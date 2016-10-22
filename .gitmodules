@@ -1,0 +1,4 @@
+[submodule "sdk2013"]
+	path = sdk2013
+	url = https://github.com/PazerOP/source-sdk-2013.git
+	branch = master
