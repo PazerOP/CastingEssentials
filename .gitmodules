@@ -2,3 +2,7 @@
 	path = sdk2013
 	url = https://github.com/PazerOP/source-sdk-2013.git
 	branch = master
+[submodule "metamod"]
+	path = metamod
+	url = https://github.com/PazerOP/metamod-source.git
+	branch = master
