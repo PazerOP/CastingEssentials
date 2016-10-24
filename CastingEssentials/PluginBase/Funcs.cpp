@@ -1,12 +1,14 @@
 #include "Funcs.h"
 #include "PluginBase/Exceptions.h"
 
+#include "MinHook.h"
+
+#include <sourcehook_impl.h>
+
 #include <Windows.h>
 #include <Psapi.h>
-#include <sourcehook.h>
-#include <sourcehook_impl.h>
-#include "MinHook.h"
 #include <convar.h>
+#include <icvar.h>
 
 SourceHook::Impl::CSourceHookImpl g_SourceHook;
 SourceHook::ISourceHook *g_SHPtr = &g_SourceHook;

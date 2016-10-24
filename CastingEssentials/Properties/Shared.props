@@ -8,13 +8,12 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;tier0.lib;tier1.lib;tier2.lib;tier3.lib;steam_api.lib;vgui_controls.lib;vstdlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;tier0.lib;tier1.lib;tier2.lib;tier3.lib;steam_api.lib;vgui_controls.lib;vstdlib.lib;$(SolutionDir)metamod\core\msvc10\$(Configuration) - Orange Box Valve\metamod.2.ep2v.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <ClCompile>
       <TreatSpecificWarningsAsErrors>4717</TreatSpecificWarningsAsErrors>
-      <PreprocessorDefinitions>SUPPRESS_INVALID_PARAMETER_NO_INFO;VERSION_SAFE_STEAM_API_INTERFACES;CLIENT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/vmg /vmv %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>SUPPRESS_INVALID_PARAMETER_NO_INFO;VERSION_SAFE_STEAM_API_INTERFACES;CLIENT_DLL;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)PluginBase\Common.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <DisableSpecificWarnings>4594;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

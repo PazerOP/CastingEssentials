@@ -37,9 +37,20 @@ private:
 
 	static void StaticAddFilter(const CCommand& command);
 	void AddFilter(const CCommand& command);
+	static void StaticRemoveFilter(const CCommand& command);
 	void RemoveFilter(const CCommand& command);
+	static void StaticListFilter(const CCommand& command);
 	void ListFilters(const CCommand& command);
+	static void StaticToggleFilterEnabled(IConVar* var, const char* oldValue, float fOldValue);
 	void ToggleFilterEnabled(IConVar* var, const char* oldValue, float fOldValue);
+
+	static void StaticAddFlags(const CCommand& command);
 	void AddFlags(const CCommand& command);
+	static void StaticRemoveFlags(const CCommand& command);
 	void RemoveFlags(const CCommand& command);
+
+	class PauseFilter;
+	int m_FilterPaused;
+
+	static int ParseFlags(const CCommand& command);
 };
