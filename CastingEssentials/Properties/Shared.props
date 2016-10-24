@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <IncludePath>$(SolutionDir)sdk2013\mp\src\public;$(SolutionDir)sdk2013\mp\src\public\tier0;$(SolutionDir)sdk2013\mp\src\public\tier1;$(SolutionDir)sdk2013\mp\src\common;$(SolutionDir)sdk2013\mp\src\game;$(SolutionDir)sdk2013\mp\src\game\shared;$(SolutionDir)metamod\core\sourcehook;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)sdk2013\mp\src\lib\public;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;tier0.lib;tier1.lib;tier2.lib;tier3.lib;steam_api.lib;vgui_controls.lib;vstdlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <ClCompile>
+      <TreatSpecificWarningsAsErrors>4717</TreatSpecificWarningsAsErrors>
+      <PreprocessorDefinitions>SUPPRESS_INVALID_PARAMETER_NO_INFO;VERSION_SAFE_STEAM_API_INTERFACES;CLIENT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/vmg /vmv %(AdditionalOptions)</AdditionalOptions>
+      <ForcedIncludeFiles>$(ProjectDir)PluginBase\Common.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <DisableSpecificWarnings>4594;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>
