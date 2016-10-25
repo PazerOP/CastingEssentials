@@ -10,6 +10,7 @@
 
 #include "Modules/CameraTools.h"
 #include "Modules/ConsoleTools.h"
+#include "Modules/PlayerAliases.h"
 
 class CastingPlugin final : public Plugin
 {
@@ -37,6 +38,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 
 	Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
 	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
+	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
 
 	ConVar_Register();
 
@@ -49,11 +51,9 @@ void CastingPlugin::Unload()
 {
 	PluginMsg("Unloading plugin...\n");
 
-	Modules().UnloadAllModules();
-
-	Funcs::Unload();
-
 	ConVar_Unregister();
+	Modules().UnloadAllModules();
+	Funcs::Unload();
 	Interfaces::Unload();
 
 	PluginMsg("Finished unloading!\n");

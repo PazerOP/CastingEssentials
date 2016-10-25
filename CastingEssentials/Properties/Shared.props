@@ -8,7 +8,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;tier0.lib;tier1.lib;tier2.lib;tier3.lib;steam_api.lib;vgui_controls.lib;vstdlib.lib;$(SolutionDir)metamod\core\msvc10\$(Configuration) - Orange Box Valve\metamod.2.ep2v.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;tier0.lib;tier1.lib;tier2.lib;tier3.lib;steam_api.lib;vgui_controls.lib;vstdlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <ClCompile>

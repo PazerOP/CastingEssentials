@@ -21,6 +21,7 @@ public:
 
 	static bool CheckDependencies();
 	static bool IsNameRetrievalAvailable() { return s_NameRetrievalAvailable; }
+	static bool IsSteamIDRetrievalAvailable() { return s_SteamIDRetrievalAvailable; }
 
 	IClientEntity* GetEntity() const { return m_PlayerEntity.Get(); }
 

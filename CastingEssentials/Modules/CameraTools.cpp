@@ -9,6 +9,33 @@
 #include <cdll_int.h>
 #include <client/c_baseentity.h>
 #include <characterset.h>
+#include <functional>
+#include <client/hltvcamera.h>
+#include <toolframework/ienginetool.h>
+
+class HLTVCameraOverride : public C_HLTVCamera
+{
+public:
+	using C_HLTVCamera::m_nCameraMode;
+	using C_HLTVCamera::m_iCameraMan;
+	using C_HLTVCamera::m_vCamOrigin;
+	using C_HLTVCamera::m_aCamAngle;
+	using C_HLTVCamera::m_iTraget1;
+	using C_HLTVCamera::m_iTraget2;
+	using C_HLTVCamera::m_flFOV;
+	using C_HLTVCamera::m_flOffset;
+	using C_HLTVCamera::m_flDistance;
+	using C_HLTVCamera::m_flLastDistance;
+	using C_HLTVCamera::m_flTheta;
+	using C_HLTVCamera::m_flPhi;
+	using C_HLTVCamera::m_flInertia;
+	using C_HLTVCamera::m_flLastAngleUpdateTime;
+	using C_HLTVCamera::m_bEntityPacketReceived;
+	using C_HLTVCamera::m_nNumSpectators;
+	using C_HLTVCamera::m_szTitleText;
+	using C_HLTVCamera::m_LastCmd;
+	using C_HLTVCamera::m_vecVelocity;
+};
 
 CameraTools::CameraTools()
 {
@@ -17,15 +44,17 @@ CameraTools::CameraTools()
 	m_SpecGUISettings = new KeyValues("Resource/UI/SpectatorTournament.res");
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
 
-	m_ForceMode = new ConVar("ce_cameratools_force_mode", "0", FCVAR_NONE, "Force the camera mode to this value");
-	m_ForceTarget = new ConVar("ce_cameratools_force_target", "-1", FCVAR_NONE, "Force the camera target to this player index");
-	m_ForceValidTarget = new ConVar("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.");
+	m_ForceMode = new ConVar("ce_cameratools_force_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.", &CameraTools::StaticChangeForceMode);
+	m_ForceTarget = new ConVar("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.", &CameraTools::StaticChangeForceTarget);
+	m_ForceValidTarget = new ConVar("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.", &CameraTools::StaticToggleForceValidTarget);
 	m_SpecPlayerAlive = new ConVar("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players.");
 
-	m_SpecClass = new ConCommand("ce_cameratools_spec_class", [](const CCommand& command) { Modules().GetModule<CameraTools>()->SpecClass(command); }, "Spectates a specific class. ce_cameratools_spec_class <team> <class> [index]", FCVAR_NONE);
-	m_SpecSteamID = new ConCommand("ce_cameratools_spec_steamid", [](const CCommand& command) { Modules().GetModule<CameraTools>()->SpecSteamID(command); }, "Spectates a player with the given steamid. ce_cameratools_spec_steamid <steamID>", FCVAR_NONE);
+	m_SpecPosition = new ConCommand("ce_cameratools_spec_pos", &CameraTools::StaticSpecPosition, "Moves the camera to a given position.");
 
-	m_ShowUsers = new ConCommand("ce_cameratools_show_users", [](const CCommand& command) { Modules().GetModule<CameraTools>()->ShowUsers(command); }, "Lists all currently connected players on the server.", FCVAR_NONE);
+	m_SpecClass = new ConCommand("ce_cameratools_spec_class", &CameraTools::StaticSpecClass, "Spectates a specific class: ce_cameratools_spec_class <team> <class> [index]");
+	m_SpecSteamID = new ConCommand("ce_cameratools_spec_steamid", &CameraTools::StaticSpecSteamID, "Spectates a player with the given steamid: ce_cameratools_spec_steamid <steamID>");
+
+	m_ShowUsers = new ConCommand("ce_cameratools_show_users", &CameraTools::StaticShowUsers, "Lists all currently connected players on the server.");
 }
 
 bool CameraTools::CheckDependencies()
@@ -316,4 +345,222 @@ void CameraTools::SpecSteamID(const CCommand& command)
 
 Usage:
 	PluginWarning("Usage: %s\n", m_SpecSteamID->GetHelpText());
+}
+
+void CameraTools::StaticShowUsers(const CCommand& command)
+{
+	CameraTools* module = GetModule();
+	if (!module)
+	{
+		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
+		return;
+	}
+
+	module->ShowUsers(command);
+}
+
+void CameraTools::StaticChangeForceMode(IConVar* var, const char* oldValue, float fOldValue)
+{
+	CameraTools* module = GetModule();
+	if (!module)
+	{
+		PluginWarning("Unable to use %s: module not loaded\n", var->GetName());
+		return;
+	}
+
+	module->ChangeForceMode(var, oldValue, fOldValue);
+}
+
+void CameraTools::StaticChangeForceTarget(IConVar* var, const char* oldValue, float fOldValue)
+{
+	CameraTools* module = GetModule();
+	if (!module)
+	{
+		PluginWarning("Unable to use %s: module not loaded\n", var->GetName());
+		return;
+	}
+
+	module->ChangeForceTarget(var, oldValue, fOldValue);
+}
+
+void CameraTools::StaticSpecPosition(const CCommand& command)
+{
+	CameraTools* module = GetModule();
+	if (!module)
+	{
+		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
+		return;
+	}
+
+	module->SpecPosition(command);
+}
+
+void CameraTools::StaticToggleForceValidTarget(IConVar* var, const char* oldValue, float fOldValue)
+{
+	CameraTools* module = GetModule();
+	if (!module)
+	{
+		PluginWarning("Unable to use %s: module not loaded\n", var->GetName());
+		return;
+	}
+
+	module->ToggleForceValidTarget(var, oldValue, fOldValue);
+}
+
+void CameraTools::StaticSpecClass(const CCommand& command)
+{
+	CameraTools* module = GetModule();
+	if (!module)
+	{
+		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
+		return;
+	}
+
+	module->SpecClass(command);
+}
+
+void CameraTools::StaticSpecSteamID(const CCommand& command)
+{
+	CameraTools* module = GetModule();
+	if (!module)
+	{
+		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
+		return;
+	}
+
+	module->SpecSteamID(command);
+}
+
+void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flOldValue)
+{
+	const int forceMode = m_ForceMode->GetInt();
+
+	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
+	{
+		if (!m_SetModeHook)
+			m_SetModeHook = Funcs::AddHook_C_HLTVCamera_SetMode(std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1, std::placeholders::_2));
+
+		try
+		{
+			Funcs::GetFunc_C_HLTVCamera_SetMode()(Interfaces::GetHLTVCamera(), forceMode);
+		}
+		catch (bad_pointer)
+		{
+			Warning("Error in setting mode.\n");
+		}
+	}
+	else
+	{
+		var->SetValue(OBS_MODE_NONE);
+
+		if (m_SetModeHook)
+		{
+			Funcs::RemoveHook_C_HLTVCamera_SetMode(m_SetModeHook);
+			m_SetModeHook = 0;
+		}
+	}
+}
+
+void CameraTools::SetModeOverride(C_HLTVCamera *hltvcamera, int &iMode)
+{
+	const int forceMode = m_ForceMode->GetInt();
+
+	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
+		iMode = forceMode;
+}
+
+void CameraTools::SetPrimaryTargetOverride(C_HLTVCamera *hltvcamera, int &nEntity)
+{
+	const int forceTarget = m_ForceTarget->GetInt();
+
+	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
+		nEntity = forceTarget;
+
+	if (!Interfaces::GetClientEntityList()->GetClientEntity(nEntity))
+		nEntity = ((HLTVCameraOverride *)hltvcamera)->m_iTraget1;
+}
+
+void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float flOldValue)
+{
+	const int forceTarget = m_ForceTarget->GetInt();
+
+	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
+	{
+		if (!m_SetPrimaryTargetHook)
+			m_SetPrimaryTargetHook = Funcs::AddHook_C_HLTVCamera_SetPrimaryTarget(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1, std::placeholders::_2));
+
+		try
+		{
+			Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget()(Interfaces::GetHLTVCamera(), forceTarget);
+		}
+		catch (bad_pointer)
+		{
+			Warning("Error in setting target.\n");
+		}
+	}
+	else
+	{
+		if (!m_ForceValidTarget->GetBool())
+		{
+			if (m_SetPrimaryTargetHook)
+			{
+				Funcs::RemoveHook_C_HLTVCamera_SetPrimaryTarget(m_SetPrimaryTargetHook);
+				m_SetPrimaryTargetHook = 0;
+			}
+		}
+	}
+}
+
+void CameraTools::SpecPosition(const CCommand &command)
+{
+	if (command.ArgC() >= 6 && IsFloat(command.Arg(1)) && IsFloat(command.Arg(2)) && IsFloat(command.Arg(3)) && IsFloat(command.Arg(4)) && IsFloat(command.Arg(5)))
+	{
+		try
+		{
+			HLTVCameraOverride *hltvcamera = (HLTVCameraOverride *)Interfaces::GetHLTVCamera();
+
+			hltvcamera->m_nCameraMode = OBS_MODE_FIXED;
+			hltvcamera->m_iCameraMan = 0;
+			hltvcamera->m_vCamOrigin.x = atof(command.Arg(1));
+			hltvcamera->m_vCamOrigin.y = atof(command.Arg(2));
+			hltvcamera->m_vCamOrigin.z = atof(command.Arg(3));
+			hltvcamera->m_aCamAngle.x = atof(command.Arg(4));
+			hltvcamera->m_aCamAngle.y = atof(command.Arg(5));
+			hltvcamera->m_iTraget1 = 0;
+			hltvcamera->m_iTraget2 = 0;
+			hltvcamera->m_flLastAngleUpdateTime = Interfaces::GetEngineTool()->GetRealTime();
+
+			Funcs::GetFunc_C_HLTVCamera_SetCameraAngle()(hltvcamera, hltvcamera->m_aCamAngle);
+		}
+		catch (bad_pointer &e)
+		{
+			Warning("%s\n", e.what());
+		}
+	}
+	else
+	{
+		Warning("Usage: statusspec_cameratools_spec_pos <x> <y> <z> <yaw> <pitch>\n");
+
+		return;
+	}
+}
+
+void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, float flOldValue)
+{
+	if (m_ForceValidTarget->GetBool())
+	{
+		if (!m_SetPrimaryTargetHook)
+			m_SetPrimaryTargetHook = Funcs::AddHook_C_HLTVCamera_SetPrimaryTarget(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1, std::placeholders::_2));
+	}
+	else
+	{
+		if (!Interfaces::GetClientEntityList()->GetClientEntity(m_ForceTarget->GetInt()))
+		{
+			if (m_SetPrimaryTargetHook)
+			{
+				Funcs::RemoveHook_C_HLTVCamera_SetPrimaryTarget(m_SetPrimaryTargetHook);
+				m_SetPrimaryTargetHook = 0;
+			}
+		}
+	}
 }

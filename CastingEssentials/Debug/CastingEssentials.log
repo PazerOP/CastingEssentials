@@ -1,8 +1,0 @@
-﻿  ConsoleTools.cpp
-LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/OPT:REF' specification
-memoverride.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/OPT:ICF' specification
-     Creating library C:\Users\mrhay\Source\Repos\CastingEssentials\Debug\CastingEssentials.lib and object C:\Users\mrhay\Source\Repos\CastingEssentials\Debug\CastingEssentials.exp
-LINK : warning LNK4098: defaultlib 'LIBCMT' conflicts with use of other libs; use /NODEFAULTLIB:library
-  CastingEssentials.vcxproj -> C:\Users\mrhay\Source\Repos\CastingEssentials\Debug\CastingEssentials.dll
-  CastingEssentials.vcxproj -> C:\Users\mrhay\Source\Repos\CastingEssentials\Debug\CastingEssentials.pdb (Partial PDB)
-          1 file(s) copied.

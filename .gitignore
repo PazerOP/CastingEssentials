@@ -27,3 +27,9 @@
 *.exe
 *.out
 *.app
+*.tlog
+
+# Other
+*.pdb
+/Release/
+/Debug/

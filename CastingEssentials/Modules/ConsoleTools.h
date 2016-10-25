@@ -14,6 +14,7 @@ public:
 	virtual ~ConsoleTools();
 
 	static bool CheckDependencies();
+	static ConsoleTools* GetModule() { return Modules().GetModule<ConsoleTools>(); }
 
 private:
 	void ConsoleColorPrintfHook(const Color& color, const char* msg);

@@ -63,6 +63,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -73,9 +74,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)\sdk2013\mp\src\public\tier0\memoverride.cpp" />
+    <ClCompile Include="..\metamod\core\sourcehook\sourcehook.cpp" />
+    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_hookmangen.cpp" />
+    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_chookidman.cpp" />
+    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_chookmaninfo.cpp" />
+    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_cproto.cpp" />
+    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_cvfnptr.cpp" />
     <ClCompile Include="..\sdk2013\mp\src\public\vgui_controls\vgui_controls.cpp" />
     <ClCompile Include="Modules\CameraTools.cpp" />
     <ClCompile Include="Modules\ConsoleTools.cpp" />
+    <ClCompile Include="Modules\PlayerAliases.cpp" />
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
     <ClCompile Include="PluginBase\Common.cpp" />
     <ClCompile Include="PluginBase\Entities.cpp" />
@@ -88,6 +96,7 @@
   <ItemGroup>
     <ClInclude Include="Modules\CameraTools.h" />
     <ClInclude Include="Modules\ConsoleTools.h" />
+    <ClInclude Include="Modules\PlayerAliases.h" />
     <ClInclude Include="PluginBase\Common.h" />
     <ClInclude Include="PluginBase\Entities.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />
