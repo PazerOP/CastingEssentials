@@ -25,8 +25,8 @@ private:
 	int m_SetPrimaryTargetHook;
 	KeyValues* m_SpecGUISettings;
 
-	void SetModeOverride(C_HLTVCamera *hltvcamera, int &iMode);
-	void SetPrimaryTargetOverride(C_HLTVCamera *hltvcamera, int &nEntity);
+	void SetModeOverride(int iMode);
+	void SetPrimaryTargetOverride(int nEntity);
 
 	ConVar* m_ForceMode;
 	ConVar* m_ForceTarget;

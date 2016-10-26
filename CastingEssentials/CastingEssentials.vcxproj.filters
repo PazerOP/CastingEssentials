@@ -57,22 +57,10 @@
     <ClCompile Include="Modules\PlayerAliases.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook.cpp">
+    <ClCompile Include="..\polyhook\PolyHook\PolyHook.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_hookmangen.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_chookidman.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_chookmaninfo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_cproto.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_cvfnptr.cpp">
+    <ClCompile Include="PluginBase\EZHook.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -114,6 +102,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\PlayerAliases.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PluginBase\EZHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

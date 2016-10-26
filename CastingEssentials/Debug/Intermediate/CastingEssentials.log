@@ -1,0 +1,21 @@
+﻿  Funcs.cpp
+  CastingPlugin.cpp
+  Generating Code...
+c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(183): warning C4715: 'Funcs::Original_ICvar_ConsoleDPrintf': not all control paths return a value
+c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(205): warning C4715: 'Funcs::Original_IVEngineClient_GetPlayerInfo': not all control paths return a value
+c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(194): warning C4715: 'Funcs::Original_ICvar_ConsolePrintf': not all control paths return a value
+c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(224): warning C4715: 'Funcs::Original_C_HLTVCamera_SetMode': not all control paths return a value
+c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(243): warning C4715: 'Funcs::Original_C_HLTVCamera_SetPrimaryTarget': not all control paths return a value
+  Compiling...
+  Interfaces.cpp
+  PlayerAliases.cpp
+  ConsoleTools.cpp
+  CameraTools.cpp
+  Generating Code...
+LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/OPT:REF' specification
+memoverride.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/OPT:ICF' specification
+     Creating library C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\Debug\CastingEssentials.lib and object C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\Debug\CastingEssentials.exp
+LINK : warning LNK4098: defaultlib 'LIBCMT' conflicts with use of other libs; use /NODEFAULTLIB:library
+  CastingEssentials.vcxproj -> C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\Debug\CastingEssentials.dll
+  CastingEssentials.vcxproj -> C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\Debug\CastingEssentials.pdb (Partial PDB)
+          1 file(s) copied.

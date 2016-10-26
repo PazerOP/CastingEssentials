@@ -13,7 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{32223B45-9C65-421A-A318-EB05D25ACA80}</ProjectGuid>
     <RootNamespace>CastingEssentials</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -74,12 +74,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)\sdk2013\mp\src\public\tier0\memoverride.cpp" />
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook.cpp" />
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_hookmangen.cpp" />
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_chookidman.cpp" />
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_chookmaninfo.cpp" />
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_cproto.cpp" />
-    <ClCompile Include="..\metamod\core\sourcehook\sourcehook_impl_cvfnptr.cpp" />
+    <ClCompile Include="..\polyhook\PolyHook\PolyHook.cpp" />
     <ClCompile Include="..\sdk2013\mp\src\public\vgui_controls\vgui_controls.cpp" />
     <ClCompile Include="Modules\CameraTools.cpp" />
     <ClCompile Include="Modules\ConsoleTools.cpp" />
@@ -87,6 +82,7 @@
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
     <ClCompile Include="PluginBase\Common.cpp" />
     <ClCompile Include="PluginBase\Entities.cpp" />
+    <ClCompile Include="PluginBase\EZHook.cpp" />
     <ClCompile Include="PluginBase\Funcs.cpp" />
     <ClCompile Include="PluginBase\Interfaces.cpp" />
     <ClCompile Include="PluginBase\Modules.cpp" />
@@ -100,6 +96,7 @@
     <ClInclude Include="PluginBase\Common.h" />
     <ClInclude Include="PluginBase\Entities.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />
+    <ClInclude Include="PluginBase\EZHook.h" />
     <ClInclude Include="PluginBase\Funcs.h" />
     <ClInclude Include="PluginBase\Player.h" />
     <ClInclude Include="PluginBase\TFDefinitions.h" />

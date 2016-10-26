@@ -438,7 +438,7 @@ void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flO
 	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
 	{
 		if (!m_SetModeHook)
-			m_SetModeHook = Funcs::AddHook_C_HLTVCamera_SetMode(std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1, std::placeholders::_2));
+			m_SetModeHook = Funcs::AddHook_C_HLTVCamera_SetMode(std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1));
 
 		try
 		{
@@ -461,15 +461,17 @@ void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flO
 	}
 }
 
-void CameraTools::SetModeOverride(C_HLTVCamera *hltvcamera, int &iMode)
+void CameraTools::SetModeOverride(int iMode)
 {
 	const int forceMode = m_ForceMode->GetInt();
 
 	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
 		iMode = forceMode;
+
+	Funcs::Original_C_HLTVCamera_SetMode()(iMode);
 }
 
-void CameraTools::SetPrimaryTargetOverride(C_HLTVCamera *hltvcamera, int &nEntity)
+void CameraTools::SetPrimaryTargetOverride(int nEntity)
 {
 	const int forceTarget = m_ForceTarget->GetInt();
 
@@ -477,7 +479,9 @@ void CameraTools::SetPrimaryTargetOverride(C_HLTVCamera *hltvcamera, int &nEntit
 		nEntity = forceTarget;
 
 	if (!Interfaces::GetClientEntityList()->GetClientEntity(nEntity))
-		nEntity = ((HLTVCameraOverride *)hltvcamera)->m_iTraget1;
+		nEntity = ((HLTVCameraOverride *)Interfaces::GetHLTVCamera())->m_iTraget1;
+
+	Funcs::Original_C_HLTVCamera_SetPrimaryTarget()(nEntity);
 }
 
 void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float flOldValue)
@@ -487,7 +491,7 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
 	{
 		if (!m_SetPrimaryTargetHook)
-			m_SetPrimaryTargetHook = Funcs::AddHook_C_HLTVCamera_SetPrimaryTarget(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1, std::placeholders::_2));
+			m_SetPrimaryTargetHook = Funcs::AddHook_C_HLTVCamera_SetPrimaryTarget(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1));
 
 		try
 		{
@@ -550,7 +554,7 @@ void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, fl
 	if (m_ForceValidTarget->GetBool())
 	{
 		if (!m_SetPrimaryTargetHook)
-			m_SetPrimaryTargetHook = Funcs::AddHook_C_HLTVCamera_SetPrimaryTarget(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1, std::placeholders::_2));
+			m_SetPrimaryTargetHook = Funcs::AddHook_C_HLTVCamera_SetPrimaryTarget(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1));
 	}
 	else
 	{

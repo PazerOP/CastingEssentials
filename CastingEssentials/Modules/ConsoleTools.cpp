@@ -2,7 +2,6 @@
 #include "PluginBase/Funcs.h"
 
 #include <convar.h>
-#include <sourcehook.h>
 #include <regex>
 
 class ConsoleTools::PauseFilter final
@@ -163,13 +162,13 @@ void ConsoleTools::ToggleFilterEnabled(IConVar *var, const char *pOldValue, floa
 	if (m_FilterEnabled->GetBool())
 	{
 		if (!m_ConsolePrintfHook)
-			m_ConsolePrintfHook = Funcs::AddHook_ICvar_ConsolePrintf(g_pCVar, SH_MEMBER(this, &ConsoleTools::ConsolePrintfHook), false);
+			m_ConsolePrintfHook = Funcs::AddHook_ICvar_ConsolePrintf(g_pCVar, std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1));
 
 		if (!m_ConsoleDPrintfHook)
-			m_ConsoleDPrintfHook = Funcs::AddHook_ICvar_ConsoleDPrintf(g_pCVar, SH_MEMBER(this, &ConsoleTools::ConsoleDPrintfHook), false);
+			m_ConsoleDPrintfHook = Funcs::AddHook_ICvar_ConsoleDPrintf(g_pCVar, std::bind(&ConsoleTools::ConsoleDPrintfHook, this, std::placeholders::_1));
 
 		if (!m_ConsoleColorPrintfHook)
-			m_ConsoleColorPrintfHook = Funcs::AddHook_ICvar_ConsoleColorPrintf(g_pCVar, SH_MEMBER(this, &ConsoleTools::ConsoleColorPrintfHook), false);
+			m_ConsoleColorPrintfHook = Funcs::s_Hook_ICvar_ConsoleColorPrintf->AddHook(std::bind(&ConsoleTools::ConsoleColorPrintfHook, this, std::placeholders::_1, std::placeholders::_2));
 	}
 	else
 	{
@@ -196,31 +195,25 @@ void ConsoleTools::ToggleFilterEnabled(IConVar *var, const char *pOldValue, floa
 void ConsoleTools::ConsoleColorPrintfHook(const Color &clr, const char *message)
 {
 	if (!m_FilterPaused && CheckFilters(message))
-	{
-		RETURN_META(MRES_SUPERCEDE);
-	}
+		return;
 
-	RETURN_META(MRES_IGNORED);
+	Funcs::s_Hook_ICvar_ConsoleColorPrintf->GetOriginal()(clr, message);
 }
 
 void ConsoleTools::ConsoleDPrintfHook(const char *message)
 {
 	if (!m_FilterPaused && CheckFilters(message))
-	{
-		RETURN_META(MRES_SUPERCEDE);
-	}
+		return;
 
-	RETURN_META(MRES_IGNORED);
+	Funcs::Original_ICvar_ConsoleDPrintf()(message);
 }
 
 void ConsoleTools::ConsolePrintfHook(const char *message)
 {
 	if (!m_FilterPaused && CheckFilters(message))
-	{
-		RETURN_META(MRES_SUPERCEDE);
-	}
+		return;
 
-	RETURN_META(MRES_IGNORED);
+	Funcs::Original_ICvar_ConsolePrintf()(message);
 }
 
 bool ConsoleTools::CheckFilters(const std::string& message) const

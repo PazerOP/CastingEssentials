@@ -4,7 +4,6 @@
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
 #include <convar.h>
-#include <sourcehook.h>
 #include <steam/steam_api.h>
 #include <cdll_int.h>
 #include <toolframework/ienginetool.h>
@@ -63,18 +62,14 @@ void PlayerAliases::StaticToggleEnabled(IConVar* var, const char* oldValue, floa
 
 bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 {
-	bool result = Funcs::CallFunc_IVEngineClient_GetPlayerInfo(Interfaces::GetEngineClient(), ent_num, pinfo);
+	bool result = Funcs::Original_IVEngineClient_GetPlayerInfo()(ent_num, pinfo);
 
 	if (ent_num < 1 || ent_num >= Interfaces::GetEngineTool()->GetMaxClients())
-	{
-		RETURN_META_VALUE(MRES_IGNORED, false);
-	}
+		return result;
 
 	Player* player = Player::GetPlayer(ent_num, __FUNCSIG__);
 	if (!player)
-	{
-		RETURN_META_VALUE(MRES_IGNORED, false);
-	}
+		return result;
 
 	static EUniverse universe = k_EUniverseInvalid;
 	if (universe == k_EUniverseInvalid)
@@ -109,7 +104,7 @@ bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 
 	V_strcpy_safe(pinfo->name, gameName.c_str());
 
-	RETURN_META_VALUE(MRES_SUPERCEDE, result);
+	return result;
 }
 
 const std::string& PlayerAliases::GetAlias(const CSteamID& player, const std::string& gameAlias) const
@@ -144,7 +139,7 @@ void PlayerAliases::ToggleEnabled(IConVar* var, const char* oldValue, float fOld
 	{
 		if (!m_GetPlayerInfoHook)
 		{
-			m_GetPlayerInfoHook = Funcs::AddHook_IVEngineClient_GetPlayerInfo(Interfaces::GetEngineClient(), SH_MEMBER(this, &PlayerAliases::GetPlayerInfoOverride), false);
+			m_GetPlayerInfoHook = Funcs::AddHook_IVEngineClient_GetPlayerInfo(Interfaces::GetEngineClient(), std::bind(&PlayerAliases::GetPlayerInfoOverride, this, std::placeholders::_1, std::placeholders::_2));
 		}
 	}
 	else
