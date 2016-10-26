@@ -6,3 +6,7 @@
 	path = metamod
 	url = https://github.com/PazerOP/metamod-source.git
 	branch = master
+[submodule "polyhook"]
+	path = polyhook
+	url = https://github.com/stevemk14ebr/PolyHook
+	branch = master
