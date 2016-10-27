@@ -309,13 +309,11 @@ inline void Funcs::VirtualHook<fType, vaArgs, Type, RetVal, Args...>::InitHook()
 	Assert(m_Instance);
 	Assert(m_TargetFunction);
 
-	auto baseHook = s_BaseHooks[fType];
-	if (!baseHook)
+	if (!s_BaseHooks[fType])
 	{
 		std::lock_guard<std::recursive_mutex> lock(s_BaseHooksMutex);
-		baseHook = s_BaseHooks[fType];
-		if (!baseHook)
-			s_BaseHooks[fType] = baseHook = SetupHook(*(BYTE***)m_Instance, VTableOffset(m_Instance, m_TargetFunction), (BYTE*)m_DetourFunc);
+		if (!s_BaseHooks[fType])
+			s_BaseHooks[fType] = SetupHook(*(BYTE***)m_Instance, VTableOffset(m_Instance, m_TargetFunction), (BYTE*)m_DetourFunc);
 	}
 }
 
@@ -340,18 +338,21 @@ inline void* Funcs::VirtualHook<fType, vaArgs, Type, RetVal, Args...>::DefaultDe
 			static_assert(!std::is_reference<testType>::value, "wtf");
 			static_assert(std::is_pointer<testType>::value, "wtf");
 
-			using swallow = int[];
-			(void)swallow{ 0, (void(va_arg(vaArgList, ArgType<Args>::type)), 0)... };
+			char** parameters[] = { (char**)(&(va_arg(vaArgList, ArgType<Args>::type)))... };
 
 			// 8192 is the length used internally by CCvar
 			char buffer[8192];
 			vsnprintf_s(buffer, _TRUNCATE, *fmt, vaArgList);
 			va_end(vaArgList);
 
+			// Can't have variable arguments in std::function, overwrite the "format" parameter with
+			// the fully parsed buffer
+			*parameters[fmtParameter] = &buffer[0];
+
 			// Now run all the hooks
 			{
 				std::lock_guard<std::recursive_mutex> locker(Funcs::GetVHook(fType)->GetHooksTableMutex());
-				for (auto& hook : *(HooksTableType*)Funcs::GetVHook(fType)->GetHooksTable())
+				for (auto hook : *(HooksTableType*)Funcs::GetVHook(fType)->GetHooksTable())
 					hook.second(args...);
 			}
 		};
