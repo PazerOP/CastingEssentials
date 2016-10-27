@@ -1,21 +1,41 @@
-﻿  Funcs.cpp
-  CameraTools.cpp
-  Generating Code...
-c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(183): warning C4715: 'Funcs::Original_ICvar_ConsoleDPrintf': not all control paths return a value
-c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(205): warning C4715: 'Funcs::Original_IVEngineClient_GetPlayerInfo': not all control paths return a value
-c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(194): warning C4715: 'Funcs::Original_ICvar_ConsolePrintf': not all control paths return a value
-c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(224): warning C4715: 'Funcs::Original_C_HLTVCamera_SetMode': not all control paths return a value
-c:\users\mrhay\source\repos\castingessentials\castingessentials\pluginbase\funcs.cpp(243): warning C4715: 'Funcs::Original_C_HLTVCamera_SetPrimaryTarget': not all control paths return a value
-  Compiling...
+﻿cl : Command line warning D9030: '/Gm' is incompatible with multiprocessing; ignoring /MP switch
   Interfaces.cpp
+  GroupHook.cpp
+  Funcs.cpp
+PluginBase\Funcs.cpp(121): error C2664: 'GroupHook<Funcs::Func,Funcs::IVEngineClient_GetPlayerInfo,false,IVEngineClient,bool,int,player_info_t *>::GroupHook(const GroupHook<Funcs::Func,Funcs::IVEngineClient_GetPlayerInfo,false,IVEngineClient,bool,int,player_info_t *> &)': cannot convert argument 2 from 'bool (__thiscall IVEngineClient013::* )(int,player_info_t *)' to 'bool (__cdecl IVEngineClient::* )(int,player_info_t *,...)'
+  PluginBase\Funcs.cpp(121): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or function-style cast
   CastingPlugin.cpp
   PlayerAliases.cpp
   ConsoleTools.cpp
+  CameraTools.cpp
+Modules\CameraTools.cpp(441): error C2039: 'AddHook_C_HLTVCamera_SetMode': is not a member of 'Funcs'
+  C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\PluginBase/Funcs.h(27): note: see declaration of 'Funcs'
+Modules\CameraTools.cpp(441): error C3861: 'AddHook_C_HLTVCamera_SetMode': identifier not found
+Modules\CameraTools.cpp(445): error C2064: term does not evaluate to a function taking 2 arguments
+  Modules\CameraTools.cpp(445): note: class does not define an 'operator()' or a user defined conversion operator to a pointer-to-function or reference-to-function that takes appropriate number of arguments
+Modules\CameraTools.cpp(458): error C2039: 'RemoveHook_C_HLTVCamera_SetMode': is not a member of 'Funcs'
+  C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\PluginBase/Funcs.h(27): note: see declaration of 'Funcs'
+Modules\CameraTools.cpp(458): error C3861: 'RemoveHook_C_HLTVCamera_SetMode': identifier not found
+Modules\CameraTools.cpp(471): error C2039: 'Original_C_HLTVCamera_SetMode': is not a member of 'Funcs'
+  C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\PluginBase/Funcs.h(27): note: see declaration of 'Funcs'
+Modules\CameraTools.cpp(471): error C3861: 'Original_C_HLTVCamera_SetMode': identifier not found
+Modules\CameraTools.cpp(484): error C2039: 'Original_C_HLTVCamera_SetPrimaryTarget': is not a member of 'Funcs'
+  C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\PluginBase/Funcs.h(27): note: see declaration of 'Funcs'
+Modules\CameraTools.cpp(484): error C3861: 'Original_C_HLTVCamera_SetPrimaryTarget': identifier not found
+Modules\CameraTools.cpp(494): error C2039: 'AddHook_C_HLTVCamera_SetPrimaryTarget': is not a member of 'Funcs'
+  C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\PluginBase/Funcs.h(27): note: see declaration of 'Funcs'
+Modules\CameraTools.cpp(494): error C3861: 'AddHook_C_HLTVCamera_SetPrimaryTarget': identifier not found
+Modules\CameraTools.cpp(498): error C2064: term does not evaluate to a function taking 2 arguments
+  Modules\CameraTools.cpp(498): note: class does not define an 'operator()' or a user defined conversion operator to a pointer-to-function or reference-to-function that takes appropriate number of arguments
+Modules\CameraTools.cpp(511): error C2039: 'RemoveHook_C_HLTVCamera_SetPrimaryTarget': is not a member of 'Funcs'
+  C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\PluginBase/Funcs.h(27): note: see declaration of 'Funcs'
+Modules\CameraTools.cpp(511): error C3861: 'RemoveHook_C_HLTVCamera_SetPrimaryTarget': identifier not found
+Modules\CameraTools.cpp(537): error C2064: term does not evaluate to a function taking 2 arguments
+  Modules\CameraTools.cpp(537): note: class does not define an 'operator()' or a user defined conversion operator to a pointer-to-function or reference-to-function that takes appropriate number of arguments
+Modules\CameraTools.cpp(557): error C2039: 'AddHook_C_HLTVCamera_SetPrimaryTarget': is not a member of 'Funcs'
+  C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\PluginBase/Funcs.h(27): note: see declaration of 'Funcs'
+Modules\CameraTools.cpp(557): error C3861: 'AddHook_C_HLTVCamera_SetPrimaryTarget': identifier not found
+Modules\CameraTools.cpp(565): error C2039: 'RemoveHook_C_HLTVCamera_SetPrimaryTarget': is not a member of 'Funcs'
+  C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\PluginBase/Funcs.h(27): note: see declaration of 'Funcs'
+Modules\CameraTools.cpp(565): error C3861: 'RemoveHook_C_HLTVCamera_SetPrimaryTarget': identifier not found
   Generating Code...
-LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/OPT:REF' specification
-memoverride.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/OPT:ICF' specification
-     Creating library C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\Debug\CastingEssentials.lib and object C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\Debug\CastingEssentials.exp
-LINK : warning LNK4098: defaultlib 'LIBCMT' conflicts with use of other libs; use /NODEFAULTLIB:library
-  CastingEssentials.vcxproj -> C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\Debug\CastingEssentials.dll
-  CastingEssentials.vcxproj -> C:\Users\mrhay\Source\Repos\CastingEssentials\CastingEssentials\Debug\CastingEssentials.pdb (Partial PDB)
-          1 file(s) copied.

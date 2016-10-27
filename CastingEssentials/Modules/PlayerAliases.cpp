@@ -62,7 +62,7 @@ void PlayerAliases::StaticToggleEnabled(IConVar* var, const char* oldValue, floa
 
 bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 {
-	bool result = Funcs::Original_IVEngineClient_GetPlayerInfo()(ent_num, pinfo);
+	bool result = Funcs::GetHook_IVEngineClient_GetPlayerInfo()->GetOriginal()(ent_num, pinfo);
 
 	if (ent_num < 1 || ent_num >= Interfaces::GetEngineTool()->GetMaxClients())
 		return result;
@@ -139,12 +139,12 @@ void PlayerAliases::ToggleEnabled(IConVar* var, const char* oldValue, float fOld
 	{
 		if (!m_GetPlayerInfoHook)
 		{
-			m_GetPlayerInfoHook = Funcs::AddHook_IVEngineClient_GetPlayerInfo(Interfaces::GetEngineClient(), std::bind(&PlayerAliases::GetPlayerInfoOverride, this, std::placeholders::_1, std::placeholders::_2));
+			m_GetPlayerInfoHook = Funcs::GetHook_IVEngineClient_GetPlayerInfo()->AddHook(std::bind(&PlayerAliases::GetPlayerInfoOverride, this, std::placeholders::_1, std::placeholders::_2));
 		}
 	}
 	else
 	{
-		if (m_GetPlayerInfoHook && Funcs::RemoveHook(m_GetPlayerInfoHook, __FUNCSIG__))
+		if (m_GetPlayerInfoHook && Funcs::GetHook_IVEngineClient_GetPlayerInfo()->RemoveHook(m_GetPlayerInfoHook, __FUNCSIG__))
 			m_GetPlayerInfoHook = 0;
 	}
 }

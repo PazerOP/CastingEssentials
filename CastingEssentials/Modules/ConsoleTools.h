@@ -50,6 +50,8 @@ private:
 	static void StaticRemoveFlags(const CCommand& command);
 	void RemoveFlags(const CCommand& command);
 
+	void DisableHooks();
+
 	class PauseFilter;
 	int m_FilterPaused;
 

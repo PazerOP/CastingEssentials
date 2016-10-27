@@ -303,7 +303,7 @@ void CameraTools::SpecPlayer(int playerIndex)
 		{
 			try
 			{
-				Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget()(Interfaces::GetHLTVCamera(), player->GetEntity()->entindex());
+				Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget()(player->GetEntity()->entindex());
 			}
 			catch (bad_pointer &e)
 			{

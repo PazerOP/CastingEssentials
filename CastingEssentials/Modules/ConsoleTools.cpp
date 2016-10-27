@@ -43,21 +43,7 @@ ConsoleTools::ConsoleTools()
 }
 ConsoleTools::~ConsoleTools()
 {
-	if (m_ConsoleColorPrintfHook)
-	{
-		Funcs::RemoveHook(m_ConsoleColorPrintfHook, __FUNCSIG__);
-		m_ConsoleColorPrintfHook = 0;
-	}
-	if (m_ConsoleDPrintfHook)
-	{
-		Funcs::RemoveHook(m_ConsoleDPrintfHook, __FUNCSIG__);
-		m_ConsoleDPrintfHook = 0;
-	}
-	if (m_ConsolePrintfHook)
-	{
-		Funcs::RemoveHook(m_ConsolePrintfHook, __FUNCSIG__);
-		m_ConsolePrintfHook = 0;
-	}
+	DisableHooks();
 }
 
 void ConsoleTools::StaticAddFilter(const CCommand& command)
@@ -162,33 +148,34 @@ void ConsoleTools::ToggleFilterEnabled(IConVar *var, const char *pOldValue, floa
 	if (m_FilterEnabled->GetBool())
 	{
 		if (!m_ConsolePrintfHook)
-			m_ConsolePrintfHook = Funcs::AddHook_ICvar_ConsolePrintf(g_pCVar, std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1));
+			m_ConsolePrintfHook = Funcs::GetHook_ICvar_ConsolePrintf()->AddHook(std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1));
 
 		if (!m_ConsoleDPrintfHook)
-			m_ConsoleDPrintfHook = Funcs::AddHook_ICvar_ConsoleDPrintf(g_pCVar, std::bind(&ConsoleTools::ConsoleDPrintfHook, this, std::placeholders::_1));
+			m_ConsoleDPrintfHook = Funcs::GetHook_ICvar_ConsoleDPrintf()->AddHook(std::bind(&ConsoleTools::ConsoleDPrintfHook, this, std::placeholders::_1));
 
 		if (!m_ConsoleColorPrintfHook)
-			m_ConsoleColorPrintfHook = Funcs::s_Hook_ICvar_ConsoleColorPrintf->AddHook(std::bind(&ConsoleTools::ConsoleColorPrintfHook, this, std::placeholders::_1, std::placeholders::_2));
+			m_ConsoleColorPrintfHook = Funcs::GetHook_ICvar_ConsoleColorPrintf()->AddHook(std::bind(&ConsoleTools::ConsoleColorPrintfHook, this, std::placeholders::_1, std::placeholders::_2));
 	}
 	else
+		DisableHooks();
+}
+
+void ConsoleTools::DisableHooks()
+{
+	if (m_ConsoleColorPrintfHook)
 	{
-		if (m_ConsoleColorPrintfHook)
-		{
-			if (Funcs::RemoveHook(m_ConsoleColorPrintfHook, __FUNCSIG__))
-				m_ConsoleColorPrintfHook = 0;
-		}
-
-		if (m_ConsoleDPrintfHook)
-		{
-			if (Funcs::RemoveHook(m_ConsoleDPrintfHook, __FUNCSIG__))
-				m_ConsoleDPrintfHook = 0;
-		}
-
-		if (m_ConsolePrintfHook)
-		{
-			if (Funcs::RemoveHook(m_ConsolePrintfHook, __FUNCSIG__))
-				m_ConsolePrintfHook = 0;
-		}
+		Funcs::GetHook_ICvar_ConsoleColorPrintf()->RemoveHook(m_ConsoleColorPrintfHook, __FUNCSIG__);
+		m_ConsoleColorPrintfHook = 0;
+	}
+	if (m_ConsoleDPrintfHook)
+	{
+		Funcs::GetHook_ICvar_ConsoleDPrintf()->RemoveHook(m_ConsoleDPrintfHook, __FUNCSIG__);
+		m_ConsoleDPrintfHook = 0;
+	}
+	if (m_ConsolePrintfHook)
+	{
+		Funcs::GetHook_ICvar_ConsolePrintf()->RemoveHook(m_ConsolePrintfHook, __FUNCSIG__);
+		m_ConsolePrintfHook = 0;
 	}
 }
 
@@ -197,7 +184,7 @@ void ConsoleTools::ConsoleColorPrintfHook(const Color &clr, const char *message)
 	if (!m_FilterPaused && CheckFilters(message))
 		return;
 
-	Funcs::s_Hook_ICvar_ConsoleColorPrintf->GetOriginal()(clr, message);
+	Funcs::GetHook_ICvar_ConsoleColorPrintf()->GetOriginal()(clr, message);
 }
 
 void ConsoleTools::ConsoleDPrintfHook(const char *message)
@@ -205,7 +192,7 @@ void ConsoleTools::ConsoleDPrintfHook(const char *message)
 	if (!m_FilterPaused && CheckFilters(message))
 		return;
 
-	Funcs::Original_ICvar_ConsoleDPrintf()(message);
+	Funcs::GetHook_ICvar_ConsoleDPrintf()->GetOriginal()(message);
 }
 
 void ConsoleTools::ConsolePrintfHook(const char *message)
@@ -213,7 +200,7 @@ void ConsoleTools::ConsolePrintfHook(const char *message)
 	if (!m_FilterPaused && CheckFilters(message))
 		return;
 
-	Funcs::Original_ICvar_ConsolePrintf()(message);
+	Funcs::GetHook_ICvar_ConsolePrintf()->GetOriginal()(message);
 }
 
 bool ConsoleTools::CheckFilters(const std::string& message) const
