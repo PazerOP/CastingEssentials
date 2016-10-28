@@ -104,6 +104,7 @@ bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 
 	V_strcpy_safe(pinfo->name, gameName.c_str());
 
+	Funcs::GetHook_IVEngineClient_GetPlayerInfo()->SetState(HookAction::SUPERCEDE);
 	return result;
 }
 

@@ -438,11 +438,12 @@ void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flO
 	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
 	{
 		if (!m_SetModeHook)
-			m_SetModeHook = Funcs::AddHook_C_HLTVCamera_SetMode(std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1));
+			m_SetModeHook = Funcs::GetHook_C_HLTVCamera_SetMode()->AddHook(
+				std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1));
 
 		try
 		{
-			Funcs::GetFunc_C_HLTVCamera_SetMode()(Interfaces::GetHLTVCamera(), forceMode);
+			Funcs::GetHook_C_HLTVCamera_SetMode()->GetOriginal()(forceMode);
 		}
 		catch (bad_pointer)
 		{
@@ -455,7 +456,7 @@ void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flO
 
 		if (m_SetModeHook)
 		{
-			Funcs::RemoveHook_C_HLTVCamera_SetMode(m_SetModeHook);
+			Funcs::GetHook_C_HLTVCamera_SetMode()->RemoveHook(m_SetModeHook, __FUNCSIG__);
 			m_SetModeHook = 0;
 		}
 	}
@@ -468,7 +469,7 @@ void CameraTools::SetModeOverride(int iMode)
 	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
 		iMode = forceMode;
 
-	Funcs::Original_C_HLTVCamera_SetMode()(iMode);
+	Funcs::GetHook_C_HLTVCamera_SetMode()->GetOriginal()(iMode);
 }
 
 void CameraTools::SetPrimaryTargetOverride(int nEntity)
@@ -481,7 +482,7 @@ void CameraTools::SetPrimaryTargetOverride(int nEntity)
 	if (!Interfaces::GetClientEntityList()->GetClientEntity(nEntity))
 		nEntity = ((HLTVCameraOverride *)Interfaces::GetHLTVCamera())->m_iTraget1;
 
-	Funcs::Original_C_HLTVCamera_SetPrimaryTarget()(nEntity);
+	Funcs::GetHook_C_HLTVCamera_SetPrimaryTarget()->GetOriginal()(nEntity);
 }
 
 void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float flOldValue)
@@ -491,11 +492,12 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
 	{
 		if (!m_SetPrimaryTargetHook)
-			m_SetPrimaryTargetHook = Funcs::AddHook_C_HLTVCamera_SetPrimaryTarget(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1));
+			m_SetPrimaryTargetHook = Funcs::GetHook_C_HLTVCamera_SetPrimaryTarget()->AddHook(
+				std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1));
 
 		try
 		{
-			Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget()(Interfaces::GetHLTVCamera(), forceTarget);
+			Funcs::GetHook_C_HLTVCamera_SetPrimaryTarget()->GetOriginal()(forceTarget);
 		}
 		catch (bad_pointer)
 		{
@@ -508,7 +510,7 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 		{
 			if (m_SetPrimaryTargetHook)
 			{
-				Funcs::RemoveHook_C_HLTVCamera_SetPrimaryTarget(m_SetPrimaryTargetHook);
+				Funcs::GetHook_C_HLTVCamera_SetPrimaryTarget()->RemoveHook(m_SetPrimaryTargetHook, __FUNCSIG__);
 				m_SetPrimaryTargetHook = 0;
 			}
 		}
@@ -534,7 +536,7 @@ void CameraTools::SpecPosition(const CCommand &command)
 			hltvcamera->m_iTraget2 = 0;
 			hltvcamera->m_flLastAngleUpdateTime = Interfaces::GetEngineTool()->GetRealTime();
 
-			Funcs::GetFunc_C_HLTVCamera_SetCameraAngle()(hltvcamera, hltvcamera->m_aCamAngle);
+			Funcs::GetFunc_C_HLTVCamera_SetCameraAngle()(hltvcamera->m_aCamAngle);
 		}
 		catch (bad_pointer &e)
 		{
@@ -554,7 +556,8 @@ void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, fl
 	if (m_ForceValidTarget->GetBool())
 	{
 		if (!m_SetPrimaryTargetHook)
-			m_SetPrimaryTargetHook = Funcs::AddHook_C_HLTVCamera_SetPrimaryTarget(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1));
+			m_SetPrimaryTargetHook = Funcs::GetHook_C_HLTVCamera_SetPrimaryTarget()->AddHook(
+				std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1));
 	}
 	else
 	{
@@ -562,7 +565,7 @@ void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, fl
 		{
 			if (m_SetPrimaryTargetHook)
 			{
-				Funcs::RemoveHook_C_HLTVCamera_SetPrimaryTarget(m_SetPrimaryTargetHook);
+				Funcs::GetHook_C_HLTVCamera_SetPrimaryTarget()->RemoveHook(m_SetPrimaryTargetHook, __FUNCSIG__);
 				m_SetPrimaryTargetHook = 0;
 			}
 		}

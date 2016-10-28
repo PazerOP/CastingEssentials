@@ -46,9 +46,21 @@ class Funcs final
 
 	typedef GroupVirtualHook<Func, IVEngineClient_GetPlayerInfo, false, IVEngineClient, bool, int, player_info_t*> Hook_IVEngineClient_GetPlayerInfo;
 
+	typedef GroupHook<Func, C_HLTVCamera_SetCameraAngle, false, C_HLTVCamera, void, const QAngle&> Hook_C_HLTVCamera_SetCameraAngle;
+	typedef GroupHook<Func, C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetMode;
+	typedef GroupHook<Func, C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetPrimaryTarget;
+
 	typedef std::function<void(const QAngle&)> Func_C_HLTVCamera_SetCameraAngle;
 	typedef std::function<void(int)> Func_C_HLTVCamera_SetMode;
 	typedef std::function<void(int)> Func_C_HLTVCamera_SetPrimaryTarget;
+
+	typedef void(__thiscall *RawSetCameraAngleFn)(C_HLTVCamera*, const QAngle&);
+	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);
+	typedef void(__thiscall *RawSetPrimaryTargetFn)(C_HLTVCamera*, int);
+
+	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
+	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
+	static RawSetPrimaryTargetFn GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
 
 public:
 	static Func_C_HLTVCamera_SetCameraAngle GetFunc_C_HLTVCamera_SetCameraAngle();
@@ -64,6 +76,10 @@ public:
 
 	static Hook_IVEngineClient_GetPlayerInfo* GetHook_IVEngineClient_GetPlayerInfo() { return s_Hook_IVEngineClient_GetPlayerInfo.get(); }
 
+	static Hook_C_HLTVCamera_SetCameraAngle* GetHook_C_HLTVCamera_SetCameraAngle() { return s_Hook_C_HLTVCamera_SetCameraAngle.get(); }
+	static Hook_C_HLTVCamera_SetMode* GetHook_C_HLTVCamera_SetMode() { return s_Hook_C_HLTVCamera_SetMode.get(); }
+	static Hook_C_HLTVCamera_SetPrimaryTarget* GetHook_C_HLTVCamera_SetPrimaryTarget() { return s_Hook_C_HLTVCamera_SetPrimaryTarget.get(); }
+
 private:
 	Funcs() { }
 	~Funcs() { }
@@ -73,6 +89,10 @@ private:
 	static std::unique_ptr<Hook_ICvar_ConsolePrintf> s_Hook_ICvar_ConsolePrintf;
 
 	static std::unique_ptr<Hook_IVEngineClient_GetPlayerInfo> s_Hook_IVEngineClient_GetPlayerInfo;
+
+	static std::unique_ptr<Hook_C_HLTVCamera_SetCameraAngle> s_Hook_C_HLTVCamera_SetCameraAngle;
+	static std::unique_ptr<Hook_C_HLTVCamera_SetMode> s_Hook_C_HLTVCamera_SetMode;
+	static std::unique_ptr<Hook_C_HLTVCamera_SetPrimaryTarget> s_Hook_C_HLTVCamera_SetPrimaryTarget;
 };
 
 extern void* SignatureScan(const char* moduleName, const char* signature, const char* mask);

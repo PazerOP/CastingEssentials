@@ -18,6 +18,10 @@ std::unique_ptr<Funcs::Hook_ICvar_ConsolePrintf> Funcs::s_Hook_ICvar_ConsolePrin
 
 std::unique_ptr<Funcs::Hook_IVEngineClient_GetPlayerInfo> Funcs::s_Hook_IVEngineClient_GetPlayerInfo;
 
+std::unique_ptr<Funcs::Hook_C_HLTVCamera_SetCameraAngle> Funcs::s_Hook_C_HLTVCamera_SetCameraAngle;
+std::unique_ptr<Funcs::Hook_C_HLTVCamera_SetMode> Funcs::s_Hook_C_HLTVCamera_SetMode;
+std::unique_ptr<Funcs::Hook_C_HLTVCamera_SetPrimaryTarget> Funcs::s_Hook_C_HLTVCamera_SetPrimaryTarget;
+
 static bool DataCompare(const BYTE* pData, const BYTE* bSig, const char* szMask)
 {
 	for (; *szMask; ++szMask, ++pData, ++bSig)
@@ -49,11 +53,9 @@ void* SignatureScan(const char* moduleName, const char* signature, const char* m
 	return FindPattern((DWORD)clientModule, clientModInfo.SizeOfImage, (PBYTE)signature, mask);
 }
 
-Funcs::Func_C_HLTVCamera_SetCameraAngle Funcs::GetFunc_C_HLTVCamera_SetCameraAngle()
+Funcs::RawSetCameraAngleFn Funcs::GetRawFunc_C_HLTVCamera_SetCameraAngle()
 {
-	typedef void(__thiscall *RawSetCameraAngleFn)(C_HLTVCamera*, const QAngle&);
 	static RawSetCameraAngleFn s_SetCameraAngleFn = nullptr;
-
 	if (!s_SetCameraAngleFn)
 	{
 		constexpr const char* SIG = "\x55\x8B\xEC\x8B\x45\x08\x56\x8B\xF1\x8D\x56\x00\xD9\x00\xD9\x1A\xD9\x40\x00\xD9\x5A\x00\xD9\x40\x00\x52";
@@ -65,16 +67,19 @@ Funcs::Func_C_HLTVCamera_SetCameraAngle Funcs::GetFunc_C_HLTVCamera_SetCameraAng
 			throw bad_pointer("C_HLTVCamera::SetCameraAngle");
 	}
 
-	return std::bind(
-		[](RawSetCameraAngleFn func, C_HLTVCamera* pThis, const QAngle& ang) { func(pThis, ang); },
-		s_SetCameraAngleFn, Interfaces::GetHLTVCamera(), std::placeholders::_1);
+	return s_SetCameraAngleFn;
 }
 
-Funcs::Func_C_HLTVCamera_SetMode Funcs::GetFunc_C_HLTVCamera_SetMode()
+Funcs::Func_C_HLTVCamera_SetCameraAngle Funcs::GetFunc_C_HLTVCamera_SetCameraAngle()
 {
-	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);
-	static RawSetModeFn s_SetModeFn = nullptr;
+	return std::bind(
+		[](RawSetCameraAngleFn func, C_HLTVCamera* pThis, const QAngle& ang) { func(pThis, ang); },
+		GetRawFunc_C_HLTVCamera_SetCameraAngle(), Interfaces::GetHLTVCamera(), std::placeholders::_1);
+}
 
+Funcs::RawSetModeFn Funcs::GetRawFunc_C_HLTVCamera_SetMode()
+{
+	static RawSetModeFn s_SetModeFn = nullptr;
 	if (!s_SetModeFn)
 	{
 		constexpr const char* SIG = "\x55\x8B\xEC\x8B\x45\x08\x53\x56\x8B\xF1\x8B\x5E\x00";
@@ -86,16 +91,19 @@ Funcs::Func_C_HLTVCamera_SetMode Funcs::GetFunc_C_HLTVCamera_SetMode()
 			throw bad_pointer("C_HLTVCamera::SetMode");
 	}
 
-	return std::bind(
-		[](RawSetModeFn func, C_HLTVCamera* pThis, int mode) { func(pThis, mode); },
-		s_SetModeFn, Interfaces::GetHLTVCamera(), std::placeholders::_1);
+	return s_SetModeFn;
 }
 
-Funcs::Func_C_HLTVCamera_SetPrimaryTarget Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget()
+Funcs::Func_C_HLTVCamera_SetMode Funcs::GetFunc_C_HLTVCamera_SetMode()
 {
-	typedef void(__thiscall *RawSetPrimaryTargetFn)(C_HLTVCamera*, int);
-	static RawSetPrimaryTargetFn s_SetPrimaryTargetFn = nullptr;
+	return std::bind(
+		[](RawSetModeFn func, C_HLTVCamera* pThis, int mode) { func(pThis, mode); },
+		GetRawFunc_C_HLTVCamera_SetMode(), Interfaces::GetHLTVCamera(), std::placeholders::_1);
+}
 
+Funcs::RawSetPrimaryTargetFn Funcs::GetRawFunc_C_HLTVCamera_SetPrimaryTarget()
+{
+	static RawSetPrimaryTargetFn s_SetPrimaryTargetFn = nullptr;
 	if (!s_SetPrimaryTargetFn)
 	{
 		constexpr const char* SIG = "\x55\x8B\xEC\x8B\x45\x08\x83\xEC\x00\x53\x56\x8B\xF1";
@@ -107,9 +115,14 @@ Funcs::Func_C_HLTVCamera_SetPrimaryTarget Funcs::GetFunc_C_HLTVCamera_SetPrimary
 			throw bad_pointer("C_HLTVCamera::SetPrimaryTarget");
 	}
 
+	return s_SetPrimaryTargetFn;
+}
+
+Funcs::Func_C_HLTVCamera_SetPrimaryTarget Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget()
+{
 	return std::bind(
 		[](RawSetPrimaryTargetFn func, C_HLTVCamera* pThis, int target) { func(pThis, target); },
-		s_SetPrimaryTargetFn, Interfaces::GetHLTVCamera(), std::placeholders::_1);
+		GetRawFunc_C_HLTVCamera_SetPrimaryTarget(), Interfaces::GetHLTVCamera(), std::placeholders::_1);
 }
 
 bool Funcs::Load()
@@ -119,6 +132,10 @@ bool Funcs::Load()
 	s_Hook_ICvar_ConsolePrintf.reset(new Hook_ICvar_ConsolePrintf(g_pCVar, &ICvar::ConsolePrintf));
 
 	s_Hook_IVEngineClient_GetPlayerInfo.reset(new Hook_IVEngineClient_GetPlayerInfo(Interfaces::GetEngineClient(), &IVEngineClient::GetPlayerInfo));
+
+	s_Hook_C_HLTVCamera_SetCameraAngle.reset(new Hook_C_HLTVCamera_SetCameraAngle(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetCameraAngle()));
+	s_Hook_C_HLTVCamera_SetMode.reset(new Hook_C_HLTVCamera_SetMode(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));
+	s_Hook_C_HLTVCamera_SetPrimaryTarget.reset(new Hook_C_HLTVCamera_SetPrimaryTarget(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetPrimaryTarget()));
 
 	return true;
 }
@@ -130,6 +147,10 @@ bool Funcs::Unload()
 	s_Hook_ICvar_ConsolePrintf.reset();
 
 	s_Hook_IVEngineClient_GetPlayerInfo.reset();
+
+	s_Hook_C_HLTVCamera_SetCameraAngle.reset();
+	s_Hook_C_HLTVCamera_SetMode.reset();
+	s_Hook_C_HLTVCamera_SetPrimaryTarget.reset();
 
 	return true;
 }

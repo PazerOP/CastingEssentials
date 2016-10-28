@@ -182,25 +182,25 @@ void ConsoleTools::DisableHooks()
 void ConsoleTools::ConsoleColorPrintfHook(const Color &clr, const char *message)
 {
 	if (!m_FilterPaused && CheckFilters(message))
-		return;
-
-	Funcs::GetHook_ICvar_ConsoleColorPrintf()->GetOriginal()(clr, message);
+		Funcs::GetHook_ICvar_ConsoleColorPrintf()->SetState(HookAction::SUPERCEDE);
+	else
+		Funcs::GetHook_ICvar_ConsoleColorPrintf()->SetState(HookAction::IGNORE);
 }
 
 void ConsoleTools::ConsoleDPrintfHook(const char *message)
 {
 	if (!m_FilterPaused && CheckFilters(message))
-		return;
-
-	Funcs::GetHook_ICvar_ConsoleDPrintf()->GetOriginal()(message);
+		Funcs::GetHook_ICvar_ConsoleDPrintf()->SetState(HookAction::SUPERCEDE);
+	else
+		Funcs::GetHook_ICvar_ConsoleDPrintf()->SetState(HookAction::IGNORE);
 }
 
 void ConsoleTools::ConsolePrintfHook(const char *message)
 {
 	if (!m_FilterPaused && CheckFilters(message))
-		return;
-
-	Funcs::GetHook_ICvar_ConsolePrintf()->GetOriginal()(message);
+		Funcs::GetHook_ICvar_ConsolePrintf()->SetState(HookAction::SUPERCEDE);
+	else
+		Funcs::GetHook_ICvar_ConsolePrintf()->SetState(HookAction::IGNORE);
 }
 
 bool ConsoleTools::CheckFilters(const std::string& message) const
