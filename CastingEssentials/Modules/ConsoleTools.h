@@ -15,6 +15,7 @@ public:
 
 	static bool CheckDependencies();
 	static ConsoleTools* GetModule() { return Modules().GetModule<ConsoleTools>(); }
+	static const char* GetModuleName() { return Modules().GetModuleName<ConsoleTools>().c_str(); }
 
 private:
 	void ConsoleColorPrintfHook(const Color& color, const char* msg);

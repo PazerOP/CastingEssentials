@@ -27,9 +27,6 @@
     <ClCompile Include="PluginBase\Interfaces.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\sdk2013\mp\src\public\vgui_controls\vgui_controls.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PluginBase\Modules.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -60,10 +57,19 @@
     <ClCompile Include="..\polyhook\PolyHook\PolyHook.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PluginBase\EZHook.cpp">
+    <ClCompile Include="PluginBase\StubPanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PluginBase\GroupHook.cpp">
+    <ClCompile Include="Modules\CameraAutoSwitch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\LocalPlayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Hooking\IGroupHook.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\Killstreaks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -107,10 +113,34 @@
     <ClInclude Include="Modules\PlayerAliases.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PluginBase\EZHook.h">
+    <ClInclude Include="PluginBase\StubPanel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PluginBase\GroupHook.h">
+    <ClInclude Include="Modules\CameraAutoSwitch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\LocalPlayer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\GroupHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\IGroupHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\GroupGlobalHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\BaseGroupHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\GroupClassHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\GroupVirtualHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\Killstreaks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

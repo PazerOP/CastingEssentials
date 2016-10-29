@@ -6,7 +6,9 @@
 #include <mutex>
 #include <type_traits>
 //#include "PluginBase/EZHook.h"
-#include "PluginBase/GroupHook.h"
+#include "Hooking/GroupGlobalHook.h"
+#include "Hooking/GroupClassHook.h"
+#include "Hooking/GroupVirtualHook.h"
 
 class C_HLTVCamera;
 class QAngle;
@@ -16,6 +18,8 @@ struct model_t;
 class IVEngineClient;
 struct player_info_s;
 typedef player_info_s player_info_t;
+class IGameEventManager2;
+class IGameEvent;
 
 namespace PLH
 {
@@ -33,9 +37,13 @@ class Funcs final
 
 		IVEngineClient_GetPlayerInfo,
 
+		IGameEventManager2_FireEventClientSide,
+
 		C_HLTVCamera_SetCameraAngle,
 		C_HLTVCamera_SetMode,
 		C_HLTVCamera_SetPrimaryTarget,
+
+		Global_GetLocalPlayerIndex,
 
 		Count,
 	};
@@ -46,26 +54,29 @@ class Funcs final
 
 	typedef GroupVirtualHook<Func, IVEngineClient_GetPlayerInfo, false, IVEngineClient, bool, int, player_info_t*> Hook_IVEngineClient_GetPlayerInfo;
 
-	typedef GroupHook<Func, C_HLTVCamera_SetCameraAngle, false, C_HLTVCamera, void, const QAngle&> Hook_C_HLTVCamera_SetCameraAngle;
-	typedef GroupHook<Func, C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetMode;
-	typedef GroupHook<Func, C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetPrimaryTarget;
+	typedef GroupVirtualHook<Func, IGameEventManager2_FireEventClientSide, false, IGameEventManager2, bool, IGameEvent*> Hook_IGameEventManager2_FireEventClientSide;
 
-	typedef std::function<void(const QAngle&)> Func_C_HLTVCamera_SetCameraAngle;
-	typedef std::function<void(int)> Func_C_HLTVCamera_SetMode;
-	typedef std::function<void(int)> Func_C_HLTVCamera_SetPrimaryTarget;
+	typedef GroupClassHook<Func, C_HLTVCamera_SetCameraAngle, false, C_HLTVCamera, void, const QAngle&> Hook_C_HLTVCamera_SetCameraAngle;
+	typedef GroupClassHook<Func, C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetMode;
+	typedef GroupClassHook<Func, C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetPrimaryTarget;
+
+	typedef GroupGlobalHook<Func, Global_GetLocalPlayerIndex, false, int> Hook_Global_GetLocalPlayerIndex;
 
 	typedef void(__thiscall *RawSetCameraAngleFn)(C_HLTVCamera*, const QAngle&);
 	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);
 	typedef void(__thiscall *RawSetPrimaryTargetFn)(C_HLTVCamera*, int);
+	typedef int(*RawGetLocalPlayerIndexFn)();
 
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
 	static RawSetPrimaryTargetFn GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
+	static RawGetLocalPlayerIndexFn GetRawFunc_Global_GetLocalPlayerIndex();
 
 public:
-	static Func_C_HLTVCamera_SetCameraAngle GetFunc_C_HLTVCamera_SetCameraAngle();
-	static Func_C_HLTVCamera_SetMode GetFunc_C_HLTVCamera_SetMode();
-	static Func_C_HLTVCamera_SetPrimaryTarget GetFunc_C_HLTVCamera_SetPrimaryTarget();
+	static Hook_C_HLTVCamera_SetCameraAngle::Functional GetFunc_C_HLTVCamera_SetCameraAngle();
+	static Hook_C_HLTVCamera_SetMode::Functional GetFunc_C_HLTVCamera_SetMode();
+	static Hook_C_HLTVCamera_SetPrimaryTarget::Functional GetFunc_C_HLTVCamera_SetPrimaryTarget();
+	static Hook_Global_GetLocalPlayerIndex::Functional GetFunc_Global_GetLocalPlayerIndex();
 
 	static bool Load();
 	static bool Unload();
@@ -76,9 +87,13 @@ public:
 
 	static Hook_IVEngineClient_GetPlayerInfo* GetHook_IVEngineClient_GetPlayerInfo() { return s_Hook_IVEngineClient_GetPlayerInfo.get(); }
 
+	static Hook_IGameEventManager2_FireEventClientSide* GetHook_IGameEventManager2_FireEventClientSide() { return s_Hook_IGameEventManager2_FireEventClientSide.get(); }
+
 	static Hook_C_HLTVCamera_SetCameraAngle* GetHook_C_HLTVCamera_SetCameraAngle() { return s_Hook_C_HLTVCamera_SetCameraAngle.get(); }
 	static Hook_C_HLTVCamera_SetMode* GetHook_C_HLTVCamera_SetMode() { return s_Hook_C_HLTVCamera_SetMode.get(); }
 	static Hook_C_HLTVCamera_SetPrimaryTarget* GetHook_C_HLTVCamera_SetPrimaryTarget() { return s_Hook_C_HLTVCamera_SetPrimaryTarget.get(); }
+
+	static Hook_Global_GetLocalPlayerIndex* GetHook_Global_GetLocalPlayerIndex() { return s_Hook_Global_GetLocalPlayerIndex.get(); }
 
 private:
 	Funcs() { }
@@ -90,9 +105,13 @@ private:
 
 	static std::unique_ptr<Hook_IVEngineClient_GetPlayerInfo> s_Hook_IVEngineClient_GetPlayerInfo;
 
+	static std::unique_ptr<Hook_IGameEventManager2_FireEventClientSide> s_Hook_IGameEventManager2_FireEventClientSide;
+
 	static std::unique_ptr<Hook_C_HLTVCamera_SetCameraAngle> s_Hook_C_HLTVCamera_SetCameraAngle;
 	static std::unique_ptr<Hook_C_HLTVCamera_SetMode> s_Hook_C_HLTVCamera_SetMode;
 	static std::unique_ptr<Hook_C_HLTVCamera_SetPrimaryTarget> s_Hook_C_HLTVCamera_SetPrimaryTarget;
+
+	static std::unique_ptr<Hook_Global_GetLocalPlayerIndex> s_Hook_Global_GetLocalPlayerIndex;
 };
 
 extern void* SignatureScan(const char* moduleName, const char* signature, const char* mask);

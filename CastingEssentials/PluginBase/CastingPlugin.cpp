@@ -7,9 +7,13 @@
 #include "Interfaces.h"
 #include "Modules.h"
 #include "Funcs.h"
+#include "Player.h"
 
+#include "Modules/CameraAutoSwitch.h"
 #include "Modules/CameraTools.h"
 #include "Modules/ConsoleTools.h"
+#include "Modules/Killstreaks.h"
+#include "Modules/LocalPlayer.h"
 #include "Modules/PlayerAliases.h"
 
 class CastingPlugin final : public Plugin
@@ -30,15 +34,23 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CastingPlugin, IServerPluginCallbacks, INTERFA
 bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory)
 {
 	Msg("Hello from CastingEssentials!\n");
+
+#ifdef DEBUG
+	//PluginMsg("_CrtCheckMemory() result: %i\n", _CrtCheckMemory());
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF);
+#endif
 	
 	Interfaces::Load(interfaceFactory);
 	Funcs::Load();
 
 	//auto test = new vgui::Label(nullptr, "testPanel", "Hello World");
 
-	Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
-	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
-	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
+	//Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
+	//Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
+	//Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
+	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
+	//Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
+	//Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
 
 	ConVar_Register();
 
@@ -49,8 +61,12 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 
 void CastingPlugin::Unload()
 {
+#ifdef DEBUG
+	//PluginMsg("_CrtCheckMemory() result: %i\n", _CrtCheckMemory());
+#endif
 	PluginMsg("Unloading plugin...\n");
 
+	Player::Unload();
 	ConVar_Unregister();
 	Modules().UnloadAllModules();
 	Funcs::Unload();

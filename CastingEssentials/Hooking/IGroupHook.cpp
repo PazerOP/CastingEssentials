@@ -1,8 +1,61 @@
-#include "EZHook.h"
+#include "IGroupHook.h"
+#include <PolyHook.h>
 
-// Stolen from SourceHook
-int EZHookBase::VTableOffset(void* mfp)
+std::atomic<uint64> IGroupHook::s_LastHook;
+
+void* IGroupHook::GetOriginalRawFn(const std::shared_ptr<PLH::IHook>& hook)
 {
+	switch (hook->GetType())
+	{
+		case PLH::HookType::VFuncSwap:
+			return assert_cast<PLH::VFuncSwap*>(hook.get())->GetOriginal<void*>();
+
+		case PLH::HookType::X86Detour:
+			return assert_cast<PLH::X86Detour*>(hook.get())->GetOriginal<void*>();
+	}
+
+	Assert(!"Invalid hook type!");
+	return nullptr;
+}
+
+std::shared_ptr<PLH::IHook> IGroupHook::SetupVFuncHook(BYTE** instance, int vtableOffset, BYTE* detourFunc)
+{
+	if (vtableOffset < 0)
+		return nullptr;
+
+	PLH::VFuncSwap* newHook = new PLH::VFuncSwap();
+	newHook->SetupHook(instance, vtableOffset, detourFunc);
+
+	BYTE** test = instance;
+	auto ptr = &test[vtableOffset];
+
+	if (!newHook->Hook())
+	{
+		Assert(0);
+		delete newHook;
+		return nullptr;
+	}
+
+	return std::shared_ptr<PLH::IHook>(newHook);
+}
+
+std::shared_ptr<PLH::IHook> IGroupHook::SetupDetour(BYTE* baseFunc, BYTE* detourFunc)
+{
+	PLH::Detour* newHook = new PLH::Detour();
+	newHook->SetupHook(baseFunc, detourFunc);
+	if (!newHook->Hook())
+	{
+		Assert(0);
+		delete newHook;
+		return nullptr;
+	}
+
+	return std::shared_ptr<PLH::IHook>(newHook);
+}
+
+int IGroupHook::MFI_GetVTblOffset(void * mfp)
+{
+	// Code stolen from SourceHook
 	static_assert(_MSC_VER == 1900, "Only verified on VS2015!");
 
 	unsigned char *addr = (unsigned char*)mfp;

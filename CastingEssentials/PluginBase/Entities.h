@@ -7,6 +7,7 @@
 class IClientEntity;
 class RecvTable;
 class RecvProp;
+class ClientClass;
 
 class Entities final
 {
@@ -22,9 +23,14 @@ public:
 		return reinterpret_cast<T>(GetEntityProp(entity, propertyTree));
 	}
 
+	static bool CheckEntityBaseclass(IClientEntity* entity, const char* baseclass);
+
 private:
-	Entities() { }
-	~Entities() { }
+	Entities() = delete;
+	~Entities() = delete;
+
+	static bool CheckClassBaseclass(ClientClass *clientClass, const char* baseclass);
+	static bool CheckTableBaseclass(RecvTable *sTable, const char* baseclass);
 
 	static std::string ConvertTreeToString(const std::vector<std::string>& tree);
 

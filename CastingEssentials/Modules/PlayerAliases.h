@@ -13,6 +13,7 @@ public:
 
 	static bool CheckDependencies();
 	static PlayerAliases* GetModule() { return Modules().GetModule<PlayerAliases>(); }
+	static const char* GetModuleName() { return Modules().GetModuleName<PlayerAliases>().c_str(); }
 
 private:
 	bool GetPlayerInfoOverride(int ent_num, player_info_s* pInfo);

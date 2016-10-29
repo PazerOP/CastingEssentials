@@ -29,7 +29,13 @@
 *.app
 *.tlog
 
+# Performance Profiling
+*.psess
+*.vspx
+
 # Other
 *.pdb
 /Release/
 /Debug/
+*.exp
+/CastingEssentials/*/Intermediate

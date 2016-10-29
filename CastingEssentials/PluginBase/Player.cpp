@@ -19,6 +19,12 @@ bool Player::s_UserIDRetrievalAvailable = false;
 
 std::unique_ptr<Player> Player::s_Players[MAX_PLAYERS];
 
+void Player::Unload()
+{
+	for (int i = 0; i < MAX_PLAYERS; i++)
+		s_Players[i].reset();
+}
+
 bool Player::CheckDependencies()
 {
 	bool ready = true;
@@ -152,6 +158,18 @@ TFTeam Player::GetTeam() const
 	return TFTeam::Unassigned;
 }
 
+int Player::GetUserID() const
+{
+	if (IsValid())
+	{
+		player_info_t playerInfo;
+		if (Interfaces::GetEngineClient()->GetPlayerInfo(GetEntity()->entindex(), &playerInfo))
+			return playerInfo.userID;
+	}
+
+	return 0;
+}
+
 std::string Player::GetName() const
 {
 	if (IsValid())
@@ -161,7 +179,7 @@ std::string Player::GetName() const
 			return playerInfo.name;
 	}
 
-	return "";
+	return std::string();
 }
 
 TFClassType Player::GetClass() const
@@ -253,9 +271,17 @@ Player::Iterator& Player::Iterator::operator++()
 	return *this;
 }
 
-Player* Player::GetPlayer(int entIndex, const char* functionName)
+bool Player::IsValidIndex(int entIndex)
 {
 	if (entIndex < 1 || entIndex > Interfaces::GetEngineTool()->GetMaxClients())
+		return false;
+
+	return true;
+}
+
+Player* Player::GetPlayer(int entIndex, const char* functionName)
+{
+	if (!IsValidIndex(entIndex))
 	{
 		if (!functionName)
 			functionName = "<UNKNOWN>";

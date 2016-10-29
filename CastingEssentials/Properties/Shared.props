@@ -4,13 +4,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <IncludePath>$(SolutionDir)sdk2013\mp\src\public;$(SolutionDir)sdk2013\mp\src\public\tier0;$(SolutionDir)sdk2013\mp\src\public\tier1;$(SolutionDir)sdk2013\mp\src\common;$(SolutionDir)sdk2013\mp\src\game;$(SolutionDir)sdk2013\mp\src\game\shared;$(SolutionDir)polyhook\polyhook;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)sdk2013\mp\src\lib\public;$(SolutionDir)polyhook\capstone\msvc\x86\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)polyhook\capstone\msvc\x86\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)$(Configuration)\Intermediate\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;tier0.lib;tier1.lib;tier2.lib;tier3.lib;steam_api.lib;vgui_controls.lib;vstdlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier0.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier1.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier2.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier3.lib;$(SolutionDir)sdk2013\mp\src\lib\public\steam_api.lib;$(SolutionDir)sdk2013\mp\src\lib\public\vstdlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -20,6 +20,10 @@
       <ForcedIncludeFiles>$(ProjectDir)PluginBase\Common.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <DisableSpecificWarnings>4594;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ControlFlowGuard>false</ControlFlowGuard>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <StringPooling>true</StringPooling>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />

@@ -45,6 +45,12 @@ bool PlayerAliases::CheckDependencies()
 		ready = false;
 	}
 
+	if (!Funcs::GetHook_IVEngineClient_GetPlayerInfo())
+	{
+		PluginWarning("Required hook IVEngineClient::GetPlayerInfo for module %s not available!\n", GetModuleName());
+		ready = false;
+	}
+
 	return ready;
 }
 

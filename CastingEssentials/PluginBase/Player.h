@@ -16,12 +16,15 @@ class C_BaseCombatWeapon;
 class Player final
 {
 public:
+	static void Unload();
 	static Player* AsPlayer(IClientEntity* entity);
 	static Player* GetPlayer(int entIndex, const char* functionName = nullptr);
+	static bool IsValidIndex(int entIndex);
 
 	static bool CheckDependencies();
 	static bool IsNameRetrievalAvailable() { return s_NameRetrievalAvailable; }
 	static bool IsSteamIDRetrievalAvailable() { return s_SteamIDRetrievalAvailable; }
+	static bool IsConditionsRetrievalAvailable() { return s_ConditionsRetrievalAvailable; }
 
 	IClientEntity* GetEntity() const { return m_PlayerEntity.Get(); }
 
@@ -69,8 +72,8 @@ public:
 
 private:
 	Player() = default;
-	Player(const Player& other) { Assert(0); }
-	Player& operator=(const Player& other) { Assert(0); }
+	Player(const Player& other) = delete;
+	Player& operator=(const Player& other) = delete;
 
 	CHandle<IClientEntity> m_PlayerEntity;
 

@@ -43,13 +43,12 @@
     <Import Project="Properties\Shared.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PreprocessorDefinitions>DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Team Fortress 2\tf\addons\$(TargetFileName)"</Command>
@@ -57,16 +56,17 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SmallerTypeCheck>false</SmallerTypeCheck>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Team Fortress 2\tf\addons\$(TargetFileName)"</Command>
@@ -75,37 +75,47 @@
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)\sdk2013\mp\src\public\tier0\memoverride.cpp" />
     <ClCompile Include="..\polyhook\PolyHook\PolyHook.cpp" />
-    <ClCompile Include="..\sdk2013\mp\src\public\vgui_controls\vgui_controls.cpp" />
+    <ClCompile Include="Hooking\IGroupHook.cpp" />
+    <ClCompile Include="Modules\CameraAutoSwitch.cpp" />
     <ClCompile Include="Modules\CameraTools.cpp" />
     <ClCompile Include="Modules\ConsoleTools.cpp" />
+    <ClCompile Include="Modules\Killstreaks.cpp" />
+    <ClCompile Include="Modules\LocalPlayer.cpp" />
     <ClCompile Include="Modules\PlayerAliases.cpp" />
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
     <ClCompile Include="PluginBase\Common.cpp" />
     <ClCompile Include="PluginBase\Entities.cpp" />
-    <ClCompile Include="PluginBase\EZHook.cpp" />
     <ClCompile Include="PluginBase\Funcs.cpp" />
     <ClCompile Include="PluginBase\Interfaces.cpp" />
     <ClCompile Include="PluginBase\Modules.cpp" />
     <ClCompile Include="PluginBase\Player.cpp" />
+    <ClCompile Include="PluginBase\StubPanel.cpp" />
     <ClCompile Include="PluginBase\TFPlayerResource.cpp" />
-    <ClCompile Include="PluginBase\GroupHook.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Hooking\BaseGroupHook.h" />
+    <ClInclude Include="Hooking\GroupClassHook.h" />
+    <ClInclude Include="Hooking\GroupGlobalHook.h" />
+    <ClInclude Include="Hooking\GroupVirtualHook.h" />
+    <ClInclude Include="Hooking\IGroupHook.h" />
+    <ClInclude Include="Modules\CameraAutoSwitch.h" />
     <ClInclude Include="Modules\CameraTools.h" />
     <ClInclude Include="Modules\ConsoleTools.h" />
+    <ClInclude Include="Modules\Killstreaks.h" />
+    <ClInclude Include="Modules\LocalPlayer.h" />
     <ClInclude Include="Modules\PlayerAliases.h" />
     <ClInclude Include="PluginBase\Common.h" />
     <ClInclude Include="PluginBase\Entities.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />
-    <ClInclude Include="PluginBase\EZHook.h" />
     <ClInclude Include="PluginBase\Funcs.h" />
     <ClInclude Include="PluginBase\Player.h" />
+    <ClInclude Include="PluginBase\StubPanel.h" />
     <ClInclude Include="PluginBase\TFDefinitions.h" />
     <ClInclude Include="PluginBase\Interfaces.h" />
     <ClInclude Include="PluginBase\Modules.h" />
     <ClInclude Include="PluginBase\Plugin.h" />
     <ClInclude Include="PluginBase\TFPlayerResource.h" />
-    <ClInclude Include="PluginBase\GroupHook.h" />
+    <ClInclude Include="Hooking\GroupHook.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

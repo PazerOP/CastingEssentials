@@ -119,7 +119,23 @@ bool ConsoleTools::CheckDependencies()
 
 	if (!g_pCVar)
 	{
-		PluginWarning("Required interface ICVar for module %s not available!\n", Modules().GetModuleName<ConsoleTools>().c_str());
+		PluginWarning("Required interface ICVar for module %s not available!\n", GetModuleName());
+		ready = false;
+	}
+
+	if (!Funcs::GetHook_ICvar_ConsoleColorPrintf())
+	{
+		PluginWarning("Required hook ICvar::ConsoleColorPrintf for module %s not available!\n", GetModuleName());
+		ready = false;
+	}
+	if (!Funcs::GetHook_ICvar_ConsoleDPrintf())
+	{
+		PluginWarning("Required hook ICvar::ConsoleDPrintf for module %s not available!\n", GetModuleName());
+		ready = false;
+	}
+	if (!Funcs::GetHook_ICvar_ConsolePrintf())
+	{
+		PluginWarning("Required hook ICvar::ConsolePrintf for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 

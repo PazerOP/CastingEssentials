@@ -470,6 +470,7 @@ void CameraTools::SetModeOverride(int iMode)
 		iMode = forceMode;
 
 	Funcs::GetHook_C_HLTVCamera_SetMode()->GetOriginal()(iMode);
+	Funcs::GetHook_C_HLTVCamera_SetMode()->SetState(HookAction::SUPERCEDE);
 }
 
 void CameraTools::SetPrimaryTargetOverride(int nEntity)
@@ -483,6 +484,7 @@ void CameraTools::SetPrimaryTargetOverride(int nEntity)
 		nEntity = ((HLTVCameraOverride *)Interfaces::GetHLTVCamera())->m_iTraget1;
 
 	Funcs::GetHook_C_HLTVCamera_SetPrimaryTarget()->GetOriginal()(nEntity);
+	Funcs::GetHook_C_HLTVCamera_SetPrimaryTarget()->SetState(HookAction::SUPERCEDE);
 }
 
 void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float flOldValue)
@@ -497,7 +499,7 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 
 		try
 		{
-			Funcs::GetHook_C_HLTVCamera_SetPrimaryTarget()->GetOriginal()(forceTarget);
+			Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget()(forceTarget);
 		}
 		catch (bad_pointer)
 		{

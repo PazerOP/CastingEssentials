@@ -8,6 +8,49 @@
 
 std::unordered_map<std::string, std::unordered_map<std::string, int>> Entities::s_ClassPropOffsets;
 
+bool Entities::CheckEntityBaseclass(IClientEntity * entity, const char * baseclass)
+{
+	ClientClass *clientClass = entity->GetClientClass();
+	if (clientClass)
+		return CheckClassBaseclass(clientClass, baseclass);
+
+	return false;
+}
+
+bool Entities::CheckClassBaseclass(ClientClass * clientClass, const char * baseclass)
+{
+	RecvTable *sTable = clientClass->m_pRecvTable;
+	if (sTable)
+		return CheckTableBaseclass(sTable, baseclass);
+
+	return false;
+}
+
+bool Entities::CheckTableBaseclass(RecvTable * sTable, const char * baseclass)
+{
+	const char* tName = sTable->GetName();
+	if (tName && tName[0] && tName[1] && tName[2] && !strcmp(tName + 3, baseclass))
+		return true;
+
+	// Micro-optimization smh
+	{
+		RecvProp* sProp;
+		RecvTable* sChildTable;
+		for (int i = 0; i < sTable->GetNumProps(); i++)
+		{
+			sProp = sTable->GetProp(i);
+
+			sChildTable = sProp->GetDataTable();
+			if (!sChildTable || strcmp(sProp->GetName(), "baseclass"))
+				continue;
+
+			return CheckTableBaseclass(sChildTable, baseclass);
+		}
+	}
+
+	return false;
+}
+
 std::string Entities::ConvertTreeToString(const std::vector<std::string>& tree)
 {
 	std::stringstream ss;

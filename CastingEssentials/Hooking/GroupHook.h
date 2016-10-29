@@ -1,126 +1,73 @@
 #pragma once
-#include <atomic>
+#if 0
 #include <map>
 #include <mutex>
 #include <stack>
 #include <vector>
 
-namespace PLH
-{
-	class IHook;
-}
-
-enum class HookAction
-{
-	// Call the original function and use its return value.
-	// Continue calling all the remaining hooks.
-	IGNORE,
-
-	// Use our return value instead of the original function.
-	// Don't call the original function.
-	// Continue calling all the remaining hooks.
-	SUPERCEDE,
-};
-
-class IGroupHook
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+class GroupGlobalHook : public IGroupHook
 {
 public:
-	virtual ~IGroupHook() { }
+	typedef GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...> SelfType;
 
-	virtual void SetState(HookAction action) = 0;
+	typedef RetVal(*OriginalFnType)(Args...);
+	typedef RetVal(__cdecl *OriginalVaArgsFnType)(Args..., ...);
+
+	GroupGlobalHook(OriginalFnType fn);
+	GroupGlobalHook(OriginalVaArgsFnType fn);
 
 protected:
-	static std::atomic<uint64> s_LastHook;
+	GroupGlobalHook();
 
-	static void* GetOriginalRawFn(const std::shared_ptr<PLH::IHook>& hook);
-	static std::shared_ptr<PLH::IHook> SetupVFuncHook(BYTE** instance, int vTableOffset, BYTE* detourFunc);
-	static std::shared_ptr<PLH::IHook> SetupDetour(BYTE* baseFunc, BYTE* detourFunc);
+	//template<std::size_t fmtParameter = sizeof...(Args)-1> void* DefaultDetourFn();
 
-	template<typename T> struct ArgType
+private:
+	typedef OriginalFnType DetourFnType;
+	typedef OriginalVaArgsFnType DetourVaArgsFnType;
+	union
 	{
-		static_assert(!std::is_reference<T>::value, "error");
-		static_assert(!std::is_const<T>::value, "error");
-		typedef T type;
-	};
-	template<typename T> struct ArgType<T&>
-	{
-		typedef typename std::remove_reference<T>::type* type;
+		DetourFnType m_DetourFunction;
+		DetourVaArgsFnType m_DetourVaArgsFunction;
 	};
 
-	static int MFI_GetVTblOffset(void* mfp);
-	template<class I, class F> static int VTableOffset(I* instance, F func)
-	{
-		union
-		{
-			F p;
-			intptr_t i;
-		};
+	template<class _RetVal> struct Stupid { static _RetVal InvokeHookFunctions(Args... args); };
+	template<> struct Stupid<void> { static void InvokeHookFunctions(Args... args); };
 
-		p = func;
+	template<std::size_t fmtParamter = sizeof...(Args)-1> struct DefaultDetourFn { static void* Get(); };
+	template<> struct DefaultDetourFn<(std::size_t)0> { static void* Get(); };
+	template<> struct DefaultDetourFn<(std::size_t) - 1> { static void* Get() { return DefaultDetourFn<(std::size_t)0>::Get(); } };
 
-		return MFI_GetVTblOffset((void*)i);
-	}
-
-	virtual void InitHook() = 0;
-
-	template<class OutType, class InType> static OutType evil_cast(InType input)
-	{
-		static_assert(std::is_pointer<InType>::value, "InType must be a pointer type!");
-		static_assert(std::is_pointer<OutType>::value, "OutType must be a pointer type!");
-
-		// >:(
-		union
-		{
-			InType goodIn;
-			OutType evilOut;
-		};
-
-		goodIn = input;
-		return evilOut;
-	}
+	virtual void InitHook();
 };
 
 template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args>
-class GroupHook : public IGroupHook
+class GroupHook : public GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>
 {
-	static_assert(std::is_enum<FuncEnumType>::value, "FuncEnumType must be an enum!");
-
 public:
 	typedef GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...> SelfType;
 
-	typedef std::function<RetVal(Args...)> Functional;
 	typedef RetVal(__thiscall Type::*MemFnPtrType)(Args...);
 	typedef RetVal(__cdecl Type::*MemVaArgsFnPtrType)(Args..., ...);
 
 	typedef RetVal(__thiscall *OriginalFnType)(Type*, Args...);
 	typedef RetVal(__cdecl *OriginalVaArgsFnType)(Type*, Args..., ...);
+	typedef RetVal(__fastcall *DetourFnType)(Type*, void*, Args...);
+	typedef OriginalVaArgsFnType DetourVaArgsFnType;
 	typedef RetVal(__fastcall *UnhookedPatchFnType)(MemFnPtrType, Type*, Args...);
 	typedef RetVal(__fastcall *UnhookedPatchVaArgsFnType)(MemVaArgsFnPtrType, Type*, Args...);
 	typedef RetVal(__fastcall *HookedPatchFnType)(OriginalFnType, Type*, Args...);
 	typedef RetVal(__fastcall *HookedPatchVaArgsFnType)(OriginalVaArgsFnType, Type*, Args...);
-	typedef RetVal(__fastcall *DetourFnType)(Type*, void*, Args...);
-	typedef RetVal(__cdecl *DetourVaArgsFnType)(Type*, Args..., ...);
 
 	GroupHook(Type* instance, OriginalFnType fn);
 	GroupHook(Type* instance, OriginalVaArgsFnType fn);
 
-	int AddHook(const Functional& newHook);
-	bool RemoveHook(int hookID, const char* funcName);
-	Functional GetOriginal() { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
-
-	void SetState(HookAction action) override;
+	virtual Functional GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
 
 protected:
 	GroupHook(Type* instance) { m_Instance = instance; Assert(m_Instance); }
 
-	std::recursive_mutex m_HooksTableMutex;
-	std::map<uint64, Functional> m_HooksTable;
-	static thread_local std::stack<HookAction> s_HookResults;
-
 	Type* m_Instance;
-
-	std::recursive_mutex m_BaseHookMutex;
-	std::shared_ptr<PLH::IHook> m_BaseHook;
 
 	// Same thing
 	union
@@ -147,10 +94,7 @@ protected:
 	typedef RetVal(__thiscall Type::*MemFnPtrTypeConst)(Args...) const;
 	typedef RetVal(__cdecl Type::*MemVaArgsFnPtrTypeConst)(Args..., ...) const;
 
-	static SelfType* This() { return static_cast<SelfType*>(s_This); }
-	static IGroupHook* s_This;
-
-	//template<class R> R InvokeHookFunctions(Args... args);
+	static SelfType* This() { return assert_cast<SelfType*>(s_This); }
 
 	template<bool _vaArgs, class _Type, class _RetVal, class... _Args> class Stupid
 	{
@@ -207,12 +151,6 @@ private:
 };
 
 template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args>
-IGroupHook* GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::s_This = nullptr;
-
-template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args>
-thread_local std::stack<HookAction> GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::s_HookResults;
-
-template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args>
 class GroupVirtualHook final : public GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>
 {
 public:
@@ -230,7 +168,7 @@ public:
 private:
 	void InitHook() override;
 
-	static SelfType* This() { return static_cast<SelfType*>(s_This); }
+	static SelfType* This() { return assert_cast<SelfType*>(s_This); }
 
 	union
 	{
@@ -272,8 +210,6 @@ template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class
 inline GroupVirtualHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::GroupVirtualHook(Type * instance, MemFnPtrType fn) :
 	GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>(instance)
 {
-	Assert(!s_This);
-	s_This = this;
 	static_assert(vaArgs == false, "Must supply a pointer to a function WITHOUT variable arguments");
 
 	SetDefaultPatchFn();
@@ -291,8 +227,6 @@ template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class
 inline GroupVirtualHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::GroupVirtualHook(Type* instance, MemVaArgsFnPtrType fn) :
 	GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>(instance)
 {
-	Assert(!s_This);
-	s_This = this;
 	static_assert(vaArgs == true, "Must supply a pointer to a function WITH variable arguments");
 
 	SetDefaultPatchFn();
@@ -309,8 +243,6 @@ inline GroupVirtualHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::Gr
 template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args>
 inline GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::GroupHook(Type* instance, OriginalFnType fn)
 {
-	Assert(!s_This);
-	s_This = this;
 	static_assert(vaArgs == false, "Must supply a pointer to a function WITHOUT variable arguments");
 
 	SetDefaultPatchFn();
@@ -330,8 +262,6 @@ inline GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::GroupHook
 template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args>
 inline GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::GroupHook(Type* instance, OriginalVaArgsFnType fn)
 {
-	Assert(!s_This);
-	s_This = this;
 	static_assert(vaArgs == true, "Must supply a pointer to a function WITH variable arguments");
 
 	SetDefaultPatchFn();
@@ -348,8 +278,8 @@ inline GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::GroupHook
 	Assert(m_Instance);
 }
 
-template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args>
-inline int GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::AddHook(const Functional& newHook)
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+inline int GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::AddHook(const Functional& newHook)
 {
 	const auto newIndex = ++s_LastHook;
 
@@ -365,8 +295,8 @@ inline int GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::AddHo
 	return newIndex;
 }
 
-template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args>
-inline bool GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::RemoveHook(int hookID, const char* funcName)
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+inline bool GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::RemoveHook(int hookID, const char* funcName)
 {
 	std::lock_guard<std::recursive_mutex> lock(m_HooksTableMutex);
 
@@ -382,8 +312,32 @@ inline bool GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::Remo
 	return true;
 }
 
-template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args>
-inline void GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::SetState(HookAction action)
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+inline GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::GroupGlobalHook()
+{
+	Assert(!s_This);
+	s_This = this;
+
+	m_DetourFunction = (DetourFnType)DefaultDetourFn<>::Get();
+	Assert(m_DetourFunction);
+}
+
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+inline GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::GroupGlobalHook(OriginalFnType fn) :
+	GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>()
+{
+	static_assert(vaArgs == false, "Must supply a pointer to a function WITHOUT variable arguments");
+}
+
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+inline GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::GroupGlobalHook(OriginalVaArgsFnType fn) :
+	GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>()
+{
+	static_assert(vaArgs == true, "Must supply a pointer to a function WITH variable arguments");
+}
+
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+inline void GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::SetState(HookAction action)
 {
 	s_HookResults.push(action);
 }
@@ -512,7 +466,6 @@ inline _RetVal GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::S
 		}
 
 		s_HookResults.pop();
-
 		index++;
 	}
 
@@ -524,3 +477,78 @@ inline _RetVal GroupHook<FuncEnumType, hookID, vaArgs, Type, RetVal, Args...>::S
 
 	return This()->GetOriginal()(args...);
 }
+
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+template<std::size_t... Is>
+inline typename GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::Functional GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::GetOriginalImpl(std::index_sequence<Is...>)
+{
+	// Make sure we're initialized so we don't have any nasty race conditions
+	InitHook();
+
+	if (m_BaseHook)
+	{
+		void* originalFnPtr = GetOriginalRawFn(m_BaseHook);
+
+		if (vaArgs)
+			return std::bind((OriginalVaArgsFnType)originalFnPtr, (std::_Ph<(int)(Is + 1)>{})...);
+		else
+			return std::bind((OriginalFnType)originalFnPtr, (std::_Ph<(int)(Is + 1)>{})...);
+	}
+	else
+	{
+		AssertMsg(0, "Should never get here... hook should be initialized so we don't have a potential race condition!");
+		return nullptr;
+	}
+}
+
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+template<std::size_t fmtParameter>
+inline void* GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::DefaultDetourFn<fmtParameter>::Get()
+{
+	if (vaArgs)
+	{
+		DetourVaArgsFnType detourFn = [](Args... args, ...)
+		{
+			using FmtType = typename std::tuple_element<fmtParameter, std::tuple<Args...>>::type;
+			static_assert(!vaArgs || std::is_same<FmtType, const char*>::value || std::is_same<FmtType, char*>::value, "Invalid format string type!");
+
+			std::tuple<Args...> blah(args...);
+
+			// Fuck you, type system
+			const char** fmt = evil_cast<const char**>(&std::get<fmtParameter>(blah));
+
+			va_list vaArgList;
+			va_start(vaArgList, pThis);
+
+			char** parameters[] = { (char**)(&(va_arg(vaArgList, ArgType<Args>::type)))... };
+
+			// 8192 is the length used internally by CCvar
+			char buffer[8192];
+			vsnprintf_s(buffer, _TRUNCATE, *fmt, vaArgList);
+			va_end(vaArgList);
+
+			// Can't have variable arguments in std::function, overwrite the "format" parameter with
+			// the fully parsed buffer
+			*parameters[fmtParameter] = &buffer[0];
+
+			// Now run all the hooks
+			return Stupid<RetVal>::InvokeHookFunctions(args...);
+		};
+		return detourFn;
+	}
+	else
+	{
+		DetourFnType detourFn = [](Args... args) { return Stupid<RetVal>::InvokeHookFunctions(args...); };
+		return detourFn;
+	}
+}
+
+template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args>
+template<>
+inline void* GroupGlobalHook<FuncEnumType, hookID, vaArgs, RetVal, Args...>::DefaultDetourFn<(std::size_t)0>::Get()
+{
+	DetourFnType detourFn = [](Args... args) { return Stupid<RetVal>::InvokeHookFunctions(args...); };
+	return detourFn;
+
+}
+#endif
