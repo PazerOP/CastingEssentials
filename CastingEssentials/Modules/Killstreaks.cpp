@@ -15,6 +15,8 @@
 #include <igameevents.h>
 #include <shareddefs.h>
 
+#include <PolyHook.h>
+
 #include "PluginBase/entities.h"
 #include "PluginBase/funcs.h"
 #include "PluginBase/Interfaces.h"
@@ -32,6 +34,8 @@ public:
 
 private:
 	bool FireEventClientSideOverride(IGameEvent *event);
+
+	std::unique_ptr<PLH::VFuncSwap> m_Detour;
 
 	int bluTopKillstreak;
 	int bluTopKillstreakPlayer;
@@ -154,9 +158,24 @@ Killstreaks::Panel::Panel()
 	bluTopKillstreak = 0;
 	bluTopKillstreakPlayer = 0;
 
-	auto test = Interfaces::GetGameEventManager();
-	fireEventClientSideHook = Funcs::GetHook_IGameEventManager2_FireEventClientSide()->AddHook(
-		std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
+	{
+#undef CreateEvent
+		IGameEventManager2* instance = Interfaces::GetGameEventManager();
+		m_Detour.reset(new PLH::VFuncSwap);
+
+		bool(__fastcall *lambda)(IGameEventManager2*, void*, IGameEvent*) = [](IGameEventManager2* pThis, void* edx, IGameEvent* event)
+		{
+			typedef bool(__thiscall* OriginalFnType)(IGameEventManager2* pThis, IGameEvent* event);
+			auto original = GetModule()->panel->m_Detour->GetOriginal<OriginalFnType>();
+			return original(pThis, event);
+		};
+
+		m_Detour->SetupHook(*(BYTE***)instance, 8, (BYTE*)lambda);
+		bool hookResult = m_Detour->Hook();
+		Assert(hookResult);
+	}
+
+	//fireEventClientSideHook = Funcs::GetHook_IGameEventManager2_FireEventClientSide()->AddHook(std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
 	redTopKillstreak = 0;
 	redTopKillstreakPlayer = 0;
 }
@@ -294,8 +313,9 @@ void Killstreaks::Panel::OnTick()
 
 bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 {
-	Funcs::GetHook_IGameEventManager2_FireEventClientSide()->SetState(HookAction::SUPERCEDE);
-	return Funcs::GetHook_IGameEventManager2_FireEventClientSide()->GetOriginal()(event);
+	Assert(event);
+	if (!event)
+		return false;
 
 	const char* eventName = event->GetName();
 	if (!strcmp(eventName, "player_spawn"))
@@ -419,6 +439,6 @@ bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 		redTopKillstreakPlayer = 0;
 	}
 
-	Funcs::GetHook_IGameEventManager2_FireEventClientSide()->SetState(HookAction::IGNORE);
+	//Funcs::GetHook_IGameEventManager2_FireEventClientSide()->SetState(HookAction::IGNORE);
 	return true;
 }

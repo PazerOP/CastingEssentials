@@ -38,7 +38,7 @@ protected:
 	DetourFnType m_DetourFunction;
 
 	RetVal InvokeHookFunctions(Args... args) { return Stupid<RetVal>::InvokeHookFunctions(args...); }
-	virtual void* DefaultDetourFn() = 0;
+	virtual DetourFnType DefaultDetourFn() = 0;
 
 	virtual void InitHook() override
 	{
@@ -84,7 +84,7 @@ private:
 	Functional GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
 
 	static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
-	void* DefaultDetourFn() override
+	DetourFnType DefaultDetourFn() override
 	{
 		DetourFnType detourFn = [](Args... args)
 		{

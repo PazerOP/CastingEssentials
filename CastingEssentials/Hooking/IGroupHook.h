@@ -4,6 +4,9 @@
 #include <mutex>
 #include <type_traits>
 
+// Badly-named macros smh
+#undef IGNORE
+
 namespace PLH
 {
 	class IHook;

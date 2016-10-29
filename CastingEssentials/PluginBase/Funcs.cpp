@@ -152,20 +152,19 @@ Funcs::Hook_C_HLTVCamera_SetPrimaryTarget::Functional Funcs::GetFunc_C_HLTVCamer
 
 bool Funcs::Load()
 {
-	//s_Hook_ICvar_ConsoleColorPrintf.reset(new Hook_ICvar_ConsoleColorPrintf(g_pCVar, &ICvar::ConsoleColorPrintf));
-	//s_Hook_ICvar_ConsoleDPrintf.reset(new Hook_ICvar_ConsoleDPrintf(g_pCVar, &ICvar::ConsoleDPrintf));
-	//s_Hook_ICvar_ConsolePrintf.reset(new Hook_ICvar_ConsolePrintf(g_pCVar, &ICvar::ConsolePrintf));
+	s_Hook_ICvar_ConsoleColorPrintf.reset(new Hook_ICvar_ConsoleColorPrintf(g_pCVar, &ICvar::ConsoleColorPrintf));
+	s_Hook_ICvar_ConsoleDPrintf.reset(new Hook_ICvar_ConsoleDPrintf(g_pCVar, &ICvar::ConsoleDPrintf));
+	s_Hook_ICvar_ConsolePrintf.reset(new Hook_ICvar_ConsolePrintf(g_pCVar, &ICvar::ConsolePrintf));
 
-	//s_Hook_IVEngineClient_GetPlayerInfo.reset(new Hook_IVEngineClient_GetPlayerInfo(Interfaces::GetEngineClient(), &IVEngineClient::GetPlayerInfo));
+	s_Hook_IVEngineClient_GetPlayerInfo.reset(new Hook_IVEngineClient_GetPlayerInfo(Interfaces::GetEngineClient(), &IVEngineClient::GetPlayerInfo));
 
-	g_Test = Interfaces::GetGameEventManager();
-	s_Hook_IGameEventManager2_FireEventClientSide.reset(new Hook_IGameEventManager2_FireEventClientSide(Interfaces::GetGameEventManager(), &IGameEventManager2::FireEventClientSide));
+	//s_Hook_IGameEventManager2_FireEventClientSide.reset(new Hook_IGameEventManager2_FireEventClientSide(Interfaces::GetGameEventManager(), &IGameEventManager2::FireEventClientSide));
 
-	//s_Hook_C_HLTVCamera_SetCameraAngle.reset(new Hook_C_HLTVCamera_SetCameraAngle(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetCameraAngle()));
-	//s_Hook_C_HLTVCamera_SetMode.reset(new Hook_C_HLTVCamera_SetMode(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));
-	//s_Hook_C_HLTVCamera_SetPrimaryTarget.reset(new Hook_C_HLTVCamera_SetPrimaryTarget(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetPrimaryTarget()));
+	s_Hook_C_HLTVCamera_SetCameraAngle.reset(new Hook_C_HLTVCamera_SetCameraAngle(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetCameraAngle()));
+	s_Hook_C_HLTVCamera_SetMode.reset(new Hook_C_HLTVCamera_SetMode(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));
+	s_Hook_C_HLTVCamera_SetPrimaryTarget.reset(new Hook_C_HLTVCamera_SetPrimaryTarget(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetPrimaryTarget()));
 
-	//s_Hook_Global_GetLocalPlayerIndex.reset(new Hook_Global_GetLocalPlayerIndex(GetRawFunc_Global_GetLocalPlayerIndex()));
+	s_Hook_Global_GetLocalPlayerIndex.reset(new Hook_Global_GetLocalPlayerIndex(GetRawFunc_Global_GetLocalPlayerIndex()));
 
 	return true;
 }

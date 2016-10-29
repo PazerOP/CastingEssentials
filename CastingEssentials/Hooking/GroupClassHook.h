@@ -23,6 +23,8 @@ public:
 	virtual Functional GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
 
 protected:
+	static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
+
 	BaseGroupClassHook(Type* instance, DetourFnType detour) : BaseType(detour)
 	{
 		m_Instance = instance;
@@ -32,7 +34,7 @@ protected:
 		Assert(m_PatchFunction);
 	}
 
-	template<std::size_t fmtParameter = sizeof...(Args)-1> static void* VaArgsDetourFn()
+	template<std::size_t fmtParameter = sizeof...(Args)-1> static DetourFnType VaArgsDetourFn()
 	{
 		DetourFnType detourFn = [](Type* pThis, Args... args, ...)
 		{
@@ -73,11 +75,13 @@ protected:
 		};
 	}
 
-	static void* StandardDetourFn()
+	static DetourFnType StandardDetourFn()
 	{
-		DetourFnType detourFn = [](Type* pThis, void* dummy, Args... args)
+		RetVal(__fastcall *detourFn)(Type*, void*, Args...) = [](Type* pThis, void* edx, Args... args)
 		{
-			dummy = nullptr;
+			Assert(pThis == This()->m_Instance);
+			//dummy = nullptr;
+			//return This()->GetOriginal()(args...);
 			return Stupid<RetVal>::InvokeHookFunctions(args...);
 		};
 		return detourFn;
@@ -109,7 +113,7 @@ public:
 	GroupClassHook(Type* instance, OriginalFnType function, DetourFnType detour = nullptr) : BaseType(instance, function, detour) { }
 
 private:
-	void* DefaultDetourFn() override { return StandardDetourFn(); }
+	DetourFnType DefaultDetourFn() override { return StandardDetourFn(); }
 };
 
 // Variable arguments version
@@ -121,7 +125,7 @@ public:
 	typedef BaseGroupClassHookType BaseType;
 
 private:
-	void* DefaultDetourFn() override { return VaArgsDetourFn(); }
+	DetourFnType DefaultDetourFn() override { return VaArgsDetourFn(); }
 };
 
 template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class OriginalFnType, class DetourFnType, class Type, class RetVal, class... Args>
@@ -134,8 +138,12 @@ BaseGroupClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, T
 
 	if (m_BaseHook)
 	{
-		//typedef RetVal(__thiscall* test)(Type*, Args...);
 		OriginalFnType originalFnPtr = reinterpret_cast<OriginalFnType>(GetOriginalRawFn(m_BaseHook));
+
+		//const auto originalFnTypeName = typeid(OriginalFnType).name();
+		//const auto patchFnTypeName = typeid(PatchFnType).name();
+		//const auto detourFnTypeName = typeid(DetourFnType).name();
+
 		return std::bind(m_PatchFunction, originalFnPtr, m_Instance, (std::_Ph<(int)(Is + 1)>{})...);
 	}
 	else

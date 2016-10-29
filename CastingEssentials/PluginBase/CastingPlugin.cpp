@@ -37,7 +37,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 
 #ifdef DEBUG
 	//PluginMsg("_CrtCheckMemory() result: %i\n", _CrtCheckMemory());
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF);
+	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF);
 #endif
 	
 	Interfaces::Load(interfaceFactory);

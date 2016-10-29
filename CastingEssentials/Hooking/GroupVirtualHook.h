@@ -66,7 +66,7 @@ private:
 	GroupVirtualHook() = delete;
 	GroupVirtualHook(const SelfType& other) = delete;
 
-	void* DefaultDetourFn() override { return StandardDetourFn(); }
+	DetourFnType DefaultDetourFn() override { return StandardDetourFn(); }
 };
 
 // Variable arguments version
@@ -105,5 +105,5 @@ private:
 	GroupVirtualHook() = delete;
 	GroupVirtualHook(const SelfType& other) = delete;
 
-	void* DefaultDetourFn() override { return VaArgsDetourFn(); }
+	DetourFnType DefaultDetourFn() override { return VaArgsDetourFn(); }
 };
