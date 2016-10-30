@@ -50,7 +50,7 @@ protected:
 	};
 
 	static int MFI_GetVTblOffset(void* mfp);
-	template<class I, class F> static int VTableOffset(I* instance, F func)
+	template<class F> static int VTableOffset(F func)
 	{
 		union
 		{

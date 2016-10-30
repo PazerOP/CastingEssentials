@@ -26,9 +26,6 @@ std::shared_ptr<PLH::IHook> IGroupHook::SetupVFuncHook(BYTE** instance, int vtab
 	PLH::VFuncSwap* newHook = new PLH::VFuncSwap();
 	newHook->SetupHook(instance, vtableOffset, detourFunc);
 
-	BYTE** test = instance;
-	auto ptr = &test[vtableOffset];
-
 	if (!newHook->Hook())
 	{
 		Assert(0);

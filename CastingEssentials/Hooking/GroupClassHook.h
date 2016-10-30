@@ -5,11 +5,11 @@ template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class OriginalFnT
 class BaseGroupClassHook : public BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, RetVal, Args...>
 {
 public:
-	typedef BaseGroupClassHook<FuncEnumType, hookID, false, OriginalFnType, DetourFnType, Type, RetVal, Args...> SelfType;
+	typedef BaseGroupClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, Type, RetVal, Args...> SelfType;
 	typedef SelfType BaseGroupClassHookType;
 	typedef BaseGroupGlobalHookType BaseType;
-	typedef OriginalFnType OriginalFnType;
-	typedef RetVal(__fastcall *PatchFnType)(OriginalFnType, Type*, Args...);
+	//typedef RetVal(__fastcall *PatchFnType)(OriginalFnType, Type*, Args...);
+	typedef std::function<RetVal(OriginalFnType, Type*, Args...)> PatchFnType;
 
 	BaseGroupClassHook(Type* instance, OriginalFnType fn, DetourFnType detour = nullptr) : BaseType(fn, detour)
 	{
@@ -25,9 +25,9 @@ public:
 protected:
 	static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
 
-	BaseGroupClassHook(Type* instance, DetourFnType detour) : BaseType(detour)
+	BaseGroupClassHook(ConstructorParam1* instance, ConstructorParam2* detour) : BaseType((ConstructorParam1*)detour)
 	{
-		m_Instance = instance;
+		m_Instance = (Type*)instance;
 		Assert(m_Instance);
 
 		SetDefaultPatchFn();
@@ -92,11 +92,7 @@ protected:
 	Type* m_Instance;
 	PatchFnType m_PatchFunction;
 
-#if !BASE_TYPE_COMPILER_BUG
 	BaseGroupClassHook() = delete;
-#else
-	BaseGroupClassHook() { }
-#endif
 	BaseGroupClassHook(const SelfType& other) = delete;
 };
 
@@ -138,7 +134,11 @@ BaseGroupClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, T
 
 	if (m_BaseHook)
 	{
-		OriginalFnType originalFnPtr = reinterpret_cast<OriginalFnType>(GetOriginalRawFn(m_BaseHook));
+		OriginalFnType originalFnPtr;
+		{
+			std::lock_guard<std::recursive_mutex> lock(m_BaseHookMutex);
+			originalFnPtr = reinterpret_cast<OriginalFnType>(GetOriginalRawFn(m_BaseHook));
+		}
 
 		//const auto originalFnTypeName = typeid(OriginalFnType).name();
 		//const auto patchFnTypeName = typeid(PatchFnType).name();

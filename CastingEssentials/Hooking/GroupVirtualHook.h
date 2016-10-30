@@ -8,10 +8,9 @@ public:
 	typedef BaseGroupVirtualHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, MemFnType, Type, RetVal, Args...> SelfType;
 	typedef SelfType BaseGroupVirtualHookType;
 	typedef BaseGroupClassHookType BaseType;
-	typedef OriginalFnType OriginalFnType;
 	typedef MemFnType MemFnType;
 
-	BaseGroupVirtualHook(Type* instance, MemFnType fn, DetourFnType detour = nullptr) : BaseType(instance, detour)
+	BaseGroupVirtualHook(Type* instance, MemFnType fn, DetourFnType detour = nullptr) : BaseType((ConstructorParam1*)instance, (ConstructorParam2*)detour)
 	{
 		m_MemberFunction = fn;
 		Assert(m_MemberFunction);
@@ -19,10 +18,6 @@ public:
 
 protected:
 	MemFnType m_MemberFunction;
-
-#if BASE_TYPE_COMPILER_BUG
-	BaseGroupVirtualHook() { }
-#endif
 
 private:
 	void InitHook() override
@@ -38,13 +33,11 @@ private:
 		{
 			std::lock_guard<std::recursive_mutex> lock(m_BaseHookMutex);
 			if (!m_BaseHook)
-				m_BaseHook = SetupVFuncHook(*(BYTE***)m_Instance, VTableOffset(m_Instance, m_MemberFunction), (BYTE*)m_DetourFunction);
+				m_BaseHook = SetupVFuncHook(*(BYTE***)m_Instance, VTableOffset(m_MemberFunction), (BYTE*)m_DetourFunction);
 		}
 	}
 
-#if !BASE_TYPE_COMPILER_BUG
 	BaseGroupVirtualHook() = delete;
-#endif
 	BaseGroupVirtualHook(const SelfType& other) = delete;
 };
 

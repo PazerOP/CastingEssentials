@@ -157,8 +157,8 @@ bool Funcs::Load()
 	s_Hook_ICvar_ConsolePrintf.reset(new Hook_ICvar_ConsolePrintf(g_pCVar, &ICvar::ConsolePrintf));
 
 	s_Hook_IVEngineClient_GetPlayerInfo.reset(new Hook_IVEngineClient_GetPlayerInfo(Interfaces::GetEngineClient(), &IVEngineClient::GetPlayerInfo));
-
-	//s_Hook_IGameEventManager2_FireEventClientSide.reset(new Hook_IGameEventManager2_FireEventClientSide(Interfaces::GetGameEventManager(), &IGameEventManager2::FireEventClientSide));
+	
+	s_Hook_IGameEventManager2_FireEventClientSide.reset(new Hook_IGameEventManager2_FireEventClientSide(Interfaces::GetGameEventManager(), &IGameEventManager2::FireEventClientSide));
 
 	s_Hook_C_HLTVCamera_SetCameraAngle.reset(new Hook_C_HLTVCamera_SetCameraAngle(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetCameraAngle()));
 	s_Hook_C_HLTVCamera_SetMode.reset(new Hook_C_HLTVCamera_SetMode(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));

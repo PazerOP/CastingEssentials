@@ -4,10 +4,6 @@
 #include <string>
 #include <steam/steamclientpublic.h>
 
-#if _MSC_VER <= 1900
-#define BASE_TYPE_COMPILER_BUG 1
-#endif
-
 #define PLUGIN_VERSION "0.1"
 
 template<class... Parameters> __forceinline void PluginMsg(const char* fmt, Parameters... param)

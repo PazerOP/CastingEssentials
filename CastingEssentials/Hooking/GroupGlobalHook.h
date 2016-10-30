@@ -6,9 +6,10 @@ class BaseGroupGlobalHook : public BaseGroupHook<FuncEnumType, hookID, RetVal, A
 {
 	static_assert(!vaArgs || (sizeof...(Args) >= 1), "Must have at least 1 concrete argument defined for a variable-argument function");
 public:
-	typedef BaseGroupGlobalHook<FuncEnumType, hookID, false, OriginalFnType, DetourFnType, RetVal, Args...> SelfType;
+	typedef BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, RetVal, Args...> SelfType;
 	typedef SelfType BaseGroupGlobalHookType;
 	typedef OriginalFnType OriginalFnType;
+	typedef DetourFnType DetourFnType;
 
 	BaseGroupGlobalHook(OriginalFnType fn, DetourFnType detour = nullptr)
 	{
@@ -21,23 +22,10 @@ public:
 	//virtual Functional GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
 
 protected:
-	BaseGroupGlobalHook(DetourFnType detour)
-	{
-		m_OriginalFunction = nullptr;
-		m_DetourFunction = detour;
-	}
-
-#if BASE_TYPE_COMPILER_BUG
-	BaseGroupGlobalHook() { }
-#endif
-
 	static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
-
-	typedef DetourFnType DetourFnType;
 
 	DetourFnType m_DetourFunction;
 
-	RetVal InvokeHookFunctions(Args... args) { return Stupid<RetVal>::InvokeHookFunctions(args...); }
 	virtual DetourFnType DefaultDetourFn() = 0;
 
 	virtual void InitHook() override
@@ -58,12 +46,20 @@ protected:
 
 	template<std::size_t... Is> Functional GetOriginalImpl(std::index_sequence<Is...>);
 
+	struct ConstructorParam1;
+	struct ConstructorParam2;
+	struct ConstructorParam3;
+	BaseGroupGlobalHook(ConstructorParam1* detour)
+	{
+		m_OriginalFunction = nullptr;
+		m_DetourFunction = (DetourFnType)detour;
+	}
+
 private:
 	OriginalFnType m_OriginalFunction;
 
-#if !BASE_TYPE_COMPILER_BUG
 	BaseGroupGlobalHook() = delete;
-#endif
+	BaseGroupGlobalHook(const SelfType& other) = delete;
 };
 
 template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class RetVal, class... Args> class GroupGlobalHook;
@@ -88,7 +84,7 @@ private:
 	{
 		DetourFnType detourFn = [](Args... args)
 		{
-			return This()->InvokeHookFunctions(args...); 
+			return Stupid<RetVal>::InvokeHookFunctions(args...);
 		};
 		return detourFn;
 	}
