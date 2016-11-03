@@ -1,8 +1,11 @@
 #include "IGroupHook.h"
 #include <PolyHook.h>
 
+using namespace Hooking;
+
 std::atomic<uint64> IGroupHook::s_LastHook;
 
+#if 0
 void* IGroupHook::GetOriginalRawFn(const std::shared_ptr<PLH::IHook>& hook)
 {
 	switch (hook->GetType())
@@ -18,13 +21,13 @@ void* IGroupHook::GetOriginalRawFn(const std::shared_ptr<PLH::IHook>& hook)
 	return nullptr;
 }
 
-std::shared_ptr<PLH::IHook> IGroupHook::SetupVFuncHook(BYTE** instance, int vtableOffset, BYTE* detourFunc)
+std::shared_ptr<PLH::IHook> IGroupHook::SetupVFuncHook(void** instance, int vtableOffset, void* detourFunc)
 {
 	if (vtableOffset < 0)
 		return nullptr;
 
 	PLH::VFuncSwap* newHook = new PLH::VFuncSwap();
-	newHook->SetupHook(instance, vtableOffset, detourFunc);
+	newHook->SetupHook((BYTE**)instance, vtableOffset, (BYTE*)detourFunc);
 
 	if (!newHook->Hook())
 	{
@@ -49,6 +52,7 @@ std::shared_ptr<PLH::IHook> IGroupHook::SetupDetour(BYTE* baseFunc, BYTE* detour
 
 	return std::shared_ptr<PLH::IHook>(newHook);
 }
+#endif
 
 int IGroupHook::MFI_GetVTblOffset(void * mfp)
 {

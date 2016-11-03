@@ -40,7 +40,7 @@ CameraAutoSwitch::CameraAutoSwitch()
 	panel = nullptr;
 
 	enabled = new ConVar("ce_cameraautoswitch_enabled", "0", FCVAR_NONE, "enable automatic switching of camera", [](IConVar *var, const char *pOldValue, float flOldValue) { Modules().GetModule<CameraAutoSwitch>()->ToggleEnabled(var, pOldValue, flOldValue); });
-	killer = new ConVar("ce_cameraautoswitch_killer", "0", FCVAR_NONE, "switch to killer upon spectated player death", [](IConVar *var, const char *pOldValue, float flOldValue) { Modules().GetModule<CameraAutoSwitch>()->ToggleKillerEnabled(var, pOldValue, flOldValue); });
+	m_SwitchToKiller = new ConVar("ce_cameraautoswitch_killer", "0", FCVAR_NONE, "switch to killer upon spectated player death", [](IConVar *var, const char *pOldValue, float flOldValue) { Modules().GetModule<CameraAutoSwitch>()->ToggleKillerEnabled(var, pOldValue, flOldValue); });
 	killer_delay = new ConVar("ce_cameraautoswitch_killer_delay", "0", FCVAR_NONE, "delay before switching to killer");
 }
 CameraAutoSwitch::~CameraAutoSwitch()
@@ -100,7 +100,7 @@ bool CameraAutoSwitch::CheckDependencies()
 
 void CameraAutoSwitch::FireGameEvent(IGameEvent *event)
 {
-	if (enabled->GetBool() && killer->GetBool() && !strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH))
+	if (enabled->GetBool() && m_SwitchToKiller->GetBool() && !strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH))
 	{
 		Player* localPlayer = Player::GetPlayer(Interfaces::GetEngineClient()->GetLocalPlayer(), __FUNCSIG__);
 

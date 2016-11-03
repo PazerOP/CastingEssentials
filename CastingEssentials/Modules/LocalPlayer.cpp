@@ -95,12 +95,12 @@ int LocalPlayer::GetLocalPlayerIndexOverride()
 		Player* localPlayer = Player::GetPlayer(player->GetInt(), __FUNCSIG__);
 		if (localPlayer)
 		{
-			Funcs::GetHook_Global_GetLocalPlayerIndex()->SetState(HookAction::SUPERCEDE);
+			Funcs::GetHook_Global_GetLocalPlayerIndex()->SetState(Hooking::HookAction::SUPERCEDE);
 			return player->GetInt();
 		}
 	}
 
-	Funcs::GetHook_Global_GetLocalPlayerIndex()->SetState(HookAction::IGNORE);
+	Funcs::GetHook_Global_GetLocalPlayerIndex()->SetState(Hooking::HookAction::IGNORE);
 	return 0;
 }
 

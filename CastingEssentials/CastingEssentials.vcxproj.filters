@@ -72,6 +72,9 @@
     <ClCompile Include="Modules\Killstreaks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Hooking\IBaseHook.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -122,9 +125,6 @@
     <ClInclude Include="Modules\LocalPlayer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Hooking\GroupHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Hooking\IGroupHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -141,6 +141,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\Killstreaks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\IBaseHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\GroupVirtualHook2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\HookFunctionsInvoker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\VariablePusher.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

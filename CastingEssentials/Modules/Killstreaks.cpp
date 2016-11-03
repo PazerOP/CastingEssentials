@@ -43,7 +43,7 @@ private:
 	int bluTopKillstreak;
 	int bluTopKillstreakPlayer;
 	std::map<int, int> currentKillstreaks;
-	int fireEventClientSideHook;
+	int m_FireEventClientSideHook;
 	CHandle<C_BaseEntity> gameResourcesEntity;
 	int redTopKillstreak;
 	int redTopKillstreakPlayer;
@@ -51,7 +51,8 @@ private:
 
 Killstreaks::Killstreaks()
 {
-	enabled = new ConVar("ce_killstreaks_enabled", "0", FCVAR_NONE, "enable killstreaks display", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
+	enabled = new ConVar("ce_killstreaks_enabled", "0", FCVAR_NONE, "enable killstreaks display");
+	panel.reset(new Panel());
 }
 
 bool Killstreaks::CheckDependencies()
@@ -159,35 +160,9 @@ void Killstreaks::ToggleEnabled(IConVar *var, const char *pOldValue, float flOld
 		panel.reset();
 }
 
-enum DummyEnum { Dummy = 1, };
-bool Killstreaks::Panel::DetourFnTest(IGameEventManager2 * pThis, void *, IGameEvent * event)
-{
-	typedef GroupVirtualHook<DummyEnum, DummyEnum::Dummy, false, IGameEventManager2, bool, IGameEvent*> HookTest;
-	//HookTest::Functional func = std::bind(&Killstreaks::Panel::FireEventClientSideOverride, GetModule()->panel.get(), std::placeholders::_1);
-	// Fire override
-	//func(event);
-	GetModule()->panel.get()->FireEventClientSideOverride(event);
-
-	bool (*patchFn)(HookTest::OriginalFnType, IGameEventManager2*, IGameEvent*) =
-		[](HookTest::OriginalFnType oFn, IGameEventManager2* instance, IGameEvent* event)
-	{
-		const char* test = event->GetName();
-		Assert(1);
-		return oFn(instance, event);
-	};
-
-	// Fire original
-	HookTest::OriginalFnType originalFnPtr = GetModule()->panel->m_Detour->GetOriginal<HookTest::OriginalFnType>();
-	//return originalFnPtr(pThis, event);
-
-	//Assert(0);
-	HookTest::Functional wrapper = std::bind(patchFn, originalFnPtr, pThis, std::placeholders::_1);
-	auto retVal = wrapper(event);
-	return retVal;
-}
-
 Killstreaks::Panel::Panel()
 {
+	m_FireEventClientSideHook = 0;
 	bluTopKillstreak = 0;
 	bluTopKillstreakPlayer = 0;
 	redTopKillstreak = 0;
@@ -196,13 +171,16 @@ Killstreaks::Panel::Panel()
 
 void Killstreaks::Panel::Init()
 {
-	typedef GroupVirtualHook<DummyEnum, DummyEnum::Dummy, false, IGameEventManager2, bool, IGameEvent*> HookTest;
-	static HookTest::Functional func = std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1);
-#if 0
+	enum DummyEnum { Dummy = 1, };
+	typedef Hooking::GroupVirtualHook<DummyEnum, DummyEnum::Dummy, false, IGameEventManager2, bool, IGameEvent*> HookTest;
+	static HookTest::Functional hookFunction = std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1);
+
+#define TEST 2
+#if TEST == 0
 	HookTest* hook = new HookTest(Interfaces::GetGameEventManager(), &IGameEventManager2::FireEventClientSide);
-	hook->AddHook(func);
-#else
-	if (false)
+	hook->AddHook(hookFunction);
+#elif TEST == 1
+	if (true)
 	{
 #undef CreateEvent
 		static IGameEventManager2* instance = Interfaces::GetGameEventManager();
@@ -215,38 +193,65 @@ void Killstreaks::Panel::Init()
 			// Fire override
 			//func(event);
 
+			typedef bool(__fastcall*HelpMe)(IGameEventManager2* instance, void* edx, IGameEvent* event);
+
 			// Fire original
-			HookTest::OriginalFnType originalFnPtr = GetModule()->panel->m_Detour->GetOriginal<HookTest::OriginalFnType>();
+			HelpMe originalFnPtr = GetModule()->panel->m_Detour->GetOriginal<HelpMe>();
 			//return originalFnPtr(instance, event);
 
-			HookTest::PatchFnType patchFn = [](HookTest::OriginalFnType oFn, IGameEventManager2* instance, IGameEvent* event)
+			return originalFnPtr(pThis, edx, event);
+
+			/*HookTest::PatchFnType patchFn = [](HelpMe oFn, IGameEventManager2* instance, void* edx, IGameEvent* event)
 			{
 				const char* test = event->GetName();
 				Assert(1);
 				return oFn(instance, event);
-			};
+			};*/
 
-			Assert(0);
-			HookTest::Functional wrapper = std::bind(patchFn, originalFnPtr, instance, std::placeholders::_1);
-			auto retVal = wrapper(event);
-			return retVal;
+			//Assert(0);
+			//std::function<bool(IGameEventManager*, void*, IGameEvent*)> wrapper = std::bind(patchFn, originalFnPtr, instance, std::placeholders::_1, std::placeholders::_2);
+			//auto retVal = wrapper(edx, event);
+			//return retVal;
 		};
 
-		instance->FireEventClientSide(nullptr);
-		m_Detour->SetupHook(*(BYTE***)instance, 8, (BYTE*)&DetourFnTest);
-		bool hookResult = m_Detour->Hook();
-		Assert(hookResult);
+		//m_Detour->SetupHook(*(BYTE***)instance, 8, (BYTE*)detour);
+		//bool hookResult = m_Detour->Hook(); Assert(hookResult);
 	}
-	else
+#elif TEST == 2
 	{
-		fireEventClientSideHook = Funcs::GetHook_IGameEventManager2_FireEventClientSide()->AddHook(std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
+		m_FireEventClientSideHook = Funcs::GetHook_IGameEventManager2_FireEventClientSide()->AddHook(std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
+	}
+#elif TEST == 3
+	{
+		void** vtable = (*(void***)Interfaces::GetGameEventManager());
+		void** vfunc = &vtable[8];
+
+		DWORD old;
+		VirtualProtect(vfunc, sizeof(void*), PAGE_READWRITE, &old);
+
+		{
+			typedef bool(__thiscall *OriginalFnType)(IGameEventManager2*, IGameEvent*);
+			typedef bool(__fastcall *DetourFnType)(IGameEventManager2*, void*, IGameEvent*);
+
+			static OriginalFnType original = (OriginalFnType)*vfunc;
+
+			DetourFnType detour = [](IGameEventManager2* pThis, void* edx, IGameEvent* event)
+			{
+				hookFunction(event);
+				return original(pThis, event);
+			};
+
+			*vfunc = detour;
+		}
+		
+		VirtualProtect(vfunc, sizeof(void*), old, &old);
 	}
 #endif
 }
 
 Killstreaks::Panel::~Panel()
 {
-	Funcs::GetHook_IGameEventManager2_FireEventClientSide()->RemoveHook(fireEventClientSideHook, __FUNCSIG__);
+	Funcs::GetHook_IGameEventManager2_FireEventClientSide()->RemoveHook(m_FireEventClientSideHook, __FUNCSIG__);
 
 	int maxEntity = Interfaces::GetClientEntityList()->GetHighestEntityIndex();
 
@@ -296,12 +301,16 @@ Killstreaks::Panel::~Panel()
 
 void Killstreaks::Panel::OnTick()
 {
-	if (Interfaces::GetEngineClient()->IsConnected())
+	if (Interfaces::GetEngineClient()->IsInGame())
 	{
+		if (!m_FireEventClientSideHook)
+		{
+			m_FireEventClientSideHook = Funcs::GetHook_IGameEventManager2_FireEventClientSide()->AddHook(std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
+		}
+
 		if (!gameResourcesEntity.IsValid() || !gameResourcesEntity.Get())
 		{
-			int maxEntity = Interfaces::GetClientEntityList()->GetHighestEntityIndex();
-
+			const int maxEntity = Interfaces::GetClientEntityList()->GetHighestEntityIndex();
 			for (int i = 1; i <= maxEntity; i++)
 			{
 				IClientEntity *entity = Interfaces::GetClientEntityList()->GetClientEntity(i);
@@ -372,6 +381,12 @@ void Killstreaks::Panel::OnTick()
 	else
 	{
 		currentKillstreaks.clear();
+
+		if (m_FireEventClientSideHook)
+		{
+			if (Funcs::GetHook_IGameEventManager2_FireEventClientSide()->RemoveHook(m_FireEventClientSideHook, __FUNCSIG__))
+				m_FireEventClientSideHook = 0;
+		}
 	}
 }
 

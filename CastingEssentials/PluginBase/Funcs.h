@@ -9,6 +9,7 @@
 #include "Hooking/GroupGlobalHook.h"
 #include "Hooking/GroupClassHook.h"
 #include "Hooking/GroupVirtualHook.h"
+#include "Hooking/GroupVirtualHook2.h"
 
 class C_HLTVCamera;
 class QAngle;
@@ -48,19 +49,26 @@ class Funcs final
 		Count,
 	};
 
-	typedef GroupVirtualHook<Func, ICvar_ConsoleColorPrintf, true, ICvar, void, const Color&, const char*> Hook_ICvar_ConsoleColorPrintf;
-	typedef GroupVirtualHook<Func, ICvar_ConsoleDPrintf, true, ICvar, void, const char*> Hook_ICvar_ConsoleDPrintf;
-	typedef GroupVirtualHook<Func, ICvar_ConsolePrintf, true, ICvar, void, const char*> Hook_ICvar_ConsolePrintf;
+	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using VirtualHook =
+		Hooking::GroupVirtualHook<Func, fn, vaArgs, Type, RetVal, Args...>;
+	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using ClassHook =
+		Hooking::GroupClassHook<Func, fn, vaArgs, Type, RetVal, Args...>;
+	template<Func fn, bool vaArgs, class RetVal, class... Args> using GlobalHook =
+		Hooking::GroupGlobalHook<Func, fn, vaArgs, RetVal, Args...>;
 
-	typedef GroupVirtualHook<Func, IVEngineClient_GetPlayerInfo, false, IVEngineClient, bool, int, player_info_t*> Hook_IVEngineClient_GetPlayerInfo;
+	typedef VirtualHook<ICvar_ConsoleColorPrintf, true, ICvar, void, const Color&, const char*> Hook_ICvar_ConsoleColorPrintf;
+	typedef VirtualHook<ICvar_ConsoleDPrintf, true, ICvar, void, const char*> Hook_ICvar_ConsoleDPrintf;
+	typedef VirtualHook<ICvar_ConsolePrintf, true, ICvar, void, const char*> Hook_ICvar_ConsolePrintf;
 
-	typedef GroupVirtualHook<Func, IGameEventManager2_FireEventClientSide, false, IGameEventManager2, bool, IGameEvent*> Hook_IGameEventManager2_FireEventClientSide;
+	typedef VirtualHook<IVEngineClient_GetPlayerInfo, false, IVEngineClient, bool, int, player_info_t*> Hook_IVEngineClient_GetPlayerInfo;
 
-	typedef GroupClassHook<Func, C_HLTVCamera_SetCameraAngle, false, C_HLTVCamera, void, const QAngle&> Hook_C_HLTVCamera_SetCameraAngle;
-	typedef GroupClassHook<Func, C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetMode;
-	typedef GroupClassHook<Func, C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetPrimaryTarget;
+	typedef VirtualHook<IGameEventManager2_FireEventClientSide, false, IGameEventManager2, bool, IGameEvent*> Hook_IGameEventManager2_FireEventClientSide;
 
-	typedef GroupGlobalHook<Func, Global_GetLocalPlayerIndex, false, int> Hook_Global_GetLocalPlayerIndex;
+	typedef ClassHook<C_HLTVCamera_SetCameraAngle, false, C_HLTVCamera, void, const QAngle&> Hook_C_HLTVCamera_SetCameraAngle;
+	typedef ClassHook<C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetMode;
+	typedef ClassHook<C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> Hook_C_HLTVCamera_SetPrimaryTarget;
+
+	typedef GlobalHook<Global_GetLocalPlayerIndex, false, int> Hook_Global_GetLocalPlayerIndex;
 
 	typedef void(__thiscall *RawSetCameraAngleFn)(C_HLTVCamera*, const QAngle&);
 	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);

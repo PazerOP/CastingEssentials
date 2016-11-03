@@ -45,12 +45,12 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 
 	//auto test = new vgui::Label(nullptr, "testPanel", "Hello World");
 
-	//Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
-	//Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
-	//Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
+	Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
+	Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
+	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
 	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
-	//Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
-	//Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
+	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
+	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
 
 	ConVar_Register();
 

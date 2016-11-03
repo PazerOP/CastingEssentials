@@ -75,6 +75,7 @@
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)\sdk2013\mp\src\public\tier0\memoverride.cpp" />
     <ClCompile Include="..\polyhook\PolyHook\PolyHook.cpp" />
+    <ClCompile Include="Hooking\IBaseHook.cpp" />
     <ClCompile Include="Hooking\IGroupHook.cpp" />
     <ClCompile Include="Modules\CameraAutoSwitch.cpp" />
     <ClCompile Include="Modules\CameraTools.cpp" />
@@ -97,7 +98,11 @@
     <ClInclude Include="Hooking\GroupClassHook.h" />
     <ClInclude Include="Hooking\GroupGlobalHook.h" />
     <ClInclude Include="Hooking\GroupVirtualHook.h" />
+    <ClInclude Include="Hooking\HookFunctionsInvoker.h" />
+    <ClInclude Include="Hooking\IBaseHook.h" />
     <ClInclude Include="Hooking\IGroupHook.h" />
+    <ClInclude Include="Hooking\GroupVirtualHook2.h" />
+    <ClInclude Include="Hooking\VariablePusher.h" />
     <ClInclude Include="Modules\CameraAutoSwitch.h" />
     <ClInclude Include="Modules\CameraTools.h" />
     <ClInclude Include="Modules\ConsoleTools.h" />
@@ -115,7 +120,6 @@
     <ClInclude Include="PluginBase\Modules.h" />
     <ClInclude Include="PluginBase\Plugin.h" />
     <ClInclude Include="PluginBase\TFPlayerResource.h" />
-    <ClInclude Include="Hooking\GroupHook.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

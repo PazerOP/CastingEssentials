@@ -24,7 +24,7 @@ private:
 	std::unique_ptr<Panel> panel;
 
 	ConVar *enabled;
-	ConVar *killer;
+	ConVar *m_SwitchToKiller;
 	ConVar *killer_delay;
 	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
 	void ToggleKillerEnabled(IConVar *var, const char *pOldValue, float flOldValue);
