@@ -518,6 +518,5 @@ bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 		redTopKillstreakPlayer = 0;
 	}
 
-	//Funcs::GetHook_IGameEventManager2_FireEventClientSide()->SetState(HookAction::IGNORE);
 	return true;
 }

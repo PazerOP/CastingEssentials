@@ -103,7 +103,6 @@ void CameraAutoSwitch::FireGameEvent(IGameEvent *event)
 	if (enabled->GetBool() && m_SwitchToKiller->GetBool() && !strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH))
 	{
 		Player* localPlayer = Player::GetPlayer(Interfaces::GetEngineClient()->GetLocalPlayer(), __FUNCSIG__);
-
 		if (localPlayer)
 		{
 			if (localPlayer->GetObserverMode() == OBS_MODE_FIXED || localPlayer->GetObserverMode() == OBS_MODE_IN_EYE || localPlayer->GetObserverMode() == OBS_MODE_CHASE)

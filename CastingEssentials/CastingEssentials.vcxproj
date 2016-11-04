@@ -101,7 +101,6 @@
     <ClInclude Include="Hooking\HookFunctionsInvoker.h" />
     <ClInclude Include="Hooking\IBaseHook.h" />
     <ClInclude Include="Hooking\IGroupHook.h" />
-    <ClInclude Include="Hooking\GroupVirtualHook2.h" />
     <ClInclude Include="Hooking\VariablePusher.h" />
     <ClInclude Include="Modules\CameraAutoSwitch.h" />
     <ClInclude Include="Modules\CameraTools.h" />

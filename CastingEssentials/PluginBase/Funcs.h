@@ -5,11 +5,9 @@
 #include <memory>
 #include <mutex>
 #include <type_traits>
-//#include "PluginBase/EZHook.h"
 #include "Hooking/GroupGlobalHook.h"
 #include "Hooking/GroupClassHook.h"
 #include "Hooking/GroupVirtualHook.h"
-#include "Hooking/GroupVirtualHook2.h"
 
 class C_HLTVCamera;
 class QAngle;

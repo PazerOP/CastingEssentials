@@ -146,9 +146,6 @@
     <ClInclude Include="Hooking\IBaseHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Hooking\GroupVirtualHook2.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Hooking\HookFunctionsInvoker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
