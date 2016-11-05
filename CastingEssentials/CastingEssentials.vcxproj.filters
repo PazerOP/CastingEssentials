@@ -54,12 +54,6 @@
     <ClCompile Include="Modules\PlayerAliases.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\polyhook\PolyHook\PolyHook.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\StubPanel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Modules\CameraAutoSwitch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -73,6 +67,24 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Hooking\IBaseHook.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sdk2013\mp\src\public\vgui_controls\vgui_controls.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\MedigunInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\polyhook\PolyHook\PolyHook.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Controls\VariableLabel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Controls\StubPanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Controls\ImageProgressBar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -116,9 +128,6 @@
     <ClInclude Include="Modules\PlayerAliases.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PluginBase\StubPanel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Modules\CameraAutoSwitch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -150,6 +159,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Hooking\VariablePusher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\MedigunInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Controls\VariableLabel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Controls\StubPanel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Controls\ImageProgressBar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

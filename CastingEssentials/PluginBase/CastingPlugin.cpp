@@ -14,7 +14,10 @@
 #include "Modules/ConsoleTools.h"
 #include "Modules/Killstreaks.h"
 #include "Modules/LocalPlayer.h"
+#include "Modules/MedigunInfo.h"
 #include "Modules/PlayerAliases.h"
+
+#include <icommandline.h>
 
 class CastingPlugin final : public Plugin
 {
@@ -42,6 +45,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	
 	Interfaces::Load(interfaceFactory);
 	Funcs::Load();
+	Modules().Init();
 
 	//auto test = new vgui::Label(nullptr, "testPanel", "Hello World");
 
@@ -50,6 +54,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
 	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
+	Modules().RegisterAndLoadModule<MedigunInfo>("Medigun Info");
 	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
 
 	ConVar_Register();

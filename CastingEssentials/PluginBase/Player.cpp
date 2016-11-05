@@ -389,3 +389,27 @@ C_BaseEntity *Player::GetObserverTarget() const
 
 	return GetEntity() ? GetEntity()->GetBaseEntity() : nullptr;
 }
+
+C_BaseCombatWeapon *Player::GetWeapon(int i) const
+{
+	if (i < 0 || i >= MAX_WEAPONS)
+	{
+		PluginWarning("Out of range index %i in %s\n", i, __FUNCTION__);
+		return nullptr;
+	}
+
+	if (IsValid())
+	{
+		if (CheckCache() || !m_CachedWeapons[i])
+		{
+			char buffer[8];
+			sprintf_s(buffer, "%.3i", i);
+			m_CachedWeapons[i] = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>*>(GetEntity(), { "m_hMyWeapons", buffer });
+		}
+
+		if (m_CachedWeapons[i])
+			return m_CachedWeapons[i]->Get();
+	}
+
+	return nullptr;
+}

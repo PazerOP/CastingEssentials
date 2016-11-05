@@ -10,13 +10,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier0.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier1.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier2.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier3.lib;$(SolutionDir)sdk2013\mp\src\lib\public\steam_api.lib;$(SolutionDir)sdk2013\mp\src\lib\public\vstdlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier0.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier1.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier2.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier3.lib;$(SolutionDir)sdk2013\mp\src\lib\public\steam_api.lib;$(SolutionDir)sdk2013\mp\src\lib\public\vstdlib.lib;$(SolutionDir)sdk2013\mp\src\lib\public\mathlib.lib;$(SolutionDir)sdk2013\mp\src\lib\public\vgui_controls.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ClCompile>
       <TreatSpecificWarningsAsErrors>4717</TreatSpecificWarningsAsErrors>
-      <PreprocessorDefinitions>SUPPRESS_INVALID_PARAMETER_NO_INFO;VERSION_SAFE_STEAM_API_INTERFACES;CLIENT_DLL;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SUPPRESS_INVALID_PARAMETER_NO_INFO;VERSION_SAFE_STEAM_API_INTERFACES;CLIENT_DLL;WIN32;RAD_TELEMETRY_DISABLED;TF2_SDK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)PluginBase\Common.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <DisableSpecificWarnings>4594;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

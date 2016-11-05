@@ -14,7 +14,7 @@
 #include <toolframework/iclientenginetools.h>
 #include <toolframework/ienginetool.h>
 #include <steam/steam_api.h>
-//#include <vgui_controls/Controls.h>
+#include <vgui_controls/Controls.h>
 #include <entitylist_base.h>
 
 IBaseClientDLL *Interfaces::pClientDLL = nullptr;
@@ -42,7 +42,7 @@ void Interfaces::Load(CreateInterfaceFn factory)
 	ConnectTier2Libraries(&factory, 1);
 	ConnectTier3Libraries(&factory, 1);
 
-	//vguiLibrariesAvailable = vgui::VGui_InitInterfacesList("CastingEssentials", &factory, 1);
+	vguiLibrariesAvailable = vgui::VGui_InitInterfacesList("CastingEssentials", &factory, 1);
 
 	pClientEngineTools = (IClientEngineTools *)factory(VCLIENTENGINETOOLS_INTERFACE_VERSION, nullptr);
 	pEngineClient = (IVEngineClient *)factory(VENGINE_CLIENT_INTERFACE_VERSION, nullptr);

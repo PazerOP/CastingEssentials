@@ -40,6 +40,7 @@ public:
 	static bool AreSteamLibrariesAvailable() { return steamLibrariesAvailable; }
 	static bool AreVguiLibrariesAvailable() { return vguiLibrariesAvailable; }
 
+	// #include <client/iclientmode.h>
 	static IClientMode *GetClientMode();
 	static C_HLTVCamera *GetHLTVCamera();
 

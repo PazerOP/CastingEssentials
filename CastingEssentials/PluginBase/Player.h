@@ -92,6 +92,7 @@ private:
 	mutable TFClassType* m_CachedClass;
 	mutable int* m_CachedObserverMode;
 	mutable CHandle<C_BaseEntity>* m_CachedObserverTarget;
+	mutable CHandle<C_BaseCombatWeapon>* m_CachedWeapons[MAX_WEAPONS];
 
 	static std::unique_ptr<Player> s_Players[MAX_PLAYERS];
 };

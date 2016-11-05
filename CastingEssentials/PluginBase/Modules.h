@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 #include <typeindex>
 
@@ -13,17 +14,27 @@ public:
 	virtual ~Module() = default;
 
 	static bool CheckDependencies() { return true; };
+
+	virtual void OnTick(bool inGame) { }
 };
 
-class ModuleManager
+class ModuleManager final
 {
 public:
+	void Init();
+	void UnloadAllModules();
+
 	template <typename ModuleType> ModuleType *GetModule() const;
 	template <typename ModuleType> const std::string& GetModuleName() const;
 	template <typename ModuleType> bool RegisterAndLoadModule(const std::string& moduleName);
-	void UnloadAllModules();
+
 private:
-	std::map<std::type_index, Module *> modules;
+	class Panel;
+	std::unique_ptr<Panel> m_Panel;
+
+	void TickAllModules(bool inGame);
+
+	std::map<std::type_index, std::unique_ptr<Module>> modules;
 	std::map<std::type_index, std::string> moduleNames;
 };
 
@@ -31,7 +42,7 @@ template <typename ModuleType> inline ModuleType *ModuleManager::GetModule() con
 {
 	auto found = modules.find(typeid(ModuleType));
 	if (found != modules.end())
-		return static_cast<ModuleType *>(found->second);
+		return static_cast<ModuleType *>(found->second.get());
 	else
 		throw module_not_loaded(GetModuleName<ModuleType>().c_str());
 }
@@ -54,7 +65,7 @@ template <typename ModuleType> inline bool ModuleManager::RegisterAndLoadModule(
 
 	if (ModuleType::CheckDependencies())
 	{
-		modules[typeid(ModuleType)] = new ModuleType();
+		modules[typeid(ModuleType)].reset(new ModuleType());
 
 		PluginColorMsg(Color(0, 255, 0, 255), "Module %s loaded successfully!\n", moduleName.c_str());
 		return true;
@@ -64,19 +75,6 @@ template <typename ModuleType> inline bool ModuleManager::RegisterAndLoadModule(
 		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load!\n", moduleName.c_str());
 		return false;
 	}
-}
-
-inline void ModuleManager::UnloadAllModules()
-{
-	for (auto iterator : modules)
-	{
-		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", moduleNames[iterator.first].c_str());
-
-		delete iterator.second;
-		iterator.second = nullptr;
-	}
-
-	modules.clear();
 }
 
 extern ModuleManager& Modules();
