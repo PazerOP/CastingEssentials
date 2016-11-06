@@ -1,6 +1,6 @@
 #include "Modules.h"
 #include "PluginBase/Interfaces.h"
-#include "PluginBase/StubPanel.h"
+#include "Controls/StubPanel.h"
 
 #include <cdll_int.h>
 
@@ -32,10 +32,7 @@ void ModuleManager::UnloadAllModules()
 
 void ModuleManager::Panel::OnTick()
 {
-	if (Interfaces::GetEngineClient()->IsInGame())
-		Modules().TickAllModules(true);
-	else
-		Modules().TickAllModules(false);
+	Modules().TickAllModules(Interfaces::GetEngineClient()->IsInGame());
 }
 
 void ModuleManager::TickAllModules(bool inGame)

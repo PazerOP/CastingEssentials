@@ -23,7 +23,7 @@
 #include "PluginBase/player.h"
 #include "PluginBase/TFDefinitions.h"
 
-#include "PluginBase/StubPanel.h"
+#include "Controls/StubPanel.h"
 
 class Killstreaks::Panel final : public vgui::StubPanel {
 public:

@@ -364,89 +364,7 @@ void MedigunInfo::MedigunPanel::OnMedigunInfoUpdate(KeyValues *attributes)
 	team = (TFTeam)attributes->GetInt("team");
 
 	if (reloadSettings)
-	{
-		KeyValues *conditions = new KeyValues("conditions");
-
-		if (alive)
-		{
-			conditions->SetBool("player-alive", true);
-		}
-		else
-		{
-			conditions->SetBool("player-dead", true);
-		}
-
-		if (charges == 0)
-		{
-			conditions->SetBool("charges-0", true);
-		}
-		else if (charges == 1)
-		{
-			conditions->SetBool("charges-1", true);
-		}
-		else if (charges == 2)
-		{
-			conditions->SetBool("charges-2", true);
-		}
-		else if (charges == 3)
-		{
-			conditions->SetBool("charges-3", true);
-		}
-		else if (charges == 4)
-		{
-			conditions->SetBool("charges-4", true);
-		}
-
-		if (medigun == TFMedigun_MediGun)
-		{
-			conditions->SetBool("medigun-medigun", true);
-		}
-		else if (medigun == TFMedigun_Kritzkrieg)
-		{
-			conditions->SetBool("medigun-kritzkrieg", true);
-		}
-		else if (medigun == TFMedigun_QuickFix)
-		{
-			conditions->SetBool("medigun-quickfix", true);
-		}
-		else if (medigun == TFMedigun_Vaccinator)
-		{
-			conditions->SetBool("medigun-vaccinator", true);
-		}
-
-		if (released)
-		{
-			conditions->SetBool("status-released", true);
-		}
-		else
-		{
-			conditions->SetBool("status-building", true);
-		}
-
-		if (resistType == TFResistType_Bullet)
-		{
-			conditions->SetBool("resist-bullet", true);
-		}
-		else if (resistType == TFResistType_Explosive)
-		{
-			conditions->SetBool("resist-explosive", true);
-		}
-		else if (resistType == TFResistType_Fire)
-		{
-			conditions->SetBool("resist-fire", true);
-		}
-
-		if (team == TFTeam::Red)
-		{
-			conditions->SetBool("team-red", true);
-		}
-		else if (team == TFTeam::Blue)
-		{
-			conditions->SetBool("team-blu", true);
-		}
-
-		LoadControlSettings("Resource/UI/MedigunPanel.res", nullptr, nullptr, conditions);
-	}
+		OnReloadControlSettings(nullptr);
 
 	// TODO: set up a custom message that doesn't spam a bunch of DialogVariables messages, forcing the panel to redraw 5 or 6 times.
 
@@ -466,82 +384,44 @@ void MedigunInfo::MedigunPanel::OnReloadControlSettings(KeyValues *attributes)
 	KeyValues *conditions = new KeyValues("conditions");
 
 	if (alive)
-	{
 		conditions->SetBool("player-alive", true);
-	}
 	else
-	{
 		conditions->SetBool("player-dead", true);
-	}
 
-	if (charges == 0)
+	// Set charges
 	{
-		conditions->SetBool("charges-0", true);
-	}
-	else if (charges == 1)
-	{
-		conditions->SetBool("charges-1", true);
-	}
-	else if (charges == 2)
-	{
-		conditions->SetBool("charges-2", true);
-	}
-	else if (charges == 3)
-	{
-		conditions->SetBool("charges-3", true);
-	}
-	else if (charges == 4)
-	{
-		conditions->SetBool("charges-4", true);
+		char buffer[16];
+		sprintf_s(buffer, "charges-%i", charges);
+		conditions->SetBool(buffer, true);
 	}
 
 	if (medigun == TFMedigun_MediGun)
-	{
 		conditions->SetBool("medigun-medigun", true);
-	}
 	else if (medigun == TFMedigun_Kritzkrieg)
-	{
 		conditions->SetBool("medigun-kritzkrieg", true);
-	}
 	else if (medigun == TFMedigun_QuickFix)
-	{
 		conditions->SetBool("medigun-quickfix", true);
-	}
 	else if (medigun == TFMedigun_Vaccinator)
-	{
 		conditions->SetBool("medigun-vaccinator", true);
-	}
 
+	// Uber popped?
 	if (released)
-	{
 		conditions->SetBool("status-released", true);
-	}
 	else
-	{
 		conditions->SetBool("status-building", true);
-	}
 
+	// Resist type?
 	if (resistType == TFResistType_Bullet)
-	{
 		conditions->SetBool("resist-bullet", true);
-	}
 	else if (resistType == TFResistType_Explosive)
-	{
 		conditions->SetBool("resist-explosive", true);
-	}
 	else if (resistType == TFResistType_Fire)
-	{
 		conditions->SetBool("resist-fire", true);
-	}
 
 	if (team == TFTeam::Red)
-	{
 		conditions->SetBool("team-red", true);
-	}
 	else if (team == TFTeam::Blue)
-	{
 		conditions->SetBool("team-blu", true);
-	}
 
 	LoadControlSettings("Resource/UI/MedigunPanel.res", nullptr, nullptr, conditions);
 }

@@ -16,8 +16,7 @@
 #include "Modules/LocalPlayer.h"
 #include "Modules/MedigunInfo.h"
 #include "Modules/PlayerAliases.h"
-
-#include <icommandline.h>
+#include "Modules/SteamTools.h"
 
 class CastingPlugin final : public Plugin
 {
@@ -56,6 +55,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
 	Modules().RegisterAndLoadModule<MedigunInfo>("Medigun Info");
 	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
+	Modules().RegisterAndLoadModule<SteamTools>("Steam Tools");
 
 	ConVar_Register();
 

@@ -87,6 +87,7 @@
     <ClCompile Include="Modules\LocalPlayer.cpp" />
     <ClCompile Include="Modules\MedigunInfo.cpp" />
     <ClCompile Include="Modules\PlayerAliases.cpp" />
+    <ClCompile Include="Modules\SteamTools.cpp" />
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
     <ClCompile Include="PluginBase\Common.cpp" />
     <ClCompile Include="PluginBase\Entities.cpp" />
@@ -115,6 +116,7 @@
     <ClInclude Include="Modules\LocalPlayer.h" />
     <ClInclude Include="Modules\MedigunInfo.h" />
     <ClInclude Include="Modules\PlayerAliases.h" />
+    <ClInclude Include="Modules\SteamTools.h" />
     <ClInclude Include="PluginBase\Common.h" />
     <ClInclude Include="PluginBase\Entities.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />

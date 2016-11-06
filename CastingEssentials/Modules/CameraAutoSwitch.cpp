@@ -21,7 +21,7 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/player.h"
 
-#include "PluginBase/StubPanel.h"
+#include "Controls/StubPanel.h"
 
 class CameraAutoSwitch::Panel : public vgui::StubPanel
 {

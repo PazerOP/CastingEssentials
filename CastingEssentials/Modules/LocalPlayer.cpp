@@ -2,7 +2,7 @@
 #include "PluginBase/Funcs.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
-#include "PluginBase/StubPanel.h"
+#include "Controls/StubPanel.h"
 
 #include <client/c_baseentity.h>
 #include <cdll_int.h>
