@@ -3,7 +3,6 @@
 #include <convar.h>
 #include <steam/steam_api.h>
 
-#include "PluginBase/funcs.h"
 #include "PluginBase/Interfaces.h"
 
 SteamTools::SteamTools()

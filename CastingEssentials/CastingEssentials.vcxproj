@@ -91,7 +91,7 @@
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
     <ClCompile Include="PluginBase\Common.cpp" />
     <ClCompile Include="PluginBase\Entities.cpp" />
-    <ClCompile Include="PluginBase\Funcs.cpp" />
+    <ClCompile Include="PluginBase\HookManager.cpp" />
     <ClCompile Include="PluginBase\Interfaces.cpp" />
     <ClCompile Include="PluginBase\Modules.cpp" />
     <ClCompile Include="PluginBase\Player.cpp" />
@@ -120,7 +120,7 @@
     <ClInclude Include="PluginBase\Common.h" />
     <ClInclude Include="PluginBase\Entities.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />
-    <ClInclude Include="PluginBase\Funcs.h" />
+    <ClInclude Include="PluginBase\HookManager.h" />
     <ClInclude Include="PluginBase\Player.h" />
     <ClInclude Include="Controls\StubPanel.h" />
     <ClInclude Include="PluginBase\TFDefinitions.h" />

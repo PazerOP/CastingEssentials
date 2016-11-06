@@ -23,7 +23,7 @@ namespace Hooking
 
 	protected:
 		BaseGroupHook();
-		virtual ~BaseGroupHook() = default;
+		virtual ~BaseGroupHook();
 
 		std::recursive_mutex m_HooksTableMutex;
 		std::map<uint64, Functional> m_HooksTable;
@@ -128,6 +128,12 @@ namespace Hooking
 	{
 		Assert(!s_This);
 		s_This = this;
+	}
+	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
+	inline BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>::~BaseGroupHook()
+	{
+		Assert(s_This == this);
+		s_This = nullptr;
 	}
 
 	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>

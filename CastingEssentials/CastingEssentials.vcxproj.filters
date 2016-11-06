@@ -33,9 +33,6 @@
     <ClCompile Include="Modules\CameraTools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PluginBase\Funcs.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PluginBase\Player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -90,6 +87,9 @@
     <ClCompile Include="Modules\SteamTools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PluginBase\HookManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -114,9 +114,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PluginBase\Player.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\Funcs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PluginBase\Entities.h">
@@ -177,6 +174,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\SteamTools.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PluginBase\HookManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

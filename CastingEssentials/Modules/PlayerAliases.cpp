@@ -1,5 +1,5 @@
 #include "PlayerAliases.h"
-#include "PluginBase/Funcs.h"
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
@@ -45,7 +45,7 @@ bool PlayerAliases::CheckDependencies()
 		ready = false;
 	}
 
-	if (!Funcs::GetHook_IVEngineClient_GetPlayerInfo())
+	if (!GetHooks()->GetHook<IVEngineClient_GetPlayerInfo>())
 	{
 		PluginWarning("Required hook IVEngineClient::GetPlayerInfo for module %s not available!\n", GetModuleName());
 		ready = false;
@@ -68,7 +68,7 @@ void PlayerAliases::StaticToggleEnabled(IConVar* var, const char* oldValue, floa
 
 bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 {
-	bool result = Funcs::GetHook_IVEngineClient_GetPlayerInfo()->GetOriginal()(ent_num, pinfo);
+	bool result = GetHooks()->GetHook<IVEngineClient_GetPlayerInfo>()->GetOriginal()(ent_num, pinfo);
 
 	if (ent_num < 1 || ent_num >= Interfaces::GetEngineTool()->GetMaxClients())
 		return result;
@@ -110,7 +110,7 @@ bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 
 	V_strcpy_safe(pinfo->name, gameName.c_str());
 
-	Funcs::GetHook_IVEngineClient_GetPlayerInfo()->SetState(Hooking::HookAction::SUPERCEDE);
+	GetHooks()->GetHook<IVEngineClient_GetPlayerInfo>()->SetState(Hooking::HookAction::SUPERCEDE);
 	return result;
 }
 
@@ -146,12 +146,14 @@ void PlayerAliases::ToggleEnabled(IConVar* var, const char* oldValue, float fOld
 	{
 		if (!m_GetPlayerInfoHook)
 		{
-			m_GetPlayerInfoHook = Funcs::GetHook_IVEngineClient_GetPlayerInfo()->AddHook(std::bind(&PlayerAliases::GetPlayerInfoOverride, this, std::placeholders::_1, std::placeholders::_2));
+			m_GetPlayerInfoHook = GetHooks()->AddHook<IVEngineClient_GetPlayerInfo>(std::bind(&PlayerAliases::GetPlayerInfoOverride, this, std::placeholders::_1, std::placeholders::_2));
 		}
 	}
 	else
 	{
-		if (m_GetPlayerInfoHook && Funcs::GetHook_IVEngineClient_GetPlayerInfo()->RemoveHook(m_GetPlayerInfoHook, __FUNCSIG__))
+		if (m_GetPlayerInfoHook && GetHooks()->RemoveHook<IVEngineClient_GetPlayerInfo>(m_GetPlayerInfoHook, __FUNCSIG__))
 			m_GetPlayerInfoHook = 0;
+
+		Assert(!m_GetPlayerInfoHook);
 	}
 }

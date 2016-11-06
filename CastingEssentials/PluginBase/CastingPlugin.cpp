@@ -6,7 +6,7 @@
 
 #include "Interfaces.h"
 #include "Modules.h"
-#include "Funcs.h"
+#include "HookManager.h"
 #include "Player.h"
 
 #include "Modules/CameraAutoSwitch.h"
@@ -43,7 +43,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 #endif
 	
 	Interfaces::Load(interfaceFactory);
-	Funcs::Load();
+	GetHooks()->Load();
 	Modules().Init();
 
 	//auto test = new vgui::Label(nullptr, "testPanel", "Hello World");
@@ -74,7 +74,7 @@ void CastingPlugin::Unload()
 	Player::Unload();
 	ConVar_Unregister();
 	Modules().UnloadAllModules();
-	Funcs::Unload();
+	GetHooks()->Unload();
 	Interfaces::Unload();
 
 	PluginMsg("Finished unloading!\n");

@@ -1,5 +1,5 @@
 #include "LocalPlayer.h"
-#include "PluginBase/Funcs.h"
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "Controls/StubPanel.h"
@@ -63,7 +63,7 @@ bool LocalPlayer::CheckDependencies()
 
 	try
 	{
-		Funcs::GetFunc_Global_GetLocalPlayerIndex();
+		GetHooks()->GetFunc<Global_GetLocalPlayerIndex>();
 	}
 	catch (bad_pointer)
 	{
@@ -95,12 +95,12 @@ int LocalPlayer::GetLocalPlayerIndexOverride()
 		Player* localPlayer = Player::GetPlayer(player->GetInt(), __FUNCSIG__);
 		if (localPlayer)
 		{
-			Funcs::GetHook_Global_GetLocalPlayerIndex()->SetState(Hooking::HookAction::SUPERCEDE);
+			GetHooks()->GetHook<Global_GetLocalPlayerIndex>()->SetState(Hooking::HookAction::SUPERCEDE);
 			return player->GetInt();
 		}
 	}
 
-	Funcs::GetHook_Global_GetLocalPlayerIndex()->SetState(Hooking::HookAction::IGNORE);
+	GetHooks()->GetHook<Global_GetLocalPlayerIndex>()->SetState(Hooking::HookAction::IGNORE);
 	return 0;
 }
 
@@ -110,13 +110,15 @@ void LocalPlayer::ToggleEnabled(IConVar *var, const char *pOldValue, float flOld
 	{
 		if (!m_GetLocalPlayerIndexHookID)
 		{
-			m_GetLocalPlayerIndexHookID = Funcs::GetHook_Global_GetLocalPlayerIndex()->AddHook(std::bind(&LocalPlayer::GetLocalPlayerIndexOverride, this));
+			m_GetLocalPlayerIndexHookID = GetHooks()->GetHook<Global_GetLocalPlayerIndex>()->AddHook(std::bind(&LocalPlayer::GetLocalPlayerIndexOverride, this));
 		}
 	}
 	else
 	{
-		if (m_GetLocalPlayerIndexHookID && Funcs::GetHook_Global_GetLocalPlayerIndex()->RemoveHook(m_GetLocalPlayerIndexHookID, __FUNCSIG__))
+		if (m_GetLocalPlayerIndexHookID && GetHooks()->GetHook<Global_GetLocalPlayerIndex>()->RemoveHook(m_GetLocalPlayerIndexHookID, __FUNCSIG__))
 			m_GetLocalPlayerIndexHookID = 0;
+
+		Assert(!m_GetLocalPlayerIndexHookID);
 	}
 }
 

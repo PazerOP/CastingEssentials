@@ -1,5 +1,5 @@
 #include "Interfaces.h"
-#include "Funcs.h"
+#include "PluginBase/HookManager.h"
 #include "Exceptions.h"
 
 #include <cdll_int.h>

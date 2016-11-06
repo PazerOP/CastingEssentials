@@ -20,10 +20,10 @@ void ModuleManager::Init()
 
 void ModuleManager::UnloadAllModules()
 {
-	for (auto& iterator : modules)
+	for (auto iterator = modules.rbegin(); iterator != modules.rend(); iterator++)
 	{
-		iterator.second.reset();
-		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", moduleNames[iterator.first].c_str());
+		iterator->second.reset();
+		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", moduleNames[iterator->first].c_str());
 	}
 
 	modules.clear();

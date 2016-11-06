@@ -17,7 +17,7 @@
 #include <toolframework/ienginetool.h>
 #include <vgui/IVGui.h>
 
-#include "PluginBase/funcs.h"
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/player.h"
 
@@ -72,7 +72,7 @@ bool CameraAutoSwitch::CheckDependencies()
 
 	try
 	{
-		Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget();
+		GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>();
 	}
 	catch (bad_pointer)
 	{
@@ -125,7 +125,7 @@ void CameraAutoSwitch::FireGameEvent(IGameEvent *event)
 							{
 								try
 								{
-									Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget()(killer->GetEntity()->entindex());
+									GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(killer->GetEntity()->entindex());
 								}
 								catch (bad_pointer &e)
 								{
@@ -177,7 +177,7 @@ void CameraAutoSwitch::Panel::OnTick()
 
 		try
 		{
-			Funcs::GetFunc_C_HLTVCamera_SetPrimaryTarget()(killerSwitchPlayer);
+			GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(killerSwitchPlayer);
 		}
 		catch (bad_pointer &e)
 		{
