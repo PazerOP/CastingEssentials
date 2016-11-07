@@ -21,6 +21,7 @@
       <DisableSpecificWarnings>4594;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />

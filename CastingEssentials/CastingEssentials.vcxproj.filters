@@ -90,6 +90,9 @@
     <ClCompile Include="PluginBase\HookManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\FOVOverride.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -177,6 +180,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PluginBase\HookManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\FOVOverride.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

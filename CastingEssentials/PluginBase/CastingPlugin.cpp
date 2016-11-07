@@ -12,6 +12,7 @@
 #include "Modules/CameraAutoSwitch.h"
 #include "Modules/CameraTools.h"
 #include "Modules/ConsoleTools.h"
+#include "Modules/FOVOverride.h"
 #include "Modules/Killstreaks.h"
 #include "Modules/LocalPlayer.h"
 #include "Modules/MedigunInfo.h"
@@ -43,7 +44,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 #endif
 	
 	Interfaces::Load(interfaceFactory);
-	GetHooks()->Load();
+	HookManager::Load();
 	Modules().Init();
 
 	//auto test = new vgui::Label(nullptr, "testPanel", "Hello World");
@@ -51,6 +52,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
 	Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
 	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
+	Modules().RegisterAndLoadModule<FOVOverride>("FOV Override");
 	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
 	Modules().RegisterAndLoadModule<MedigunInfo>("Medigun Info");
@@ -74,7 +76,7 @@ void CastingPlugin::Unload()
 	Player::Unload();
 	ConVar_Unregister();
 	Modules().UnloadAllModules();
-	GetHooks()->Unload();
+	HookManager::Unload();
 	Interfaces::Unload();
 
 	PluginMsg("Finished unloading!\n");

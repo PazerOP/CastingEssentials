@@ -138,6 +138,55 @@ CSteamID Player::GetSteamID() const
 	return CSteamID();
 }
 
+bool Player::CheckCondition(TFCond condition) const
+{
+	if (IsValid())
+	{
+		uint32_t playerCond = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "m_nPlayerCond" });
+		uint32_t condBits = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "_condition_bits" });
+		uint32_t playerCondEx = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "m_nPlayerCondEx" });
+		uint32_t playerCondEx2 = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "m_nPlayerCondEx2" });
+		uint32_t playerCondEx3 = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "m_nPlayerCondEx3" });
+
+		uint32_t conditions[4];
+		conditions[0] = playerCond | condBits;
+		conditions[1] = playerCondEx;
+		conditions[2] = playerCondEx2;
+		conditions[3] = playerCondEx3;
+
+		if (condition < 32)
+		{
+			if (conditions[0] & (1 << condition))
+			{
+				return true;
+			}
+		}
+		else if (condition < 64)
+		{
+			if (conditions[1] & (1 << (condition - 32)))
+			{
+				return true;
+			}
+		}
+		else if (condition < 96)
+		{
+			if (conditions[2] & (1 << (condition - 64)))
+			{
+				return true;
+			}
+		}
+		else if (condition < 128)
+		{
+			if (conditions[3] & (1 << (condition - 96)))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 TFTeam Player::GetTeam() const
 {
 	if (IsValid())

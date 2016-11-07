@@ -11,15 +11,30 @@
 #include <icvar.h>
 #include <cdll_int.h>
 #include <client/hltvcamera.h>
+#include <toolframework/iclientenginetools.h>
 
-static HookManager s_HookManager;
-HookManager* GetHooks() { return &s_HookManager; }
+static std::unique_ptr<HookManager> s_HookManager;
+HookManager* GetHooks() { Assert(s_HookManager); return s_HookManager.get(); }
+
+bool HookManager::Load()
+{
+	s_HookManager.reset(new HookManager());
+	return true;
+}
+bool HookManager::Unload()
+{
+	s_HookManager.reset();
+	return true;
+}
 
 class HookManager::Panel final : vgui::StubPanel
 {
 public:
 	Panel()
 	{
+		if (!Interfaces::GetEngineClient())
+			Error("[CastingEssentials] Interfaces::GetEngineClient() returned nullptr.");
+
 		m_InGame = false;
 	}
 	void OnTick() override
@@ -27,12 +42,12 @@ public:
 		if (!m_InGame && Interfaces::GetEngineClient()->IsInGame())
 		{
 			m_InGame = true;
-			s_HookManager.IngameStateChanged(m_InGame);
+			GetHooks()->IngameStateChanged(m_InGame);
 		}
 		else if (m_InGame && Interfaces::GetEngineClient()->IsInGame())
 		{
 			m_InGame = false;
-			s_HookManager.IngameStateChanged(m_InGame);
+			GetHooks()->IngameStateChanged(m_InGame);
 		}
 	}
 private:
@@ -147,48 +162,30 @@ void HookManager::IngameStateChanged(bool inGame)
 {
 	if (inGame)
 	{
-		m_Hook_IGameEventManager2_FireEventClientSide.reset(new IGameEventManager2_FireEventClientSide(Interfaces::GetGameEventManager(), &IGameEventManager2::FireEventClientSide));
+		m_Hook_IGameEventManager2_FireEventClientSide.AttachHook(std::make_shared<IGameEventManager2_FireEventClientSide::Inner>(Interfaces::GetGameEventManager(), &IGameEventManager2::FireEventClientSide));
 	}
 	else
 	{
-		m_Hook_IGameEventManager2_FireEventClientSide.reset();
+		m_Hook_IGameEventManager2_FireEventClientSide.DetachHook();
 	}
 }
 
-bool HookManager::Load()
+HookManager::HookManager()
 {
 	m_Panel.reset(new Panel());
-	m_Hook_ICvar_ConsoleColorPrintf.reset(new ICvar_ConsoleColorPrintf(g_pCVar, &ICvar::ConsoleColorPrintf));
-	m_Hook_ICvar_ConsoleDPrintf.reset(new ICvar_ConsoleDPrintf(g_pCVar, &ICvar::ConsoleDPrintf));
-	m_Hook_ICvar_ConsolePrintf.reset(new ICvar_ConsolePrintf(g_pCVar, &ICvar::ConsolePrintf));
+	m_Hook_ICvar_ConsoleColorPrintf.AttachHook(std::make_shared<ICvar_ConsoleColorPrintf::Inner>(g_pCVar, &ICvar::ConsoleColorPrintf));
+	m_Hook_ICvar_ConsoleDPrintf.AttachHook(std::make_shared<ICvar_ConsoleDPrintf::Inner>(g_pCVar, &ICvar::ConsoleDPrintf));
+	m_Hook_ICvar_ConsolePrintf.AttachHook(std::make_shared<ICvar_ConsolePrintf::Inner>(g_pCVar, &ICvar::ConsolePrintf));
 
-	m_Hook_IVEngineClient_GetPlayerInfo.reset(new IVEngineClient_GetPlayerInfo(Interfaces::GetEngineClient(), &IVEngineClient::GetPlayerInfo));
+	m_Hook_IClientEngineTools_InToolMode.AttachHook(std::make_shared<IClientEngineTools_InToolMode::Inner>(Interfaces::GetClientEngineTools(), &IClientEngineTools::InToolMode));
+	m_Hook_IClientEngineTools_IsThirdPersonCamera.AttachHook(std::make_shared<IClientEngineTools_IsThirdPersonCamera::Inner>(Interfaces::GetClientEngineTools(), &IClientEngineTools::IsThirdPersonCamera));
+	m_Hook_IClientEngineTools_SetupEngineView.AttachHook(std::make_shared<IClientEngineTools_SetupEngineView::Inner>(Interfaces::GetClientEngineTools(), &IClientEngineTools::SetupEngineView));
 
-	m_Hook_C_HLTVCamera_SetCameraAngle.reset(new C_HLTVCamera_SetCameraAngle(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetCameraAngle()));
-	m_Hook_C_HLTVCamera_SetMode.reset(new C_HLTVCamera_SetMode(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));
-	m_Hook_C_HLTVCamera_SetPrimaryTarget.reset(new C_HLTVCamera_SetPrimaryTarget(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetPrimaryTarget()));
+	m_Hook_IVEngineClient_GetPlayerInfo.AttachHook(std::make_shared<IVEngineClient_GetPlayerInfo::Inner>(Interfaces::GetEngineClient(), &IVEngineClient::GetPlayerInfo));
 
-	m_Hook_Global_GetLocalPlayerIndex.reset(new Global_GetLocalPlayerIndex(GetRawFunc_Global_GetLocalPlayerIndex()));
+	m_Hook_C_HLTVCamera_SetCameraAngle.AttachHook(std::make_shared<C_HLTVCamera_SetCameraAngle::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetCameraAngle()));
+	m_Hook_C_HLTVCamera_SetMode.AttachHook(std::make_shared<C_HLTVCamera_SetMode::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));
+	m_Hook_C_HLTVCamera_SetPrimaryTarget.AttachHook(std::make_shared<C_HLTVCamera_SetPrimaryTarget::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetPrimaryTarget()));
 
-	return true;
-}
-bool HookManager::Unload()
-{
-	m_Panel.reset();
-	//g_SourceHook.UnloadPlugin(g_PLID, new StatusSpecUnloader());
-	m_Hook_ICvar_ConsoleColorPrintf.reset();
-	m_Hook_ICvar_ConsoleDPrintf.reset();
-	m_Hook_ICvar_ConsolePrintf.reset();
-
-	m_Hook_IVEngineClient_GetPlayerInfo.reset();
-
-	m_Hook_IGameEventManager2_FireEventClientSide.reset();
-
-	m_Hook_C_HLTVCamera_SetCameraAngle.reset();
-	m_Hook_C_HLTVCamera_SetMode.reset();
-	m_Hook_C_HLTVCamera_SetPrimaryTarget.reset();
-
-	m_Hook_Global_GetLocalPlayerIndex.reset();
-
-	return true;
+	m_Hook_Global_GetLocalPlayerIndex.AttachHook(std::make_shared<Global_GetLocalPlayerIndex::Inner>(GetRawFunc_Global_GetLocalPlayerIndex()));
 }

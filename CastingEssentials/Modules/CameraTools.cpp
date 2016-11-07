@@ -547,8 +547,7 @@ void CameraTools::SpecPosition(const CCommand &command)
 	}
 	else
 	{
-		Warning("Usage: statusspec_cameratools_spec_pos <x> <y> <z> <yaw> <pitch>\n");
-
+		PluginWarning("Usage: statusspec_cameratools_spec_pos <x> <y> <z> <yaw> <pitch>\n");
 		return;
 	}
 }

@@ -57,12 +57,16 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SmallerTypeCheck>false</SmallerTypeCheck>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <WholeProgramOptimization>Yes (/GL)h</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -83,6 +87,7 @@
     <ClCompile Include="Modules\CameraAutoSwitch.cpp" />
     <ClCompile Include="Modules\CameraTools.cpp" />
     <ClCompile Include="Modules\ConsoleTools.cpp" />
+    <ClCompile Include="Modules\FOVOverride.cpp" />
     <ClCompile Include="Modules\Killstreaks.cpp" />
     <ClCompile Include="Modules\LocalPlayer.cpp" />
     <ClCompile Include="Modules\MedigunInfo.cpp" />
@@ -112,6 +117,7 @@
     <ClInclude Include="Modules\CameraAutoSwitch.h" />
     <ClInclude Include="Modules\CameraTools.h" />
     <ClInclude Include="Modules\ConsoleTools.h" />
+    <ClInclude Include="Modules\FOVOverride.h" />
     <ClInclude Include="Modules\Killstreaks.h" />
     <ClInclude Include="Modules\LocalPlayer.h" />
     <ClInclude Include="Modules\MedigunInfo.h" />

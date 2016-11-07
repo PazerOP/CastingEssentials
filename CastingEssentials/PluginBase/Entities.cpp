@@ -29,6 +29,8 @@ bool Entities::CheckClassBaseclass(ClientClass * clientClass, const char * basec
 bool Entities::CheckTableBaseclass(RecvTable * sTable, const char * baseclass)
 {
 	const char* tName = sTable->GetName();
+
+	// We're operating on the assumption that network table classes will start with "DT_"
 	if (tName && tName[0] && tName[1] && tName[2] && !strcmp(tName + 3, baseclass))
 		return true;
 
