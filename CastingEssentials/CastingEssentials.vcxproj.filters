@@ -93,6 +93,9 @@
     <ClCompile Include="Modules\FOVOverride.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\ProjectileOutlines.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -183,6 +186,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\FOVOverride.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\ProjectileOutlines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -4,6 +4,8 @@
 #include "Hooking/GroupVirtualHook.h"
 #include "PluginBase/Modules.h"
 
+#include <basehandle.h>
+
 #include <memory>
 #include <vector>
 
@@ -19,6 +21,9 @@ class IGameEventManager2;
 class IGameEvent;
 class IClientEngineTools;
 class Vector;
+class IClientNetworkable;
+class CBaseEntityList;
+class IHandleEntity;
 
 class HookManager final
 {
@@ -40,7 +45,11 @@ class HookManager final
 		C_HLTVCamera_SetMode,
 		C_HLTVCamera_SetPrimaryTarget,
 
+		C_BaseEntity_Init,
+
+		Global_CreateEntityByName,
 		Global_GetLocalPlayerIndex,
+		Global_CreateTFGlowObject,
 
 		Count,
 	};
@@ -145,14 +154,21 @@ class HookManager final
 	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);
 	typedef void(__thiscall *RawSetPrimaryTargetFn)(C_HLTVCamera*, int);
 	typedef int(*RawGetLocalPlayerIndexFn)();
+	typedef C_BaseEntity*(__cdecl *RawCreateEntityByNameFn)(const char* entityName);
+	typedef IClientNetworkable*(__cdecl *RawCreateTFGlowObjectFn)(int entNum, int serialNum);
+	typedef bool(__thiscall *RawBaseEntityInitFn)(C_BaseEntity* pThis, int entnum, int iSerialNum);
 
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
 	static RawSetPrimaryTargetFn GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
 	static RawGetLocalPlayerIndexFn GetRawFunc_Global_GetLocalPlayerIndex();
+	static RawCreateEntityByNameFn GetRawFunc_Global_CreateEntityByName();
+	static RawCreateTFGlowObjectFn GetRawFunc_Global_CreateTFGlowObject();
 
 public:
 	HookManager();
+
+	static RawBaseEntityInitFn GetRawFunc_C_BaseEntity_Init();
 
 	static bool Load();
 	static bool Unload();
@@ -173,13 +189,13 @@ public:
 	typedef ClassHook<Func::C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> C_HLTVCamera_SetMode;
 	typedef ClassHook<Func::C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> C_HLTVCamera_SetPrimaryTarget;
 
+	typedef ClassHook<Func::C_BaseEntity_Init, false, C_BaseEntity, bool, int, int> C_BaseEntity_Init;
+
 	typedef GlobalHook<Func::Global_GetLocalPlayerIndex, false, int> Global_GetLocalPlayerIndex;
+	typedef GlobalHook<Func::Global_CreateEntityByName, false, C_BaseEntity*, const char*> Global_CreateEntityByName;
+	typedef GlobalHook<Func::Global_CreateTFGlowObject, false, IClientNetworkable*, int, int> Global_CreateTFGlowObject;
 
 	template<class Hook> typename Hook::Functional GetFunc() { static_assert(false, "Invalid hook type"); }
-	template<> C_HLTVCamera_SetCameraAngle::Functional GetFunc<C_HLTVCamera_SetCameraAngle>();
-	template<> C_HLTVCamera_SetMode::Functional GetFunc<C_HLTVCamera_SetMode>();
-	template<> C_HLTVCamera_SetPrimaryTarget::Functional GetFunc<C_HLTVCamera_SetPrimaryTarget>();
-	template<> Global_GetLocalPlayerIndex::Functional GetFunc<Global_GetLocalPlayerIndex>();
 
 	template<class Hook> Hook* GetHook() { static_assert(false, "Invalid hook type"); }
 	template<> ICvar_ConsoleColorPrintf* GetHook<ICvar_ConsoleColorPrintf>() { return &m_Hook_ICvar_ConsoleColorPrintf; }
@@ -245,14 +261,17 @@ private:
 	C_HLTVCamera_SetMode m_Hook_C_HLTVCamera_SetMode;
 	C_HLTVCamera_SetPrimaryTarget m_Hook_C_HLTVCamera_SetPrimaryTarget;
 
+	C_BaseEntity_Init m_Hook_C_BaseEntity_Init;
+
 	Global_GetLocalPlayerIndex m_Hook_Global_GetLocalPlayerIndex;
 
 	void IngameStateChanged(bool inGame);
 	class Panel;
 	std::unique_ptr<Panel> m_Panel;
 
-	// Passthrough from Interfaces::GetHLTVCamera() so we don't have to #include "Interfaces.h" yet
+	// Passthrough from Interfaces so we don't have to #include "Interfaces.h" yet
 	static C_HLTVCamera* GetHLTVCamera();
+	static CBaseEntityList* GetBaseEntityList();
 };
 
 using ICvar_ConsoleColorPrintf = HookManager::ICvar_ConsoleColorPrintf;
@@ -271,31 +290,45 @@ using C_HLTVCamera_SetCameraAngle = HookManager::C_HLTVCamera_SetCameraAngle;
 using C_HLTVCamera_SetMode = HookManager::C_HLTVCamera_SetMode;
 using C_HLTVCamera_SetPrimaryTarget = HookManager::C_HLTVCamera_SetPrimaryTarget;
 
+using C_BaseEntity_Init = HookManager::C_BaseEntity_Init;
+
 using Global_GetLocalPlayerIndex = HookManager::Global_GetLocalPlayerIndex;
+using Global_CreateEntityByName = HookManager::Global_CreateEntityByName;
+using Global_CreateTFGlowObject = HookManager::Global_CreateTFGlowObject;
 
 extern void* SignatureScan(const char* moduleName, const char* signature, const char* mask);
 extern HookManager* GetHooks();
 
-template<> C_HLTVCamera_SetCameraAngle::Functional HookManager::GetFunc<C_HLTVCamera_SetCameraAngle>()
+template<> inline C_HLTVCamera_SetCameraAngle::Functional HookManager::GetFunc<C_HLTVCamera_SetCameraAngle>()
 {
 	return std::bind(
 		[](RawSetCameraAngleFn func, C_HLTVCamera* pThis, const QAngle& ang) { func(pThis, ang); },
 		GetRawFunc_C_HLTVCamera_SetCameraAngle(), GetHLTVCamera(), std::placeholders::_1);
 }
-template<> HookManager::C_HLTVCamera_SetMode::Functional HookManager::GetFunc<HookManager::C_HLTVCamera_SetMode>()
+template<> inline HookManager::C_HLTVCamera_SetMode::Functional HookManager::GetFunc<HookManager::C_HLTVCamera_SetMode>()
 {
 	return std::bind(
-		[](RawSetModeFn func, C_HLTVCamera* pThis, int mode) { func(pThis, mode); },
-		GetRawFunc_C_HLTVCamera_SetMode(), GetHLTVCamera(), std::placeholders::_1);
+		[](int mode) { GetRawFunc_C_HLTVCamera_SetMode()(GetHLTVCamera(), mode); },
+		std::placeholders::_1);
 }
-template<> C_HLTVCamera_SetPrimaryTarget::Functional HookManager::GetFunc<C_HLTVCamera_SetPrimaryTarget>()
+template<> inline C_HLTVCamera_SetPrimaryTarget::Functional HookManager::GetFunc<C_HLTVCamera_SetPrimaryTarget>()
 {
 	return std::bind(
 		[](RawSetPrimaryTargetFn func, C_HLTVCamera* pThis, int target) { func(pThis, target); },
 		GetRawFunc_C_HLTVCamera_SetPrimaryTarget(), GetHLTVCamera(), std::placeholders::_1);
 }
 
-template<> Global_GetLocalPlayerIndex::Functional HookManager::GetFunc<Global_GetLocalPlayerIndex>()
+template<> inline Global_GetLocalPlayerIndex::Functional HookManager::GetFunc<Global_GetLocalPlayerIndex>()
 {
 	return std::bind(GetRawFunc_Global_GetLocalPlayerIndex());
+}
+
+template<> inline Global_CreateEntityByName::Functional HookManager::GetFunc<Global_CreateEntityByName>()
+{
+	return std::bind(GetRawFunc_Global_CreateEntityByName(), std::placeholders::_1);
+}
+
+template<> inline Global_CreateTFGlowObject::Functional HookManager::GetFunc<Global_CreateTFGlowObject>()
+{
+	return std::bind(GetRawFunc_Global_CreateTFGlowObject(), std::placeholders::_1, std::placeholders::_2);
 }

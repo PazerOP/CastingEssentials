@@ -28,6 +28,8 @@ public:
 
 	// #include <cdll_int.h>
 	static IVEngineClient* GetEngineClient() { return pEngineClient; }
+
+	// #include <toolframework/ienginetool.h>
 	static IEngineTool* GetEngineTool() { return pEngineTool; }
 	static IGameEventManager2* GetGameEventManager() { return pGameEventManager; }
 	static IPrediction* GetPrediction() { return pPrediction; }

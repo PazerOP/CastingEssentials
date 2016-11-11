@@ -197,7 +197,7 @@ TFTeam Player::GetTeam() const
 			if (!entity)
 				return TFTeam::Unassigned;
 
-			m_CachedTeam = (TFTeam*)Entities::GetEntityProp<int*>(entity, { "m_iTeamNum" });
+			m_CachedTeam = Entities::GetEntityProp<TFTeam*>(entity, { "m_iTeamNum" });
 		}
 
 		if (m_CachedTeam)
@@ -236,7 +236,7 @@ TFClassType Player::GetClass() const
 	if (IsValid())
 	{
 		if (CheckCache() || !m_CachedClass)
-			m_CachedClass = (TFClassType*)Entities::GetEntityProp<int*>(GetEntity(), { "m_iClass" });
+			m_CachedClass = Entities::GetEntityProp<TFClassType*>(GetEntity(), { "m_iClass" });
 
 		if (m_CachedClass)
 			return *m_CachedClass;

@@ -265,11 +265,11 @@ typedef enum
 	TFResistType_Fire
 } TFResistType;
 
-typedef enum
+enum class TFGrenadePipebombType
 {
-	TFGrenadePipebombType_Grenade,
-	TFGrenadePipebombType_Stickybomb,
-} TFGrenadePipebombType;
+	Pill,
+	Sticky,
+};
 
 #define MAX_COSMETIC_SLOTS 3
 #define MAX_TAUNT_SLOTS 8

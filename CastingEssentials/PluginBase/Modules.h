@@ -13,7 +13,10 @@ class Module
 public:
 	virtual ~Module() = default;
 
-	static bool CheckDependencies() { return true; };
+	static bool CheckDependencies() { return true; }
+
+private:
+	friend class ModuleManager;
 
 	virtual void OnTick(bool inGame) { }
 };

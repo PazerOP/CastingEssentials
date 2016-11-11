@@ -82,7 +82,7 @@ void* SignatureScan(const char* moduleName, const char* signature, const char* m
 	const HMODULE clientModule = GetModuleHandle((std::string(moduleName) + ".dll").c_str());
 	GetModuleInformation(GetCurrentProcess(), clientModule, &clientModInfo, sizeof(MODULEINFO));
 
-	return FindPattern((DWORD)clientModule, clientModInfo.SizeOfImage, (PBYTE)signature, mask);
+	return FindPattern((DWORD)clientModInfo.lpBaseOfDll, clientModInfo.SizeOfImage, (PBYTE)signature, mask);
 }
 
 C_HLTVCamera* HookManager::GetHLTVCamera()
@@ -152,10 +152,72 @@ HookManager::RawGetLocalPlayerIndexFn HookManager::GetRawFunc_Global_GetLocalPla
 		s_GetLocalPlayerIndexFn = (RawGetLocalPlayerIndexFn)SignatureScan("client", SIG, MASK);
 
 		if (!s_GetLocalPlayerIndexFn)
-			throw bad_pointer("C_HLTVCamera::SetPrimaryTarget");
+			throw bad_pointer("GetLocalPlayerIndex");
 	}
 
 	return s_GetLocalPlayerIndexFn;
+}
+
+HookManager::RawCreateEntityByNameFn HookManager::GetRawFunc_Global_CreateEntityByName()
+{
+	static RawCreateEntityByNameFn s_CreateEntityByNameFn = nullptr;
+	if (!s_CreateEntityByNameFn)
+	{
+		constexpr const char* SIG =  "\x55" "\x8B\xEC" "\xE8\x00\x00\x00\x00" "\xFF\x75\x08" "\x8B\xC8" "\x8B\x10" "\xFF\x00\x00" "\x85\xC0" "\x75\x13" "\xFF\x75\x08" "\x68\x00\x00\x00\x00" "\xFF\x00\x00\x00\x00\x00" "\x83\xC4\x08" "\x33\xC0" "\x5D" "\xC3";
+		constexpr const char* MASK = "x" "xx" "x????" "xxx" "xx" "xx" "x??" "xx" "xx" "xxx" "x????" "x?????" "xxx" "xx" "x" "x";
+
+		s_CreateEntityByNameFn = (RawCreateEntityByNameFn)SignatureScan("client", SIG, MASK);
+		if (!s_CreateEntityByNameFn)
+			throw bad_pointer("CreateEntityByName");
+	}
+
+	return s_CreateEntityByNameFn;
+}
+
+HookManager::RawCreateTFGlowObjectFn HookManager::GetRawFunc_Global_CreateTFGlowObject()
+{
+	static RawCreateTFGlowObjectFn s_CreateTFGlowObjectFn = nullptr;
+	if (!s_CreateTFGlowObjectFn)
+	{
+		constexpr const char* SIG = 
+			"\x55"					// push ebp
+			"\x8B\xEC"				// mov ebp, esp
+			"\x57"					// push edi
+			"\x68\x00\x00\x00\x00"	// push <size_t>
+			"\xE8\x00\x00\x00\x00"	// call ???? (malloc?)
+			"\x8B\xF8"				// mov edi, eax
+			"\x83\xC4\x04"			// add esp, 4
+			"\x85\xFF"				// test edi, edi
+			"\x74\x5F"				// jz short ???? (return nullptr)
+			"\x56"					// push esi
+			"\x8B\xCF"				// mov ecx, edi <pThis>
+			"\xE8\x00\x00\x00\x00"	// call C_BaseEntity::C_BaseEntity
+			"\xFF\x75\x0C"			// push [ebp+serialNum]
+			"\xC7\x07";				// mov dword ptr [edi], ...
+		constexpr const char* MASK = "xxxxx????x????xxxxxxxxxxxxx????xxxxx";
+
+		s_CreateTFGlowObjectFn = (RawCreateTFGlowObjectFn)SignatureScan("client", SIG, MASK);
+		if (!s_CreateTFGlowObjectFn)
+			throw bad_pointer("_C_TFGlow_CreateObject");
+	}
+
+	return s_CreateTFGlowObjectFn;
+}
+
+HookManager::RawBaseEntityInitFn HookManager::GetRawFunc_C_BaseEntity_Init()
+{
+	static RawBaseEntityInitFn s_BaseEntityInitFn = nullptr;
+	if (!s_BaseEntityInitFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x8B\x45\x08\x56\xFF\x75\x0C\x8B\xF1\x8D\x4E\x04";
+		constexpr const char* MASK = "xxxxxxxxxxxxxxx";
+
+		s_BaseEntityInitFn = (RawBaseEntityInitFn)SignatureScan("client", SIG, MASK);
+		if (!s_BaseEntityInitFn)
+			throw bad_pointer("CBaseEntity::Init");
+	}
+
+	return s_BaseEntityInitFn;
 }
 
 void HookManager::IngameStateChanged(bool inGame)
@@ -172,6 +234,7 @@ void HookManager::IngameStateChanged(bool inGame)
 
 HookManager::HookManager()
 {
+	Assert(!s_HookManager);
 	m_Panel.reset(new Panel());
 	m_Hook_ICvar_ConsoleColorPrintf.AttachHook(std::make_shared<ICvar_ConsoleColorPrintf::Inner>(g_pCVar, &ICvar::ConsoleColorPrintf));
 	m_Hook_ICvar_ConsoleDPrintf.AttachHook(std::make_shared<ICvar_ConsoleDPrintf::Inner>(g_pCVar, &ICvar::ConsoleDPrintf));

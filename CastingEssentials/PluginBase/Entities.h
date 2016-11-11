@@ -8,6 +8,7 @@ class IClientEntity;
 class RecvTable;
 class RecvProp;
 class ClientClass;
+enum class TFTeam;
 
 class Entities final
 {
@@ -24,6 +25,10 @@ public:
 	}
 
 	static bool CheckEntityBaseclass(IClientEntity* entity, const char* baseclass);
+
+	static ClientClass* GetClientClass(const char* className);
+
+	__forceinline static TFTeam* GetEntityTeam(IClientEntity* entity) { return GetEntityProp<TFTeam*>(entity, { "m_iTeamNum" }); }
 
 private:
 	Entities() = delete;

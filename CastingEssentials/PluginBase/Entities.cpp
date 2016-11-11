@@ -1,10 +1,13 @@
 #include "Entities.h"
 #include "Interfaces.h"
 #include "Exceptions.h"
-#include <sstream>
+#include "PluginBase/TFDefinitions.h"
+
 #include <cdll_int.h>
 #include <client_class.h>
 #include <icliententity.h>
+
+#include <sstream>
 
 std::unordered_map<std::string, std::unordered_map<std::string, int>> Entities::s_ClassPropOffsets;
 
@@ -60,6 +63,20 @@ std::string Entities::ConvertTreeToString(const std::vector<std::string>& tree)
 		ss << '>' << branch;
 
 	return ss.str();
+}
+
+ClientClass* Entities::GetClientClass(const char* className)
+{
+	ClientClass *cc = Interfaces::GetClientDLL()->GetAllClasses();
+	while (cc)
+	{
+		if (!stricmp(className, cc->GetName()))
+			return cc;
+
+		cc = cc->m_pNext;
+	}
+
+	return nullptr;
 }
 
 bool Entities::RetrieveClassPropOffset(const std::string& className, const std::string& propertyString, const std::vector<std::string>& propertyTree)
