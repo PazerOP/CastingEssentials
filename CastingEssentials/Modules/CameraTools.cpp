@@ -315,10 +315,8 @@ void CameraTools::SpecPlayer(int playerIndex)
 
 void CameraTools::SpecSteamID(const CCommand& command)
 {
-	characterset_t newSet;
-	CharacterSetBuild(&newSet, "{}()'");	// Everything the default set has, minus the ':'
 	CCommand newCommand;
-	if (!newCommand.Tokenize(command.GetCommandString(), &newSet))
+	if (!ReparseForSteamIDs(command, newCommand))
 		return;
 
 	CSteamID parsed;

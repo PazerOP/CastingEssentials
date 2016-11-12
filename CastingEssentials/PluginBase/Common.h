@@ -6,6 +6,8 @@
 
 #define PLUGIN_VERSION "0.1"
 
+class CCommand;
+
 template<class... Parameters> __forceinline void PluginMsg(const char* fmt, Parameters... param)
 {
 	ConColorMsg(Color(0, 153, 153, 255), "[CastingEssentials] ");
@@ -46,3 +48,5 @@ inline bool IsFloat(const std::string& s)
 
 extern CSteamID ParseSteamID(const char* input);
 extern std::string RenderSteamID(const CSteamID& id);
+
+extern bool ReparseForSteamIDs(const CCommand& in, CCommand& out);

@@ -15,6 +15,11 @@ PlayerAliases::PlayerAliases()
 	m_Enabled = new ConVar("ce_playeraliases_enabled", "0", FCVAR_NONE, "Enables player aliases.", &PlayerAliases::StaticToggleEnabled);
 	m_FormatBlue = new ConVar("ce_playeraliases_format_blu", "%alias%", FCVAR_NONE, "Name format for BLU players.");
 	m_FormatRed = new ConVar("ce_playeraliases_format_red", "%alias%", FCVAR_NONE, "Name format for RED players.");
+	m_FormatSwap = new ConCommand("ce_playeraliases_format_swap", [](const CCommand& args) { GetModule()->SwapTeamFormats(); }, "Swaps the values of ce_playeraliases_format_red and ce_playeraliases_format_blu.");
+
+	m_PrintPlayerAliases = new ConCommand("ce_playeraliases_list", [](const CCommand& args) { GetModule()->PrintPlayerAliases(); }, "Prints all player aliases to console.");
+	m_AddPlayerAlias = new ConCommand("ce_playeraliases_add", [](const CCommand& args) { GetModule()->AddPlayerAlias(args); }, "Adds a new player alias.");
+	m_RemovePlayerAlias = new ConCommand("ce_playeraliases_remove", [](const CCommand& args) { GetModule()->RemovePlayerAlias(args); }, "Removes an existing player alias.");
 }
 
 bool PlayerAliases::CheckDependencies()
@@ -124,6 +129,87 @@ const std::string& PlayerAliases::GetAlias(const CSteamID& player, const std::st
 		return found->second;
 
 	return gameAlias;
+}
+
+void PlayerAliases::SwapTeamFormats()
+{
+	std::unique_ptr<const char> red(strdup(m_FormatRed->GetString()));
+	m_FormatRed->SetValue(m_FormatBlue->GetString());
+	m_FormatBlue->SetValue(red.get());
+}
+
+void PlayerAliases::PrintPlayerAliases()
+{
+	Msg("%i player aliases:\n", m_CustomAliases.size());
+
+	for (auto alias : m_CustomAliases)
+		Msg("    %s = %s\n", RenderSteamID(alias.first).c_str(), alias.second.c_str());
+}
+
+void PlayerAliases::AddPlayerAlias(const CCommand& brokenCommand)
+{
+	CCommand command;
+	if (!ReparseForSteamIDs(brokenCommand, command))
+		return;
+
+	if (command.ArgC() != 3)
+		goto Usage;
+
+	const CSteamID& id = ParseSteamID(command.Arg(1));
+	if (!id.IsValid())
+	{
+		Warning("Failed to parse steamid \"%s\"!\n", command.Arg(1));
+		return;
+	}
+
+	// Check for existing
+	{
+		const auto& found = m_CustomAliases.find(id);
+		if (found != m_CustomAliases.end())
+			m_CustomAliases.erase(found);
+	}
+	
+	{
+		const std::string& name = command.Arg(2);
+		m_CustomAliases.insert(std::make_pair(id, name));
+	}
+
+	return;
+Usage:
+	Warning("Usage: %s <steam id> <name>\n", m_AddPlayerAlias->GetName());
+}
+
+void PlayerAliases::RemovePlayerAlias(const CCommand& brokenCommand)
+{
+	CCommand command;
+	if (!ReparseForSteamIDs(brokenCommand, command))
+		return;
+
+	if (command.ArgC() != 2)
+		goto Usage;
+
+	const CSteamID& id = ParseSteamID(command.Arg(1));
+	if (!id.IsValid())
+	{
+		Warning("Failed to parse steamid \"%s\"!\n", command.Arg(1));
+		goto Usage;
+	}
+
+	// Find and remove existing
+	{
+		const auto& found = m_CustomAliases.find(id);
+		if (found != m_CustomAliases.end())
+			m_CustomAliases.erase(found);
+		else
+		{
+			Warning("Unable to find existing alias for steamid \"%s\"!\n", command.Arg(1));
+			return;
+		}
+	}
+
+	return;
+Usage:
+	Warning("Usage: %s <steam id>\n", m_RemovePlayerAlias->GetName());
 }
 
 void PlayerAliases::FindAndReplaceInString(std::string &str, const std::string &find, const std::string &replace)

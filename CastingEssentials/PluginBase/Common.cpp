@@ -1,5 +1,8 @@
 #include "Common.h"
 
+#include <convar.h>
+#include <characterset.h>
+
 #include <regex>
 
 CSteamID ParseSteamID(const char* input)
@@ -40,4 +43,17 @@ std::string RenderSteamID(const CSteamID& id)
 		return std::string();
 
 	return std::string("[U:") + std::to_string(id.GetEUniverse()) + ':' + std::to_string(id.GetAccountID()) + ']';
+}
+
+bool ReparseForSteamIDs(const CCommand& in, CCommand& out)
+{
+	characterset_t newSet;
+	CharacterSetBuild(&newSet, "{}()'");	// Everything the default set has, minus the ':'
+	if (!out.Tokenize(in.GetCommandString(), &newSet))
+	{
+		Warning("Failed to reparse command string \"%s\"\n", in.GetCommandString());
+		return false;
+	}
+
+	return true;
 }

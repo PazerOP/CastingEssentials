@@ -4,6 +4,8 @@
 struct player_info_s;
 class ConVar;
 class IConVar;
+class ConCommand;
+class CCommand;
 
 class PlayerAliases final : public Module
 {
@@ -28,6 +30,17 @@ private:
 	ConVar* m_Enabled;
 	ConVar* m_FormatBlue;
 	ConVar* m_FormatRed;
+
+	ConCommand* m_FormatSwap;
+	void SwapTeamFormats();
+
+	ConCommand* m_PrintPlayerAliases;
+	void PrintPlayerAliases();
+
+	ConCommand* m_AddPlayerAlias;
+	void AddPlayerAlias(const CCommand& command);
+	ConCommand* m_RemovePlayerAlias;
+	void RemovePlayerAlias(const CCommand& command);
 
 	static void StaticToggleEnabled(IConVar* var, const char* oldValue, float fOldValue);
 	void ToggleEnabled(IConVar* var, const char* oldValue, float fOldValue);
