@@ -250,5 +250,14 @@ HookManager::HookManager()
 	m_Hook_C_HLTVCamera_SetMode.AttachHook(std::make_shared<C_HLTVCamera_SetMode::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));
 	m_Hook_C_HLTVCamera_SetPrimaryTarget.AttachHook(std::make_shared<C_HLTVCamera_SetPrimaryTarget::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetPrimaryTarget()));
 
+	{
+		Hooking::Internal::LocalDetourFnPtr<C_BaseEntity, bool, int, int> hack = [](C_BaseEntity* pThis, void*, int entnum, int iSerialNum)
+		{
+			return GetRawFunc_C_BaseEntity_Init()(pThis, entnum, iSerialNum);
+		};
+		m_Hook_C_BaseEntity_Init.AttachHook(std::make_shared<C_BaseEntity_Init::Inner>(
+			reinterpret_cast<Hooking::Internal::GlobalDetourFnPtr<bool, C_BaseEntity*, void*, int, int>>(hack)));
+	}
+
 	m_Hook_Global_GetLocalPlayerIndex.AttachHook(std::make_shared<Global_GetLocalPlayerIndex::Inner>(GetRawFunc_Global_GetLocalPlayerIndex()));
 }

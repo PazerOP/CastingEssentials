@@ -8,9 +8,13 @@
 
 #include <toolframework/ienginetool.h>
 
+// smh windows
+#undef IGNORE
+
 ProjectileOutlines::ProjectileOutlines()
 {
 	m_Init = false;
+	m_BaseEntityInitHook = 0;
 
 	m_RocketsEnabled = new ConVar("ce_projectileoutlines_rockets", "0", FCVAR_NONE, "Enable projectile outlines for rockets.");
 	m_PillsEnabled = new ConVar("ce_projectileoutlines_pills", "0", FCVAR_NONE, "Enable projectile outlines for pills.");
@@ -23,17 +27,26 @@ ProjectileOutlines::ProjectileOutlines()
 	ce_projectileoutlines_color_red = new ConVar("ce_projectileoutlines_color_red", "189 55 55 255", FCVAR_NONE, "The color used for outlines of RED team's projectiles.", &ColorChanged);
 }
 
+ProjectileOutlines::~ProjectileOutlines()
+{
+	if (m_BaseEntityInitHook && GetHooks()->RemoveHook<C_BaseEntity_Init>(m_BaseEntityInitHook, __FUNCSIG__))
+		m_BaseEntityInitHook = 0;
+
+	Assert(!m_BaseEntityInitHook);
+}
+
 void ProjectileOutlines::OnTick(bool inGame)
 {
-	if (!m_Init)
-	{
-		ColorChanged(ce_projectileoutlines_color_blu, "", 0);
-		ColorChanged(ce_projectileoutlines_color_red, "", 0);
-		m_Init = true;
-	}
-
 	if (inGame)
 	{
+		if (!m_Init)
+		{
+			ColorChanged(ce_projectileoutlines_color_blu, "", 0);
+			ColorChanged(ce_projectileoutlines_color_red, "", 0);
+			m_BaseEntityInitHook = GetHooks()->AddHook<C_BaseEntity_Init>(std::bind(&InitDetour, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+			m_Init = true;
+		}
+
 		IClientEntityList* const clientEntityList = Interfaces::GetClientEntityList();
 
 		// Remove glows for dead entities
@@ -73,30 +86,8 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 {
 	EHANDLE handle;
 	{
-		static constexpr int MAGIC_ENTNUM = 0x141BCF9B;
-		static constexpr int MAGIC_SERIALNUM = 0x0FCAD8B9;
-
-		static std::unique_ptr<PLH::Detour> detour;
-		if (!detour)
-		{
-			Hooking::Internal::LocalDetourFnPtr<C_BaseEntity, bool, int, int> detourFn = [](C_BaseEntity* pThis, void*, int entnum, int iSerialNum)
-			{
-				if (entnum == MAGIC_ENTNUM && iSerialNum == MAGIC_SERIALNUM)
-					return pThis->InitializeAsClientEntity(nullptr, RENDER_GROUP_OTHER);
-				else
-					detour->GetOriginal<Hooking::Internal::LocalFnPtr<C_BaseEntity, bool, int, int>>()(pThis, entnum, iSerialNum);
-			};
-
-			detour.reset(new PLH::Detour);
-			detour->SetupHook((BYTE*)HookManager::GetRawFunc_C_BaseEntity_Init(), (BYTE*)detourFn);
-			if (!detour->Hook())
-			{
-				detour.reset();
-				return nullptr;
-			}
-		}
-
-		IClientNetworkable* networkable = GetHooks()->GetFunc<Global_CreateTFGlowObject>()(MAGIC_ENTNUM, MAGIC_SERIALNUM);
+		auto wtf = GetHooks()->GetRawFunc_Global_CreateTFGlowObject();
+		IClientNetworkable* networkable = wtf(MAGIC_ENTNUM, MAGIC_SERIALNUM);//GetHooks()->GetFunc<Global_CreateTFGlowObject>()(MAGIC_ENTNUM, MAGIC_SERIALNUM);
 		handle = networkable->GetIClientUnknown()->GetBaseEntity();
 	}
 
@@ -148,6 +139,18 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 		m_GlowEntities.insert(std::make_pair<EHANDLE, EHANDLE>(entity->GetBaseEntity(), CreateGlowForEntity(entity)));
 	else if (stickies && type == TFGrenadePipebombType::Sticky)
 		m_GlowEntities.insert(std::make_pair<EHANDLE, EHANDLE>(entity->GetBaseEntity(), CreateGlowForEntity(entity)));
+}
+
+bool ProjectileOutlines::InitDetour(C_BaseEntity * pThis, void *, int entnum, int iSerialNum)
+{
+	if (entnum == MAGIC_ENTNUM && iSerialNum == MAGIC_SERIALNUM)
+	{
+		GetHooks()->SetState<C_BaseEntity_Init>(Hooking::HookAction::SUPERCEDE);
+		return pThis->InitializeAsClientEntity(nullptr, RENDER_GROUP_OTHER);
+	}
+
+	GetHooks()->SetState<C_BaseEntity_Init>(Hooking::HookAction::IGNORE);
+	return true;
 }
 
 void ProjectileOutlines::ColorChanged(IConVar* var, const char* oldValue, float flOldValue)

@@ -10,6 +10,7 @@ class ProjectileOutlines final : public Module
 {
 public:
 	ProjectileOutlines();
+	~ProjectileOutlines();
 
 	static ProjectileOutlines* GetModule() { return Modules().GetModule<ProjectileOutlines>(); }
 	static const char* GetModuleName() { return Modules().GetModuleName<ProjectileOutlines>().c_str(); }
@@ -29,6 +30,12 @@ private:
 
 	CHandle<C_BaseEntity> CreateGlowForEntity(IClientEntity* ent);
 	std::map<EHANDLE, EHANDLE> m_GlowEntities;
+
+	static constexpr int MAGIC_ENTNUM = 0x141BCF9B;
+	static constexpr int MAGIC_SERIALNUM = 0x0FCAD8B9;
+
+	int m_BaseEntityInitHook;
+	static bool InitDetour(C_BaseEntity* pThis, void*, int entnum, int iSerialNum);
 
 	bool m_Init;
 	static void ColorChanged(IConVar* var, const char* oldValue, float flOldValue);

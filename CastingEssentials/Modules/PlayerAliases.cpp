@@ -133,9 +133,9 @@ const std::string& PlayerAliases::GetAlias(const CSteamID& player, const std::st
 
 void PlayerAliases::SwapTeamFormats()
 {
-	std::unique_ptr<const char> red(strdup(m_FormatRed->GetString()));
+	std::string red(m_FormatRed->GetString());
 	m_FormatRed->SetValue(m_FormatBlue->GetString());
-	m_FormatBlue->SetValue(red.get());
+	m_FormatBlue->SetValue(red.c_str());
 }
 
 void PlayerAliases::PrintPlayerAliases()

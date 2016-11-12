@@ -25,8 +25,6 @@ namespace Hooking
 		template<class Type, class RetVal, class... Args> using LocalVaArgsFnPtr = RetVal(__cdecl*)(Type*, Args..., ...);
 
 		template<class RetVal, class... Args> using FunctionalType = std::function<RetVal(Args...)>;
-
-		
 	}
 
 	enum class HookAction

@@ -143,12 +143,20 @@ class HookManager final
 		std::map<uint64, uint64> m_ActiveHooks;
 	};
 
+	template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args> class GroupGlobalClassHook final :
+		public Hooking::BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>
+	{
+
+	};
+
 	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using VirtualHook =
 		HookShim<Hooking::GroupVirtualHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
 	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using ClassHook =
 		HookShim<Hooking::GroupClassHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
 	template<Func fn, bool vaArgs, class RetVal, class... Args> using GlobalHook =
 		HookShim<Hooking::GroupGlobalHook<Func, fn, vaArgs, RetVal, Args...>, Args...>;
+	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using GlobalClassHook =
+		HookShim<GroupGlobalClassHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
 
 	typedef void(__thiscall *RawSetCameraAngleFn)(C_HLTVCamera*, const QAngle&);
 	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);
@@ -163,12 +171,11 @@ class HookManager final
 	static RawSetPrimaryTargetFn GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
 	static RawGetLocalPlayerIndexFn GetRawFunc_Global_GetLocalPlayerIndex();
 	static RawCreateEntityByNameFn GetRawFunc_Global_CreateEntityByName();
-	static RawCreateTFGlowObjectFn GetRawFunc_Global_CreateTFGlowObject();
+	static RawBaseEntityInitFn GetRawFunc_C_BaseEntity_Init();
 
 public:
 	HookManager();
-
-	static RawBaseEntityInitFn GetRawFunc_C_BaseEntity_Init();
+	static RawCreateTFGlowObjectFn GetRawFunc_Global_CreateTFGlowObject();
 
 	static bool Load();
 	static bool Unload();
@@ -189,7 +196,7 @@ public:
 	typedef ClassHook<Func::C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> C_HLTVCamera_SetMode;
 	typedef ClassHook<Func::C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> C_HLTVCamera_SetPrimaryTarget;
 
-	typedef ClassHook<Func::C_BaseEntity_Init, false, C_BaseEntity, bool, int, int> C_BaseEntity_Init;
+	typedef GlobalClassHook<Func::C_BaseEntity_Init, false, bool, C_BaseEntity*, void*, int, int> C_BaseEntity_Init;
 
 	typedef GlobalHook<Func::Global_GetLocalPlayerIndex, false, int> Global_GetLocalPlayerIndex;
 	typedef GlobalHook<Func::Global_CreateEntityByName, false, C_BaseEntity*, const char*> Global_CreateEntityByName;
@@ -209,6 +216,7 @@ public:
 	template<> C_HLTVCamera_SetCameraAngle* GetHook<C_HLTVCamera_SetCameraAngle>() { return &m_Hook_C_HLTVCamera_SetCameraAngle; }
 	template<> C_HLTVCamera_SetMode* GetHook<C_HLTVCamera_SetMode>() { return &m_Hook_C_HLTVCamera_SetMode; }
 	template<> C_HLTVCamera_SetPrimaryTarget* GetHook<C_HLTVCamera_SetPrimaryTarget>() { return &m_Hook_C_HLTVCamera_SetPrimaryTarget; }
+	template<> C_BaseEntity_Init* GetHook<C_BaseEntity_Init>() { return &m_Hook_C_BaseEntity_Init; }
 	template<> Global_GetLocalPlayerIndex* GetHook<Global_GetLocalPlayerIndex>() { return &m_Hook_Global_GetLocalPlayerIndex; }
 
 	template<class Hook> int AddHook(const typename Hook::Functional& hook)
