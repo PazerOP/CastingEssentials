@@ -7,6 +7,7 @@
 #define PLUGIN_VERSION "0.1"
 
 class CCommand;
+class ConVar;
 
 template<class... Parameters> __forceinline void PluginMsg(const char* fmt, Parameters... param)
 {
@@ -50,3 +51,5 @@ extern CSteamID ParseSteamID(const char* input);
 extern std::string RenderSteamID(const CSteamID& id);
 
 extern bool ReparseForSteamIDs(const CCommand& in, CCommand& out);
+
+extern void SwapConVars(ConVar& var1, ConVar& var2);

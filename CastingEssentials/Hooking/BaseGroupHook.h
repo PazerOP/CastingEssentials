@@ -1,5 +1,6 @@
 #pragma once
 #include "IGroupHook.h"
+#include "TemplateFunctions.h"
 
 #include <map>
 #include <stack>
@@ -23,7 +24,7 @@ namespace Hooking
 		virtual void SetState(HookAction action) override;
 
 		virtual int AddHook(const Functional& newHook);
-		virtual bool RemoveHook(int hookID, const char* funcName);
+		virtual bool RemoveHook(int hookID, const char* funcName) override;
 		virtual Functional GetOriginal() = 0;
 
 	protected:
@@ -84,6 +85,7 @@ namespace Hooking
 
 		static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
 		static IGroupHook* BaseThis() { return s_This; }
+		friend RetVal Internal::HookFunctionsInvoker<SelfType, RetVal, Args...>::Invoke(SelfType* hook, Args... args);
 
 	private:
 		static IGroupHook* s_This;

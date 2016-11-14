@@ -57,3 +57,10 @@ bool ReparseForSteamIDs(const CCommand& in, CCommand& out)
 
 	return true;
 }
+
+void SwapConVars(ConVar& var1, ConVar& var2)
+{
+	const std::string value1(var1.GetString());
+	var1.SetValue(var2.GetString());
+	var2.SetValue(value1.c_str());
+}

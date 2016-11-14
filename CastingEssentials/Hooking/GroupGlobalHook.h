@@ -65,7 +65,7 @@ namespace Hooking
 			}
 			else
 			{
-				AssertMsg(0, "Should never get here... hook should be initialized so we don't have a potential race condition!");
+				Assert(!"Should never get here... hook should be initialized so we don't have a potential race condition!");
 				return nullptr;
 			}
 		}

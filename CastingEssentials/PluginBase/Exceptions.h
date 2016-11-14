@@ -77,3 +77,13 @@ inline const char *bad_pointer::what() const noexcept
 
 	return s.c_str();
 }
+
+class not_supported : public std::exception
+{
+public:
+	not_supported(const char* funcname) noexcept { m_FuncName = funcname; }
+	virtual const char* what() const noexcept override { return m_FuncName; }
+
+private:
+	const char* m_FuncName;
+};

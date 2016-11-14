@@ -45,18 +45,6 @@ namespace Hooking
 			m_PatchFunction = std::bind(patchFn, std::placeholders::_1, m_Instance, std::placeholders::_2);
 		}
 
-		static DetourFnType StandardDetourFn()
-		{
-			DetourFnType detourFn = [](Type* pThis, void* edx, Args... args)
-			{
-				//Assert(pThis == This()->m_Instance);
-				//dummy = nullptr;
-				//return This()->GetOriginal()(args...);
-				return Stupid<RetVal>::InvokeHookFunctions(args...);
-			};
-			return detourFn;
-		}
-
 		template<std::size_t... Is> Functional GetOriginalImpl(std::index_sequence<Is...>)
 		{
 			Assert(GetType() == HookType::Class || GetType() == HookType::Virtual);
@@ -76,39 +64,6 @@ namespace Hooking
 				return nullptr;
 			}
 		}
-
-		static DetourFnType VaArgsDetourFn()
-		{
-			DetourFnType detourFn = [](Type* pThis, Args... args, ...)
-			{
-				constexpr std::size_t fmtParameter = sizeof...(Args)-1;
-				using FmtType = typename std::tuple_element<fmtParameter, std::tuple<Args...>>::type;
-				static_assert(!vaArgs || std::is_same<FmtType, const char*>::value || std::is_same<FmtType, char*>::value, "Invalid format string type!");
-
-				std::tuple<Args...> blah(args...);
-
-				// Fuck you, type system
-				const char** fmt = evil_cast<const char**>(&std::get<fmtParameter>(blah));
-
-				va_list vaArgList;
-				va_start(vaArgList, pThis);
-
-				char** parameters[] = { (char**)(&(va_arg(vaArgList, ArgType<Args>::type)))... };
-
-				// 8192 is the length used internally by CCvar
-				char buffer[8192];
-				vsnprintf_s(buffer, _TRUNCATE, *fmt, vaArgList);
-				va_end(vaArgList);
-
-				// Can't have variable arguments in std::function, overwrite the "format" parameter with
-				// the fully parsed buffer
-				*parameters[fmtParameter] = &buffer[0];
-
-				// Now run all the hooks
-				return Stupid<RetVal>::InvokeHookFunctions(args...);
-			};
-			return detourFn;
-		}
 	};
 
 	template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args> class GroupClassHook;
@@ -124,7 +79,7 @@ namespace Hooking
 		GroupClassHook(Type* instance, OriginalFnType function, DetourFnType detour = nullptr) : BaseType(instance, function, detour) { }
 
 	private:
-		DetourFnType DefaultDetourFn() override { return StandardDetourFn(); }
+		DetourFnType DefaultDetourFn() override { return Internal::LocalDetourFn<SelfType, Type, RetVal, Args...>(this); }
 	};
 
 	// Variable arguments version

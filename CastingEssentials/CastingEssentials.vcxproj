@@ -94,6 +94,7 @@
     <ClCompile Include="Modules\PlayerAliases.cpp" />
     <ClCompile Include="Modules\ProjectileOutlines.cpp" />
     <ClCompile Include="Modules\SteamTools.cpp" />
+    <ClCompile Include="Modules\TeamNames.cpp" />
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
     <ClCompile Include="PluginBase\Common.cpp" />
     <ClCompile Include="PluginBase\Entities.cpp" />
@@ -108,12 +109,15 @@
     <ClInclude Include="Controls\ImageProgressBar.h" />
     <ClInclude Include="Controls\VariableLabel.h" />
     <ClInclude Include="Hooking\BaseGroupHook.h" />
+    <ClInclude Include="Hooking\TemplateFunctions.h" />
     <ClInclude Include="Hooking\GroupClassHook.h" />
     <ClInclude Include="Hooking\GroupGlobalHook.h" />
+    <ClInclude Include="Hooking\GroupManualClassHook.h" />
     <ClInclude Include="Hooking\GroupVirtualHook.h" />
     <ClInclude Include="Hooking\HookFunctionsInvoker.h" />
     <ClInclude Include="Hooking\IBaseHook.h" />
     <ClInclude Include="Hooking\IGroupHook.h" />
+    <ClInclude Include="Hooking\TemplateTypedefs.h" />
     <ClInclude Include="Hooking\VariablePusher.h" />
     <ClInclude Include="Modules\CameraAutoSwitch.h" />
     <ClInclude Include="Modules\CameraTools.h" />
@@ -125,6 +129,7 @@
     <ClInclude Include="Modules\PlayerAliases.h" />
     <ClInclude Include="Modules\ProjectileOutlines.h" />
     <ClInclude Include="Modules\SteamTools.h" />
+    <ClInclude Include="Modules\TeamNames.h" />
     <ClInclude Include="PluginBase\Common.h" />
     <ClInclude Include="PluginBase\Entities.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />

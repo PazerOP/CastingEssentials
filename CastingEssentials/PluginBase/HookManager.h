@@ -1,5 +1,6 @@
 #pragma once
 #include "Hooking/GroupGlobalHook.h"
+#include "Hooking/GroupManualClassHook.h"
 #include "Hooking/GroupClassHook.h"
 #include "Hooking/GroupVirtualHook.h"
 #include "PluginBase/Modules.h"
@@ -143,12 +144,6 @@ class HookManager final
 		std::map<uint64, uint64> m_ActiveHooks;
 	};
 
-	template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class Type, class RetVal, class... Args> class GroupGlobalClassHook final :
-		public Hooking::BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>
-	{
-
-	};
-
 	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using VirtualHook =
 		HookShim<Hooking::GroupVirtualHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
 	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using ClassHook =
@@ -156,7 +151,7 @@ class HookManager final
 	template<Func fn, bool vaArgs, class RetVal, class... Args> using GlobalHook =
 		HookShim<Hooking::GroupGlobalHook<Func, fn, vaArgs, RetVal, Args...>, Args...>;
 	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using GlobalClassHook =
-		HookShim<GroupGlobalClassHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
+		HookShim<Hooking::GroupManualClassHook<Func, fn, vaArgs, Type, RetVal, Args...>, Type*, Args...>;
 
 	typedef void(__thiscall *RawSetCameraAngleFn)(C_HLTVCamera*, const QAngle&);
 	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);
@@ -196,7 +191,7 @@ public:
 	typedef ClassHook<Func::C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> C_HLTVCamera_SetMode;
 	typedef ClassHook<Func::C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> C_HLTVCamera_SetPrimaryTarget;
 
-	typedef GlobalClassHook<Func::C_BaseEntity_Init, false, bool, C_BaseEntity*, void*, int, int> C_BaseEntity_Init;
+	typedef GlobalClassHook<Func::C_BaseEntity_Init, false, C_BaseEntity, bool, int, int> C_BaseEntity_Init;
 
 	typedef GlobalHook<Func::Global_GetLocalPlayerIndex, false, int> Global_GetLocalPlayerIndex;
 	typedef GlobalHook<Func::Global_CreateEntityByName, false, C_BaseEntity*, const char*> Global_CreateEntityByName;
