@@ -19,6 +19,7 @@
 #include "Modules/PlayerAliases.h"
 #include "Modules/ProjectileOutlines.h"
 #include "Modules/SteamTools.h"
+#include "Modules/TeamNames.h"
 
 class CastingPlugin final : public Plugin
 {
@@ -60,6 +61,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
 	Modules().RegisterAndLoadModule<ProjectileOutlines>("Projectile Outlines");
 	Modules().RegisterAndLoadModule<SteamTools>("Steam Tools");
+	Modules().RegisterAndLoadModule<TeamNames>("Team Names");
 
 	ConVar_Register();
 

@@ -44,7 +44,7 @@ public:
 			m_InGame = true;
 			GetHooks()->IngameStateChanged(m_InGame);
 		}
-		else if (m_InGame && Interfaces::GetEngineClient()->IsInGame())
+		else if (m_InGame && !Interfaces::GetEngineClient()->IsInGame())
 		{
 			m_InGame = false;
 			GetHooks()->IngameStateChanged(m_InGame);

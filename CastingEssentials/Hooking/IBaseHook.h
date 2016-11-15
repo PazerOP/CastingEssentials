@@ -14,6 +14,7 @@ namespace Hooking
 		virtual void* GetOriginalFunction() const = 0;
 	};
 
+	extern std::shared_ptr<IBaseHook> CreateVTableSwapHook(void* instance, void* detourFunc, int vTableIndex);
 	extern std::shared_ptr<IBaseHook> CreateVFuncSwapHook(void* instance, void* detourFunc, int vTableIndex);
 	extern std::shared_ptr<IBaseHook> CreateDetour(void* func, void* detourFunc);
 }

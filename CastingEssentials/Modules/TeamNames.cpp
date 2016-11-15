@@ -6,38 +6,54 @@
 class CCvar
 {
 public:
-	static Hooking::Internal::MemberFnPtr<ConVar, void, const char*> GetInternalSetValueFn() { return &ConVar::InternalSetValue; }
-	static void SetParent(ConVar& cVar, ConVar* newParent) { cVar.m_pParent = newParent; }
-
-	static const char* GetLocalName(ConCommandBase* ccmd) { return ccmd->m_pszName; }
+	static FnChangeCallback_t GetChangeCallback(ConVar& cVar) { return cVar.m_pParent->m_fnChangeCallback; }
+	static void SetChangeCallback(ConVar& cVar, FnChangeCallback_t callback) { cVar.m_pParent->m_fnChangeCallback = callback; }
 
 	CCvar() = delete;
 	CCvar(const CCvar&) = delete;
 };
 
-class StandinConVar final : public ConVar
+template<TeamNames::TeamConvars::Enum team> void TeamNames::OriginalChangeCallback(IConVar* var, const char* oldValue, float flOldValue)
 {
-public:
-	StandinConVar() = delete;
-	StandinConVar(const StandinConVar&) = delete;
-	StandinConVar operator=(const StandinConVar&) = delete;
+	TeamNames* const m = GetModule();
+	m->m_LastServerValues[team] = m->m_OriginalCvars[team]->GetString();
 
-	const char* GetName() const override { return CCvar::GetLocalName(m_OriginalParent); }
+	if (!IsStringEmpty(m->m_OverrideCvars[team]->GetString()))
+	{
+		var->SetValue(m->m_OverrideCvars[team]->GetString());
+		return;
+	}
+}
 
-private:
-	ConVar* m_OriginalParent;
-};
+template<TeamNames::TeamConvars::Enum team> void TeamNames::OverrideChangeCallback(IConVar* var, const char* oldValue, float flOldValue)
+{
+	TeamNames* const m = GetModule();
+
+	if (IsStringEmpty(m->m_OverrideCvars[team]->GetString()))
+		m->m_OriginalCvars[team]->SetValue(m->m_LastServerValues[team].c_str());
+	else
+		m->m_OriginalCvars[team]->SetValue(m->m_OverrideCvars[team]->GetString());
+}
+
+void TeamNames::GlobalChangeCallback(IConVar* var, const char* oldValue, float flOldValue)
+{
+	TeamNames* const m = GetModule();
+
+	if (var == m->m_OriginalCvars[TeamConvars::Blue])
+		OriginalChangeCallback<TeamConvars::Blue>(var, oldValue, flOldValue);
+	else if (var == m->m_OriginalCvars[TeamConvars::Red])
+		OriginalChangeCallback<TeamConvars::Red>(var, oldValue, flOldValue);
+}
 
 TeamNames::TeamNames()
 {
-	m_OriginalCvars[(int)TeamConvars::Blue] = g_pCVar->FindVar("mp_tournament_bluteamname");
+	m_OriginalCvars[(int)TeamConvars::Blue] = g_pCVar->FindVar("mp_tournament_blueteamname");
 	m_OriginalCvars[(int)TeamConvars::Red] = g_pCVar->FindVar("mp_tournament_redteamname");
+	
+	g_pCVar->InstallGlobalChangeCallback(&TeamNames::GlobalChangeCallback);
 
-	m_BlueTeamNameHooker.reset(new VirtualHook<TeamConvars::Blue>(m_OriginalCvars[(int)TeamConvars::Blue], CCvar::GetInternalSetValueFn()));
-	m_BlueTeamNameHooker->AddHook(std::bind(&TeamNames::SetValueDetour<TeamConvars::Blue>, this, std::placeholders::_1));
-
-	m_OverrideCvars[(int)TeamConvars::Blue] = new ConVar("ce_teamnames_blu", "", FCVAR_NONE, "Overrides mp_tournament_bluteamname.");
-	m_OverrideCvars[(int)TeamConvars::Red] = new ConVar("ce_teamnames_red", "", FCVAR_NONE, "Overrides mp_tournament_redteamname.");
+	m_OverrideCvars[(int)TeamConvars::Blue] = new ConVar("ce_teamnames_blu", "", FCVAR_NONE, "Overrides mp_tournament_blueteamname.", &TeamNames::OverrideChangeCallback<TeamConvars::Blue>);
+	m_OverrideCvars[(int)TeamConvars::Red] = new ConVar("ce_teamnames_red", "", FCVAR_NONE, "Overrides mp_tournament_redteamname.", &TeamNames::OverrideChangeCallback<TeamConvars::Red>);
 
 	ce_teamnames_swap = new ConCommand("ce_teamnames_swap", [](const CCommand& args) { GetModule()->SwapTeamNames(); }, "Swaps the values of ce_teamnames_blu and ce_teamnames_red.");
 }
@@ -51,13 +67,4 @@ void TeamNames::SwapTeamNames()
 		return;
 
 	SwapConVars(*m_OverrideCvars[(int)TeamConvars::Red], *m_OverrideCvars[(int)TeamConvars::Blue]);
-}
-
-void TeamNames::SetValueDetour(Hooking::IGroupHook* hook, ConVar* originalCvar, ConVar* overrideCvar, const char* newValue)
-{
-	if (!strcmp(newValue, overrideCvar->GetString()))
-	{
-		hook->SetState(Hooking::HookAction::SUPERCEDE);
-		return;
-	}
 }

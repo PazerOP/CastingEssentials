@@ -40,7 +40,7 @@ namespace Hooking
 				std::lock_guard<std::recursive_mutex> lock(m_BaseHookMutex);
 				if (!m_BaseHook)
 				{
-					m_BaseHook = CreateVFuncSwapHook(m_Instance, m_DetourFunction, VTableOffset(m_MemberFunction));
+					m_BaseHook = CreateVTableSwapHook(m_Instance, m_DetourFunction, VTableOffset(m_MemberFunction));
 					m_BaseHook->Hook();
 				}
 			}

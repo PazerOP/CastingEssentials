@@ -47,6 +47,22 @@ inline bool IsFloat(const std::string& s)
 	return (*p == 0);
 }
 
+inline bool IsStringEmpty(const std::string& s) { return s.empty(); }
+inline bool IsStringEmpty(const std::string* s)
+{
+	if (!s)
+		return true;
+
+	return s->empty();
+}
+inline bool IsStringEmpty(const char* s)
+{
+	if (!s)
+		return true;
+
+	return !(s[0]);
+}
+
 extern CSteamID ParseSteamID(const char* input);
 extern std::string RenderSteamID(const CSteamID& id);
 

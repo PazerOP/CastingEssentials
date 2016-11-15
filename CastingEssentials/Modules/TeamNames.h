@@ -1,9 +1,9 @@
 #pragma once
-#include "Hooking/GroupVirtualHook.h"
 #include "PluginBase/Modules.h"
 
 class ConVar;
 class ConCommand;
+class IConVar;
 
 class TeamNames final : public Module
 {
@@ -14,44 +14,27 @@ public:
 	static const char* GetModuleName() { return Modules().GetModuleName<TeamNames>().c_str(); }
 
 private:
-	enum class TeamConvars
-	{
-		Blue,
-		Red,
 
-		Count,
+	struct TeamConvars
+	{
+		enum Enum
+		{
+			Blue,
+			Red,
+
+			Count,
+		};
 	};
 
-	ConVar* m_OriginalCvars[(int)TeamConvars::Count];
-	ConVar* m_OverrideCvars[(int)TeamConvars::Count];
+	ConVar* m_OriginalCvars[TeamConvars::Count];
+	ConVar* m_OverrideCvars[TeamConvars::Count];
 
 	ConCommand* ce_teamnames_swap;
 	void SwapTeamNames();
 
-	void SetValueDetour(Hooking::IGroupHook* hook, ConVar* originalCvar, ConVar* overrideCvar, const char* newValue);
-	template<TeamConvars team> void SetValueDetour(const char* newValue) 
-	{
-		Hooking::IGroupHook* hook = nullptr;
-		if (team == TeamConvars::Red)
-		{
-			hook = m_RedTeamNameHooker.get();
-		}
-		else if (team == TeamConvars::Blue)
-		{
-			hook = m_BlueTeamNameHooker.get();
-		}
-		else
-			Error("[CastingEssentials] Out of range TeamConvars value %i", team);
-
-		SetValueDetour(hook, m_OriginalCvars[(int)team], m_OverrideCvars[(int)team], newValue);
-	}
-
-	template<TeamConvars team> using VirtualHook = Hooking::GroupVirtualHook<TeamConvars, team, false, ConVar, void, const char*>;
-
-	std::unique_ptr<VirtualHook<TeamConvars::Blue>> m_BlueTeamNameHooker;
-	std::unique_ptr<VirtualHook<TeamConvars::Red>> m_RedTeamNameHooker;
-	
-	int m_Hooks[(int)TeamConvars::Count];
-
 	std::string m_LastServerValues[(int)TeamConvars::Count];
+	template<TeamConvars::Enum team> static void OriginalChangeCallback(IConVar* var, const char* oldValue, float flOldValue);
+	template<TeamConvars::Enum team> static void OverrideChangeCallback(IConVar* var, const char* oldValue, float flOldValue);
+
+	static void GlobalChangeCallback(IConVar* var, const char* oldValue, float flOldValue);
 };

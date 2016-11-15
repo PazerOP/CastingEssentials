@@ -3,8 +3,15 @@
 
 namespace Hooking
 {
+	template<class Type>
+	class IGroupClassHook
+	{
+	public:
+		virtual Type* GetInstance() const = 0;
+	};
+
 	template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class OriginalFnType, class DetourFnType, class Type, class RetVal, class... Args>
-	class BaseGroupClassHook : public BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, RetVal, Args...>
+	class BaseGroupClassHook : public BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, RetVal, Args...>, public IGroupClassHook<Type>
 	{
 	public:
 		typedef BaseGroupClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, Type, RetVal, Args...> BaseGroupClassHookType;
@@ -19,6 +26,8 @@ namespace Hooking
 
 		virtual Functional GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
 		virtual HookType GetType() const override { return HookType::Class; }
+
+		virtual Type* GetInstance() const override { return m_Instance; }
 
 	protected:
 		Type* m_Instance;
