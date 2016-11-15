@@ -61,6 +61,8 @@ namespace Hooking{ namespace Internal
 	{
 		static RetVal Invoke(GroupHookType* hook, Args... args)
 		{
+			Assert(hook);
+
 			// Run all the hooks
 			std::lock_guard<std::recursive_mutex> locker(hook->m_HooksTableMutex);
 
@@ -73,10 +75,10 @@ namespace Hooking{ namespace Internal
 				int retValIndex = -1;
 				RetVal retVal = RetVal();
 				auto& hooksTable = hook->m_HooksTable;
-				for (auto hook : hooksTable)
+				for (auto currentHook : hooksTable)
 				{
 					const auto startDepth = newHookResults.size();
-					const auto& temp = hook.second(args...);
+					const auto& temp = currentHook.second(args...);
 
 					if (startDepth == newHookResults.size())
 						newHookResults.push(HookAction::IGNORE);
@@ -129,11 +131,11 @@ namespace Hooking{ namespace Internal
 				const auto outerStartDepth = newHookResults.size();
 				bool callOriginal = true;
 				auto& hooksTable = hook->m_HooksTable;
-				for (auto hook : hooksTable)
+				for (auto currentHook : hooksTable)
 				{
 					const auto startDepth = newHookResults.size();
 
-					hook.second(args...);
+					currentHook.second(args...);
 
 					if (startDepth == newHookResults.size())
 						newHookResults.push(HookAction::IGNORE);
@@ -166,8 +168,9 @@ namespace Hooking{ namespace Internal
 	template<class GroupHookType, class Type, class RetVal, class... Args>
 	LocalDetourFnPtr<Type, RetVal, Args...> LocalDetourFn(GroupHookType* hook)
 	{
-		static thread_local GroupHookType* s_Hook;
+		static GroupHookType* s_Hook;
 		s_Hook = hook;
+		Assert(s_Hook);
 
 		LocalDetourFnPtr<Type, RetVal, Args...> fn = [](Type* pThis, void*, Args... args)
 		{
@@ -179,11 +182,14 @@ namespace Hooking{ namespace Internal
 	template<class GroupHookType, class Type, class RetVal, class... Args>
 	LocalVaArgsFnPtr<Type, RetVal, Args...> LocalVaArgsDetourFn(GroupHookType* hook)
 	{
-		static thread_local GroupHookType* s_Hook;
+		static GroupHookType* s_Hook;
 		s_Hook = hook;
+		Assert(s_Hook);
 
 		LocalVaArgsFnPtr<Type, RetVal, Args...> fn = [](Type* pThis, Args... args, ...)
 		{
+			Assert(s_Hook);
+
 			constexpr std::size_t fmtParameter = sizeof...(Args)-1;
 			using FmtType = typename std::tuple_element<fmtParameter, std::tuple<Args...>>::type;
 			static_assert(std::is_same<FmtType, const char*>::value || std::is_same<FmtType, char*>::value, "Invalid format string type!");

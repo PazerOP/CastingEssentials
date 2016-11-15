@@ -35,7 +35,7 @@ private:
 	static constexpr int MAGIC_SERIALNUM = 0x0FCAD8B9;
 
 	int m_BaseEntityInitHook;
-	static bool InitDetour(C_BaseEntity* pThis, void*, int entnum, int iSerialNum);
+	static bool InitDetour(C_BaseEntity* pThis, int entnum, int iSerialNum);
 
 	bool m_Init;
 	static void ColorChanged(IConVar* var, const char* oldValue, float flOldValue);

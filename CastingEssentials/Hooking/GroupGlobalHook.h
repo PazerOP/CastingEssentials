@@ -32,7 +32,7 @@ namespace Hooking
 
 		virtual void InitHook() override
 		{
-			Assert(GetType() == HookType::Global || GetType() == HookType::Class);
+			Assert(GetType() == HookType::Global || GetType() == HookType::Class || GetType() == HookType::GlobalClass);
 
 			if (!m_DetourFunction)
 				m_DetourFunction = (DetourFnType)DefaultDetourFn();

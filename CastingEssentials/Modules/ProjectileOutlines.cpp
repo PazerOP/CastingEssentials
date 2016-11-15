@@ -43,7 +43,7 @@ void ProjectileOutlines::OnTick(bool inGame)
 		{
 			ColorChanged(ce_projectileoutlines_color_blu, "", 0);
 			ColorChanged(ce_projectileoutlines_color_red, "", 0);
-			m_BaseEntityInitHook = GetHooks()->AddHook<C_BaseEntity_Init>(std::bind(&InitDetour, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+			m_BaseEntityInitHook = GetHooks()->AddHook<C_BaseEntity_Init>(std::bind(&InitDetour, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 			m_Init = true;
 		}
 
@@ -141,7 +141,7 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 		m_GlowEntities.insert(std::make_pair<EHANDLE, EHANDLE>(entity->GetBaseEntity(), CreateGlowForEntity(entity)));
 }
 
-bool ProjectileOutlines::InitDetour(C_BaseEntity * pThis, void *, int entnum, int iSerialNum)
+bool ProjectileOutlines::InitDetour(C_BaseEntity* pThis, int entnum, int iSerialNum)
 {
 	if (entnum == MAGIC_ENTNUM && iSerialNum == MAGIC_SERIALNUM)
 	{

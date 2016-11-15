@@ -7,7 +7,7 @@ class CCvar
 {
 public:
 	static Hooking::Internal::MemberFnPtr<ConVar, void, const char*> GetInternalSetValueFn() { return &ConVar::InternalSetValue; }
-	static void SetParent(ConVar& cvar, ConVar* newParent) { cvar.m_pParent = newParent; }
+	static void SetParent(ConVar& cVar, ConVar* newParent) { cVar.m_pParent = newParent; }
 
 	static const char* GetLocalName(ConCommandBase* ccmd) { return ccmd->m_pszName; }
 
@@ -33,7 +33,8 @@ TeamNames::TeamNames()
 	m_OriginalCvars[(int)TeamConvars::Blue] = g_pCVar->FindVar("mp_tournament_bluteamname");
 	m_OriginalCvars[(int)TeamConvars::Red] = g_pCVar->FindVar("mp_tournament_redteamname");
 
-	m_BlueTeamNameHooker.reset(new VirtualHook<TeamConvars::Blue>(m_OriginalCvars[(int)TeamConvars::Blue], CCvar::GetInternalSetValueFn(), [](const char* newValue) { return GetModule()->ChangeDetour<TeamConvars::Blue>(newValue); }));
+	m_BlueTeamNameHooker.reset(new VirtualHook<TeamConvars::Blue>(m_OriginalCvars[(int)TeamConvars::Blue], CCvar::GetInternalSetValueFn()));
+	m_BlueTeamNameHooker->AddHook(std::bind(&TeamNames::SetValueDetour<TeamConvars::Blue>, this, std::placeholders::_1));
 
 	m_OverrideCvars[(int)TeamConvars::Blue] = new ConVar("ce_teamnames_blu", "", FCVAR_NONE, "Overrides mp_tournament_bluteamname.");
 	m_OverrideCvars[(int)TeamConvars::Red] = new ConVar("ce_teamnames_red", "", FCVAR_NONE, "Overrides mp_tournament_redteamname.");
@@ -52,7 +53,7 @@ void TeamNames::SwapTeamNames()
 	SwapConVars(*m_OverrideCvars[(int)TeamConvars::Red], *m_OverrideCvars[(int)TeamConvars::Blue]);
 }
 
-void TeamNames::ChangeDetour(Hooking::IGroupHook* hook, ConVar* originalCvar, ConVar* overrideCvar, const char* newValue)
+void TeamNames::SetValueDetour(Hooking::IGroupHook* hook, ConVar* originalCvar, ConVar* overrideCvar, const char* newValue)
 {
 	if (!strcmp(newValue, overrideCvar->GetString()))
 	{

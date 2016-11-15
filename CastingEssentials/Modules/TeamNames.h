@@ -28,8 +28,8 @@ private:
 	ConCommand* ce_teamnames_swap;
 	void SwapTeamNames();
 
-	void ChangeDetour(Hooking::IGroupHook* hook, ConVar* originalCvar, ConVar* overrideCvar, const char* newValue);
-	template<TeamConvars team> void ChangeDetour(const char* newValue) 
+	void SetValueDetour(Hooking::IGroupHook* hook, ConVar* originalCvar, ConVar* overrideCvar, const char* newValue);
+	template<TeamConvars team> void SetValueDetour(const char* newValue) 
 	{
 		Hooking::IGroupHook* hook = nullptr;
 		if (team == TeamConvars::Red)
@@ -43,7 +43,7 @@ private:
 		else
 			Error("[CastingEssentials] Out of range TeamConvars value %i", team);
 
-		ChangeDetour(hook, m_OriginalCvars[team], m_OverrideCvars[team], newValue);
+		SetValueDetour(hook, m_OriginalCvars[(int)team], m_OverrideCvars[(int)team], newValue);
 	}
 
 	template<TeamConvars team> using VirtualHook = Hooking::GroupVirtualHook<TeamConvars, team, false, ConVar, void, const char*>;
