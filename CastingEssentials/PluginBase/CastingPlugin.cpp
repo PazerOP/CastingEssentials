@@ -9,6 +9,7 @@
 #include "HookManager.h"
 #include "Player.h"
 
+#include "Modules/Antifreeze.h"
 #include "Modules/CameraAutoSwitch.h"
 #include "Modules/CameraSmooths.h"
 #include "Modules/CameraTools.h"
@@ -54,6 +55,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 
 	//auto test = new vgui::Label(nullptr, "testPanel", "Hello World");
 
+	Modules().RegisterAndLoadModule<AntiFreeze>("HUD Antifreeze");
 	Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
 	Modules().RegisterAndLoadModule<CameraSmooths>("Camera Smooths");
 	Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");

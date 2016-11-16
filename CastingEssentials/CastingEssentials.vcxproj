@@ -86,6 +86,7 @@
     <ClCompile Include="Hooking\IGroupHook.cpp" />
     <ClCompile Include="Misc\DebugOverlay.cpp" />
     <ClCompile Include="Misc\MissingDefinitions.cpp" />
+    <ClCompile Include="Modules\Antifreeze.cpp" />
     <ClCompile Include="Modules\CameraAutoSwitch.cpp" />
     <ClCompile Include="Modules\CameraSmooths.cpp" />
     <ClCompile Include="Modules\CameraTools.cpp" />
@@ -125,6 +126,7 @@
     <ClInclude Include="Hooking\TemplateTypedefs.h" />
     <ClInclude Include="Hooking\VariablePusher.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
+    <ClInclude Include="Modules\Antifreeze.h" />
     <ClInclude Include="Modules\CameraAutoSwitch.h" />
     <ClInclude Include="Modules\CameraSmooths.h" />
     <ClInclude Include="Modules\CameraTools.h" />

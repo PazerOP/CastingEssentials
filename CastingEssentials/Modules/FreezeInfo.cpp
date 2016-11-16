@@ -7,7 +7,6 @@
 #include <vgui/IVGui.h>
 #include <vgui_controls/EditablePanel.h>
 
-#include "PluginBase/common.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 
@@ -29,7 +28,7 @@ private:
 
 FreezeInfo::FreezeInfo()
 {
-	enabled = new ConVar("ce_freezeinfo_enabled", "0", FCVAR_NONE, "enables display of an info panel when a freeze is detected", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
+	enabled = new ConVar("ce_freezeinfo_enabled", "0", FCVAR_NONE, "enables display of an info panel when a freeze is detected");
 	reload_settings = new ConCommand("ce_freezeinfo_reload_settings", []() { GetModule()->ReloadSettings(); }, "reload settings for the freeze info panel from the resource file", FCVAR_NONE);
 	threshold = new ConVar("ce_freezeinfo_threshold", "1", FCVAR_NONE, "the time of a freeze (in seconds) before the info panel is displayed", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ChangeThreshold(var, pOldValue, flOldValue); });
 
@@ -92,8 +91,37 @@ bool FreezeInfo::CheckDependencies()
 
 void FreezeInfo::OnTick(bool inGame)
 {
-	if (m_Panel)
-		m_Panel->OnTick();
+	if (inGame && enabled->GetBool())
+	{
+		if (!m_Panel)
+		{
+			try
+			{
+				vgui::Panel* const viewport = Interfaces::GetClientMode()->GetViewport();
+				if (viewport)
+				{
+					m_Panel.reset(new Panel(viewport, "FreezeInfo"));
+					m_Panel->SetDisplayThreshold(threshold->GetFloat());
+				}
+				else
+					Warning("Could not initialize the panel!\n");
+			}
+			catch (bad_pointer)
+			{
+				Warning("Could not initialize the panel!\n");
+			}
+		}
+
+		if (m_Panel)
+		{
+			if (!m_Panel->IsEnabled())
+				m_Panel->SetEnabled(true);
+
+			m_Panel->OnTick();
+		}
+	}
+	else if (m_Panel)
+		m_Panel.reset();
 }
 
 void FreezeInfo::PostEntityPacketReceivedHook()
@@ -112,44 +140,6 @@ void FreezeInfo::ReloadSettings()
 {
 	if (m_Panel)
 		m_Panel->LoadControlSettings("Resource/UI/FreezeInfo.res");
-}
-
-void FreezeInfo::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)
-{
-	if (enabled->GetBool())
-	{
-		if (!m_Panel)
-		{
-			try
-			{
-				vgui::Panel *viewport = Interfaces::GetClientMode()->GetViewport();
-
-				if (viewport)
-				{
-					m_Panel.reset(new Panel(viewport, "FreezeInfo"));
-					m_Panel->SetDisplayThreshold(threshold->GetFloat());
-				}
-				else
-				{
-					Warning("Could not initialize the panel!\n");
-					var->SetValue(0);
-				}
-			}
-			catch (bad_pointer)
-			{
-				Warning("Could not initialize the panel!\n");
-				var->SetValue(0);
-			}
-		}
-
-		if (m_Panel)
-			m_Panel->SetEnabled(true);
-	}
-	else
-	{
-		if (m_Panel)
-			m_Panel.reset();
-	}
 }
 
 FreezeInfo::Panel::Panel(vgui::Panel *parent, const char *panelName) : vgui::EditablePanel(parent, panelName)
