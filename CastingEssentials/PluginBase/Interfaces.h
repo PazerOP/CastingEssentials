@@ -41,6 +41,8 @@ public:
 	// #include <toolframework/ienginetool.h>
 	static IEngineTool* GetEngineTool() { return pEngineTool; }
 	static IGameEventManager2* GetGameEventManager() { return pGameEventManager; }
+
+	// #include <iprediction.h>
 	static IPrediction* GetPrediction() { return pPrediction; }
 	static IVModelInfoClient* GetModelInfoClient() { return pModelInfoClient; }
 

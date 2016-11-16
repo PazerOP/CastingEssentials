@@ -97,6 +97,7 @@
     <ClCompile Include="Modules\MedigunInfo.cpp" />
     <ClCompile Include="Modules\PlayerAliases.cpp" />
     <ClCompile Include="Modules\ProjectileOutlines.cpp" />
+    <ClCompile Include="Modules\FreezeInfo.cpp" />
     <ClCompile Include="Modules\SteamTools.cpp" />
     <ClCompile Include="Modules\TeamNames.cpp" />
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
@@ -129,6 +130,7 @@
     <ClInclude Include="Modules\CameraTools.h" />
     <ClInclude Include="Modules\ConsoleTools.h" />
     <ClInclude Include="Modules\FOVOverride.h" />
+    <ClInclude Include="Modules\FreezeInfo.h" />
     <ClInclude Include="Modules\Killstreaks.h" />
     <ClInclude Include="Modules\LocalPlayer.h" />
     <ClInclude Include="Modules\MapFlythroughs.h" />

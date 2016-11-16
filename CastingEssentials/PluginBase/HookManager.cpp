@@ -13,6 +13,7 @@
 #include <cdll_int.h>
 #include <client/hltvcamera.h>
 #include <toolframework/iclientenginetools.h>
+#include <iprediction.h>
 
 static std::unique_ptr<HookManager> s_HookManager;
 HookManager* GetHooks() { Assert(s_HookManager); return s_HookManager.get(); }
@@ -246,6 +247,8 @@ HookManager::HookManager()
 	m_Hook_IClientEngineTools_SetupEngineView.AttachHook(std::make_shared<IClientEngineTools_SetupEngineView::Inner>(Interfaces::GetClientEngineTools(), &IClientEngineTools::SetupEngineView));
 
 	m_Hook_IVEngineClient_GetPlayerInfo.AttachHook(std::make_shared<IVEngineClient_GetPlayerInfo::Inner>(Interfaces::GetEngineClient(), &IVEngineClient::GetPlayerInfo));
+
+	m_Hook_IPrediction_PostEntityPacketReceived.AttachHook(std::make_shared<IPrediction_PostEntityPacketReceived::Inner>(Interfaces::GetPrediction(), &IPrediction::PostEntityPacketReceived));
 
 	m_Hook_C_HLTVCamera_SetCameraAngle.AttachHook(std::make_shared<C_HLTVCamera_SetCameraAngle::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetCameraAngle()));
 	m_Hook_C_HLTVCamera_SetMode.AttachHook(std::make_shared<C_HLTVCamera_SetMode::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));
