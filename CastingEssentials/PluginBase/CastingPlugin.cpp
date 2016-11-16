@@ -10,11 +10,13 @@
 #include "Player.h"
 
 #include "Modules/CameraAutoSwitch.h"
+#include "Modules/CameraSmooths.h"
 #include "Modules/CameraTools.h"
 #include "Modules/ConsoleTools.h"
 #include "Modules/FOVOverride.h"
 #include "Modules/Killstreaks.h"
 #include "Modules/LocalPlayer.h"
+#include "Modules/MapFlythroughs.h"
 #include "Modules/MedigunInfo.h"
 #include "Modules/PlayerAliases.h"
 #include "Modules/ProjectileOutlines.h"
@@ -52,11 +54,13 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	//auto test = new vgui::Label(nullptr, "testPanel", "Hello World");
 
 	Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
+	Modules().RegisterAndLoadModule<CameraSmooths>("Camera Smooths");
 	Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
 	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
 	Modules().RegisterAndLoadModule<FOVOverride>("FOV Override");
 	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
+	//Modules().RegisterAndLoadModule<MapFlythroughs>("Map Flythroughs");
 	Modules().RegisterAndLoadModule<MedigunInfo>("Medigun Info");
 	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
 	Modules().RegisterAndLoadModule<ProjectileOutlines>("Projectile Outlines");

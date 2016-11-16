@@ -1,4 +1,5 @@
 #include "CameraTools.h"
+#include "Misc/HLTVCameraHack.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
@@ -12,30 +13,6 @@
 #include <functional>
 #include <client/hltvcamera.h>
 #include <toolframework/ienginetool.h>
-
-class HLTVCameraOverride : public C_HLTVCamera
-{
-public:
-	using C_HLTVCamera::m_nCameraMode;
-	using C_HLTVCamera::m_iCameraMan;
-	using C_HLTVCamera::m_vCamOrigin;
-	using C_HLTVCamera::m_aCamAngle;
-	using C_HLTVCamera::m_iTraget1;
-	using C_HLTVCamera::m_iTraget2;
-	using C_HLTVCamera::m_flFOV;
-	using C_HLTVCamera::m_flOffset;
-	using C_HLTVCamera::m_flDistance;
-	using C_HLTVCamera::m_flLastDistance;
-	using C_HLTVCamera::m_flTheta;
-	using C_HLTVCamera::m_flPhi;
-	using C_HLTVCamera::m_flInertia;
-	using C_HLTVCamera::m_flLastAngleUpdateTime;
-	using C_HLTVCamera::m_bEntityPacketReceived;
-	using C_HLTVCamera::m_nNumSpectators;
-	using C_HLTVCamera::m_szTitleText;
-	using C_HLTVCamera::m_LastCmd;
-	using C_HLTVCamera::m_vecVelocity;
-};
 
 CameraTools::CameraTools()
 {
@@ -146,6 +123,28 @@ bool CameraTools::CheckDependencies()
 	}
 
 	return ready;
+}
+
+void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle)
+{
+	try
+	{
+		HLTVCameraOverride *hltvcamera = Interfaces::GetHLTVCamera();
+
+		hltvcamera->m_nCameraMode = OBS_MODE_FIXED;
+		hltvcamera->m_iCameraMan = 0;
+		hltvcamera->m_vCamOrigin = pos;
+		hltvcamera->m_aCamAngle = angle;
+		hltvcamera->m_iTraget1 = 0;
+		hltvcamera->m_iTraget2 = 0;
+		hltvcamera->m_flLastAngleUpdateTime = -1;
+
+		GetHooks()->GetFunc<C_HLTVCamera_SetCameraAngle>()(hltvcamera->m_aCamAngle);
+	}
+	catch (bad_pointer &e)
+	{
+		Warning("%s\n", e.what());
+	}
 }
 
 void CameraTools::ShowUsers(const CCommand& command)
@@ -521,27 +520,9 @@ void CameraTools::SpecPosition(const CCommand &command)
 {
 	if (command.ArgC() >= 6 && IsFloat(command.Arg(1)) && IsFloat(command.Arg(2)) && IsFloat(command.Arg(3)) && IsFloat(command.Arg(4)) && IsFloat(command.Arg(5)))
 	{
-		try
-		{
-			HLTVCameraOverride *hltvcamera = (HLTVCameraOverride *)Interfaces::GetHLTVCamera();
-
-			hltvcamera->m_nCameraMode = OBS_MODE_FIXED;
-			hltvcamera->m_iCameraMan = 0;
-			hltvcamera->m_vCamOrigin.x = atof(command.Arg(1));
-			hltvcamera->m_vCamOrigin.y = atof(command.Arg(2));
-			hltvcamera->m_vCamOrigin.z = atof(command.Arg(3));
-			hltvcamera->m_aCamAngle.x = atof(command.Arg(4));
-			hltvcamera->m_aCamAngle.y = atof(command.Arg(5));
-			hltvcamera->m_iTraget1 = 0;
-			hltvcamera->m_iTraget2 = 0;
-			hltvcamera->m_flLastAngleUpdateTime = Interfaces::GetEngineTool()->GetRealTime();
-
-			GetHooks()->GetFunc<C_HLTVCamera_SetCameraAngle>()(hltvcamera->m_aCamAngle);
-		}
-		catch (bad_pointer &e)
-		{
-			Warning("%s\n", e.what());
-		}
+		SpecPosition(
+			Vector(atof(command.Arg(1)), atof(command.Arg(2)), atof(command.Arg(3))),
+			QAngle(atof(command.Arg(4)), atof(command.Arg(5)), 0));
 	}
 	else
 	{

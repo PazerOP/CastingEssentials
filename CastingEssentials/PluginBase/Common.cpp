@@ -64,3 +64,18 @@ void SwapConVars(ConVar& var1, ConVar& var2)
 	var1.SetValue(var2.GetString());
 	var2.SetValue(value1.c_str());
 }
+
+bool ParseFloat3(const char* str, float& f1, float& f2, float& f3)
+{
+	return sscanf_s(str, "%f %f %f", &f1, &f2, &f3) == 3;
+}
+
+bool ParseVector(Vector& v, const char* str)
+{
+	return ParseFloat3(str, v.x, v.y, v.z);
+}
+
+bool ParseAngle(QAngle& a, const char* str)
+{
+	return ParseFloat3(str, a.x, a.y, a.z);
+}

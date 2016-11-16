@@ -16,6 +16,9 @@
 #include <steam/steam_api.h>
 #include <vgui_controls/Controls.h>
 #include <entitylist_base.h>
+#include <filesystem.h>
+#include <engine/ivdebugoverlay.h>
+#include <engine/IEngineTrace.h>
 
 IBaseClientDLL *Interfaces::pClientDLL = nullptr;
 IClientEngineTools *Interfaces::pClientEngineTools = nullptr;
@@ -27,6 +30,10 @@ IPrediction *Interfaces::pPrediction = nullptr;
 IVModelInfoClient *Interfaces::pModelInfoClient = nullptr;
 IVRenderView *Interfaces::pRenderView = nullptr;
 CSteamAPIContext *Interfaces::pSteamAPIContext = nullptr;
+IFileSystem* Interfaces::s_FileSystem = nullptr;
+IVDebugOverlay* Interfaces::s_DebugOverlay = nullptr;
+IEngineTrace* Interfaces::s_EngineTrace = nullptr;
+ISpatialPartition* Interfaces::s_SpatialPartition = nullptr;
 
 bool Interfaces::steamLibrariesAvailable = false;
 bool Interfaces::vguiLibrariesAvailable = false;
@@ -35,6 +42,8 @@ IClientMode*** Interfaces::s_ClientMode = nullptr;
 C_HLTVCamera** Interfaces::s_HLTVCamera = nullptr;
 
 CBaseEntityList *g_pEntityList;
+IVDebugOverlay* debugoverlay;
+IEngineTrace* enginetrace;
 
 void Interfaces::Load(CreateInterfaceFn factory)
 {
@@ -50,6 +59,10 @@ void Interfaces::Load(CreateInterfaceFn factory)
 	pGameEventManager = (IGameEventManager2 *)factory(INTERFACEVERSION_GAMEEVENTSMANAGER2, nullptr);
 	pModelInfoClient = (IVModelInfoClient *)factory(VMODELINFO_CLIENT_INTERFACE_VERSION, nullptr);
 	pRenderView = (IVRenderView *)factory(VENGINE_RENDERVIEW_INTERFACE_VERSION, nullptr);
+	s_FileSystem = (IFileSystem*)factory(FILESYSTEM_INTERFACE_VERSION, nullptr);
+	s_DebugOverlay = (IVDebugOverlay*)factory(VDEBUG_OVERLAY_INTERFACE_VERSION, nullptr);
+	s_EngineTrace = (IEngineTrace*)factory(INTERFACEVERSION_ENGINETRACE_CLIENT, nullptr);
+	s_SpatialPartition = (ISpatialPartition*)factory(INTERFACEVERSION_SPATIALPARTITION, nullptr);
 
 	CreateInterfaceFn gameClientFactory;
 	pEngineTool->GetClientFactory(gameClientFactory);
@@ -61,7 +74,12 @@ void Interfaces::Load(CreateInterfaceFn factory)
 	pSteamAPIContext = new CSteamAPIContext();
 	steamLibrariesAvailable = SteamAPI_InitSafe() && pSteamAPIContext->Init();
 
-	g_pEntityList = dynamic_cast<CBaseEntityList *>(Interfaces::pClientEntityList);
+	// Built in declarations
+	{
+		g_pEntityList = dynamic_cast<CBaseEntityList *>(Interfaces::GetClientEntityList());
+		debugoverlay = Interfaces::GetDebugOverlay();
+		enginetrace = Interfaces::GetEngineTrace();
+	}
 }
 
 void Interfaces::Unload()
@@ -111,7 +129,7 @@ IClientMode* Interfaces::GetClientMode()
 	return deref;
 }
 
-C_HLTVCamera* Interfaces::GetHLTVCamera()
+HLTVCameraOverride* Interfaces::GetHLTVCamera()
 {
 	if (!s_HLTVCamera)
 	{
@@ -129,5 +147,5 @@ C_HLTVCamera* Interfaces::GetHLTVCamera()
 	if (!deref)
 		throw bad_pointer("C_HLTVCamera");
 
-	return deref;
+	return (HLTVCameraOverride*)deref;
 }

@@ -1,0 +1,49 @@
+Flythroughs
+{
+	// Smooth out over 10 seconds
+	smooth_period 10
+	
+	Idle
+	{
+		Target	// blu last
+		{
+			pos "1234 5678 9012"
+			ang "30 128 0"
+			time 30		// Takes 30 seconds to get from red last to here
+		}
+		Target 	// blu second
+		{
+			pos "1234 5678 9012"
+			ang "30 128 0"
+			time 10		// Takes 10 seconds to get from blu last to here
+		}
+		Target 	// mid
+		{
+			pos "1234 5678 9012"
+			ang "30 128 0"
+			time 15		// Takes 15 seconds to get from blu second to here
+		}
+		Target 	// red second
+		{
+			pos "1234 5678 9012"
+			ang "30 128 0"
+			time 15		// Takes 15 seconds to get from mid to here
+		}
+		Target 	// red last
+		{
+			pos "1234 5678 9012"
+			ang "30 128 0"
+			time 10		// Takes 10 seconds to get from red second to here
+		}
+	}
+	
+	Blu_Rollout
+	{
+		// blu last to mid stuff
+	}
+	
+	Red_Rollout
+	{
+		// red last to mid stuff
+	}
+}

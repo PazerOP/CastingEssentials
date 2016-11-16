@@ -20,6 +20,8 @@ public:
 	static bool CheckDependencies();
 	static CameraTools* GetModule() { return Modules().GetModule<CameraTools>(); }
 
+	void SpecPosition(const Vector& pos, const QAngle& angle);
+
 private:
 	int m_SetModeHook;
 	int m_SetPrimaryTargetHook;

@@ -1,7 +1,8 @@
 #include "HookManager.h"
+#include "Controls/StubPanel.h"
+#include "Misc/HLTVCameraHack.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Exceptions.h"
-#include "Controls/StubPanel.h"
 
 #include <PolyHook.h>
 

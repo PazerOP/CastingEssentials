@@ -78,7 +78,7 @@ namespace Hooking{ namespace Internal
 				for (auto currentHook : hooksTable)
 				{
 					const auto startDepth = newHookResults.size();
-					const auto& temp = currentHook.second(args...);
+					const auto& temp = std::move(currentHook.second(args...));
 
 					if (startDepth == newHookResults.size())
 						newHookResults.push(HookAction::IGNORE);
@@ -89,7 +89,7 @@ namespace Hooking{ namespace Internal
 						case HookAction::SUPERCEDE:
 						{
 							if (retValIndex != -1)
-								Assert(!"Someone else already used HookAction::SUPERCEDE this hook!");
+								AssertMsg(temp == retVal, "Someone else already used HookAction::SUPERCEDE this hook with a different return value!");
 
 							retVal = temp;
 							retValIndex = index;
