@@ -53,8 +53,6 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	HookManager::Load();
 	Modules().Init();
 
-	//auto test = new vgui::Label(nullptr, "testPanel", "Hello World");
-
 	Modules().RegisterAndLoadModule<AntiFreeze>("HUD Antifreeze");
 	Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
 	Modules().RegisterAndLoadModule<CameraSmooths>("Camera Smooths");
@@ -64,7 +62,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<FreezeInfo>("Freeze Info");
 	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
-	//Modules().RegisterAndLoadModule<MapFlythroughs>("Map Flythroughs");
+	Modules().RegisterAndLoadModule<MapFlythroughs>("Map Flythroughs");
 	Modules().RegisterAndLoadModule<MedigunInfo>("Medigun Info");
 	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
 	Modules().RegisterAndLoadModule<ProjectileOutlines>("Projectile Outlines");

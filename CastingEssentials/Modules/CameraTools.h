@@ -19,6 +19,7 @@ public:
 
 	static bool CheckDependencies();
 	static CameraTools* GetModule() { return Modules().GetModule<CameraTools>(); }
+	static const char* GetModuleName() { return Modules().GetModuleName<CameraTools>().c_str(); }
 
 	void SpecPosition(const Vector& pos, const QAngle& angle);
 

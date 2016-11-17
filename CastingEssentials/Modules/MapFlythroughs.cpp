@@ -18,17 +18,40 @@
 #include <toolframework/ienginetool.h>
 #include <collisionutils.h>
 
+#include <regex>
+
 MapFlythroughs::MapFlythroughs()
 {
-	ce_cameratrigger_begin = new ConCommand("ce_cameratrigger_begin", [](const CCommand& args) { GetModule()->BeginCameraTrigger(); });
-	ce_cameratrigger_end = new ConCommand("ce_cameratrigger_end", [](const CCommand& args) { GetModule()->EndCameraTrigger(); });
+	ce_cameratrigger_begin = new ConCommand("ce_autocamera_trigger_begin", [](const CCommand& args) { GetModule()->BeginCameraTrigger(); });
+	ce_cameratrigger_end = new ConCommand("ce_autocamera_trigger_end", [](const CCommand& args) { GetModule()->EndCameraTrigger(); });
 
 	ce_autocamera_begin_storyboard = new ConCommand("ce_autocamera_begin_storyboard", [](const CCommand& args) { GetModule()->BeginStoryboard(args); });
 
+	ce_autocamera_mark_camera = new ConCommand("ce_autocamera_mark_camera", [](const CCommand& args) { GetModule()->MarkCamera(args); });
+	ce_autocamera_goto_camera = new ConCommand("ce_autocamera_goto_camera", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &MapFlythroughs::GotoCameraCompletion);
+
+	ce_autocamera_reload_config = new ConCommand("ce_autocamera_reload_config", [](const CCommand& args) { GetModule()->LoadConfig(); });
+
 	m_CreatingCameraTrigger = false;
 	m_CameraTriggerStart.Init();
+}
 
-	LoadConfig();
+static bool GetView(Vector* pos, QAngle* ang)
+{
+	CViewSetup view;
+	if (!Interfaces::GetClientDLL()->GetPlayerView(view))
+	{
+		PluginWarning("[%s] Failed to GetPlayerView!\n", __FUNCSIG__);
+		return false;
+	}
+
+	if (pos)
+		*pos = view.origin;
+
+	if (ang)
+		*ang = view.angles;
+
+	return true;
 }
 
 static Vector GetCrosshairTarget()
@@ -88,18 +111,41 @@ void MapFlythroughs::OnTick(bool ingame)
 	}
 }
 
+void MapFlythroughs::LevelInitPreEntity()
+{
+	LoadConfig();
+}
+
 void MapFlythroughs::LoadConfig()
 {
+	const char* const mapName = Interfaces::GetEngineClient()->GetLevelName();
+	LoadConfig(mapName);
+}
+
+void MapFlythroughs::LoadConfig(const char* bspName)
+{
+	m_Triggers.clear();
+	m_Cameras.clear();
+	m_Storyboards.clear();
+
+	std::string mapName(bspName);
+	mapName.erase(mapName.size() - 4, 4);	// remove .bsp
+	mapName.erase(0, 5);					// remove /maps/
+
 	KeyValuesAD kv("AutoCameras");
-	const char* const filename = "cp_gullywash_final1.vdf";
-	kv->LoadFromFile(Interfaces::GetFileSystem(), filename);
+	const std::string filename = strprintf("addons/castingessentials/autocameras/%s.vdf", mapName.c_str());
+	if (!kv->LoadFromFile(Interfaces::GetFileSystem(), filename.c_str()))
+	{
+		PluginWarning("Unable to load autocameras from %s!\n", filename.c_str());
+		return;
+	}
 
 	for (KeyValues* trigger = kv->GetFirstTrueSubKey(); trigger; trigger = trigger->GetNextTrueSubKey())
 	{
 		if (stricmp("trigger", trigger->GetName()))
 			continue;
 
-		if (!LoadTrigger(trigger, filename))
+		if (!LoadTrigger(trigger, filename.c_str()))
 			return;
 	}
 
@@ -108,7 +154,7 @@ void MapFlythroughs::LoadConfig()
 		if (stricmp("camera", camera->GetName()))
 			continue;
 
-		if (!LoadCamera(camera, filename))
+		if (!LoadCamera(camera, filename.c_str()))
 			return;
 	}
 
@@ -117,9 +163,11 @@ void MapFlythroughs::LoadConfig()
 		if (stricmp("storyboard", storyboard->GetName()))
 			continue;
 
-		if (!LoadStoryboard(storyboard, filename))
+		if (!LoadStoryboard(storyboard, filename.c_str()))
 			return;
 	}
+
+	PluginMsg("Loaded autocameras from %s.\n", filename.c_str());
 }
 
 static void FixupBounds(Vector& mins, Vector& maxs)
@@ -493,7 +541,7 @@ void MapFlythroughs::EndCameraTrigger()
 	const Vector cameraTriggerEnd = GetCrosshairTarget();
 	NDebugOverlay::Box(Vector(0, 0, 0), m_CameraTriggerStart, cameraTriggerEnd, 128, 255, 128, 64, 5);
 
-	ConColorMsg(Color(128, 255, 128, 255), "Trigger { mins \"%f %f %f\" maxs \"%f %f %f\" }\n",
+	ConColorMsg(Color(128, 255, 128, 255), "Trigger { mins \"%1.1f %1.1f %1.1f\" maxs \"%1.1f %1.1f %1.1f\" }\n",
 		m_CameraTriggerStart.x, m_CameraTriggerStart.y, m_CameraTriggerStart.z,
 		cameraTriggerEnd.x, cameraTriggerEnd.y, cameraTriggerEnd.z);
 
@@ -506,6 +554,91 @@ void MapFlythroughs::BeginStoryboard(const CCommand& args)
 	const auto& storyboard = m_Storyboards.front();
 	m_ActiveStoryboard = storyboard;
 	m_ActiveStoryboardElement = m_ActiveStoryboard->m_FirstElement;
+}
+
+void MapFlythroughs::MarkCamera(const CCommand& args)
+{
+	if (args.ArgC() != 2)
+	{
+		Warning("Usage: %s <name>\n", ce_autocamera_mark_camera->GetName());
+		return;
+	}
+
+	const Vector pos;
+	const QAngle ang;
+	if (!GetView(const_cast<Vector*>(&pos), const_cast<QAngle*>(&ang)))
+		return;
+
+	std::string angString;
+	if (fabs(ang.z) < 0.25)
+		angString = strprintf("\"%1.1f %1.1f\"", ang.x, ang.y);
+	else
+		angString = strprintf("\"%1.1f %1.1f %1.1f\"", ang.x, ang.y, ang.z);
+
+	ConColorMsg(Color(128, 255, 128, 255), "Camera { name \"%s\" pos \"%1.1f %1.1f %1.1f\" ang %s }\n",
+		args.Arg(1), pos.x, pos.y, pos.z, angString.c_str());
+}
+
+void MapFlythroughs::GotoCamera(const CCommand& args)
+{
+	CameraTools* const ctools = CameraTools::GetModule();
+	if (!ctools)
+	{
+		PluginWarning("%s: %s module unavailable!\n", ce_autocamera_goto_camera->GetName(), CameraTools::GetModuleName());
+		return;
+	}
+
+	if (args.ArgC() != 2)
+	{
+		Warning("Usage: %s <camera name>\n", ce_autocamera_goto_camera->GetName());
+		return;
+	}
+
+	const char* const name = args.Arg(1);
+	auto const cam = FindCamera(name);
+	if (!cam)
+	{
+		Warning("%s: Unable to find camera with name \"%s\"!\n", ce_autocamera_goto_camera->GetName(), name);;
+		return;
+	}
+
+	ctools->SpecPosition(cam->m_Pos, cam->m_DefaultAngle);
+}
+
+int MapFlythroughs::GotoCameraCompletion(const char* const partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
+{
+	std::cmatch match;
+	if (!std::regex_search(partial, match, std::regex("\\s*ce_autocamera_goto_camera \\s*\"?(.*?)\"?\\s*$", std::regex_constants::icase)))
+		return 0;
+	
+	MapFlythroughs* const mod = GetModule();
+
+	std::vector<std::shared_ptr<Camera>> _cameras;
+	std::vector<std::shared_ptr<Camera>>* cameras;
+	if (match[1].length() < 1)
+		cameras = &mod->m_Cameras;
+	else
+	{
+		const char* const matchStr = match[1].first;
+		for (int i = 0; i < mod->m_Cameras.size(); i++)
+		{
+			if (!stristr(mod->m_Cameras[i]->m_Name.c_str(), matchStr))
+				continue;
+
+			_cameras.push_back(mod->m_Cameras[i]);
+		}
+
+		cameras = &_cameras;
+	}
+
+	int i;
+	for (i = 0; i < COMMAND_COMPLETION_MAXITEMS && i < cameras->size(); i++)
+	{
+		strcpy_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, mod->ce_autocamera_goto_camera->GetName());
+		const auto& nameStr = cameras->at(i)->m_Name;
+		strcat_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, (std::string(" ") + nameStr).c_str());
+	}
+	return i;
 }
 
 std::shared_ptr<MapFlythroughs::Trigger> MapFlythroughs::FindTrigger(const char* const triggerName)

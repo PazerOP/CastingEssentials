@@ -11,6 +11,9 @@ class ModuleManager::Panel final : public vgui::StubPanel
 {
 public:
 	void OnTick() override;
+
+private:
+	std::string m_LastLevelName;
 };
 
 void ModuleManager::Init()
@@ -32,11 +35,27 @@ void ModuleManager::UnloadAllModules()
 
 void ModuleManager::Panel::OnTick()
 {
-	Modules().TickAllModules(Interfaces::GetEngineClient()->IsInGame());
+	const bool inGame = Interfaces::GetEngineClient()->IsInGame();
+	Modules().TickAllModules(inGame);
+
+	if (inGame)
+	{
+		const char* const levelName = Interfaces::GetEngineClient()->GetLevelName();
+		if (stricmp(m_LastLevelName.c_str(), levelName))
+		{
+			m_LastLevelName = levelName;
+			for (const auto& pair : Modules().modules)
+				pair.second->LevelInitPreEntity();
+		}
+	}
+	else
+	{
+		m_LastLevelName.clear();
+	}
 }
 
 void ModuleManager::TickAllModules(bool inGame)
 {
-	for (auto& pair : modules)
+	for (const auto& pair : modules)
 		pair.second->OnTick(inGame);
 }

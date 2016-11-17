@@ -65,6 +65,48 @@ inline bool IsStringEmpty(const char* s)
 	return !(s[0]);
 }
 
+inline std::string strprintf(const char* fmt, ...)
+{
+	va_list v;
+	va_start(v, fmt);
+	const auto length = vsnprintf(nullptr, 0, fmt, v) + 1;
+	va_end(v);
+
+	Assert(length > 0);
+	if (length <= 0)
+		return nullptr;
+
+	std::string retVal;
+	retVal.resize(length);
+	va_start(v, fmt);
+	const auto written = vsnprintf(&retVal[0], length, fmt, v);
+	va_end(v);
+
+	Assert((written + 1) == length);
+
+	return retVal;
+}
+
+inline const char* stristr(const char* const searchThis, const char* const forThis)
+{
+	// smh
+	std::string lowerSearchThis(searchThis);
+	for (auto& c : lowerSearchThis)
+		c = tolower(c);
+
+	std::string lowerForThis(forThis);
+	for (auto& c : lowerForThis)
+		c = tolower(c);
+
+	auto const ptr = strstr(lowerSearchThis.c_str(), lowerForThis.c_str());
+	if (!ptr)
+		return nullptr;
+
+	auto const dist = std::distance(lowerSearchThis.c_str(), ptr);
+
+	return (const char*)(searchThis + dist);
+}
+
 extern CSteamID ParseSteamID(const char* input);
 extern std::string RenderSteamID(const CSteamID& id);
 

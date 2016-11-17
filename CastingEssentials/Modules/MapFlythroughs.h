@@ -2,6 +2,7 @@
 #include "PluginBase/Modules.h"
 
 #include <mathlib/vector.h>
+#include <convar.h>
 
 #include <vector>
 
@@ -20,12 +21,15 @@ public:
 	void OnTick(bool ingame) override;
 
 private:
+	void LevelInitPreEntity() override;
+
 	struct StoryboardElement;
 	struct Trigger;
 	struct Shot;
 	struct Action;
 
 	void LoadConfig();
+	void LoadConfig(const char* mapName);
 	bool LoadTrigger(KeyValues* trigger, const char* filename);
 	bool LoadCamera(KeyValues* camera, const char* filename);
 	bool LoadStoryboard(KeyValues* storyboard, const char* filename);
@@ -46,8 +50,17 @@ private:
 	void BeginStoryboard(const CCommand& args);
 	ConCommand* ce_autocamera_begin_storyboard;
 
+	ConCommand* ce_autocamera_mark_camera;
+	void MarkCamera(const CCommand& args);
+
+	ConCommand* ce_autocamera_goto_camera;
+	void GotoCamera(const CCommand& args);
+	static int GotoCameraCompletion(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
+
 	bool m_CreatingCameraTrigger;
 	Vector m_CameraTriggerStart;
+
+	ConCommand* ce_autocamera_reload_config;
 
 	enum class Target
 	{
