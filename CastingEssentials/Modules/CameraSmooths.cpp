@@ -7,6 +7,7 @@
 #include <shareddefs.h>
 #include <toolframework/ienginetool.h>
 #include <cdll_int.h>
+#include <view_shared.h>
 
 class CameraSmooths::HLTVCameraOverride : public C_HLTVCamera
 {
@@ -44,9 +45,13 @@ CameraSmooths::CameraSmooths()
 	smoothLastTime = 0;
 
 	enabled = new ConVar("ce_camerasmooths_enabled", "0", FCVAR_NONE, "smooth transition between camera positions", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
-	max_angle_difference = new ConVar("ce_camerasmooths_max_angle_difference", "90", FCVAR_NONE, "max angle difference at which smoothing will be performed");
-	max_distance = new ConVar("ce_camerasmooths_max_distance", "800", FCVAR_NONE, "max distance at which smoothing will be performed");
-	move_speed = new ConVar("ce_camerasmooths_move_speed", "800", FCVAR_NONE, "max units per second to move view");
+	max_angle_difference = new ConVar("ce_camerasmooths_max_angle_difference", "90", FCVAR_NONE, "max angle difference at which smoothing will be performed", true, 0, true, 180);
+	max_distance = new ConVar("ce_camerasmooths_max_distance", "-1", FCVAR_NONE, "max distance at which smoothing will be performed");
+	max_speed = new ConVar("ce_camerasmooths_max_speed", "2500", FCVAR_NONE, "max units per second to move view");
+	ce_camerasmooths_duration = new ConVar("ce_camerasmooths_duration", "0.5", FCVAR_NONE, "Duration over which to smooth the camera.");
+
+	ce_camerasmooths_ang_bias = new ConVar("ce_camerasmooths_ang_bias", "0.1", FCVAR_NONE, "biasAmt for angle smoothing.", true, 0, true, 1);
+	ce_camerasmooths_pos_bias = new ConVar("ce_camerasmooths_pos_bias", "0.75", FCVAR_NONE, "biasAmt for position smoothing.", true, 0, true, 1);
 }
 
 bool CameraSmooths::CheckDependencies()
@@ -147,11 +152,18 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 			Vector moveVector = origin - smoothLastOrigin;
 			Vector currentAngleVector(smoothLastAngles.x, smoothLastAngles.y, smoothLastAngles.z);
-			Vector targetAngleVector(angles.x, angles.y, angles.z);
 
-			float angle = acos(currentAngleVector.Dot(targetAngleVector) / (currentAngleVector.Length() * targetAngleVector.Length())) * 180.f / M_PI_F;
+			Vector targetForward, currentForward;
+			AngleVectors(angles, &targetForward);
+			AngleVectors(smoothLastAngles, &currentForward);
 
-			smoothInProgress = moveVector.Length() < max_distance->GetFloat() && angle < max_angle_difference->GetFloat();
+			//forward.Dot()
+
+			m_SmoothStartAng = m_LastFrameAng;
+			m_SmoothBeginPos = m_SmoothStartPos = m_LastFramePos;
+			m_SmoothStartTime = Interfaces::GetEngineTool()->HostTime();
+			smoothInProgress = true; // moveVector.Length() < max_distance->GetFloat() &&
+				//(max_angle_difference->GetFloat() < 0 || angle < max_angle_difference->GetFloat());
 		}
 	}
 	else
@@ -159,14 +171,61 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 	if (smoothInProgress)
 	{
-		float moveDistance = move_speed->GetFloat() * (Interfaces::GetEngineTool()->HostTime() - smoothLastTime);
+		GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
 
-		Vector moveVector = origin - smoothLastOrigin;
-		Vector currentAngleVector(smoothLastAngles.x, smoothLastAngles.y, smoothLastAngles.z);
-		Vector targetAngleVector(angles.x, angles.y, angles.z);
+		const float percentage = (Interfaces::GetEngineTool()->HostTime() - m_SmoothStartTime) / ce_camerasmooths_duration->GetFloat();
+		const float posPercentage = Bias(percentage, ce_camerasmooths_pos_bias->GetFloat());
 
-		float angle = acos(currentAngleVector.Dot(targetAngleVector) / (currentAngleVector.Length() * targetAngleVector.Length())) * 180.f / M_PI_F;
+		if (percentage < 1)
+		{
+			//Vector currentForward, targetForward;
+			//AngleVectors(smoothLastAngles, &currentForward);
+			//AngleVectors(angles, &targetForward);
 
+			// Ideally, how far would we travel this frame?
+			const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
+			const float maxDistThisFrame = max_speed->GetFloat() * frametime;
+
+			// If we had uncapped speed, we'd be here.
+			const Vector idealPos = VectorLerp(m_SmoothStartPos, origin, posPercentage);
+			const Vector targetPos = origin;
+
+			// How far would we have to travel this frame to get to our ideal position?
+			const float posDifference = m_LastFramePos.DistTo(idealPos);
+
+			// Clamp camera translation to max speed
+			if (posDifference > maxDistThisFrame)
+			{
+				m_SmoothStartPos = origin = VectorLerp(m_SmoothStartPos, idealPos, maxDistThisFrame / posDifference);
+				m_SmoothStartTime = Interfaces::GetEngineTool()->HostTime();
+			}
+			else
+				origin = idealPos;
+
+			{
+				// Angle percentage is determined by overall progress towards our goal position
+				const float overallPercentage = 1 - (origin.DistTo(targetPos) / m_SmoothBeginPos.DistTo(targetPos));
+				const float angPercentage = Bias(overallPercentage, ce_camerasmooths_ang_bias->GetFloat());
+				Vector startForward, endForward;
+				AngleVectors(m_SmoothStartAng, &startForward);
+				AngleVectors(angles, &endForward);
+
+				const Vector lerpedAngles = VectorLerp(startForward, endForward, angPercentage);
+				VectorAngles(lerpedAngles, angles);
+			}
+
+			m_LastFramePos = origin;
+			m_LastFrameAng = angles;
+			return true;
+		}
+		else
+		{
+			smoothInProgress = false;
+			smoothEnding = true;
+			return true;
+		}
+		
+#if 0
 		if (moveDistance < moveVector.Length() && moveVector.Length() < max_distance->GetFloat() && angle < max_angle_difference->GetFloat())
 		{
 			float movePercentage = moveDistance / moveVector.Length();
@@ -200,6 +259,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 		GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
 		return true;
+#endif
 	}
 	else if (smoothEnding)
 	{
@@ -247,5 +307,20 @@ void CameraSmooths::ToggleEnabled(IConVar *var, const char *pOldValue, float flO
 			setupEngineViewHook = 0;
 
 		Assert(!setupEngineViewHook);
+	}
+}
+
+void CameraSmooths::OnTick(bool inGame)
+{
+	if (inGame)
+	{
+		{
+			CViewSetup view;
+			if (Interfaces::GetClientDLL()->GetPlayerView(view))
+			{
+				m_LastFramePos = view.origin;
+				m_LastFrameAng = view.angles;
+			}
+		}
 	}
 }

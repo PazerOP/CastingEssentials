@@ -625,7 +625,7 @@ int MapFlythroughs::GotoCameraCompletion(const char* const partial, char command
 	else
 	{
 		const char* const matchStr = match[1].first;
-		for (int i = 0; i < mod->m_Cameras.size(); i++)
+		for (size_t i = 0; i < mod->m_Cameras.size(); i++)
 		{
 			if (!stristr(mod->m_Cameras[i]->m_Name.c_str(), matchStr))
 				continue;
@@ -636,7 +636,7 @@ int MapFlythroughs::GotoCameraCompletion(const char* const partial, char command
 		cameras = &_cameras;
 	}
 
-	int i;
+	size_t i;
 	for (i = 0; i < COMMAND_COMPLETION_MAXITEMS && i < cameras->size(); i++)
 	{
 		strcpy_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, mod->ce_autocamera_goto_camera->GetName());

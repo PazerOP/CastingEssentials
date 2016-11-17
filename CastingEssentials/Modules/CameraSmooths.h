@@ -28,6 +28,15 @@ private:
 	Vector smoothLastOrigin;
 	float smoothLastTime;
 
+	Vector m_SmoothBeginPos;
+
+	Vector m_SmoothStartPos;
+	QAngle m_SmoothStartAng;
+	float m_SmoothStartTime;
+
+	Vector m_LastFramePos;
+	QAngle m_LastFrameAng;
+
 	bool InToolModeOverride();
 	bool IsThirdPersonCameraOverride();
 	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov);
@@ -37,6 +46,13 @@ private:
 	ConVar *enabled;
 	ConVar *max_angle_difference;
 	ConVar *max_distance;
-	ConVar *move_speed;
+	ConVar *max_speed;
+	ConVar* ce_camerasmooths_duration;
+
+	ConVar* ce_camerasmooths_pos_bias;
+	ConVar* ce_camerasmooths_ang_bias;
+
 	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
+
+	void OnTick(bool inGame) override;
 };
