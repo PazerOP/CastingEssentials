@@ -77,5 +77,9 @@ bool ParseVector(Vector& v, const char* str)
 
 bool ParseAngle(QAngle& a, const char* str)
 {
-	return ParseFloat3(str, a.x, a.y, a.z);
+	const auto scanned = sscanf_s(str, "%f %f %f", &a.x, &a.y, &a.z);
+	if (scanned == 2 || scanned == 3)
+		return true;
+
+	return false;
 }

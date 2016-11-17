@@ -173,10 +173,10 @@ void CameraTools::ShowUsers(const CCommand& command)
 
 	Msg("%i Players:\n", red.size() + blu.size());
 
-	for (int i = 0; i < blu.size(); i++)
+	for (size_t i = 0; i < blu.size(); i++)
 		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s\n", i, m_SpecSteamID->GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName().c_str());
 
-	for (int i = 0; i < red.size(); i++)
+	for (size_t i = 0; i < red.size(); i++)
 		ConColorMsg(Color(255, 128, 128, 255), "    alias player_red%i \"%s %s\"		// %s\n", i, m_SpecSteamID->GetName(), RenderSteamID(red[i]->GetSteamID().ConvertToUint64()).c_str(), red[i]->GetName().c_str());
 }
 

@@ -107,6 +107,24 @@ inline const char* stristr(const char* const searchThis, const char* const forTh
 	return (const char*)(searchThis + dist);
 }
 
+// Easing functions, see https://www.desmos.com/calculator/5s0csyhvm7 for live demo
+inline float EaseOut(float x, float bias = 0.5)
+{
+	//Assert(x >= 0 && x <= 1);
+	//Assert(bias >= 0 && bias <= 1);
+	return 1 - std::pow(1 - std::pow(x, bias), 1 / bias);
+}
+inline float EaseIn(float x, float bias = 0.5)
+{
+	//Assert(x >= 0 && x <= 1);
+	//Assert(bias >= 0 && bias <= 1);
+	return std::pow(1 - std::pow(1 - x, bias), 1 / bias);
+}
+inline float EaseInSlope(float x, float bias = 0.5)
+{
+	return std::pow(1 - std::pow(1 - x, bias), (1 / bias) - 1) * std::pow(1 - x, bias - 1);
+}
+
 extern CSteamID ParseSteamID(const char* input);
 extern std::string RenderSteamID(const CSteamID& id);
 

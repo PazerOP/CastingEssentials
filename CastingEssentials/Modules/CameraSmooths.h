@@ -36,6 +36,8 @@ private:
 
 	Vector m_LastFramePos;
 	QAngle m_LastFrameAng;
+	float m_LastOverallProgress;
+	float m_LastAngPercentage;
 
 	bool InToolModeOverride();
 	bool IsThirdPersonCameraOverride();

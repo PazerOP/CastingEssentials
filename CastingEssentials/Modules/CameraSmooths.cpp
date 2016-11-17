@@ -9,6 +9,9 @@
 #include <cdll_int.h>
 #include <view_shared.h>
 
+#undef max
+#include <algorithm>
+
 class CameraSmooths::HLTVCameraOverride : public C_HLTVCamera
 {
 public:
@@ -47,11 +50,11 @@ CameraSmooths::CameraSmooths()
 	enabled = new ConVar("ce_camerasmooths_enabled", "0", FCVAR_NONE, "smooth transition between camera positions", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
 	max_angle_difference = new ConVar("ce_camerasmooths_max_angle_difference", "90", FCVAR_NONE, "max angle difference at which smoothing will be performed", true, 0, true, 180);
 	max_distance = new ConVar("ce_camerasmooths_max_distance", "-1", FCVAR_NONE, "max distance at which smoothing will be performed");
-	max_speed = new ConVar("ce_camerasmooths_max_speed", "2500", FCVAR_NONE, "max units per second to move view");
+	max_speed = new ConVar("ce_camerasmooths_max_speed", "2000", FCVAR_NONE, "max units per second to move view");
 	ce_camerasmooths_duration = new ConVar("ce_camerasmooths_duration", "0.5", FCVAR_NONE, "Duration over which to smooth the camera.");
 
-	ce_camerasmooths_ang_bias = new ConVar("ce_camerasmooths_ang_bias", "0.1", FCVAR_NONE, "biasAmt for angle smoothing.", true, 0, true, 1);
-	ce_camerasmooths_pos_bias = new ConVar("ce_camerasmooths_pos_bias", "0.75", FCVAR_NONE, "biasAmt for position smoothing.", true, 0, true, 1);
+	ce_camerasmooths_ang_bias = new ConVar("ce_camerasmooths_ang_bias", "0.65", FCVAR_NONE, "biasAmt for angle smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1);
+	ce_camerasmooths_pos_bias = new ConVar("ce_camerasmooths_pos_bias", "0.75", FCVAR_NONE, "biasAmt for position smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1);
 }
 
 bool CameraSmooths::CheckDependencies()
@@ -156,12 +159,11 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			Vector targetForward, currentForward;
 			AngleVectors(angles, &targetForward);
 			AngleVectors(smoothLastAngles, &currentForward);
-
-			//forward.Dot()
-
+			
 			m_SmoothStartAng = m_LastFrameAng;
 			m_SmoothBeginPos = m_SmoothStartPos = m_LastFramePos;
 			m_SmoothStartTime = Interfaces::GetEngineTool()->HostTime();
+			m_LastOverallProgress = m_LastAngPercentage = 0;
 			smoothInProgress = true; // moveVector.Length() < max_distance->GetFloat() &&
 				//(max_angle_difference->GetFloat() < 0 || angle < max_angle_difference->GetFloat());
 		}
@@ -174,24 +176,22 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 		GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
 
 		const float percentage = (Interfaces::GetEngineTool()->HostTime() - m_SmoothStartTime) / ce_camerasmooths_duration->GetFloat();
-		const float posPercentage = Bias(percentage, ce_camerasmooths_pos_bias->GetFloat());
+		const float posPercentage = EaseOut(percentage, ce_camerasmooths_pos_bias->GetFloat());
 
 		if (percentage < 1)
 		{
-			//Vector currentForward, targetForward;
-			//AngleVectors(smoothLastAngles, &currentForward);
-			//AngleVectors(angles, &targetForward);
-
-			// Ideally, how far would we travel this frame?
-			const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
-			const float maxDistThisFrame = max_speed->GetFloat() * frametime;
+			const Vector targetPos = origin;
 
 			// If we had uncapped speed, we'd be here.
-			const Vector idealPos = VectorLerp(m_SmoothStartPos, origin, posPercentage);
-			const Vector targetPos = origin;
+			const Vector idealPos = VectorLerp(m_SmoothStartPos, targetPos, posPercentage);
 
 			// How far would we have to travel this frame to get to our ideal position?
 			const float posDifference = m_LastFramePos.DistTo(idealPos);
+
+			// What's the furthest we're allowed to travel this frame?
+			const float maxDistThisFrame = max_speed->GetFloat() > 0 ?
+				max_speed->GetFloat() * Interfaces::GetEngineTool()->HostFrameTime() :
+				std::numeric_limits<float>::infinity();
 
 			// Clamp camera translation to max speed
 			if (posDifference > maxDistThisFrame)
@@ -202,20 +202,48 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			else
 				origin = idealPos;
 
+			const float overallPercentage = std::max(1 - (origin.DistTo(targetPos) / m_SmoothBeginPos.DistTo(targetPos)), m_LastOverallProgress);
 			{
-				// Angle percentage is determined by overall progress towards our goal position
-				const float overallPercentage = 1 - (origin.DistTo(targetPos) / m_SmoothBeginPos.DistTo(targetPos));
-				const float angPercentage = Bias(overallPercentage, ce_camerasmooths_ang_bias->GetFloat());
-				Vector startForward, endForward;
-				AngleVectors(m_SmoothStartAng, &startForward);
-				AngleVectors(angles, &endForward);
+				// Percentage this frame
+				const float percentThisFrame = overallPercentage - m_LastOverallProgress;
 
-				const Vector lerpedAngles = VectorLerp(startForward, endForward, angPercentage);
-				VectorAngles(lerpedAngles, angles);
+				const float adjustedPercentage = percentThisFrame / (1 - overallPercentage);
+
+				// Angle percentage is determined by overall progress towards our goal position
+				const float angPercentage = EaseIn(overallPercentage, ce_camerasmooths_ang_bias->GetFloat());
+
+				const float angPercentThisFrame = angPercentage - m_LastAngPercentage;
+				const float adjustedAngPercentage = angPercentThisFrame / (1 - angPercentage);
+				
+#if 0
+				Quaternion currentForward, endForward;
+				AngleQuaternion(percentage == 0 ? m_SmoothStartAng : m_LastFrameAng, currentForward);
+				AngleQuaternion(angles, endForward);
+
+				Quaternion lerped;
+				QuaternionSlerp(currentForward, endForward, angPercentage, lerped);
+
+				QuaternionAngles(lerped, angles);
+#else
+
+				const float distx = AngleDistance(angles.x, m_LastFrameAng.x);
+				const float disty = AngleDistance(angles.y, m_LastFrameAng.y);
+				const float distz = AngleDistance(angles.z, m_LastFrameAng.z);
+
+				angles.x = ApproachAngle(angles.x, m_LastFrameAng.x, distx * adjustedAngPercentage);
+				angles.y = ApproachAngle(angles.y, m_LastFrameAng.y, disty * adjustedAngPercentage);
+				angles.z = ApproachAngle(angles.z, m_LastFrameAng.z, distz * adjustedAngPercentage);
+
+				//angles.x = AngleNormalize(Lerp(angPercentage, AngleNormalizePositive(m_SmoothStartAng.x), AngleNormalizePositive(angles.x)));
+				//angles.y = AngleNormalize(Lerp(angPercentage, AngleNormalizePositive(m_SmoothStartAng.y), AngleNormalizePositive(angles.y)));
+				//angles.z = AngleNormalize(Lerp(angPercentage, AngleNormalizePositive(m_SmoothStartAng.z), AngleNormalizePositive(angles.z)));
+#endif
+				m_LastAngPercentage = angPercentage;
 			}
 
 			m_LastFramePos = origin;
 			m_LastFrameAng = angles;
+			m_LastOverallProgress = overallPercentage;
 			return true;
 		}
 		else
