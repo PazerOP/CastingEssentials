@@ -21,3 +21,8 @@ void NDebugOverlay::BoxAngles(const Vector &origin, const Vector &mins, const Ve
 {
 	debugoverlay->AddBoxOverlay(origin, mins, maxs, angles, r, g, b, a, duration);
 }
+
+void NDebugOverlay::Text(const Vector& origin, const char* text, bool bViewCheck, float duration)
+{
+	debugoverlay->AddTextOverlay(origin, duration, "%s", text);
+}

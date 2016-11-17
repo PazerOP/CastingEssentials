@@ -21,17 +21,17 @@ CameraTools::CameraTools()
 	m_SpecGUISettings = new KeyValues("Resource/UI/SpectatorTournament.res");
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
 
-	m_ForceMode = new ConVar("ce_cameratools_force_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.", &CameraTools::StaticChangeForceMode);
-	m_ForceTarget = new ConVar("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.", &CameraTools::StaticChangeForceTarget);
-	m_ForceValidTarget = new ConVar("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.", &CameraTools::StaticToggleForceValidTarget);
+	m_ForceMode = new ConVar("ce_cameratools_force_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceMode(var, pOldValue, flOldValue); });
+	m_ForceTarget = new ConVar("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceTarget(var, pOldValue, flOldValue); });
+	m_ForceValidTarget = new ConVar("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); });
 	m_SpecPlayerAlive = new ConVar("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players.");
 
-	m_SpecPosition = new ConCommand("ce_cameratools_spec_pos", &CameraTools::StaticSpecPosition, "Moves the camera to a given position.");
+	m_SpecPosition = new ConCommand("ce_cameratools_spec_pos", [](const CCommand& args) { GetModule()->SpecPosition(args); }, "Moves the camera to a given position.");
 
-	m_SpecClass = new ConCommand("ce_cameratools_spec_class", &CameraTools::StaticSpecClass, "Spectates a specific class: ce_cameratools_spec_class <team> <class> [index]");
-	m_SpecSteamID = new ConCommand("ce_cameratools_spec_steamid", &CameraTools::StaticSpecSteamID, "Spectates a player with the given steamid: ce_cameratools_spec_steamid <steamID>");
+	m_SpecClass = new ConCommand("ce_cameratools_spec_class", [](const CCommand& args) { GetModule()->SpecClass(args); }, "Spectates a specific class: ce_cameratools_spec_class <team> <class> [index]");
+	m_SpecSteamID = new ConCommand("ce_cameratools_spec_steamid", [](const CCommand& args) { GetModule()->SpecSteamID(args); }, "Spectates a player with the given steamid: ce_cameratools_spec_steamid <steamID>");
 
-	m_ShowUsers = new ConCommand("ce_cameratools_show_users", &CameraTools::StaticShowUsers, "Lists all currently connected players on the server.");
+	m_ShowUsers = new ConCommand("ce_cameratools_show_users", [](const CCommand& args) { GetModule()->ShowUsers(args); }, "Lists all currently connected players on the server.");
 }
 
 bool CameraTools::CheckDependencies()
@@ -149,35 +149,35 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle)
 
 void CameraTools::ShowUsers(const CCommand& command)
 {
-	Msg("Players:\n");
-
-	int red = 0, blue = 0;
+	std::vector<Player*> red;
+	std::vector<Player*> blu;
 	for (Player* player : Player::Iterable())
 	{
 		if (player->GetClass() == TFClassType::Unknown)
 			continue;
 
-		const char* team;
-		int index;
 		switch (player->GetTeam())
 		{
 			case TFTeam::Red:
-				index = red++;
-				team = "red";
+				red.push_back(player);
 				break;
 
 			case TFTeam::Blue:
-				index = blue++;
-				team = "blu";
+				blu.push_back(player);
 				break;
 
 			default:
 				continue;
 		}
-
-		Msg("alias player_%s%i \"%s %s\"		// %s\n",
-			team, index, m_SpecSteamID->GetName(), RenderSteamID(player->GetSteamID().ConvertToUint64()).c_str(), player->GetName().c_str());
 	}
+
+	Msg("%i Players:\n", red.size() + blu.size());
+
+	for (int i = 0; i < blu.size(); i++)
+		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s\n", i, m_SpecSteamID->GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName().c_str());
+
+	for (int i = 0; i < red.size(); i++)
+		ConColorMsg(Color(255, 128, 128, 255), "    alias player_red%i \"%s %s\"		// %s\n", i, m_SpecSteamID->GetName(), RenderSteamID(red[i]->GetSteamID().ConvertToUint64()).c_str(), red[i]->GetName().c_str());
 }
 
 void CameraTools::SpecClass(const CCommand& command)
@@ -342,90 +342,6 @@ void CameraTools::SpecSteamID(const CCommand& command)
 
 Usage:
 	PluginWarning("Usage: %s\n", m_SpecSteamID->GetHelpText());
-}
-
-void CameraTools::StaticShowUsers(const CCommand& command)
-{
-	CameraTools* module = GetModule();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
-		return;
-	}
-
-	module->ShowUsers(command);
-}
-
-void CameraTools::StaticChangeForceMode(IConVar* var, const char* oldValue, float fOldValue)
-{
-	CameraTools* module = GetModule();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", var->GetName());
-		return;
-	}
-
-	module->ChangeForceMode(var, oldValue, fOldValue);
-}
-
-void CameraTools::StaticChangeForceTarget(IConVar* var, const char* oldValue, float fOldValue)
-{
-	CameraTools* module = GetModule();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", var->GetName());
-		return;
-	}
-
-	module->ChangeForceTarget(var, oldValue, fOldValue);
-}
-
-void CameraTools::StaticSpecPosition(const CCommand& command)
-{
-	CameraTools* module = GetModule();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
-		return;
-	}
-
-	module->SpecPosition(command);
-}
-
-void CameraTools::StaticToggleForceValidTarget(IConVar* var, const char* oldValue, float fOldValue)
-{
-	CameraTools* module = GetModule();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", var->GetName());
-		return;
-	}
-
-	module->ToggleForceValidTarget(var, oldValue, fOldValue);
-}
-
-void CameraTools::StaticSpecClass(const CCommand& command)
-{
-	CameraTools* module = GetModule();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
-		return;
-	}
-
-	module->SpecClass(command);
-}
-
-void CameraTools::StaticSpecSteamID(const CCommand& command)
-{
-	CameraTools* module = GetModule();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
-		return;
-	}
-
-	module->SpecSteamID(command);
 }
 
 void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flOldValue)

@@ -61,6 +61,9 @@ private:
 	Vector m_CameraTriggerStart;
 
 	ConCommand* ce_autocamera_reload_config;
+	ConVar* ce_autocamera_show_triggers;
+
+	void DrawTriggers();
 
 	enum class Target
 	{

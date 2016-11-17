@@ -41,22 +41,15 @@ private:
 	ConCommand* m_SpecSteamID;
 
 	ConCommand* m_ShowUsers;
-	static void StaticShowUsers(const CCommand& command);
 	void ShowUsers(const CCommand& command);
 
-	static void StaticChangeForceMode(IConVar* var, const char* oldValue, float fOldValue);
 	void ChangeForceMode(IConVar *var, const char *pOldValue, float flOldValue);
-	static void StaticChangeForceTarget(IConVar* var, const char* oldValue, float fOldValue);
 	void ChangeForceTarget(IConVar *var, const char *pOldValue, float flOldValue);
-	static void StaticSpecPosition(const CCommand& command);
 	void SpecPosition(const CCommand &command);
-	static void StaticToggleForceValidTarget(IConVar* var, const char* oldValue, float fOldValue);
 	void ToggleForceValidTarget(IConVar *var, const char *pOldValue, float flOldValue);
 
-	static void StaticSpecClass(const CCommand& command);
 	void SpecClass(const CCommand& command);
 	void SpecClass(TFTeam team, TFClassType playerClass, int classIndex);
-	static void StaticSpecSteamID(const CCommand& command);
 	void SpecSteamID(const CCommand& command);
 
 	void SpecPlayer(int playerIndex);

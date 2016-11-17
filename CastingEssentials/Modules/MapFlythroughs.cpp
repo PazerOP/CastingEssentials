@@ -32,6 +32,8 @@ MapFlythroughs::MapFlythroughs()
 
 	ce_autocamera_reload_config = new ConCommand("ce_autocamera_reload_config", [](const CCommand& args) { GetModule()->LoadConfig(); });
 
+	ce_autocamera_show_triggers = new ConVar("ce_autocamera_show_triggers", "0", FCVAR_NONE, "Shows all triggers on the map.");
+
 	m_CreatingCameraTrigger = false;
 	m_CameraTriggerStart.Init();
 }
@@ -108,6 +110,9 @@ void MapFlythroughs::OnTick(bool ingame)
 				break;
 			}
 		}
+
+		if (ce_autocamera_show_triggers->GetBool())
+			DrawTriggers();
 	}
 }
 
@@ -639,6 +644,17 @@ int MapFlythroughs::GotoCameraCompletion(const char* const partial, char command
 		strcat_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, (std::string(" ") + nameStr).c_str());
 	}
 	return i;
+}
+
+void MapFlythroughs::DrawTriggers()
+{
+	for (const auto& trigger : m_Triggers)
+	{
+		NDebugOverlay::Box(Vector(0, 0, 0), trigger->m_Mins, trigger->m_Maxs, 128, 255, 128, 64, 0);
+
+		const Vector difference = VectorLerp(trigger->m_Mins, trigger->m_Maxs, 0.5);
+		NDebugOverlay::Text(VectorLerp(trigger->m_Mins, trigger->m_Maxs, 0.5), trigger->m_Name.c_str(), false, 0);
+	}
 }
 
 std::shared_ptr<MapFlythroughs::Trigger> MapFlythroughs::FindTrigger(const char* const triggerName)
