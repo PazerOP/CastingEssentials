@@ -27,6 +27,7 @@ public:
 	static void Load(CreateInterfaceFn factory);
 	static void Unload();
 
+	// #include <cdll_int.h>
 	static IBaseClientDLL* GetClientDLL() { return pClientDLL; }
 
 	// #include <toolframework/iclientenginetools.h>

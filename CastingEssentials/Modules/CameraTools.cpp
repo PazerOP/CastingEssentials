@@ -319,8 +319,8 @@ void CameraTools::OnTick(bool inGame)
 	{
 		if (ce_cameratools_show_mode->GetBool())
 		{
-			const auto const hltvcamera = Interfaces::GetHLTVCamera();
-			const auto const mode = hltvcamera->m_nCameraMode;
+			const HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
+			const auto mode = hltvcamera->m_nCameraMode;
 			Interfaces::GetEngineClient()->Con_NPrintf(0, "Current spec_mode: %i %s",
 				mode, mode >= 0 && mode < NUM_OBSERVER_MODES ? s_ObserverModes[mode] : "INVALID");
 		}

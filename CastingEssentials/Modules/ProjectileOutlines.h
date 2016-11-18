@@ -23,6 +23,9 @@ private:
 	ConVar* ce_projectileoutlines_color_blu;
 	ConVar* ce_projectileoutlines_color_red;
 
+	ConVar* ce_projectileoutlines_fade_start;
+	ConVar* ce_projectileoutlines_fade_end;
+
 	void OnTick(bool inGame) override;
 
 	void SoldierGlows(IClientEntity* entity);
@@ -31,6 +34,7 @@ private:
 	CHandle<C_BaseEntity> CreateGlowForEntity(IClientEntity* ent);
 	std::map<EHANDLE, EHANDLE> m_GlowEntities;
 
+	// Some random numbers I generated
 	static constexpr int MAGIC_ENTNUM = 0x141BCF9B;
 	static constexpr int MAGIC_SERIALNUM = 0x0FCAD8B9;
 

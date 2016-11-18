@@ -20,11 +20,12 @@ ProjectileOutlines::ProjectileOutlines()
 	m_PillsEnabled = new ConVar("ce_projectileoutlines_pills", "0", FCVAR_NONE, "Enable projectile outlines for pills.");
 	m_StickiesEnabled = new ConVar("ce_projectileoutlines_stickies", "0", FCVAR_NONE, "Enable projectile outlines for stickies.");
 
-	// 88 133 162 255
 	ce_projectileoutlines_color_blu = new ConVar("ce_projectileoutlines_color_blu", "125 169 197 255", FCVAR_NONE, "The color used for outlines of BLU team's projectiles.", &ColorChanged);
 
-	// 184 56 59 255
 	ce_projectileoutlines_color_red = new ConVar("ce_projectileoutlines_color_red", "189 55 55 255", FCVAR_NONE, "The color used for outlines of RED team's projectiles.", &ColorChanged);
+
+	ce_projectileoutlines_fade_start = new ConVar("ce_projectileoutlines_fade_start", "-1", FCVAR_NONE, "Distance from the camera at which projectile outlines begin fading out.");
+	ce_projectileoutlines_fade_end = new ConVar("ce_projectileoutlines_fade_end", "-1", FCVAR_NONE, "Distance from the camera at which projectile outlines finish fading out.");
 }
 
 ProjectileOutlines::~ProjectileOutlines()
@@ -83,6 +84,37 @@ void ProjectileOutlines::OnTick(bool inGame)
 			SoldierGlows(entity);
 			DemoGlows(entity);
 		}
+
+		// Update glows for existing entities
+		for (const auto& glow : m_GlowEntities)
+		{
+			IClientEntity* baseEntity = glow.first.Get();
+			if (!baseEntity)
+				continue;
+
+			IClientEntity* glowEntity = glow.second.Get();
+			if (!glowEntity)
+				continue;
+
+			const Vector viewPos = GetViewOrigin();
+			const Vector entPos = baseEntity->GetAbsOrigin();
+			const float dist = viewPos.DistTo(entPos);
+
+			const byte alpha = (ce_projectileoutlines_fade_start->GetFloat() >= 0 && ce_projectileoutlines_fade_end->GetFloat() >= 0) ?
+				Lerp(smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start->GetFloat(), ce_projectileoutlines_fade_end->GetFloat(), 1, 0)), 0, 255) :
+				255;
+
+			Color* glowColor = Entities::GetEntityProp<Color*>(glowEntity, { "m_glowColor" });
+			if (!glowColor)
+				continue;
+
+			Color newColor(glowColor->r(), glowColor->g(), glowColor->b(), alpha);
+			if (newColor == *glowColor)
+				continue;
+
+			*glowColor = newColor;
+			glowEntity->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_DATATABLE_CHANGED);
+		}
 	}
 }
 
@@ -108,7 +140,7 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 		else if (team && *team == TFTeam::Red)
 			*color = m_ColorRed;
 		else
-			color->SetColor(255, 255, 255, 255);
+			color->SetColor(0, 255, 0, 255);
 	}
 
 	handle->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_CREATED);

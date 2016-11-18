@@ -1,7 +1,10 @@
 #include "Common.h"
+#include "Interfaces.h"
 
 #include <convar.h>
 #include <characterset.h>
+#include <cdll_int.h>
+#include <view_shared.h>
 
 #include <regex>
 
@@ -87,4 +90,20 @@ bool ParseAngle(QAngle& a, const char* str)
 		return true;
 
 	return false;
+}
+
+Vector GetViewOrigin()
+{
+	auto const clientDLL = Interfaces::GetClientDLL();
+	Assert(clientDLL);
+	if (!clientDLL)
+		return Vector();
+
+	CViewSetup view;
+	const bool retVal = clientDLL->GetPlayerView(view);
+	Assert(retVal);
+	if (!retVal)
+		return Vector();
+
+	return view.origin;
 }

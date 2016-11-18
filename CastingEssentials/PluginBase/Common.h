@@ -6,6 +6,18 @@
 
 #define PLUGIN_VERSION "0.1"
 
+static constexpr const char* s_ObserverModes[] =
+{
+	"None",
+	"Deathcam",
+	"Freezecam",
+	"Fixed",
+	"In-eye",
+	"Third-person chase",
+	"Point of interest",
+	"Free roaming",
+};
+
 class CCommand;
 class ConVar;
 class Vector;
@@ -125,6 +137,15 @@ inline float EaseInSlope(float x, float bias = 0.5)
 	return std::pow(1 - std::pow(1 - x, bias), (1 / bias) - 1) * std::pow(1 - x, bias - 1);
 }
 
+inline float smoothstep(float x)
+{
+	return x*x*(3.0f - 2.0f * x);
+}
+inline float smootherstep(float x)
+{
+	return x*x*x*(x*(x * 6.0f - 15.0f) + 10.0f);
+}
+
 extern CSteamID ParseSteamID(const char* input);
 extern std::string RenderSteamID(const CSteamID& id);
 
@@ -136,14 +157,4 @@ extern bool ParseFloat3(const char* str, float& f1, float& f2, float& f3);
 extern bool ParseVector(Vector& v, const char* str);
 extern bool ParseAngle(QAngle& a, const char* str);
 
-static constexpr const char* s_ObserverModes[] =
-{
-	"None",
-	"Deathcam",
-	"Freezecam",
-	"Fixed",
-	"In-eye",
-	"Third-person chase",
-	"Point of interest",
-	"Free roaming",
-};
+extern Vector GetViewOrigin();
