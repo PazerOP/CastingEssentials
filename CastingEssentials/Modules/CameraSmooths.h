@@ -28,6 +28,8 @@ private:
 	Vector smoothLastOrigin;
 	float smoothLastTime;
 
+	bool TestCollision(const Vector& currentPos, const Vector& targetPos);
+
 	Vector m_SmoothBeginPos;
 
 	Vector m_SmoothStartPos;

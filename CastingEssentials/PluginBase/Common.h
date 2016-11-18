@@ -135,3 +135,15 @@ extern void SwapConVars(ConVar& var1, ConVar& var2);
 extern bool ParseFloat3(const char* str, float& f1, float& f2, float& f3);
 extern bool ParseVector(Vector& v, const char* str);
 extern bool ParseAngle(QAngle& a, const char* str);
+
+static constexpr const char* s_ObserverModes[] =
+{
+	"None",
+	"Deathcam",
+	"Freezecam",
+	"Fixed",
+	"In-eye",
+	"Third-person chase",
+	"Point of interest",
+	"Free roaming",
+};

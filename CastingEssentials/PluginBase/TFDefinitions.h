@@ -249,21 +249,21 @@ enum
 
 // self-generated
 
-typedef enum
+enum class TFMedigun
 {
-	TFMedigun_Unknown,
-	TFMedigun_MediGun,
-	TFMedigun_Kritzkrieg,
-	TFMedigun_QuickFix,
-	TFMedigun_Vaccinator
-} TFMedigun;
+	Unknown,
+	MediGun,
+	Kritzkrieg,
+	QuickFix,
+	Vaccinator
+};
 
-typedef enum
+enum class TFResistType
 {
-	TFResistType_Bullet,
-	TFResistType_Explosive,
-	TFResistType_Fire
-} TFResistType;
+	Bullet,
+	Explosive,
+	Fire
+};
 
 enum class TFGrenadePipebombType
 {

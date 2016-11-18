@@ -36,6 +36,36 @@ public:
 	using C_HLTVCamera::m_vecVelocity;
 };
 
+static const std::vector<std::shared_ptr<const Vector>>& GetTestPoints()
+{
+	constexpr int resolution = 6;
+	constexpr float mins = -1;
+	constexpr float maxs = 1;
+
+	static thread_local std::vector<std::shared_ptr<const Vector>> s_Vectors;
+	static thread_local bool s_VectorInitialized = false;
+
+	if (!s_VectorInitialized)
+	{
+		for (int x = 0; x < resolution; x++)
+		{
+			const float xpos = RemapVal(x, 0, resolution - 1, mins, maxs);
+			for (int y = 0; y < resolution; y++)
+			{
+				const float ypos = RemapVal(y, 0, resolution - 1, mins, maxs);
+				for (int z = 0; z < resolution; z++)
+				{
+					const float zpos = RemapVal(y, 0, resolution - 1, mins, maxs);
+
+					s_Vectors.push_back(std::make_shared<Vector>(xpos, ypos, zpos));
+				}
+			}
+		}
+	}
+
+	return s_Vectors;
+}
+
 CameraSmooths::CameraSmooths()
 {
 	inToolModeHook = 0;
@@ -111,6 +141,11 @@ bool CameraSmooths::CheckDependencies()
 	return ready;
 }
 
+bool CameraSmooths::TestCollision(const Vector& currentPos, const Vector& targetPos)
+{
+	return false;
+}
+
 bool CameraSmooths::InToolModeOverride()
 {
 	if (!Interfaces::GetEngineClient()->IsHLTV())
@@ -153,19 +188,16 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			smoothEndMode = hltvcamera->m_nCameraMode;
 			smoothEndTarget = hltvcamera->m_iTraget1;
 
-			Vector moveVector = origin - smoothLastOrigin;
-			Vector currentAngleVector(smoothLastAngles.x, smoothLastAngles.y, smoothLastAngles.z);
-
 			Vector targetForward, currentForward;
 			AngleVectors(angles, &targetForward);
 			AngleVectors(smoothLastAngles, &currentForward);
-			
+
 			m_SmoothStartAng = m_LastFrameAng;
 			m_SmoothBeginPos = m_SmoothStartPos = m_LastFramePos;
 			m_SmoothStartTime = Interfaces::GetEngineTool()->HostTime();
 			m_LastOverallProgress = m_LastAngPercentage = 0;
 			smoothInProgress = true; // moveVector.Length() < max_distance->GetFloat() &&
-				//(max_angle_difference->GetFloat() < 0 || angle < max_angle_difference->GetFloat());
+										//(max_angle_difference->GetFloat() < 0 || angle < max_angle_difference->GetFloat());
 		}
 	}
 	else
@@ -233,10 +265,6 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 				angles.x = ApproachAngle(angles.x, m_LastFrameAng.x, distx * adjustedAngPercentage);
 				angles.y = ApproachAngle(angles.y, m_LastFrameAng.y, disty * adjustedAngPercentage);
 				angles.z = ApproachAngle(angles.z, m_LastFrameAng.z, distz * adjustedAngPercentage);
-
-				//angles.x = AngleNormalize(Lerp(angPercentage, AngleNormalizePositive(m_SmoothStartAng.x), AngleNormalizePositive(angles.x)));
-				//angles.y = AngleNormalize(Lerp(angPercentage, AngleNormalizePositive(m_SmoothStartAng.y), AngleNormalizePositive(angles.y)));
-				//angles.z = AngleNormalize(Lerp(angPercentage, AngleNormalizePositive(m_SmoothStartAng.z), AngleNormalizePositive(angles.z)));
 #endif
 				m_LastAngPercentage = angPercentage;
 			}

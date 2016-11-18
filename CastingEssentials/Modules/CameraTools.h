@@ -31,6 +31,7 @@ private:
 	void SetModeOverride(int iMode);
 	void SetPrimaryTargetOverride(int nEntity);
 
+	ConVar* ce_cameratools_show_mode;
 	ConVar* m_ForceMode;
 	ConVar* m_ForceTarget;
 	ConVar* m_ForceValidTarget;
@@ -53,4 +54,6 @@ private:
 	void SpecSteamID(const CCommand& command);
 
 	void SpecPlayer(int playerIndex);
+
+	void OnTick(bool inGame) override;
 };

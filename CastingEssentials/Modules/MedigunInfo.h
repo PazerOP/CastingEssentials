@@ -17,11 +17,12 @@ public:
 	static bool CheckDependencies();
 private:
 	class MainPanel;
-	MainPanel *mainPanel;
+	std::unique_ptr<MainPanel> m_MainPanel;
 	class MedigunPanel;
+
+	void OnTick(bool inGame) override;
 
 	ConVar *enabled;
 	ConCommand *reload_settings;
 	void ReloadSettings();
-	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
 };

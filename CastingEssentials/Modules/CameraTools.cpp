@@ -21,6 +21,7 @@ CameraTools::CameraTools()
 	m_SpecGUISettings = new KeyValues("Resource/UI/SpectatorTournament.res");
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
 
+	ce_cameratools_show_mode = new ConVar("ce_cameratools_show_mode", "0", FCVAR_NONE, "Displays the current spec_mode in the top right corner of the screen.");
 	m_ForceMode = new ConVar("ce_cameratools_force_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceMode(var, pOldValue, flOldValue); });
 	m_ForceTarget = new ConVar("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceTarget(var, pOldValue, flOldValue); });
 	m_ForceValidTarget = new ConVar("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); });
@@ -308,6 +309,20 @@ void CameraTools::SpecPlayer(int playerIndex)
 			{
 				Warning("%s\n", e.what());
 			}
+		}
+	}
+}
+
+void CameraTools::OnTick(bool inGame)
+{
+	if (inGame)
+	{
+		if (ce_cameratools_show_mode->GetBool())
+		{
+			const auto const hltvcamera = Interfaces::GetHLTVCamera();
+			const auto const mode = hltvcamera->m_nCameraMode;
+			Interfaces::GetEngineClient()->Con_NPrintf(0, "Current spec_mode: %i %s",
+				mode, mode >= 0 && mode < NUM_OBSERVER_MODES ? s_ObserverModes[mode] : "INVALID");
 		}
 	}
 }

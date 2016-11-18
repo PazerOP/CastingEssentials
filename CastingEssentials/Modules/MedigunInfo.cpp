@@ -59,7 +59,7 @@ class MedigunInfo::MedigunPanel : public vgui::EditablePanel
 	DECLARE_CLASS_SIMPLE(MedigunPanel, vgui::EditablePanel);
 
 public:
-	MedigunPanel(vgui::Panel *parent, const char *panelName);
+	MedigunPanel(vgui::Panel *parent, const char *panelName) : vgui::EditablePanel(parent, panelName) { }
 	virtual ~MedigunPanel() { }
 
 private:
@@ -77,9 +77,7 @@ private:
 
 MedigunInfo::MedigunInfo()
 {
-	mainPanel = nullptr;
-
-	enabled = new ConVar("ce_mediguninfo_enabled", "0", FCVAR_NONE, "enable medigun info", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
+	enabled = new ConVar("ce_mediguninfo_enabled", "0", FCVAR_NONE, "enable medigun info");
 	reload_settings = new ConCommand("ce_mediguninfo_reload_settings", []() { GetModule()->ReloadSettings(); }, "reload settings for the medigun info HUD from the resource file", FCVAR_NONE);
 }
 
@@ -147,55 +145,49 @@ bool MedigunInfo::CheckDependencies()
 	return ready;
 }
 
-void MedigunInfo::ReloadSettings()
+void MedigunInfo::OnTick(bool inGame)
 {
-	mainPanel->LoadControlSettings("Resource/UI/MedigunInfo.res");
-}
-
-void MedigunInfo::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)
-{
-	if (enabled->GetBool())
+	if (inGame && enabled->GetBool())
 	{
-		if (!mainPanel)
+		if (!m_MainPanel)
 		{
 			try
 			{
 				vgui::Panel *viewport = Interfaces::GetClientMode()->GetViewport();
 
 				if (viewport)
-					mainPanel = new MainPanel(viewport, "MedigunInfo");
+					m_MainPanel.reset(new MainPanel(viewport, "MedigunInfo"));
 				else
 				{
-					Warning("Could not initialize the panel!\n");
-					mainPanel = nullptr;
-					var->SetValue(0);
+					PluginWarning("[%s] Could not get IClientMode viewport to attach main MedigunInfo panel!\n");
+					m_MainPanel.reset();
 				}
 			}
 			catch (bad_pointer)
 			{
-				Warning("Could not initialize the panel!\n");
-				mainPanel = nullptr;
-				var->SetValue(0);
+				PluginWarning("Could not initialize main MedigunInfo panel: unable to get IClientMode!\n");
+				m_MainPanel.reset();
 			}
 		}
 
-		if (mainPanel)
-			mainPanel->SetEnabled(true);
-	}
-	else
-	{
-		if (mainPanel)
+		if (m_MainPanel)
 		{
-			delete mainPanel;
-			mainPanel = nullptr;
+			if (!m_MainPanel->IsEnabled())
+				m_MainPanel->SetEnabled(true);
 		}
 	}
+	else if (m_MainPanel)
+		m_MainPanel.reset();
+}
+
+void MedigunInfo::ReloadSettings()
+{
+	m_MainPanel->LoadControlSettings("Resource/UI/MedigunInfo.res");
 }
 
 MedigunInfo::MainPanel::MainPanel(vgui::Panel *parent, const char *panelName) : vgui::EditablePanel(parent, panelName)
 {
 	LoadControlSettings("Resource/UI/MedigunInfo.res");
-
 	g_pVGui->AddTickSignal(GetVPanel());
 }
 
@@ -296,34 +288,36 @@ void MedigunInfo::MainPanel::OnTick()
 					x = bluBaseX + (bluOffsetX * (bluMediguns - 1));
 					y = bluBaseY + (bluOffsetY * (bluMediguns - 1));
 				}
+				else
+					continue;	// We will never get here, but VS2015 won't shut up about potentially uninititialized local variables x and y
 
 				KeyValues *medigunInfo = new KeyValues("MedigunInfo");
 
 				int itemDefinitionIndex = *Entities::GetEntityProp<int *>(weapon, { "m_iItemDefinitionIndex" });
-				TFMedigun type = TFMedigun_Unknown;
+				TFMedigun type = TFMedigun::Unknown;
 				if (itemDefinitionIndex == 29 || itemDefinitionIndex == 211 || itemDefinitionIndex == 663 || itemDefinitionIndex == 796 || itemDefinitionIndex == 805 || itemDefinitionIndex == 885 || itemDefinitionIndex == 894 || itemDefinitionIndex == 903 || itemDefinitionIndex == 912 || itemDefinitionIndex == 961 || itemDefinitionIndex == 970 || itemDefinitionIndex == 15008 || itemDefinitionIndex == 15010 || itemDefinitionIndex == 15025 || itemDefinitionIndex == 15039 || itemDefinitionIndex == 15050)
 				{
-					type = TFMedigun_MediGun;
+					type = TFMedigun::MediGun;
 				}
 				else if (itemDefinitionIndex == 35)
 				{
-					type = TFMedigun_Kritzkrieg;
+					type = TFMedigun::Kritzkrieg;
 				}
 				else if (itemDefinitionIndex == 411)
 				{
-					type = TFMedigun_QuickFix;
+					type = TFMedigun::QuickFix;
 				}
 				else if (itemDefinitionIndex == 998)
 				{
-					type = TFMedigun_Vaccinator;
+					type = TFMedigun::Vaccinator;
 				}
 
 				float level = *Entities::GetEntityProp<float *>(weapon, { "m_flChargeLevel" });
 
 				medigunInfo->SetBool("alive", player->IsAlive());
-				medigunInfo->SetInt("charges", type == TFMedigun_Vaccinator ? int(floor(level * 4.0f)) : int(floor(level)));
+				medigunInfo->SetInt("charges", type == TFMedigun::Vaccinator ? int(floor(level * 4.0f)) : int(floor(level)));
 				medigunInfo->SetFloat("level", level);
-				medigunInfo->SetInt("medigun", type);
+				medigunInfo->SetInt("medigun", (int)type);
 				medigunInfo->SetBool("released", *Entities::GetEntityProp<bool *>(weapon, { "m_bChargeRelease" }));
 				medigunInfo->SetInt("resistType", *Entities::GetEntityProp<int *>(weapon, { "m_nChargeResistType" }));
 				medigunInfo->SetInt("team", (int)team);
@@ -349,11 +343,9 @@ void MedigunInfo::MainPanel::OnTick()
 	}
 }
 
-MedigunInfo::MedigunPanel::MedigunPanel(vgui::Panel *parent, const char *panelName) : vgui::EditablePanel(parent, panelName) { }
-
 void MedigunInfo::MedigunPanel::OnMedigunInfoUpdate(KeyValues *attributes)
 {
-	bool reloadSettings = (alive != attributes->GetBool("alive") || charges != attributes->GetInt("charges") || medigun != attributes->GetInt("medigun") || released != attributes->GetBool("released") || resistType != attributes->GetInt("resistType") || team != (TFTeam)attributes->GetInt("team"));
+	bool reloadSettings = (alive != attributes->GetBool("alive") || charges != attributes->GetInt("charges") || medigun != (TFMedigun)attributes->GetInt("medigun") || released != attributes->GetBool("released") || resistType != (TFResistType)attributes->GetInt("resistType") || team != (TFTeam)attributes->GetInt("team"));
 
 	alive = attributes->GetBool("alive");
 	charges = attributes->GetInt("charges");
@@ -369,7 +361,7 @@ void MedigunInfo::MedigunPanel::OnMedigunInfoUpdate(KeyValues *attributes)
 	// TODO: set up a custom message that doesn't spam a bunch of DialogVariables messages, forcing the panel to redraw 5 or 6 times.
 
 	SetDialogVariable("charge", int(floor(level * 100.0f)));
-	if (medigun == TFMedigun_Vaccinator)
+	if (medigun == TFMedigun::Vaccinator)
 	{
 		SetDialogVariable("charges", int(floor(level * 4.0f)));
 		SetDialogVariable("charge1", int(floor(level * 400.0f) - 0.0f) < 0 ? 0 : int(floor(level * 400.0f) - 0.0f));
@@ -395,13 +387,13 @@ void MedigunInfo::MedigunPanel::OnReloadControlSettings(KeyValues *attributes)
 		conditions->SetBool(buffer, true);
 	}
 
-	if (medigun == TFMedigun_MediGun)
+	if (medigun == TFMedigun::MediGun)
 		conditions->SetBool("medigun-medigun", true);
-	else if (medigun == TFMedigun_Kritzkrieg)
+	else if (medigun == TFMedigun::Kritzkrieg)
 		conditions->SetBool("medigun-kritzkrieg", true);
-	else if (medigun == TFMedigun_QuickFix)
+	else if (medigun == TFMedigun::QuickFix)
 		conditions->SetBool("medigun-quickfix", true);
-	else if (medigun == TFMedigun_Vaccinator)
+	else if (medigun == TFMedigun::Vaccinator)
 		conditions->SetBool("medigun-vaccinator", true);
 
 	// Uber popped?
@@ -411,11 +403,11 @@ void MedigunInfo::MedigunPanel::OnReloadControlSettings(KeyValues *attributes)
 		conditions->SetBool("status-building", true);
 
 	// Resist type?
-	if (resistType == TFResistType_Bullet)
+	if (resistType == TFResistType::Bullet)
 		conditions->SetBool("resist-bullet", true);
-	else if (resistType == TFResistType_Explosive)
+	else if (resistType == TFResistType::Explosive)
 		conditions->SetBool("resist-explosive", true);
-	else if (resistType == TFResistType_Fire)
+	else if (resistType == TFResistType::Fire)
 		conditions->SetBool("resist-fire", true);
 
 	if (team == TFTeam::Red)
