@@ -57,8 +57,12 @@ void ProjectileOutlines::OnTick(bool inGame)
 				if (glow.first.Get())
 					continue;
 
-				C_BaseEntity* clientGlowEntity = glow.second.Get();
-				clientGlowEntity->Release();
+				{
+					C_BaseEntity* clientGlowEntity = glow.second.Get();
+					if (clientGlowEntity)
+						clientGlowEntity->Release();
+				}
+
 				toEraseList.push_back(glow.first);
 			}
 
