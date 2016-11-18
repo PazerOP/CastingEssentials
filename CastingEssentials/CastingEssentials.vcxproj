@@ -126,6 +126,7 @@
     <ClInclude Include="Hooking\IGroupHook.h" />
     <ClInclude Include="Hooking\TemplateTypedefs.h" />
     <ClInclude Include="Hooking\VariablePusher.h" />
+    <ClInclude Include="Misc\DebugOverlay.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
     <ClInclude Include="Modules\Antifreeze.h" />
     <ClInclude Include="Modules\CameraAutoSwitch.h" />

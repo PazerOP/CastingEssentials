@@ -78,7 +78,12 @@ bool ParseVector(Vector& v, const char* str)
 bool ParseAngle(QAngle& a, const char* str)
 {
 	const auto scanned = sscanf_s(str, "%f %f %f", &a.x, &a.y, &a.z);
-	if (scanned == 2 || scanned == 3)
+	if (scanned == 2)
+	{
+		a.z = 0;
+		return true;
+	}
+	else if (scanned == 3)
 		return true;
 
 	return false;

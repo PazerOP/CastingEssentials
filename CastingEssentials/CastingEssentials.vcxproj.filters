@@ -239,5 +239,8 @@
     <ClInclude Include="Modules\Antifreeze.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Misc\DebugOverlay.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -62,8 +62,10 @@ private:
 
 	ConCommand* ce_autocamera_reload_config;
 	ConVar* ce_autocamera_show_triggers;
+	ConVar* ce_autocamera_show_cameras;
 
 	void DrawTriggers();
+	void DrawCameras();
 
 	enum class Target
 	{
@@ -79,6 +81,7 @@ private:
 		Vector m_Maxs;
 	};
 	std::vector<std::shared_ptr<Trigger>> m_Triggers;
+	std::vector<std::string> m_MalformedTriggers;
 	std::shared_ptr<Trigger> FindTrigger(const char* triggerName);
 	
 	struct Camera
@@ -88,7 +91,9 @@ private:
 		QAngle m_DefaultAngle;
 	};
 	std::vector<std::shared_ptr<Camera>> m_Cameras;
+	std::vector<std::string> m_MalformedCameras;
 	std::shared_ptr<Camera> FindCamera(const char* cameraName);
+	std::vector<std::shared_ptr<const Camera>> GetAlphabeticalCameras() const;
 
 	struct StoryboardElement
 	{
@@ -127,6 +132,11 @@ private:
 		std::shared_ptr<StoryboardElement> m_FirstElement;
 	};
 	std::vector<std::shared_ptr<Storyboard>> m_Storyboards;
+	std::vector<std::string> m_MalformedStoryboards;
+
+	bool FindContainedString(const std::vector<std::string>& vec, const char* str);
+
+	std::string m_ConfigFilename;
 
 	std::shared_ptr<Storyboard> m_ActiveStoryboard;
 	std::shared_ptr<StoryboardElement> m_ActiveStoryboardElement;

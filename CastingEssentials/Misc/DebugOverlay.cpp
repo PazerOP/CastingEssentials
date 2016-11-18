@@ -26,3 +26,22 @@ void NDebugOverlay::Text(const Vector& origin, const char* text, bool bViewCheck
 {
 	debugoverlay->AddTextOverlay(origin, duration, "%s", text);
 }
+
+void NDebugOverlay::Triangle(const Vector& p1, const Vector& p2, const Vector& p3, int r, int g, int b, int a, bool noDepthTest, float duration)
+{
+	debugoverlay->AddTriangleOverlay(p1, p2, p3, r, g, b, a, noDepthTest, duration);
+}
+
+void NDebugOverlay::Cross3DOriented(const Vector& position, const QAngle& angles, float size, int r, int g, int b, bool noDepthTest, float flDuration)
+{
+	Vector forward, right, up;
+	AngleVectors(angles, &forward, &right, &up);
+
+	forward *= size;
+	right *= size;
+	up *= size;
+
+	Line(position + right, position - right, r, g, b, noDepthTest, flDuration);
+	Line(position + forward, position - forward, r, g, b, noDepthTest, flDuration);
+	Line(position + up, position - up, r, g, b, noDepthTest, flDuration);
+}

@@ -1,4 +1,5 @@
 #include "MapFlythroughs.h"
+#include "Misc/DebugOverlay.h"
 #include "Modules/CameraTools.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -22,17 +23,18 @@
 
 MapFlythroughs::MapFlythroughs()
 {
-	ce_cameratrigger_begin = new ConCommand("ce_autocamera_trigger_begin", [](const CCommand& args) { GetModule()->BeginCameraTrigger(); });
-	ce_cameratrigger_end = new ConCommand("ce_autocamera_trigger_end", [](const CCommand& args) { GetModule()->EndCameraTrigger(); });
+	ce_cameratrigger_begin = new ConCommand("ce_autocamera_trigger_begin", [](const CCommand& args) { GetModule()->BeginCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED);
+	ce_cameratrigger_end = new ConCommand("ce_autocamera_trigger_end", [](const CCommand& args) { GetModule()->EndCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED);
 
-	ce_autocamera_begin_storyboard = new ConCommand("ce_autocamera_begin_storyboard", [](const CCommand& args) { GetModule()->BeginStoryboard(args); });
+	ce_autocamera_begin_storyboard = new ConCommand("ce_autocamera_begin_storyboard", [](const CCommand& args) { GetModule()->BeginStoryboard(args); }, nullptr, FCVAR_UNREGISTERED);
 
-	ce_autocamera_mark_camera = new ConCommand("ce_autocamera_mark_camera", [](const CCommand& args) { GetModule()->MarkCamera(args); });
-	ce_autocamera_goto_camera = new ConCommand("ce_autocamera_goto_camera", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &MapFlythroughs::GotoCameraCompletion);
+	ce_autocamera_mark_camera = new ConCommand("ce_autocamera_create", [](const CCommand& args) { GetModule()->MarkCamera(args); });
+	ce_autocamera_goto_camera = new ConCommand("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &MapFlythroughs::GotoCameraCompletion);
 
 	ce_autocamera_reload_config = new ConCommand("ce_autocamera_reload_config", [](const CCommand& args) { GetModule()->LoadConfig(); });
 
-	ce_autocamera_show_triggers = new ConVar("ce_autocamera_show_triggers", "0", FCVAR_NONE, "Shows all triggers on the map.");
+	ce_autocamera_show_triggers = new ConVar("ce_autocamera_show_triggers", "0", FCVAR_UNREGISTERED, "Shows all triggers on the map.");
+	ce_autocamera_show_cameras = new ConVar("ce_autocamera_show_cameras", "0", FCVAR_NONE, "1 = Shows all cameras on the map. 2 = Shows view frustums as well.");
 
 	m_CreatingCameraTrigger = false;
 	m_CameraTriggerStart.Init();
@@ -113,6 +115,9 @@ void MapFlythroughs::OnTick(bool ingame)
 
 		if (ce_autocamera_show_triggers->GetBool())
 			DrawTriggers();
+
+		if (ce_autocamera_show_cameras->GetBool())
+			DrawCameras();
 	}
 }
 
@@ -129,8 +134,11 @@ void MapFlythroughs::LoadConfig()
 
 void MapFlythroughs::LoadConfig(const char* bspName)
 {
+	m_MalformedTriggers.clear();
 	m_Triggers.clear();
+	m_MalformedCameras.clear();
 	m_Cameras.clear();
+	m_MalformedStoryboards.clear();
 	m_Storyboards.clear();
 
 	std::string mapName(bspName);
@@ -138,10 +146,10 @@ void MapFlythroughs::LoadConfig(const char* bspName)
 	mapName.erase(0, 5);					// remove /maps/
 
 	KeyValuesAD kv("AutoCameras");
-	const std::string filename = strprintf("addons/castingessentials/autocameras/%s.vdf", mapName.c_str());
-	if (!kv->LoadFromFile(Interfaces::GetFileSystem(), filename.c_str()))
+	m_ConfigFilename = strprintf("addons/castingessentials/autocameras/%s.vdf", mapName.c_str());
+	if (!kv->LoadFromFile(Interfaces::GetFileSystem(), m_ConfigFilename.c_str()))
 	{
-		PluginWarning("Unable to load autocameras from %s!\n", filename.c_str());
+		PluginWarning("Unable to load autocameras from %s!\n", m_ConfigFilename.c_str());
 		return;
 	}
 
@@ -150,8 +158,7 @@ void MapFlythroughs::LoadConfig(const char* bspName)
 		if (stricmp("trigger", trigger->GetName()))
 			continue;
 
-		if (!LoadTrigger(trigger, filename.c_str()))
-			return;
+		LoadTrigger(trigger, m_ConfigFilename.c_str());
 	}
 
 	for (KeyValues* camera = kv->GetFirstTrueSubKey(); camera; camera = camera->GetNextTrueSubKey())
@@ -159,8 +166,7 @@ void MapFlythroughs::LoadConfig(const char* bspName)
 		if (stricmp("camera", camera->GetName()))
 			continue;
 
-		if (!LoadCamera(camera, filename.c_str()))
-			return;
+		LoadCamera(camera, m_ConfigFilename.c_str());
 	}
 
 	for (KeyValues* storyboard = kv->GetFirstTrueSubKey(); storyboard; storyboard = storyboard->GetNextTrueSubKey())
@@ -168,11 +174,10 @@ void MapFlythroughs::LoadConfig(const char* bspName)
 		if (stricmp("storyboard", storyboard->GetName()))
 			continue;
 
-		if (!LoadStoryboard(storyboard, filename.c_str()))
-			return;
+		LoadStoryboard(storyboard, m_ConfigFilename.c_str());
 	}
 
-	PluginMsg("Loaded autocameras from %s.\n", filename.c_str());
+	PluginMsg("Loaded autocameras from %s.\n", m_ConfigFilename.c_str());
 }
 
 static void FixupBounds(Vector& mins, Vector& maxs)
@@ -204,11 +209,13 @@ bool MapFlythroughs::LoadTrigger(KeyValues* const trigger, const char* const fil
 		if (!mins)
 		{
 			Warning("Missing required value \"mins\" in \"%s\" on trigger named \"%s\"!\n", filename, name);
+			m_MalformedTriggers.push_back(name);
 			return false;
 		}
 		if (!ParseVector(newTrigger->m_Mins, mins))
 		{
 			Warning("Failed to parse mins \"%s\" in \"%s\" on trigger named \"%s\"!\n", mins, filename, name);
+			m_MalformedTriggers.push_back(name);
 			return false;
 		}
 	}
@@ -219,11 +226,13 @@ bool MapFlythroughs::LoadTrigger(KeyValues* const trigger, const char* const fil
 		if (!maxs)
 		{
 			Warning("Missing required value \"maxs\" in \"%s\" on trigger named \"%s\"!\n", filename, name);
+			m_MalformedTriggers.push_back(name);
 			return false;
 		}
 		if (!ParseVector(newTrigger->m_Maxs, maxs))
 		{
 			Warning("Failed to parse maxs \"%s\" in \"%s\" on trigger named \"%s\"!\n", maxs, filename, name);
+			m_MalformedTriggers.push_back(name);
 			return false;
 		}
 	}
@@ -253,11 +262,13 @@ bool MapFlythroughs::LoadCamera(KeyValues* const camera, const char* const filen
 		if (!pos)
 		{
 			Warning("Missing required value \"pos\" in \"%s\" on camera named \"%s\"!\n", filename, name);
+			m_MalformedCameras.push_back(name);
 			return false;
 		}
 		if (!ParseVector(newCamera->m_Pos, pos))
 		{
 			Warning("Failed to parse pos \"%s\" in \"%s\" on camera named \"%s\"!\n", pos, filename, name);
+			m_MalformedCameras.push_back(name);
 			return false;
 		}
 	}
@@ -268,11 +279,13 @@ bool MapFlythroughs::LoadCamera(KeyValues* const camera, const char* const filen
 		if (!ang)
 		{
 			Warning("Missing required value \"ang\" in \"%s\" on camera named \"%s\"!\n", filename, name);
+			m_MalformedCameras.push_back(name);
 			return false;
 		}
 		if (!ParseAngle(newCamera->m_DefaultAngle, ang))
 		{
 			Warning("Failed to parrse ang \"%s\" in \"%s\" on camera named \"%s\"!\n", ang, filename, name);
+			m_MalformedCameras.push_back(name);
 			return false;
 		}
 	}
@@ -301,12 +314,18 @@ bool MapFlythroughs::LoadStoryboard(KeyValues* const storyboard, const char* con
 		if (!stricmp("shot", element->GetName()))
 		{
 			if (!LoadShot(newElement, element, name, filename))
+			{
+				m_MalformedStoryboards.push_back(name);
 				return false;
+			}
 		}
 		else if (!stricmp("action", element->GetName()))
 		{
 			if (!LoadAction(newElement, element, name, filename))
+			{
+				m_MalformedStoryboards.push_back(name);
 				return false;
+			}
 		}
 		
 		if (!lastElement)
@@ -589,7 +608,7 @@ void MapFlythroughs::GotoCamera(const CCommand& args)
 	CameraTools* const ctools = CameraTools::GetModule();
 	if (!ctools)
 	{
-		PluginWarning("%s: %s module unavailable!\n", ce_autocamera_goto_camera->GetName(), CameraTools::GetModuleName());
+		PluginWarning("%s: Camera Tools module unavailable!\n", ce_autocamera_goto_camera->GetName());
 		return;
 	}
 
@@ -603,7 +622,11 @@ void MapFlythroughs::GotoCamera(const CCommand& args)
 	auto const cam = FindCamera(name);
 	if (!cam)
 	{
-		Warning("%s: Unable to find camera with name \"%s\"!\n", ce_autocamera_goto_camera->GetName(), name);;
+		if (FindContainedString(m_MalformedCameras, name))
+			Warning("%s: Unable to go to camera \"%s\" because its definition in \"%s\" is malformed.\n", ce_autocamera_goto_camera->GetName(), name, m_ConfigFilename.c_str());
+		else
+			Warning("%s: Unable to find camera with name \"%s\"!\n", ce_autocamera_goto_camera->GetName(), name);
+
 		return;
 	}
 
@@ -618,29 +641,22 @@ int MapFlythroughs::GotoCameraCompletion(const char* const partial, char command
 	
 	MapFlythroughs* const mod = GetModule();
 
-	std::vector<std::shared_ptr<Camera>> _cameras;
-	std::vector<std::shared_ptr<Camera>>* cameras;
-	if (match[1].length() < 1)
-		cameras = &mod->m_Cameras;
-	else
+	auto cameras = mod->GetAlphabeticalCameras();
+	if (match[1].length() >= 1)
 	{
 		const char* const matchStr = match[1].first;
-		for (size_t i = 0; i < mod->m_Cameras.size(); i++)
+		for (size_t i = 0; i < cameras.size(); i++)
 		{
-			if (!stristr(mod->m_Cameras[i]->m_Name.c_str(), matchStr))
-				continue;
-
-			_cameras.push_back(mod->m_Cameras[i]);
+			if (!stristr(cameras[i]->m_Name.c_str(), matchStr))
+				cameras.erase(cameras.begin() + i--);
 		}
-
-		cameras = &_cameras;
 	}
 
 	size_t i;
-	for (i = 0; i < COMMAND_COMPLETION_MAXITEMS && i < cameras->size(); i++)
+	for (i = 0; i < COMMAND_COMPLETION_MAXITEMS && i < cameras.size(); i++)
 	{
 		strcpy_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, mod->ce_autocamera_goto_camera->GetName());
-		const auto& nameStr = cameras->at(i)->m_Name;
+		const auto& nameStr = cameras[i]->m_Name;
 		strcat_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, (std::string(" ") + nameStr).c_str());
 	}
 	return i;
@@ -654,6 +670,71 @@ void MapFlythroughs::DrawTriggers()
 
 		const Vector difference = VectorLerp(trigger->m_Mins, trigger->m_Maxs, 0.5);
 		NDebugOverlay::Text(VectorLerp(trigger->m_Mins, trigger->m_Maxs, 0.5), trigger->m_Name.c_str(), false, 0);
+	}
+}
+
+constexpr float test(float input)
+{
+	return input * 5020;
+}
+
+void MapFlythroughs::DrawCameras()
+{
+	for (auto camera : m_Cameras)
+	{
+		Vector forward, up, right;
+		AngleVectors(camera->m_DefaultAngle, &forward, &right, &up);
+
+		// Draw cameras
+		if (ce_autocamera_show_cameras->GetInt() > 0)
+		{
+			NDebugOverlay::BoxAngles(camera->m_Pos, Vector(-16, -16, -16), Vector(16, 16, 16), camera->m_DefaultAngle, 128, 128, 255, 64, 0);
+
+			const Vector endPos = camera->m_Pos + (forward * 128);
+			NDebugOverlay::Line(camera->m_Pos, endPos, 128, 128, 255, true, 0);
+			NDebugOverlay::Cross3DOriented(endPos, camera->m_DefaultAngle, 16, 128, 128, 255, true, 0);
+
+			NDebugOverlay::Text(camera->m_Pos, camera->m_Name.c_str(), false, 0);
+		}
+
+		// From http://stackoverflow.com/a/27872276
+		// Draw camera frustums
+		if (ce_autocamera_show_cameras->GetInt() > 1)
+		{
+			constexpr float farDistance = 512;
+			constexpr float viewRatio = 16.0 / 9.0;
+
+			// Compute the center points of the near and far planes
+			const Vector farCenter = camera->m_Pos + forward * farDistance;
+			
+			// Compute the widths and heights of the near and far planes:
+			const float farHeight = 2 * std::tanf(DEG2RAD(45) / 2) * farDistance;
+			const float farWidth = farHeight * viewRatio;
+
+			// Compute the corner points from the near and far planes:
+			const Vector farTopLeft = farCenter + up * (farHeight * 0.5) - right * (farWidth * 0.5);
+			const Vector farTopRight = farCenter + up * (farHeight * 0.5) + right * (farWidth * 0.5);
+			const Vector farBottomLeft = farCenter - up * (farHeight * 0.5) - right * (farWidth * 0.5);
+			const Vector farBottomRight = farCenter - up * (farHeight * 0.5) + right * (farWidth * 0.5);
+
+			// Draw camera frustums
+			NDebugOverlay::TriangleIgnoreZ(camera->m_Pos, farTopRight, farTopLeft, 200, 200, 200, 32, false, 0);
+			NDebugOverlay::TriangleIgnoreZ(camera->m_Pos, farBottomRight, farTopRight, 200, 200, 200, 32, false, 0);
+			NDebugOverlay::TriangleIgnoreZ(camera->m_Pos, farBottomLeft, farBottomRight, 200, 200, 200, 32, false, 0);
+			NDebugOverlay::TriangleIgnoreZ(camera->m_Pos, farTopLeft, farBottomLeft, 200, 200, 200, 32, false, 0);
+
+			// Triangle outlines
+			NDebugOverlay::Line(camera->m_Pos, farTopRight, 200, 200, 200, false, 0);
+			NDebugOverlay::Line(camera->m_Pos, farTopLeft, 200, 200, 200, false, 0);
+			NDebugOverlay::Line(camera->m_Pos, farBottomLeft, 200, 200, 200, false, 0);
+			NDebugOverlay::Line(camera->m_Pos, farBottomRight, 200, 200, 200, false, 0);
+
+			// Far plane outline
+			NDebugOverlay::Line(farTopLeft, farTopRight, 200, 200, 200, false, 0);
+			NDebugOverlay::Line(farTopRight, farBottomRight, 200, 200, 200, false, 0);
+			NDebugOverlay::Line(farBottomRight, farBottomLeft, 200, 200, 200, false, 0);
+			NDebugOverlay::Line(farBottomLeft, farTopLeft, 200, 200, 200, false, 0);
+		}
 	}
 }
 
@@ -677,4 +758,33 @@ std::shared_ptr<MapFlythroughs::Camera> MapFlythroughs::FindCamera(const char* c
 	}
 
 	return nullptr;
+}
+
+std::vector<std::shared_ptr<const MapFlythroughs::Camera>> MapFlythroughs::GetAlphabeticalCameras() const
+{
+	std::vector<std::shared_ptr<const Camera>> retVal;
+	for (auto cam : m_Cameras)
+		retVal.push_back(cam);
+
+	for (size_t a = 0; a < retVal.size(); a++)
+	{
+		for (size_t b = a + 1; b < retVal.size(); b++)
+		{
+			if (stricmp(retVal[a]->m_Name.c_str(), retVal[b]->m_Name.c_str()) < 0)
+				std::swap(retVal.begin() + a, retVal.begin() + b);
+		}
+	}
+
+	return retVal;
+}
+
+bool MapFlythroughs::FindContainedString(const std::vector<std::string>& vec, const char* str)
+{
+	for (const std::string& x : vec)
+	{
+		if (!stricmp(x.c_str(), str))
+			return true;
+	}
+
+	return false;
 }
