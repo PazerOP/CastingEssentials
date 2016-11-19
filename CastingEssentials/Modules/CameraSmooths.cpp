@@ -286,38 +286,46 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			{
 				if (angle > max_angle->GetFloat())
 				{
-					ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, angle difference was %1.0f degrees.\n\n", GetModuleName(), angle);
+					if (ce_camerasmooths_debug->GetBool())
+						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, angle difference was %1.0f degrees.\n\n", GetModuleName(), angle);
 					smoothInProgress = false;
 					return false;
 				}
 
-				ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed angle test with difference of %1.0f degrees.\n", GetModuleName(), angle);
+				if (ce_camerasmooths_debug->GetBool())
+					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed angle test with difference of %1.0f degrees.\n", GetModuleName(), angle);
 
 				const float visibility = GetVisibility(smoothEndTarget);
 				if (visibility <= 0)
 				{
-					ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, no visibility to new target\n\n", GetModuleName());
+					if (ce_camerasmooths_debug->GetBool())
+						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, no visibility to new target\n\n", GetModuleName());
 					smoothInProgress = false;
 					return false;
 				}
 
-				ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed LOS test (%1.0f%% visible)\n", GetModuleName(), visibility * 100);
+				if (ce_camerasmooths_debug->GetBool())
+					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed LOS test (%1.0f%% visible)\n", GetModuleName(), visibility * 100);
 
-				if (distance > max_distance->GetFloat())
+				if (max_distance->GetFloat() > 0 && distance > max_distance->GetFloat())
 				{
-					ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, distance of %1.0f units > %s (1.0f units)\n\n", GetModuleName(), distance, max_distance->GetName(), max_distance->GetFloat());
+					if (ce_camerasmooths_debug->GetBool())
+						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, distance of %1.0f units > %s (%1.0f units)\n\n", GetModuleName(), distance, max_distance->GetName(), max_distance->GetFloat());
 					smoothInProgress = false;
 					return false;
 				}
 
-				ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed distance test, %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, max_distance->GetName(), max_distance->GetFloat());
+				if (ce_camerasmooths_debug->GetBool())
+					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed distance test, %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, max_distance->GetName(), max_distance->GetFloat());
 			}
 			else
 			{
-				ConColorMsg(DBGMSG_COLOR, "[%s] Forcing smooth, distance of %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_camerasmooths_min_distance->GetName(), ce_camerasmooths_min_distance->GetFloat());
+				if (ce_camerasmooths_debug->GetBool())
+					ConColorMsg(DBGMSG_COLOR, "[%s] Forcing smooth, distance of %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_camerasmooths_min_distance->GetName(), ce_camerasmooths_min_distance->GetFloat());
 			}
 
-			ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth!\n\n", GetModuleName());
+			if (ce_camerasmooths_debug->GetBool())
+				ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth!\n\n", GetModuleName());
 
 			m_SmoothStartAng = m_LastFrameAng;
 			m_SmoothBeginPos = m_SmoothStartPos = m_LastFramePos;
