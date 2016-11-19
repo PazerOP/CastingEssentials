@@ -319,10 +319,21 @@ void CameraTools::OnTick(bool inGame)
 	{
 		if (ce_cameratools_show_mode->GetBool())
 		{
-			const HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
-			const auto mode = hltvcamera->m_nCameraMode;
-			Interfaces::GetEngineClient()->Con_NPrintf(0, "Current spec_mode: %i %s",
-				mode, mode >= 0 && mode < NUM_OBSERVER_MODES ? s_ObserverModes[mode] : "INVALID");
+			int mode = -1;
+			if (Interfaces::GetEngineClient()->IsHLTV())
+				mode = Interfaces::GetHLTVCamera()->m_nCameraMode;
+			else
+			{
+				Player* local = Player::GetLocalPlayer();
+				if (local)
+					mode = local->GetObserverMode();
+			}
+
+			if (mode >= 0)
+			{
+				Interfaces::GetEngineClient()->Con_NPrintf(0, "Current spec_mode: %i %s",
+					mode, mode >= 0 && mode < NUM_OBSERVER_MODES ? s_ObserverModes[mode] : "INVALID");
+			}
 		}
 	}
 }
