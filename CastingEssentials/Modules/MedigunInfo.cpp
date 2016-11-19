@@ -182,6 +182,12 @@ void MedigunInfo::OnTick(bool inGame)
 
 void MedigunInfo::ReloadSettings()
 {
+	if (!enabled->GetBool())
+	{
+		Warning("%s must be enabled with %s 1 before using %s.\n", GetModuleName(), enabled->GetName(), reload_settings->GetName());
+		return;
+	}
+
 	m_MainPanel->LoadControlSettings("Resource/UI/MedigunInfo.res");
 }
 
