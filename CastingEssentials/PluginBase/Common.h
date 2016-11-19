@@ -4,6 +4,8 @@
 #include <string>
 #include <steam/steamclientpublic.h>
 
+#pragma warning(disable : 4592)		// 'x': symbol will be dynamically initialized (implementation limitation)
+
 #define PLUGIN_VERSION "0.1"
 
 static constexpr const char* s_ObserverModes[] =
@@ -173,3 +175,24 @@ constexpr float Deg2Rad(float degrees)
 {
 	return degrees * float(3.14159265358979323846 / 180);
 }
+
+template<class T, T value>
+class VariablePusher final
+{
+public:
+	VariablePusher() = delete;
+	VariablePusher(const VariablePusher<T, value>& other) = delete;
+	VariablePusher(T& variable) : m_Variable(&variable)
+	{
+		m_OldValue = std::move(*m_Variable);
+		*m_Variable = value;
+	}
+	~VariablePusher()
+	{
+		*m_Variable = std::move(m_OldValue);
+	}
+
+private:
+	T* const m_Variable;
+	T m_OldValue;
+};

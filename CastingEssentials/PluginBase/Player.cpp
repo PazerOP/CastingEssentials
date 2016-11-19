@@ -2,6 +2,7 @@
 #include "Interfaces.h"
 #include "Entities.h"
 #include "TFDefinitions.h"
+#include "HookManager.h"
 #include <cdll_int.h>
 #include <icliententity.h>
 #include <steam/steam_api.h>
@@ -17,11 +18,15 @@ bool Player::s_NameRetrievalAvailable = false;
 bool Player::s_SteamIDRetrievalAvailable = false;
 bool Player::s_UserIDRetrievalAvailable = false;
 
-std::unique_ptr<Player> Player::s_Players[MAX_PLAYERS];
+std::unique_ptr<Player> Player::s_Players[ABSOLUTE_PLAYER_LIMIT];
+
+Player::Player(CHandle<IClientEntity> handle, int userID) : m_PlayerEntity(handle), m_UserID(userID)
+{
+}
 
 void Player::Unload()
 {
-	for (int i = 0; i < MAX_PLAYERS; i++)
+	for (size_t i = 0; i < arraysize(s_Players); i++)
 		s_Players[i].reset();
 }
 
@@ -253,8 +258,17 @@ bool Player::IsValid() const
 	if (!m_PlayerEntity.Get())
 		return false;
 
-	if (m_PlayerEntity->entindex() < 1 || m_PlayerEntity->entindex() > Interfaces::GetEngineTool()->GetMaxClients())
+	if (EntIndex() < 1 || EntIndex() > Interfaces::GetEngineTool()->GetMaxClients())
 		return false;
+
+	{
+		player_info_t info;
+		if (!GetHooks()->GetOriginal<IVEngineClient_GetPlayerInfo>()(EntIndex(), &info))
+			return false;
+
+		if (info.userID != m_UserID)
+			return false;
+	}
 
 	// pazer: this is slow, and theoretically it should be impossible to create
 	// Player objects with incorrect entity types
@@ -266,6 +280,8 @@ bool Player::IsValid() const
 
 bool Player::CheckCache() const
 {
+	Assert(IsValid());
+
 	void* current = m_PlayerEntity.Get();
 	if (current != m_CachedPlayerEntity)
 	{
@@ -275,6 +291,9 @@ bool Player::CheckCache() const
 		m_CachedClass = nullptr;
 		m_CachedObserverMode = nullptr;
 		m_CachedObserverTarget = nullptr;
+
+		for (auto& wpn : m_CachedWeapons)
+			wpn = nullptr;
 
 		return true;
 	}
@@ -348,8 +367,11 @@ Player* Player::GetPlayer(int entIndex, const char* functionName)
 		if (!playerEntity)
 			return nullptr;
 
-		s_Players[entIndex - 1] = std::unique_ptr<Player>(p = new Player());
-		p->m_PlayerEntity = playerEntity;
+		player_info_t info;
+		if (!GetHooks()->GetOriginal<IVEngineClient_GetPlayerInfo>()(entIndex, &info))
+			return nullptr;
+
+		s_Players[entIndex - 1] = std::unique_ptr<Player>(p = new Player(playerEntity, info.userID));
 	}
 
 	if (!p || !p->IsValid())
@@ -363,7 +385,7 @@ Player* Player::AsPlayer(IClientEntity* entity)
 	if (!entity)
 		return nullptr;
 
-	int entIndex = entity->entindex();
+	const int entIndex = entity->entindex();
 	if (entIndex >= 1 && entIndex <= Interfaces::GetEngineTool()->GetMaxClients())
 		return GetPlayer(entity->entindex());
 
@@ -379,6 +401,41 @@ bool Player::IsAlive() const
 	}
 
 	return false;
+}
+
+int Player::EntIndex() const
+{
+	if (m_PlayerEntity.IsValid())
+		return m_PlayerEntity.GetEntryIndex();
+	else
+		return -1;
+}
+
+const player_info_t& Player::GetPlayerInfo() const
+{
+	static player_info_t s_InvalidPlayerInfo = []()
+	{
+		player_info_t retVal;
+		strcpy_s(retVal.name, "INVALID");
+		retVal.userID = -1;
+		strcpy_s(retVal.guid, "[U:0:0]");
+		retVal.friendsID = 0;
+		strcpy_s(retVal.friendsName, "INVALID");
+		retVal.fakeplayer = true;
+		retVal.ishltv = false;
+
+		for (auto& crc : retVal.customFiles)
+			crc = 0;
+
+		retVal.filesDownloaded = 0;
+
+		return retVal;
+	}();
+
+	if (!Interfaces::GetEngineClient()->GetPlayerInfo(EntIndex(), &m_CachedPlayerInfo))
+		return s_InvalidPlayerInfo;
+
+	return m_CachedPlayerInfo;
 }
 
 int Player::GetObserverMode() const

@@ -1,8 +1,10 @@
 #pragma once
 #include <shared/ehandle.h>
 #include <steam/steamclientpublic.h>
-#include <string>
 #include <shareddefs.h>
+#include <cdll_int.h>
+
+#include <string>
 #include <memory>
 
 enum TFCond;
@@ -40,6 +42,10 @@ public:
 	int GetUserID() const;
 	C_BaseCombatWeapon* GetWeapon(int i) const;
 	bool IsAlive() const;
+	int EntIndex() const;
+	const player_info_t& GetPlayerInfo() const;
+
+	bool IsValid() const;
 
 	class Iterator
 	{
@@ -71,11 +77,13 @@ public:
 	};
 
 private:
-	Player() = default;
+	Player() = delete;
+	Player(CHandle<IClientEntity> handle, int userID);
 	Player(const Player& other) = delete;
 	Player& operator=(const Player& other) = delete;
 
-	CHandle<IClientEntity> m_PlayerEntity;
+	const CHandle<IClientEntity> m_PlayerEntity;
+	const int m_UserID;
 
 	static bool s_ClassRetrievalAvailable;
 	static bool s_ComparisonAvailable;
@@ -84,8 +92,6 @@ private:
 	static bool s_SteamIDRetrievalAvailable;
 	static bool s_UserIDRetrievalAvailable;
 
-	bool IsValid() const;
-
 	bool CheckCache() const;
 	mutable void* m_CachedPlayerEntity;
 	mutable TFTeam* m_CachedTeam;
@@ -93,6 +99,7 @@ private:
 	mutable int* m_CachedObserverMode;
 	mutable CHandle<C_BaseEntity>* m_CachedObserverTarget;
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedWeapons[MAX_WEAPONS];
+	mutable player_info_t m_CachedPlayerInfo;
 
-	static std::unique_ptr<Player> s_Players[MAX_PLAYERS];
+	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
 };

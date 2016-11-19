@@ -239,7 +239,16 @@ void MedigunInfo::MainPanel::OnTick()
 	{
 		Assert(player);
 		if (!player)
+		{
+			PluginWarning("null player in %s!\n", __FUNCSIG__);
 			continue;
+		}
+
+		if (!player->IsValid())
+		{
+			PluginWarning("Invalid player in %s!\n", __FUNCSIG__);
+			continue;
+		}
 
 		TFClassType cls = player->GetClass();
 		if (cls != TFClassType::Medic)
