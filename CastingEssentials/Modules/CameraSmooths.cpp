@@ -4,6 +4,7 @@
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
 #include "Misc/DebugOverlay.h"
+#include "Misc/HLTVCameraHack.h"
 
 #include <convar.h>
 #include <client/hltvcamera.h>
@@ -17,30 +18,6 @@
 
 #undef max
 #include <algorithm>
-
-class CameraSmooths::HLTVCameraOverride : public C_HLTVCamera
-{
-public:
-	using C_HLTVCamera::m_nCameraMode;
-	using C_HLTVCamera::m_iCameraMan;
-	using C_HLTVCamera::m_vCamOrigin;
-	using C_HLTVCamera::m_aCamAngle;
-	using C_HLTVCamera::m_iTraget1;
-	using C_HLTVCamera::m_iTraget2;
-	using C_HLTVCamera::m_flFOV;
-	using C_HLTVCamera::m_flOffset;
-	using C_HLTVCamera::m_flDistance;
-	using C_HLTVCamera::m_flLastDistance;
-	using C_HLTVCamera::m_flTheta;
-	using C_HLTVCamera::m_flPhi;
-	using C_HLTVCamera::m_flInertia;
-	using C_HLTVCamera::m_flLastAngleUpdateTime;
-	using C_HLTVCamera::m_bEntityPacketReceived;
-	using C_HLTVCamera::m_nNumSpectators;
-	using C_HLTVCamera::m_szTitleText;
-	using C_HLTVCamera::m_LastCmd;
-	using C_HLTVCamera::m_vecVelocity;
-};
 
 static const Vector TEST_POINTS[27] =
 {
@@ -288,7 +265,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 	if (!Interfaces::GetEngineClient()->IsHLTV())
 		return false;
 
-	HLTVCameraOverride* const hltvcamera = (HLTVCameraOverride *)Interfaces::GetHLTVCamera();
+	HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 
 	if (hltvcamera->m_nCameraMode == OBS_MODE_IN_EYE || hltvcamera->m_nCameraMode == OBS_MODE_CHASE)
 	{

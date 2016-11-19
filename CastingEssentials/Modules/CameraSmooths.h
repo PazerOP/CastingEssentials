@@ -46,8 +46,6 @@ private:
 	bool IsThirdPersonCameraOverride();
 	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov);
 
-	class HLTVCameraOverride;
-
 	ConVar *enabled;
 	ConVar *max_angle;
 	ConVar* ce_camerasmooths_min_distance;
