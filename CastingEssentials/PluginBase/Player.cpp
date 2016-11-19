@@ -347,6 +347,15 @@ bool Player::IsValidIndex(int entIndex)
 	return true;
 }
 
+Player* Player::GetLocalPlayer()
+{
+	const auto localPlayerIndex = Interfaces::GetEngineClient()->GetLocalPlayer();
+	if (!IsValidIndex(localPlayerIndex))
+		return nullptr;
+
+	return GetPlayer(localPlayerIndex, __FUNCSIG__);
+}
+
 Player* Player::GetPlayer(int entIndex, const char* functionName)
 {
 	if (!IsValidIndex(entIndex))

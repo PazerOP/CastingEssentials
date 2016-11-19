@@ -22,6 +22,7 @@ public:
 	static Player* AsPlayer(IClientEntity* entity);
 	static Player* GetPlayer(int entIndex, const char* functionName = nullptr);
 	static bool IsValidIndex(int entIndex);
+	static Player* GetLocalPlayer();
 
 	static bool CheckDependencies();
 	static bool IsNameRetrievalAvailable() { return s_NameRetrievalAvailable; }
