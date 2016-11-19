@@ -45,3 +45,10 @@ void NDebugOverlay::Cross3DOriented(const Vector& position, const QAngle& angles
 	Line(position + forward, position - forward, r, g, b, noDepthTest, flDuration);
 	Line(position + up, position - up, r, g, b, noDepthTest, flDuration);
 }
+
+void NDebugOverlay::EntityText(int entityID, int text_offset, const char *text, float duration, int r, int g, int b, int a)
+{
+	debugoverlay->AddEntityTextOverlay(entityID, text_offset, duration,
+		(int)clamp(r * 255.f, 0.f, 255.f), (int)clamp(g * 255.f, 0.f, 255.f), (int)clamp(b * 255.f, 0.f, 255.f),
+		(int)clamp(a * 255.f, 0.f, 255.f), text);
+}

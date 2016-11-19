@@ -77,12 +77,12 @@ inline bool IsStringEmpty(const char* s)
 	return !(s[0]);
 }
 
-inline std::string strprintf(const char* fmt, ...)
+inline std::string vstrprintf(const char* fmt, va_list args)
 {
-	va_list v;
-	va_start(v, fmt);
-	const auto length = vsnprintf(nullptr, 0, fmt, v) + 1;
-	va_end(v);
+	va_list args2;
+	va_copy(args2, args);
+
+	const auto length = vsnprintf(nullptr, 0, fmt, args) + 1;
 
 	Assert(length > 0);
 	if (length <= 0)
@@ -90,13 +90,17 @@ inline std::string strprintf(const char* fmt, ...)
 
 	std::string retVal;
 	retVal.resize(length);
-	va_start(v, fmt);
-	const auto written = vsnprintf(&retVal[0], length, fmt, v);
-	va_end(v);
+	const auto written = vsnprintf(&retVal[0], length, fmt, args2);
 
 	Assert((written + 1) == length);
 
 	return retVal;
+}
+inline std::string strprintf(const char* fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	return vstrprintf(fmt, args);
 }
 
 inline const char* stristr(const char* const searchThis, const char* const forThis)
@@ -139,11 +143,11 @@ inline float EaseInSlope(float x, float bias = 0.5)
 
 inline float smoothstep(float x)
 {
-	return x*x*(3.0f - 2.0f * x);
+	return 3.0f*(x*x) - 2.0f*(x*x*x);
 }
 inline float smootherstep(float x)
 {
-	return x*x*x*(x*(x * 6.0f - 15.0f) + 10.0f);
+	return 6.0f*(x*x*x*x*x) - 15.0f*(x*x*x*x) + 10.0f*(x*x*x);
 }
 
 extern CSteamID ParseSteamID(const char* input);
@@ -158,3 +162,14 @@ extern bool ParseVector(Vector& v, const char* str);
 extern bool ParseAngle(QAngle& a, const char* str);
 
 extern Vector GetViewOrigin();
+
+template <typename T, std::size_t N> constexpr std::size_t arraysize(T const (&)[N]) noexcept { return N; }
+
+constexpr float Rad2Deg(float radians)
+{
+	return radians * float(180.0 / 3.14159265358979323846);
+}
+constexpr float Deg2Rad(float degrees)
+{
+	return degrees * float(3.14159265358979323846 / 180);
+}

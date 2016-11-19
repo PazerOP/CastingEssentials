@@ -205,14 +205,19 @@ namespace Hooking{ namespace Internal
 
 			char** parameters[] = { (char**)(&(va_arg(vaArgList, ArgType<Args>::type)))... };
 
-			// 8192 is the length used internally by CCvar
-			char buffer[8192];
-			vsnprintf_s(buffer, _TRUNCATE, *fmt, vaArgList);
+			std::string formatted = vstrprintf(*fmt, vaArgList);
 			va_end(vaArgList);
+
+			// Escape any '%' with a second %
+			for (size_t i = 0; i < formatted.size(); i++)
+			{
+				if (formatted[i] == '%')
+					formatted.insert(i++, 1, '%');
+			}
 
 			// Can't have variable arguments in std::function, overwrite the "format" parameter with
 			// the fully parsed buffer
-			*parameters[fmtParameter] = &buffer[0];
+			*parameters[fmtParameter] = (char*)formatted.c_str();
 
 			// Now run all the hooks
 			return HookFunctionsInvoker<GroupHookType::BaseGroupHookType, RetVal, Args...>::Invoke(s_Hook, args...);

@@ -10,11 +10,12 @@
 
 #pragma once
 
-#include <yvals.h>
 #include <array>
 #include <map>
 #include <string>
 #include <vector>
+
+#include <mathlib/vector.h>
 
 // taken from SourceMod
 
@@ -271,8 +272,8 @@ enum class TFGrenadePipebombType
 	Sticky,
 };
 
-#define MAX_COSMETIC_SLOTS 3
-#define MAX_TAUNT_SLOTS 8
+constexpr auto MAX_COSMETIC_SLOTS = 3;
+constexpr auto MAX_TAUNT_SLOTS = 8;
 
 class TFDefinitions
 {
@@ -281,4 +282,19 @@ public:
 	static const std::array<std::string, 9> itemSlots;
 	static const std::map<TFClassType, int> normalClassOrdinal;
 	static const std::map<int, std::vector<std::string>> slotKillIcons;
+};
+
+static const Vector VIEW_OFFSETS[] =
+{
+	Vector(0, 0, 72),		// TF_CLASS_UNDEFINED
+
+	Vector(0, 0, 65),		// TF_CLASS_SCOUT,			// TF_FIRST_NORMAL_CLASS
+	Vector(0, 0, 75),		// TF_CLASS_SNIPER,
+	Vector(0, 0, 68),		// TF_CLASS_SOLDIER,
+	Vector(0, 0, 68),		// TF_CLASS_DEMOMAN,
+	Vector(0, 0, 75),		// TF_CLASS_MEDIC,
+	Vector(0, 0, 75),		// TF_CLASS_HEAVYWEAPONS,
+	Vector(0, 0, 68),		// TF_CLASS_PYRO,
+	Vector(0, 0, 75),		// TF_CLASS_SPY,
+	Vector(0, 0, 68),		// TF_CLASS_ENGINEER,		// TF_LAST_NORMAL_CLASS
 };

@@ -3,6 +3,9 @@
 #include "PluginBase/Modules.h"
 
 #include <mathlib/vector.h>
+#include <ehandle.h>
+
+#include <vector>
 
 class ConVar;
 class IConVar;
@@ -28,8 +31,6 @@ private:
 	Vector smoothLastOrigin;
 	float smoothLastTime;
 
-	bool TestCollision(const Vector& currentPos, const Vector& targetPos);
-
 	Vector m_SmoothBeginPos;
 
 	Vector m_SmoothStartPos;
@@ -48,7 +49,8 @@ private:
 	class HLTVCameraOverride;
 
 	ConVar *enabled;
-	ConVar *max_angle_difference;
+	ConVar *max_angle;
+	ConVar* ce_camerasmooths_min_distance;
 	ConVar *max_distance;
 	ConVar *max_speed;
 	ConVar* ce_camerasmooths_duration;
@@ -56,7 +58,32 @@ private:
 	ConVar* ce_camerasmooths_pos_bias;
 	ConVar* ce_camerasmooths_ang_bias;
 
+	ConVar* ce_camerasmooths_debug;
+	ConVar* ce_camerasmooths_debug_los;
+
+	ConVar* ce_camerasmooths_check_los;
+	ConVar* ce_camerasmooths_los_buffer;
+	
+	ConVar* ce_camerasmooths_avoid_scoped_snipers;
+
+	struct CollisionTest
+	{
+		Vector m_Mins;
+		Vector m_Maxs;
+
+		CHandle<C_BaseEntity> m_Entity;
+		float m_Visibility;
+	};
+
+	int m_CollisionTestFrame;
+	std::vector<CollisionTest> m_CollisionTests;
+	void UpdateCollisionTests();
+	void DrawCollisionTests();
+	float GetVisibility(int entIndex);
+
 	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
 
 	void OnTick(bool inGame) override;
+
+	static constexpr Color DBGMSG_COLOR = Color(255, 205, 68, 255);
 };
