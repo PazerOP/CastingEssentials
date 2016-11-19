@@ -92,24 +92,24 @@ CameraSmooths::CameraSmooths()
 	smoothInProgress = false;
 	smoothLastTime = 0;
 
-	enabled = new ConVar("ce_camerasmooths_enabled", "0", FCVAR_NONE, "smooth transition between camera positions", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
-	max_angle = new ConVar("ce_camerasmooths_max_angle", "45", FCVAR_NONE, "max angle difference at which smoothing will be performed", true, 0, true, 180);
-	max_distance = new ConVar("ce_camerasmooths_max_distance", "-1", FCVAR_NONE, "max distance at which smoothing will be performed");
+	enabled = new ConVar("ce_smoothing_enabled", "0", FCVAR_NONE, "smooth transition between camera positions", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
+	max_angle = new ConVar("ce_smoothing_max_angle", "45", FCVAR_NONE, "max angle difference at which smoothing will be performed", true, 0, true, 180);
+	max_distance = new ConVar("ce_smoothing_max_distance", "-1", FCVAR_NONE, "max distance at which smoothing will be performed");
 	ce_camerasmooths_min_distance = new ConVar("ce_camerasmooths_min_distance", "128", FCVAR_NONE, "Always smooth if we're closer than this distance.");
-	max_speed = new ConVar("ce_camerasmooths_max_speed", "2000", FCVAR_NONE, "max units per second to move view");
-	ce_camerasmooths_duration = new ConVar("ce_camerasmooths_duration", "0.5", FCVAR_NONE, "Duration over which to smooth the camera.");
+	max_speed = new ConVar("ce_smoothing_max_speed", "2000", FCVAR_NONE, "max units per second to move view");
+	ce_camerasmooths_duration = new ConVar("ce_smoothing_duration", "0.5", FCVAR_NONE, "Duration over which to smooth the camera.");
 
-	ce_camerasmooths_ang_bias = new ConVar("ce_camerasmooths_ang_bias", "0.65", FCVAR_NONE, "biasAmt for angle smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1);
-	ce_camerasmooths_pos_bias = new ConVar("ce_camerasmooths_pos_bias", "0.75", FCVAR_NONE, "biasAmt for position smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1);
+	ce_camerasmooths_ang_bias = new ConVar("ce_smoothing_ang_bias", "0.65", FCVAR_NONE, "biasAmt for angle smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1);
+	ce_camerasmooths_pos_bias = new ConVar("ce_smoothing_pos_bias", "0.75", FCVAR_NONE, "biasAmt for position smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1);
 
-	ce_camerasmooths_check_los = new ConVar("ce_camerasmooths_check_los", "1", FCVAR_NONE, "Make sure we have LOS to the player we're smoothing to.");
+	ce_camerasmooths_check_los = new ConVar("ce_smoothing_check_los", "1", FCVAR_NONE, "Make sure we have LOS to the player we're smoothing to.");
 
-	ce_camerasmooths_los_buffer = new ConVar("ce_camerasmooths_los_buffer", "32", FCVAR_NONE, "Additional space to give ourselves so we can sorta see around corners.");
+	ce_camerasmooths_los_buffer = new ConVar("ce_smoothing_los_buffer", "32", FCVAR_NONE, "Additional space to give ourselves so we can sorta see around corners.");
 
-	ce_camerasmooths_debug_los = new ConVar("ce_camerasmooths_debug_los", "0", FCVAR_NONE, "Draw points associated with LOS checking for camera smooths.");
-	ce_camerasmooths_debug = new ConVar("ce_camerasmooths_debug", "0", FCVAR_NONE, "Prints debugging info about camera smooths to the console.");
+	ce_camerasmooths_debug_los = new ConVar("ce_smoothing_debug_los", "0", FCVAR_NONE, "Draw points associated with LOS checking for camera smooths.");
+	ce_camerasmooths_debug = new ConVar("ce_smoothing_debug", "0", FCVAR_NONE, "Prints debugging info about camera smooths to the console.");
 
-	ce_camerasmooths_avoid_scoped_snipers = new ConVar("ce_camerasmooths_avoid_scoped_snipers", "0", FCVAR_NONE, "DHW HACK: Don't smooth to scoped snipers.");
+	ce_camerasmooths_avoid_scoped_snipers = new ConVar("ce_smoothing_avoid_scoped_snipers", "0", FCVAR_NONE, "DHW HACK: Don't smooth to scoped snipers.");
 }
 
 bool CameraSmooths::CheckDependencies()
