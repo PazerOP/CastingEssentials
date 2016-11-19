@@ -636,7 +636,8 @@ void MapFlythroughs::GotoCamera(const CCommand& args)
 int MapFlythroughs::GotoCameraCompletion(const char* const partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
 {
 	std::cmatch match;
-	if (!std::regex_search(partial, match, std::regex("\\s*ce_autocamera_goto_camera \\s*\"?(.*?)\"?\\s*$", std::regex_constants::icase)))
+	const std::string regexString = strprintf("\\s*%s \\s*\"?(.*?)\"?\\s*$", GetModule()->ce_autocamera_goto_camera->GetName());
+	if (!std::regex_search(partial, match, std::regex(regexString, std::regex_constants::icase)))
 		return 0;
 	
 	MapFlythroughs* const mod = GetModule();
