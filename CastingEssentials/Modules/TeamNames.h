@@ -33,8 +33,7 @@ private:
 	void SwapTeamNames();
 
 	std::string m_LastServerValues[(int)TeamConvars::Count];
-	template<TeamConvars::Enum team> static void OriginalChangeCallback(IConVar* var, const char* oldValue, float flOldValue);
-	template<TeamConvars::Enum team> static void OverrideChangeCallback(IConVar* var, const char* oldValue, float flOldValue);
+	std::string m_LastOverrideValues[TeamConvars::Count];
 
-	static void GlobalChangeCallback(IConVar* var, const char* oldValue, float flOldValue);
+	void OnTick(bool inGame) override;
 };
