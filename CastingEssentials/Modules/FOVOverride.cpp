@@ -10,6 +10,7 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
+#include "Misc/HLTVCameraHack.h"
 
 FOVOverride::FOVOverride()
 {
@@ -67,22 +68,32 @@ bool FOVOverride::InToolModeOverride()
 bool FOVOverride::SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov)
 {
 	if (!Interfaces::GetEngineClient()->IsInGame())
-	{
-		GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::IGNORE);
 		return false;
-	}
 
-	Player* const localPlayer = Player::GetPlayer(Interfaces::GetEngineClient()->GetLocalPlayer(), __FUNCSIG__);
-	if (localPlayer)
+	if (Interfaces::GetEngineClient()->IsHLTV())
 	{
-		if (localPlayer->CheckCondition(TFCond_Zoomed))
+		const auto target = Interfaces::GetHLTVCamera()->m_iTraget1;
+		if (!Player::IsValidIndex(target))
 			return false;
-		else if (localPlayer->GetObserverMode() == OBS_MODE_IN_EYE)
-		{
-			Player* targetPlayer = Player::AsPlayer(localPlayer->GetObserverTarget());
 
-			if (targetPlayer && targetPlayer->CheckCondition(TFCond_Zoomed))
+		Player* const targetPlayer = Player::GetPlayer(target, __FUNCSIG__);
+		if (Interfaces::GetHLTVCamera()->m_nCameraMode == OBS_MODE_IN_EYE && targetPlayer->CheckCondition(TFCond_Zoomed))
+			return false;
+	}
+	else
+	{
+		Player* const localPlayer = Player::GetPlayer(Interfaces::GetEngineClient()->GetLocalPlayer(), __FUNCSIG__);
+		if (localPlayer)
+		{
+			if (localPlayer->CheckCondition(TFCond_Zoomed))
 				return false;
+			else if (localPlayer->GetObserverMode() == OBS_MODE_IN_EYE)
+			{
+				Player* targetPlayer = Player::AsPlayer(localPlayer->GetObserverTarget());
+
+				if (targetPlayer && targetPlayer->CheckCondition(TFCond_Zoomed))
+					return false;
+			}
 		}
 	}
 
