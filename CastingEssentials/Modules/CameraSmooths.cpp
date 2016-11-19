@@ -95,7 +95,7 @@ CameraSmooths::CameraSmooths()
 	enabled = new ConVar("ce_smoothing_enabled", "0", FCVAR_NONE, "smooth transition between camera positions", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
 	max_angle = new ConVar("ce_smoothing_max_angle", "45", FCVAR_NONE, "max angle difference at which smoothing will be performed", true, 0, true, 180);
 	max_distance = new ConVar("ce_smoothing_max_distance", "-1", FCVAR_NONE, "max distance at which smoothing will be performed");
-	ce_camerasmooths_min_distance = new ConVar("ce_camerasmooths_min_distance", "128", FCVAR_NONE, "Always smooth if we're closer than this distance.");
+	ce_camerasmooths_min_distance = new ConVar("ce_smoothing_min_distance", "128", FCVAR_NONE, "Always smooth if we're closer than this distance.");
 	max_speed = new ConVar("ce_smoothing_max_speed", "2000", FCVAR_NONE, "max units per second to move view");
 	ce_camerasmooths_duration = new ConVar("ce_smoothing_duration", "0.5", FCVAR_NONE, "Duration over which to smooth the camera.");
 
