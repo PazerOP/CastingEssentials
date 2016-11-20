@@ -104,12 +104,31 @@ bool CTraceFilterSimple::ShouldHitEntity(IHandleEntity *pHandleEntity, int conte
 	return true;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Trace filter that only hits anything but NPCs and the player
+//-----------------------------------------------------------------------------
+bool CTraceFilterNoNPCsOrPlayer::ShouldHitEntity(IHandleEntity *pHandleEntity, int contentsMask)
+{
+	if (CTraceFilterSimple::ShouldHitEntity(pHandleEntity, contentsMask))
+	{
+		CBaseEntity *pEntity = EntityFromEntityHandle(pHandleEntity);
+		if (!pEntity)
+			return NULL;
+#ifndef CLIENT_DLL
+		if (pEntity->Classify() == CLASS_PLAYER_ALLY)
+			return false; // CS hostages are CLASS_PLAYER_ALLY but not IsNPC()
+#endif
+		return (!pEntity->IsNPC() && !pEntity->IsPlayer());
+	}
+	return false;
+}
+
 Vector UTIL_YawToVector(float yaw)
 {
 	Vector ret;
 
 	ret.z = 0;
-	float angle = DEG2RAD(yaw);
+	float angle = Deg2Rad(yaw);
 	SinCos(angle, &ret.y, &ret.x);
 
 	return ret;
@@ -122,7 +141,7 @@ float UTIL_VecToYaw(const Vector &vec)
 
 	float yaw = atan2(vec.y, vec.x);
 
-	yaw = RAD2DEG(yaw);
+	yaw = Rad2Deg(yaw);
 
 	if (yaw < 0)
 		yaw += 360;

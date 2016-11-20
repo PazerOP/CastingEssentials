@@ -5,6 +5,7 @@
 #include "PluginBase/TFDefinitions.h"
 #include "Misc/DebugOverlay.h"
 #include "Misc/HLTVCameraHack.h"
+#include "Modules/CameraState.h"
 
 #include <convar.h>
 #include <client/hltvcamera.h>
@@ -60,16 +61,13 @@ static const Vector TEST_POINTS[27] =
 
 CameraSmooths::CameraSmooths()
 {
-	inToolModeHook = 0;
-	isThirdPersonCameraHook = 0;
-	setupEngineViewHook = 0;
 	smoothEnding = false;
 	smoothEndMode = OBS_MODE_NONE;
 	smoothEndTarget = 0;
 	smoothInProgress = false;
 	smoothLastTime = 0;
 
-	enabled = new ConVar("ce_smoothing_enabled", "0", FCVAR_NONE, "smooth transition between camera positions", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
+	enabled = new ConVar("ce_smoothing_enabled", "0", FCVAR_NONE, "smooth transition between camera positions");
 	max_angle = new ConVar("ce_smoothing_max_angle", "45", FCVAR_NONE, "max angle difference at which smoothing will be performed", true, 0, true, 180);
 	max_distance = new ConVar("ce_smoothing_max_distance", "2250", FCVAR_NONE, "max distance at which smoothing will be performed");
 	ce_camerasmooths_min_distance = new ConVar("ce_smoothing_min_distance", "128", FCVAR_NONE, "Always smooth if we're closer than this distance.");
@@ -150,7 +148,7 @@ void CameraSmooths::UpdateCollisionTests()
 	{
 		m_CollisionTests.clear();
 
-		const Vector viewPos = m_LastFramePos;
+		const Vector& viewPos = CameraState::GetModule()->GetLastFramePluginViewOrigin();
 
 		for (Player* player : Player::Iterable())
 		{
@@ -169,7 +167,7 @@ void CameraSmooths::UpdateCollisionTests()
 			newTest.m_Entity = entity->GetRefEHandle();
 
 			const TFClassType playerClass = player->GetClass();
-			const Vector eyePos = entity->GetAbsOrigin() + VIEW_OFFSETS[(int)playerClass];
+			const Vector eyePos = player->GetEyePosition();
 			const Vector buffer(ce_camerasmooths_los_buffer->GetFloat());
 			newTest.m_Mins = eyePos - buffer;
 			newTest.m_Maxs = eyePos + buffer;
@@ -267,6 +265,9 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 	HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 
+	const Vector& lastFramePos = CameraState::GetModule()->GetLastFramePluginViewOrigin();
+	const QAngle& lastFrameAng = CameraState::GetModule()->GetLastFramePluginViewAngles();
+
 	if (hltvcamera->m_nCameraMode == OBS_MODE_IN_EYE || hltvcamera->m_nCameraMode == OBS_MODE_CHASE)
 	{
 		if (hltvcamera->m_iTraget1 != smoothEndTarget || (hltvcamera->m_nCameraMode != smoothEndMode && !smoothInProgress))
@@ -275,9 +276,9 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			smoothEndTarget = hltvcamera->m_iTraget1;
 
 			Vector currentForward;
-			AngleVectors(m_LastFrameAng, &currentForward);
+			AngleVectors(lastFrameAng, &currentForward);
 
-			const Vector deltaPos = origin - m_LastFramePos;
+			const Vector deltaPos = origin - lastFramePos;
 			const float angle = Rad2Deg(std::acosf(currentForward.Dot(deltaPos) / (currentForward.Length() + deltaPos.Length())));
 			const float distance = deltaPos.Length();
 
@@ -327,8 +328,8 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			if (ce_camerasmooths_debug->GetBool())
 				ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth!\n\n", GetModuleName());
 
-			m_SmoothStartAng = m_LastFrameAng;
-			m_SmoothBeginPos = m_SmoothStartPos = m_LastFramePos;
+			m_SmoothStartAng = lastFrameAng;
+			m_SmoothBeginPos = m_SmoothStartPos = lastFramePos;
 			m_SmoothStartTime = Interfaces::GetEngineTool()->HostTime();
 			m_LastOverallProgress = m_LastAngPercentage = 0;
 			smoothInProgress = true; // moveVector.Length() < max_distance->GetFloat() &&
@@ -353,7 +354,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			const Vector idealPos = VectorLerp(m_SmoothStartPos, targetPos, posPercentage);
 
 			// How far would we have to travel this frame to get to our ideal position?
-			const float posDifference = m_LastFramePos.DistTo(idealPos);
+			const float posDifference = lastFramePos.DistTo(idealPos);
 
 			// What's the furthest we're allowed to travel this frame?
 			const float maxDistThisFrame = max_speed->GetFloat() > 0 ?
@@ -381,31 +382,18 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 				const float angPercentThisFrame = angPercentage - m_LastAngPercentage;
 				const float adjustedAngPercentage = angPercentThisFrame / (1 - angPercentage);
-				
-#if 0
-				Quaternion currentForward, endForward;
-				AngleQuaternion(percentage == 0 ? m_SmoothStartAng : m_LastFrameAng, currentForward);
-				AngleQuaternion(angles, endForward);
 
-				Quaternion lerped;
-				QuaternionSlerp(currentForward, endForward, angPercentage, lerped);
+				const float distx = AngleDistance(angles.x, lastFrameAng.x);
+				const float disty = AngleDistance(angles.y, lastFrameAng.y);
+				const float distz = AngleDistance(angles.z, lastFrameAng.z);
 
-				QuaternionAngles(lerped, angles);
-#else
+				angles.x = ApproachAngle(angles.x, lastFrameAng.x, distx * adjustedAngPercentage);
+				angles.y = ApproachAngle(angles.y, lastFrameAng.y, disty * adjustedAngPercentage);
+				angles.z = ApproachAngle(angles.z, lastFrameAng.z, distz * adjustedAngPercentage);
 
-				const float distx = AngleDistance(angles.x, m_LastFrameAng.x);
-				const float disty = AngleDistance(angles.y, m_LastFrameAng.y);
-				const float distz = AngleDistance(angles.z, m_LastFrameAng.z);
-
-				angles.x = ApproachAngle(angles.x, m_LastFrameAng.x, distx * adjustedAngPercentage);
-				angles.y = ApproachAngle(angles.y, m_LastFrameAng.y, disty * adjustedAngPercentage);
-				angles.z = ApproachAngle(angles.z, m_LastFrameAng.z, distz * adjustedAngPercentage);
-#endif
 				m_LastAngPercentage = angPercentage;
 			}
 
-			m_LastFramePos = origin;
-			m_LastFrameAng = angles;
 			m_LastOverallProgress = overallPercentage;
 			return true;
 		}
@@ -416,8 +404,11 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			return true;
 		}
 	}
-	else if (smoothEnding)
+	
+	if (smoothEnding)
 	{
+		Assert(!smoothInProgress);
+
 		if (hltvcamera)
 			GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(smoothEndMode);
 	}
@@ -426,58 +417,17 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 	smoothEndMode = hltvcamera->m_nCameraMode;
 	smoothEndTarget = hltvcamera->m_iTraget1;
 	smoothInProgress = false;
-	m_LastFrameAng = smoothLastAngles = angles;
-	m_LastFramePos = smoothLastOrigin = origin;
+	smoothLastAngles = angles;
+	smoothLastOrigin = origin;
 	smoothLastTime = Interfaces::GetEngineTool()->HostTime();
 
 	return false;
-}
-
-void CameraSmooths::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)
-{
-	if (enabled->GetBool())
-	{
-		if (!inToolModeHook)
-			inToolModeHook = GetHooks()->AddHook<IClientEngineTools_InToolMode>(std::bind(&CameraSmooths::InToolModeOverride, this));
-
-		if (!isThirdPersonCameraHook)
-			isThirdPersonCameraHook = GetHooks()->AddHook<IClientEngineTools_IsThirdPersonCamera>(std::bind(&CameraSmooths::IsThirdPersonCameraOverride, this));
-
-		if (!setupEngineViewHook)
-			setupEngineViewHook = GetHooks()->AddHook<IClientEngineTools_SetupEngineView>(std::bind(&CameraSmooths::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	}
-	else
-	{
-		if (inToolModeHook && GetHooks()->RemoveHook<IClientEngineTools_InToolMode>(inToolModeHook, __FUNCSIG__))
-			inToolModeHook = 0;
-
-		Assert(!inToolModeHook);
-
-		if (isThirdPersonCameraHook && GetHooks()->RemoveHook<IClientEngineTools_IsThirdPersonCamera>(isThirdPersonCameraHook, __FUNCSIG__))
-			isThirdPersonCameraHook = 0;
-
-		Assert(!isThirdPersonCameraHook);
-
-		if (setupEngineViewHook && GetHooks()->RemoveHook<IClientEngineTools_SetupEngineView>(setupEngineViewHook, __FUNCSIG__))
-			setupEngineViewHook = 0;
-
-		Assert(!setupEngineViewHook);
-	}
 }
 
 void CameraSmooths::OnTick(bool inGame)
 {
 	if (inGame)
 	{
-		{
-			CViewSetup view;
-			if (Interfaces::GetClientDLL()->GetPlayerView(view))
-			{
-				m_LastFramePos = view.origin;
-				m_LastFrameAng = view.angles;
-			}
-		}
-
 		if (ce_camerasmooths_debug_los->GetBool())
 			DrawCollisionTests();
 	}

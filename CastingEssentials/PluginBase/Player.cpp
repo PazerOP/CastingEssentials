@@ -447,6 +447,69 @@ const player_info_t& Player::GetPlayerInfo() const
 	return m_CachedPlayerInfo;
 }
 
+Vector Player::GetAbsOrigin() const
+{
+	if (!IsValid())
+		return vec3_origin;
+
+	IClientEntity* const clientEntity = GetEntity();
+	if (!clientEntity)
+		return vec3_origin;
+
+	return clientEntity->GetAbsOrigin();
+}
+
+QAngle Player::GetAbsAngles() const
+{
+	if (!IsValid())
+		return vec3_angle;
+
+	IClientEntity* const clientEntity = GetEntity();
+	if (!clientEntity)
+		return vec3_angle;
+
+	return clientEntity->GetAbsAngles();
+}
+
+Vector Player::GetEyePosition() const
+{
+	if (!IsValid())
+		return vec3_origin;
+
+	static const Vector VIEW_OFFSETS[] =
+	{
+		Vector(0, 0, 72),		// TF_CLASS_UNDEFINED
+
+		Vector(0, 0, 65),		// TF_CLASS_SCOUT,			// TF_FIRST_NORMAL_CLASS
+		Vector(0, 0, 75),		// TF_CLASS_SNIPER,
+		Vector(0, 0, 68),		// TF_CLASS_SOLDIER,
+		Vector(0, 0, 68),		// TF_CLASS_DEMOMAN,
+		Vector(0, 0, 75),		// TF_CLASS_MEDIC,
+		Vector(0, 0, 75),		// TF_CLASS_HEAVYWEAPONS,
+		Vector(0, 0, 68),		// TF_CLASS_PYRO,
+		Vector(0, 0, 75),		// TF_CLASS_SPY,
+		Vector(0, 0, 68),		// TF_CLASS_ENGINEER,		// TF_LAST_NORMAL_CLASS
+	};
+
+	return GetAbsOrigin() + VIEW_OFFSETS[(int)GetClass()];
+}
+
+QAngle Player::GetEyeAngles() const
+{
+	if (!IsValid())
+		return vec3_angle;
+
+	IClientEntity* const clientEntity = GetEntity();
+	if (!clientEntity)
+		return vec3_angle;
+
+	C_BaseEntity* const baseEntity = clientEntity->GetBaseEntity();
+	if (!baseEntity)
+		return vec3_angle;
+
+	return baseEntity->EyeAngles();
+}
+
 int Player::GetObserverMode() const
 {
 	if (IsValid())

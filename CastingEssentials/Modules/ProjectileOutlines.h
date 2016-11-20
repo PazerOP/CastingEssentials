@@ -20,6 +20,8 @@ private:
 	ConVar* m_PillsEnabled;
 	ConVar* m_StickiesEnabled;
 
+	ConVar* ce_projectileoutlines_mode;
+
 	ConVar* ce_projectileoutlines_color_blu;
 	ConVar* ce_projectileoutlines_color_red;
 

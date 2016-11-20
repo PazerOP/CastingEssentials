@@ -1,9 +1,12 @@
 #include "CameraTools.h"
 #include "Misc/HLTVCameraHack.h"
+#include "Modules/CameraSmooths.h"
+#include "Modules/CameraState.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
+
 #include <filesystem.h>
 #include <tier1/KeyValues.h>
 #include <tier3/tier3.h>
@@ -13,6 +16,7 @@
 #include <functional>
 #include <client/hltvcamera.h>
 #include <toolframework/ienginetool.h>
+#include <util_shared.h>
 
 CameraTools::CameraTools()
 {
@@ -21,11 +25,27 @@ CameraTools::CameraTools()
 	m_SpecGUISettings = new KeyValues("Resource/UI/SpectatorTournament.res");
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
 
+	m_ViewOverride = false;
+
 	ce_cameratools_show_mode = new ConVar("ce_cameratools_show_mode", "0", FCVAR_NONE, "Displays the current spec_mode in the top right corner of the screen.");
 	m_ForceMode = new ConVar("ce_cameratools_force_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceMode(var, pOldValue, flOldValue); });
 	m_ForceTarget = new ConVar("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceTarget(var, pOldValue, flOldValue); });
 	m_ForceValidTarget = new ConVar("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); });
 	m_SpecPlayerAlive = new ConVar("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players.");
+
+	m_TPLockAngles = new ConVar("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player.");
+
+	m_TPXShift = new ConVar("ce_tplock_xoffset", "20", FCVAR_NONE);
+	m_TPYShift = new ConVar("ce_tplock_yoffset", "-10", FCVAR_NONE);
+	m_TPZShift = new ConVar("ce_tplock_zoffset", "-40", FCVAR_NONE);
+
+	m_TPLockPitch = new ConVar("ce_tplock_force_pitch", "0", FCVAR_NONE, "Value to force pitch to. Blank to follow player's eye angles.");
+	m_TPLockYaw = new ConVar("ce_tplock_force_yaw", "", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles.");
+	m_TPLockRoll = new ConVar("ce_tplock_force_roll", "0", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles.");
+
+	m_TPLockXDPS = new ConVar("ce_tplock_dps_pitch", "360", FCVAR_NONE, "Max degrees per second for pitch.");
+	m_TPLockYDPS = new ConVar("ce_tplock_dps_yaw", "360", FCVAR_NONE, "Max degrees per second for yaw.");
+	m_TPLockZDPS = new ConVar("ce_tplock_dps_roll", "360", FCVAR_NONE, "Max degrees per second for roll.");
 
 	m_SpecPosition = new ConCommand("ce_cameratools_spec_pos", [](const CCommand& args) { GetModule()->SpecPosition(args); }, "Moves the camera to a given position.");
 
@@ -336,6 +356,84 @@ void CameraTools::OnTick(bool inGame)
 			}
 		}
 	}
+	else
+	{
+	}
+}
+
+Vector CameraTools::CalcPosForAngle(const Vector& orbitCenter, const QAngle& angle)
+{
+	Vector forward, right, up;
+	AngleVectors(angle, &forward, &right, &up);
+
+	Vector idealPos = orbitCenter + forward * m_TPZShift->GetFloat();
+	idealPos += right * m_TPXShift->GetFloat();
+	idealPos += up * m_TPYShift->GetFloat();
+
+	const Vector camDir = (idealPos - orbitCenter).Normalized();
+	const float dist = orbitCenter.DistTo(idealPos);
+
+	// clip against walls
+	trace_t trace;
+
+	CTraceFilterNoNPCsOrPlayer noPlayers(nullptr, COLLISION_GROUP_NONE);
+	UTIL_TraceHull(orbitCenter, idealPos, WALL_MIN, WALL_MAX, MASK_SOLID, &noPlayers, &trace);
+
+	const float wallDist = (trace.endpos - orbitCenter).Length();
+
+	return orbitCenter + camDir * wallDist;;
+}
+
+bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov)
+{
+	m_ViewOverride = false;
+	if (!Interfaces::GetEngineClient()->IsHLTV())
+		return false;
+
+	HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
+	if (!hltvcamera)
+		return false;
+
+	Player* const targetPlayer = Player::IsValidIndex(hltvcamera->m_iTraget1) ? Player::GetPlayer(hltvcamera->m_iTraget1, __FUNCSIG__) : nullptr;
+	if (!targetPlayer)
+	{
+		m_LastTargetPlayer = nullptr;
+		return false;
+	}
+
+	QAngle idealAngles = targetPlayer->GetEyeAngles();
+
+	if (!IsStringEmpty(m_TPLockPitch->GetString()))
+		idealAngles.x = m_TPLockPitch->GetFloat();
+	if (!IsStringEmpty(m_TPLockYaw->GetString()))
+		idealAngles.y = m_TPLockYaw->GetFloat();
+	if (!IsStringEmpty(m_TPLockRoll->GetString()))
+		idealAngles.z = m_TPLockRoll->GetFloat();
+
+	if (m_LastTargetPlayer == targetPlayer)
+	{
+		const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
+		idealAngles.x = ApproachAngle(idealAngles.x, m_LastFrameAngle.x, m_TPLockXDPS->GetFloat() * frametime);
+		idealAngles.y = ApproachAngle(idealAngles.y, m_LastFrameAngle.y, m_TPLockYDPS->GetFloat() * frametime);
+		idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, m_TPLockZDPS->GetFloat() * frametime);
+	}
+
+	const Vector idealPos = CalcPosForAngle(targetPlayer->GetEyePosition(), idealAngles);
+
+	m_LastFrameAngle = idealAngles;
+	m_LastTargetPlayer = targetPlayer;
+
+	if (hltvcamera->m_nCameraMode != OBS_MODE_CHASE)
+		return false;
+
+	if (!m_TPLockAngles->GetBool())
+		return false;
+
+	m_ViewOverride = true;
+	angles = idealAngles;
+	origin = idealPos;
+
+	return true;
 }
 
 void CameraTools::SpecSteamID(const CCommand& command)

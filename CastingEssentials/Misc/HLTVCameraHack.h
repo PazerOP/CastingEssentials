@@ -24,3 +24,9 @@ public:
 	using C_HLTVCamera::m_LastCmd;
 	using C_HLTVCamera::m_vecVelocity;
 };
+
+#undef WALL_OFFSET
+static constexpr float WALL_OFFSET = 6;
+
+static const Vector WALL_MIN(-WALL_OFFSET, -WALL_OFFSET, -WALL_OFFSET);
+static const Vector WALL_MAX(WALL_OFFSET, WALL_OFFSET, WALL_OFFSET);

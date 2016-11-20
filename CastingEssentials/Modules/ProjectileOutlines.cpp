@@ -26,6 +26,9 @@ ProjectileOutlines::ProjectileOutlines()
 
 	ce_projectileoutlines_fade_start = new ConVar("ce_projectileoutlines_fade_start", "-1", FCVAR_NONE, "Distance from the camera at which projectile outlines begin fading out.");
 	ce_projectileoutlines_fade_end = new ConVar("ce_projectileoutlines_fade_end", "-1", FCVAR_NONE, "Distance from the camera at which projectile outlines finish fading out.");
+
+	// For some reason this isn't hooked up, wtf valve
+	ce_projectileoutlines_mode = new ConVar("ce_projectileoutlines_mode", "1", FCVAR_UNREGISTERED, "Modes:\n    0: always\n    1: only when occluded\n    2: only when model is visible", true, 0, true, 2);
 }
 
 ProjectileOutlines::~ProjectileOutlines()
@@ -122,15 +125,14 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 {
 	EHANDLE handle;
 	{
-		auto wtf = GetHooks()->GetRawFunc_Global_CreateTFGlowObject();
-		IClientNetworkable* networkable = wtf(MAGIC_ENTNUM, MAGIC_SERIALNUM);//GetHooks()->GetFunc<Global_CreateTFGlowObject>()(MAGIC_ENTNUM, MAGIC_SERIALNUM);
+		IClientNetworkable* networkable = GetHooks()->GetRawFunc_Global_CreateTFGlowObject()(MAGIC_ENTNUM, MAGIC_SERIALNUM);
 		handle = networkable->GetIClientUnknown()->GetBaseEntity();
 	}
 
 	{
 		IClientEntity* glowEntity = handle.Get();
 		*Entities::GetEntityProp<bool*>(glowEntity, { "m_bDisabled" }) = false;
-		*Entities::GetEntityProp<int*>(glowEntity, { "m_iMode" }) = 0;
+		*Entities::GetEntityProp<int*>(glowEntity, { "m_iMode" }) = ce_projectileoutlines_mode->GetInt();
 		Entities::GetEntityProp<EHANDLE*>(glowEntity, { "m_hTarget" })->Set(projectileEntity->GetBaseEntity());
 
 		Color* color = Entities::GetEntityProp<Color*>(glowEntity, { "m_glowColor" });

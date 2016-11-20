@@ -12,6 +12,7 @@
 #include "Modules/Antifreeze.h"
 #include "Modules/CameraAutoSwitch.h"
 #include "Modules/CameraSmooths.h"
+#include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
 #include "Modules/ConsoleTools.h"
 #include "Modules/FOVOverride.h"
@@ -53,10 +54,13 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	HookManager::Load();
 	Modules().Init();
 
+	// CameraTools and CameraSmooths depend on CameraState
+	Modules().RegisterAndLoadModule<CameraState>("Camera State");
+	Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
+	Modules().RegisterAndLoadModule<CameraSmooths>("Camera Smooths");
+
 	Modules().RegisterAndLoadModule<AntiFreeze>("HUD Antifreeze");
 	Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
-	Modules().RegisterAndLoadModule<CameraSmooths>("Camera Smooths");
-	Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
 	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
 	Modules().RegisterAndLoadModule<FOVOverride>("FOV Override");
 	Modules().RegisterAndLoadModule<FreezeInfo>("Freeze Info");

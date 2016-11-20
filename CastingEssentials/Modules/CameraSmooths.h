@@ -19,10 +19,9 @@ public:
 	static const char* GetModuleName() { return Modules().GetModuleName<CameraSmooths>().c_str(); }
 
 	static bool CheckDependencies();
+
+	bool IsSmoothing() const { return smoothInProgress; }
 private:
-	int inToolModeHook;
-	int isThirdPersonCameraHook;
-	int setupEngineViewHook;
 	bool smoothEnding;
 	int smoothEndMode;
 	int smoothEndTarget;
@@ -37,8 +36,6 @@ private:
 	QAngle m_SmoothStartAng;
 	float m_SmoothStartTime;
 
-	Vector m_LastFramePos;
-	QAngle m_LastFrameAng;
 	float m_LastOverallProgress;
 	float m_LastAngPercentage;
 
@@ -79,9 +76,9 @@ private:
 	void DrawCollisionTests();
 	float GetVisibility(int entIndex);
 
-	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
-
 	void OnTick(bool inGame) override;
 
 	static constexpr Color DBGMSG_COLOR = Color(255, 205, 68, 255);
+
+	friend class CameraState;
 };

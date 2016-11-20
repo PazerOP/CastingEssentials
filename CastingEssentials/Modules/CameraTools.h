@@ -1,6 +1,8 @@
 #pragma once
 #include "PluginBase/Modules.h"
 
+#include <mathlib/vector.h>
+
 enum class TFTeam;
 enum class TFClassType;
 
@@ -10,6 +12,8 @@ class ConVar;
 class KeyValues;
 class IConVar;
 class C_HLTVCamera;
+class C_BaseEntity;
+class Player;
 
 class CameraTools final : public Module
 {
@@ -38,6 +42,19 @@ private:
 	ConVar* m_SpecPlayerAlive;
 	ConCommand* m_SpecPosition;
 
+	ConVar* m_TPXShift;
+	ConVar* m_TPYShift;
+	ConVar* m_TPZShift;
+	ConVar* m_TPLockAngles;
+
+	ConVar* m_TPLockPitch;
+	ConVar* m_TPLockYaw;
+	ConVar* m_TPLockRoll;
+
+	ConVar* m_TPLockXDPS;
+	ConVar* m_TPLockYDPS;
+	ConVar* m_TPLockZDPS;
+
 	ConCommand* m_SpecClass;
 	ConCommand* m_SpecSteamID;
 
@@ -56,4 +73,15 @@ private:
 	void SpecPlayer(int playerIndex);
 
 	void OnTick(bool inGame) override;
+
+	Vector CalcPosForAngle(const Vector& orbitCenter, const QAngle& angle);
+
+	bool InToolModeOverride() { return m_ViewOverride; }
+	bool IsThirdPersonCameraOverride() { return m_ViewOverride; }
+	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov);
+	bool m_ViewOverride;
+	QAngle m_LastFrameAngle;
+	Player* m_LastTargetPlayer;
+
+	friend class CameraState;
 };

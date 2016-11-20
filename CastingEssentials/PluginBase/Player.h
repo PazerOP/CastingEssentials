@@ -46,6 +46,11 @@ public:
 	int EntIndex() const;
 	const player_info_t& GetPlayerInfo() const;
 
+	Vector GetAbsOrigin() const;
+	QAngle GetAbsAngles() const;
+	Vector GetEyePosition() const;
+	QAngle GetEyeAngles() const;
+
 	bool IsValid() const;
 
 	class Iterator
