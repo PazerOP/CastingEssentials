@@ -89,6 +89,7 @@ private:
 		std::string m_Name;
 		Vector m_Pos;
 		QAngle m_DefaultAngle;
+		std::string m_MirroredCamera;
 	};
 	std::vector<std::shared_ptr<Camera>> m_Cameras;
 	std::vector<std::string> m_MalformedCameras;
@@ -137,6 +138,8 @@ private:
 	bool FindContainedString(const std::vector<std::string>& vec, const char* str);
 
 	std::string m_ConfigFilename;
+
+	Vector m_MapOrigin;
 
 	std::shared_ptr<Storyboard> m_ActiveStoryboard;
 	std::shared_ptr<StoryboardElement> m_ActiveStoryboardElement;

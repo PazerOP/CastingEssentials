@@ -153,6 +153,15 @@ void MapFlythroughs::LoadConfig(const char* bspName)
 		return;
 	}
 
+	{
+		constexpr const char* mapOriginKey = "map_origin";
+		const char* const mapOriginValue = kv->GetString(mapOriginKey, "0 0 0");
+		if (!ParseVector(m_MapOrigin, mapOriginValue))
+		{
+			PluginWarning("Failed to parse \"%s\" vector from value \"%s\" in %s! Mirrored cameras will not work.\n", mapOriginKey, mapOriginValue, m_ConfigFilename.c_str());
+		}
+	}
+
 	for (KeyValues* trigger = kv->GetFirstTrueSubKey(); trigger; trigger = trigger->GetNextTrueSubKey())
 	{
 		if (stricmp("trigger", trigger->GetName()))
@@ -256,37 +265,45 @@ bool MapFlythroughs::LoadCamera(KeyValues* const camera, const char* const filen
 		newCamera->m_Name = name;
 	}
 
-	// pos
+	const char* const mirror = camera->GetString("mirror", nullptr);
+	if (mirror)
 	{
-		const char* const pos = camera->GetString("pos", nullptr);
-		if (!pos)
-		{
-			Warning("Missing required value \"pos\" in \"%s\" on camera named \"%s\"!\n", filename, name);
-			m_MalformedCameras.push_back(name);
-			return false;
-		}
-		if (!ParseVector(newCamera->m_Pos, pos))
-		{
-			Warning("Failed to parse pos \"%s\" in \"%s\" on camera named \"%s\"!\n", pos, filename, name);
-			m_MalformedCameras.push_back(name);
-			return false;
-		}
+		newCamera->m_MirroredCamera = mirror;
 	}
-
-	// ang
+	else
 	{
-		const char* const ang = camera->GetString("ang", nullptr);
-		if (!ang)
+		// pos
 		{
-			Warning("Missing required value \"ang\" in \"%s\" on camera named \"%s\"!\n", filename, name);
-			m_MalformedCameras.push_back(name);
-			return false;
+			const char* const pos = camera->GetString("pos", nullptr);
+			if (!pos)
+			{
+				Warning("Missing required value \"pos\" in \"%s\" on camera named \"%s\"!\n", filename, name);
+				m_MalformedCameras.push_back(name);
+				return false;
+			}
+			if (!ParseVector(newCamera->m_Pos, pos))
+			{
+				Warning("Failed to parse pos \"%s\" in \"%s\" on camera named \"%s\"!\n", pos, filename, name);
+				m_MalformedCameras.push_back(name);
+				return false;
+			}
 		}
-		if (!ParseAngle(newCamera->m_DefaultAngle, ang))
+
+		// ang
 		{
-			Warning("Failed to parrse ang \"%s\" in \"%s\" on camera named \"%s\"!\n", ang, filename, name);
-			m_MalformedCameras.push_back(name);
-			return false;
+			const char* const ang = camera->GetString("ang", nullptr);
+			if (!ang)
+			{
+				Warning("Missing required value \"ang\" in \"%s\" on camera named \"%s\"!\n", filename, name);
+				m_MalformedCameras.push_back(name);
+				return false;
+			}
+			if (!ParseAngle(newCamera->m_DefaultAngle, ang))
+			{
+				Warning("Failed to parrse ang \"%s\" in \"%s\" on camera named \"%s\"!\n", ang, filename, name);
+				m_MalformedCameras.push_back(name);
+				return false;
+			}
 		}
 	}
 
@@ -623,21 +640,46 @@ void MapFlythroughs::GotoCamera(const CCommand& args)
 	if (!cam)
 	{
 		if (FindContainedString(m_MalformedCameras, name))
-			Warning("%s: Unable to go to camera \"%s\" because its definition in \"%s\" is malformed.\n", ce_autocamera_goto_camera->GetName(), name, m_ConfigFilename.c_str());
+			Warning("%s: Unable to goto camera \"%s\" because its definition in \"%s\" is malformed.\n", ce_autocamera_goto_camera->GetName(), name, m_ConfigFilename.c_str());
 		else
 			Warning("%s: Unable to find camera with name \"%s\"!\n", ce_autocamera_goto_camera->GetName(), name);
 
 		return;
 	}
 
-	ctools->SpecPosition(cam->m_Pos, cam->m_DefaultAngle);
+	if (!cam->m_MirroredCamera.empty())
+	{
+		auto const targetCam = FindCamera(cam->m_MirroredCamera.c_str());
+		if (!targetCam)
+		{
+			if (FindContainedString(m_MalformedCameras, cam->m_MirroredCamera.c_str()))
+				Warning("%s: Unable to goto mirrored camera \"%s\" because its base \"%s\" is malformed in \"%s\".\n", ce_autocamera_goto_camera->GetName(), name, cam->m_MirroredCamera.c_str(), m_ConfigFilename.c_str());
+			else
+				Warning("%s: Unable to goto mirrored camera \"%s\" because the base camera definition \"%s\" cannot be found in \"%s\".\n", ce_autocamera_goto_camera->GetName(), name, cam->m_MirroredCamera.c_str(), m_ConfigFilename.c_str());
+			
+			return;
+		}
+
+		const Vector relativeBasePos = targetCam->m_Pos - m_MapOrigin;
+		const Vector mirroredPos = Vector(-relativeBasePos.x, -relativeBasePos.y, relativeBasePos.z) + m_MapOrigin;
+		const QAngle mirroredAng(
+			AngleNormalize(targetCam->m_DefaultAngle.x),
+			AngleNormalize(targetCam->m_DefaultAngle.y + 180),
+			AngleNormalize(targetCam->m_DefaultAngle.z));
+
+		ctools->SpecPosition(mirroredPos, mirroredAng);
+	}
+	else
+		ctools->SpecPosition(cam->m_Pos, cam->m_DefaultAngle);
 }
 
 int MapFlythroughs::GotoCameraCompletion(const char* const partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
 {
 	std::cmatch match;
-	const std::string regexString = strprintf("\\s*%s \\s*\"?(.*?)\"?\\s*$", GetModule()->ce_autocamera_goto_camera->GetName());
-	if (!std::regex_search(partial, match, std::regex(regexString, std::regex_constants::icase)))
+	const std::string regexString = strprintf("\\s*%s\\s+\"?(.*?)\"?\\s*$", GetModule()->ce_autocamera_goto_camera->GetName());
+
+	// Interesting... this only works if you pass a const char* to std::regex's constructor, and not if you pass an std::string.
+	if (!std::regex_search(partial, match, std::regex(regexString.c_str(), std::regex_constants::icase)))
 		return 0;
 	
 	MapFlythroughs* const mod = GetModule();
