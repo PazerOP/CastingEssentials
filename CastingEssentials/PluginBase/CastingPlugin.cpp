@@ -19,6 +19,7 @@
 #include "Modules/FreezeInfo.h"
 #include "Modules/Killstreaks.h"
 #include "Modules/LocalPlayer.h"
+#include "Modules/MapConfigs.h"
 #include "Modules/MapFlythroughs.h"
 #include "Modules/MedigunInfo.h"
 #include "Modules/PlayerAliases.h"
@@ -26,7 +27,7 @@
 #include "Modules/SteamTools.h"
 #include "Modules/TeamNames.h"
 
-const char* PLUGIN_VERSION_ID = "r7 final";
+const char* PLUGIN_VERSION_ID = "r8 final";
 const char* PLUGIN_FULL_VERSION = strdup(strprintf("%s %s", PLUGIN_NAME, PLUGIN_VERSION_ID).c_str());
 
 class CastingPlugin final : public Plugin
@@ -69,6 +70,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<FreezeInfo>("Freeze Info");
 	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
+	Modules().RegisterAndLoadModule<MapConfigs>("Map Configs");
 	Modules().RegisterAndLoadModule<MapFlythroughs>("Map Flythroughs");
 	Modules().RegisterAndLoadModule<MedigunInfo>("Medigun Info");
 	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");

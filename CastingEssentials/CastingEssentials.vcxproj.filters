@@ -120,6 +120,9 @@
     <ClCompile Include="Modules\CameraState.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\MapConfigs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -246,6 +249,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\CameraState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\MapConfigs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
