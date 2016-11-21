@@ -134,6 +134,8 @@ void MapFlythroughs::LoadConfig()
 
 void MapFlythroughs::LoadConfig(const char* bspName)
 {
+	debugoverlay->ClearAllOverlays();
+
 	m_MalformedTriggers.clear();
 	m_Triggers.clear();
 	m_MalformedCameras.clear();
