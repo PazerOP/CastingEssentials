@@ -45,7 +45,7 @@ private:
 	ConVar* m_TPXShift;
 	ConVar* m_TPYShift;
 	ConVar* m_TPZShift;
-	ConVar* m_TPLockAngles;
+	ConVar* m_TPLockEnabled;
 
 	ConVar* m_TPLockPitch;
 	ConVar* m_TPLockYaw;
@@ -57,6 +57,7 @@ private:
 
 	ConVar* m_TPLockBone;
 
+	ConVar* m_NextPlayerMode;
 	ConCommand* m_SpecClass;
 	ConCommand* m_SpecSteamID;
 

@@ -33,6 +33,20 @@ enum class TFClassType
 	Engineer
 };
 
+static constexpr const char* TF_CLASS_NAMES[] =
+{
+	"Unknown",
+	"Scout",
+	"Sniper",
+	"Soldier",
+	"Demoman",
+	"Medic",
+	"Heavy",
+	"Pyro",
+	"Spy",
+	"Engineer",
+};
+
 enum class TFTeam
 {
 	Unassigned = 0,

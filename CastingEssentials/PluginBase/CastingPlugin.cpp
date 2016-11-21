@@ -26,6 +26,9 @@
 #include "Modules/SteamTools.h"
 #include "Modules/TeamNames.h"
 
+const char* PLUGIN_VERSION_ID = "r7 final";
+const char* PLUGIN_FULL_VERSION = strdup(strprintf("%s %s", PLUGIN_NAME, PLUGIN_VERSION_ID).c_str());
+
 class CastingPlugin final : public Plugin
 {
 public:
@@ -34,7 +37,7 @@ public:
 
 	bool Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory) override;
 	void Unload() override;
-	const char* GetPluginDescription() override { return "CastingEssentials " PLUGIN_VERSION; }
+	const char* GetPluginDescription() override { return PLUGIN_FULL_VERSION; }
 };
 
 static CastingPlugin s_CastingPlugin;
@@ -43,7 +46,7 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CastingPlugin, IServerPluginCallbacks, INTERFA
 
 bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory)
 {
-	Msg("Hello from CastingEssentials %s!\n", PLUGIN_VERSION);
+	Msg("Hello from %s!\n", PLUGIN_FULL_VERSION);
 
 #ifdef DEBUG
 	//PluginMsg("_CrtCheckMemory() result: %i\n", _CrtCheckMemory());

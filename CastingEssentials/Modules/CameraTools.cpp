@@ -29,12 +29,12 @@ CameraTools::CameraTools()
 	m_ViewOverride = false;
 
 	ce_cameratools_show_mode = new ConVar("ce_cameratools_show_mode", "0", FCVAR_NONE, "Displays the current spec_mode in the top right corner of the screen.");
-	m_ForceMode = new ConVar("ce_cameratools_force_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceMode(var, pOldValue, flOldValue); });
+	m_ForceMode = new ConVar("ce_cameratools_autodirector_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceMode(var, pOldValue, flOldValue); });
 	m_ForceTarget = new ConVar("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceTarget(var, pOldValue, flOldValue); });
 	m_ForceValidTarget = new ConVar("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); });
 	m_SpecPlayerAlive = new ConVar("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players.");
 
-	m_TPLockAngles = new ConVar("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player.");
+	m_TPLockEnabled = new ConVar("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player.");
 
 	m_TPXShift = new ConVar("ce_tplock_xoffset", "18", FCVAR_NONE);
 	m_TPYShift = new ConVar("ce_tplock_yoffset", "20", FCVAR_NONE);
@@ -153,7 +153,7 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle)
 {
 	try
 	{
-		HLTVCameraOverride *hltvcamera = Interfaces::GetHLTVCamera();
+		HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 
 		hltvcamera->m_nCameraMode = OBS_MODE_FIXED;
 		hltvcamera->m_iCameraMan = 0;
@@ -197,11 +197,11 @@ void CameraTools::ShowUsers(const CCommand& command)
 
 	Msg("%i Players:\n", red.size() + blu.size());
 
-	for (size_t i = 0; i < blu.size(); i++)
-		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s\n", i, m_SpecSteamID->GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName().c_str());
-
 	for (size_t i = 0; i < red.size(); i++)
-		ConColorMsg(Color(255, 128, 128, 255), "    alias player_red%i \"%s %s\"		// %s\n", i, m_SpecSteamID->GetName(), RenderSteamID(red[i]->GetSteamID().ConvertToUint64()).c_str(), red[i]->GetName().c_str());
+		ConColorMsg(Color(255, 128, 128, 255), "    alias player_red%i \"%s %s\"		// %s (%s)\n", i, m_SpecSteamID->GetName(), RenderSteamID(red[i]->GetSteamID().ConvertToUint64()).c_str(), red[i]->GetName().c_str(), TF_CLASS_NAMES[(int)red[i]->GetClass()]);
+
+	for (size_t i = 0; i < blu.size(); i++)
+		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s (%s)\n", i, m_SpecSteamID->GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName().c_str(), TF_CLASS_NAMES[(int)blu[i]->GetClass()]);
 }
 
 void CameraTools::SpecClass(const CCommand& command)
@@ -327,6 +327,10 @@ void CameraTools::SpecPlayer(int playerIndex)
 			try
 			{
 				GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(player->GetEntity()->entindex());
+
+				HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
+				if (hltvcamera)
+					hltvcamera->m_nCameraMode = m_TPLockEnabled->GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE;
 			}
 			catch (bad_pointer &e)
 			{
@@ -343,19 +347,30 @@ void CameraTools::OnTick(bool inGame)
 		if (ce_cameratools_show_mode->GetBool())
 		{
 			int mode = -1;
+			int target = -1;
+			std::string playerName;
 			if (Interfaces::GetEngineClient()->IsHLTV())
+			{
 				mode = Interfaces::GetHLTVCamera()->m_nCameraMode;
+				target = Interfaces::GetHLTVCamera()->m_iTraget1;
+				if (Player::IsValidIndex(target) && Player::GetPlayer(target, __FUNCSIG__))
+					playerName = Player::GetPlayer(target, __FUNCSIG__)->GetName();
+			}
 			else
 			{
 				Player* local = Player::GetLocalPlayer();
 				if (local)
+				{
 					mode = local->GetObserverMode();
+				}
 			}
 
 			if (mode >= 0)
 			{
 				Interfaces::GetEngineClient()->Con_NPrintf(0, "Current spec_mode: %i %s",
 					mode, mode >= 0 && mode < NUM_OBSERVER_MODES ? s_ObserverModes[mode] : "INVALID");
+				Interfaces::GetEngineClient()->Con_NPrintf(1, "Current target: %i%s",
+					target, target == 0 ? " (None)" : (strprintf(" (%s)", playerName.c_str())));
 			}
 		}
 	}
@@ -438,7 +453,7 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 		idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, m_TPLockZDPS->GetFloat() * frametime);
 	}
 
-	const Vector idealPos = CalcPosForAngle(targetPos/*targetPlayer->GetEyePosition()*/, idealAngles);
+	const Vector idealPos = CalcPosForAngle(targetPos, idealAngles);
 
 	m_LastFrameAngle = idealAngles;
 	m_LastTargetPlayer = targetPlayer;
@@ -446,7 +461,7 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 	if (hltvcamera->m_nCameraMode != OBS_MODE_CHASE)
 		return false;
 
-	if (!m_TPLockAngles->GetBool())
+	if (!m_TPLockEnabled->GetBool())
 		return false;
 
 	m_ViewOverride = true;
@@ -521,13 +536,17 @@ void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flO
 
 void CameraTools::SetModeOverride(int iMode)
 {
-	const int forceMode = m_ForceMode->GetInt();
+	static ConVarRef spec_autodirector("spec_autodirector");
+	if (spec_autodirector.GetBool())
+	{
+		const int forceMode = m_ForceMode->GetInt();
 
-	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
-		iMode = forceMode;
+		if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
+			iMode = forceMode;
 
-	GetHooks()->GetOriginal<C_HLTVCamera_SetMode>()(iMode);
-	GetHooks()->GetHook<C_HLTVCamera_SetMode>()->SetState(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->GetOriginal<C_HLTVCamera_SetMode>()(iMode);
+		GetHooks()->GetHook<C_HLTVCamera_SetMode>()->SetState(Hooking::HookAction::SUPERCEDE);
+	}
 }
 
 void CameraTools::SetPrimaryTargetOverride(int nEntity)

@@ -6,7 +6,11 @@
 
 #pragma warning(disable : 4592)		// 'x': symbol will be dynamically initialized (implementation limitation)
 
-#define PLUGIN_VERSION "r6"
+//#define PLUGIN_VERSION "r7b1"
+
+static constexpr const char* PLUGIN_NAME = "CastingEssentials";
+extern const char* PLUGIN_VERSION_ID;
+extern const char* PLUGIN_FULL_VERSION;
 
 static constexpr const char* s_ObserverModes[] =
 {
@@ -20,6 +24,18 @@ static constexpr const char* s_ObserverModes[] =
 	"Free roaming",
 };
 
+static constexpr const char* s_ShortObserverModes[] =
+{
+	"None",
+	"Deathcam",
+	"Freezecam",
+	"Fixed",
+	"Firstperson",
+	"Thirdperson",
+	"POI",
+	"Roaming",
+};
+
 class CCommand;
 class ConVar;
 class Vector;
@@ -27,17 +43,17 @@ class QAngle;
 
 template<class... Parameters> __forceinline void PluginMsg(const char* fmt, Parameters... param)
 {
-	ConColorMsg(Color(0, 153, 153, 255), "[CastingEssentials] ");
+	ConColorMsg(Color(0, 153, 153, 255), "[%s] ", PLUGIN_NAME);
 	Msg(fmt, param...);
 }
 template<class... Parameters> __forceinline void PluginWarning(const char* fmt, Parameters... param)
 {
-	ConColorMsg(Color(0, 153, 153, 255), "[CastingEssentials] ");
+	ConColorMsg(Color(0, 153, 153, 255), "[%s] ", PLUGIN_NAME);
 	Warning(fmt, param...);
 }
 template<class... Parameters> __forceinline void PluginColorMsg(const Color& color, const char* fmt, Parameters... param)
 {
-	ConColorMsg(Color(0, 153, 153, 255), "[CastingEssentials] ");
+	ConColorMsg(Color(0, 153, 153, 255), "[%s] ", PLUGIN_NAME);
 	ConColorMsg(color, fmt, param...);
 }
 
