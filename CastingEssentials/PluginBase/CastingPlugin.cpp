@@ -34,7 +34,7 @@ public:
 
 	bool Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory) override;
 	void Unload() override;
-	const char* GetPluginDescription() override { return "CastingEssentials"; }
+	const char* GetPluginDescription() override { return "CastingEssentials " PLUGIN_VERSION; }
 };
 
 static CastingPlugin s_CastingPlugin;
@@ -43,7 +43,7 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CastingPlugin, IServerPluginCallbacks, INTERFA
 
 bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory)
 {
-	Msg("Hello from CastingEssentials!\n");
+	Msg("Hello from CastingEssentials %s!\n", PLUGIN_VERSION);
 
 #ifdef DEBUG
 	//PluginMsg("_CrtCheckMemory() result: %i\n", _CrtCheckMemory());

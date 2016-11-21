@@ -186,6 +186,8 @@ void MapFlythroughs::LoadConfig(const char* bspName)
 		LoadStoryboard(storyboard, m_ConfigFilename.c_str());
 	}
 
+	SetupMirroredCameras();
+
 	PluginMsg("Loaded autocameras from %s.\n", m_ConfigFilename.c_str());
 }
 
@@ -268,7 +270,7 @@ bool MapFlythroughs::LoadCamera(KeyValues* const camera, const char* const filen
 	const char* const mirror = camera->GetString("mirror", nullptr);
 	if (mirror)
 	{
-		newCamera->m_MirroredCamera = mirror;
+		newCamera->m_MirroredCameraName = mirror;
 	}
 	else
 	{
@@ -647,30 +649,7 @@ void MapFlythroughs::GotoCamera(const CCommand& args)
 		return;
 	}
 
-	if (!cam->m_MirroredCamera.empty())
-	{
-		auto const targetCam = FindCamera(cam->m_MirroredCamera.c_str());
-		if (!targetCam)
-		{
-			if (FindContainedString(m_MalformedCameras, cam->m_MirroredCamera.c_str()))
-				Warning("%s: Unable to goto mirrored camera \"%s\" because its base \"%s\" is malformed in \"%s\".\n", ce_autocamera_goto_camera->GetName(), name, cam->m_MirroredCamera.c_str(), m_ConfigFilename.c_str());
-			else
-				Warning("%s: Unable to goto mirrored camera \"%s\" because the base camera definition \"%s\" cannot be found in \"%s\".\n", ce_autocamera_goto_camera->GetName(), name, cam->m_MirroredCamera.c_str(), m_ConfigFilename.c_str());
-			
-			return;
-		}
-
-		const Vector relativeBasePos = targetCam->m_Pos - m_MapOrigin;
-		const Vector mirroredPos = Vector(-relativeBasePos.x, -relativeBasePos.y, relativeBasePos.z) + m_MapOrigin;
-		const QAngle mirroredAng(
-			AngleNormalize(targetCam->m_DefaultAngle.x),
-			AngleNormalize(targetCam->m_DefaultAngle.y + 180),
-			AngleNormalize(targetCam->m_DefaultAngle.z));
-
-		ctools->SpecPosition(mirroredPos, mirroredAng);
-	}
-	else
-		ctools->SpecPosition(cam->m_Pos, cam->m_DefaultAngle);
+	ctools->SpecPosition(cam->m_Pos, cam->m_DefaultAngle);
 }
 
 int MapFlythroughs::GotoCameraCompletion(const char* const partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
@@ -746,12 +725,13 @@ void MapFlythroughs::DrawCameras()
 		{
 			constexpr float farDistance = 512;
 			constexpr float viewRatio = 16.0 / 9.0;
+			constexpr float halfFOV = Deg2Rad(75 / 2.0);
 
 			// Compute the center points of the near and far planes
 			const Vector farCenter = camera->m_Pos + forward * farDistance;
 			
 			// Compute the widths and heights of the near and far planes:
-			const float farHeight = 2 * std::tanf(DEG2RAD(45) / 2) * farDistance;
+			const float farHeight = 2 * (std::tanf(halfFOV) * farDistance);
 			const float farWidth = farHeight * viewRatio;
 
 			// Compute the corner points from the near and far planes:
@@ -819,6 +799,33 @@ std::vector<std::shared_ptr<const MapFlythroughs::Camera>> MapFlythroughs::GetAl
 	}
 
 	return retVal;
+}
+
+void MapFlythroughs::SetupMirroredCameras()
+{
+	for (auto camera : m_Cameras)
+	{
+		if (camera->m_MirroredCameraName.empty())
+			continue;
+
+		const auto camToMirror = FindCamera(camera->m_MirroredCameraName.c_str());
+		if (!camToMirror)
+		{
+			if (FindContainedString(m_MalformedCameras, camera->m_MirroredCameraName.c_str()))
+				PluginWarning("Unable to mirror camera \"%s\" because its base \"%s\" is malformed in \"%s\".\n", camera->m_Name.c_str(), camera->m_MirroredCameraName.c_str(), m_ConfigFilename.c_str());
+			else
+				PluginWarning("Unable to mirror camera \"%s\" because the base camera definition \"%s\" cannot be found in \"%s\".\n", camera->m_Name.c_str(), camera->m_MirroredCameraName.c_str(), m_ConfigFilename.c_str());
+
+			continue;
+		}
+
+		const Vector relativeBasePos = camToMirror->m_Pos - m_MapOrigin;
+		camera->m_Pos = Vector(-relativeBasePos.x, -relativeBasePos.y, relativeBasePos.z) + m_MapOrigin;
+		camera->m_DefaultAngle = QAngle(
+			AngleNormalize(camToMirror->m_DefaultAngle.x),
+			AngleNormalize(camToMirror->m_DefaultAngle.y + 180),
+			AngleNormalize(camToMirror->m_DefaultAngle.z));
+	}
 }
 
 bool MapFlythroughs::FindContainedString(const std::vector<std::string>& vec, const char* str)

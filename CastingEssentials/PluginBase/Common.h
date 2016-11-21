@@ -6,7 +6,7 @@
 
 #pragma warning(disable : 4592)		// 'x': symbol will be dynamically initialized (implementation limitation)
 
-#define PLUGIN_VERSION "0.1"
+#define PLUGIN_VERSION "r6"
 
 static constexpr const char* s_ObserverModes[] =
 {

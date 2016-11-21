@@ -89,12 +89,16 @@ private:
 		std::string m_Name;
 		Vector m_Pos;
 		QAngle m_DefaultAngle;
-		std::string m_MirroredCamera;
+
+		std::string m_MirroredCameraName;
+		Camera* m_CameraToMirror;
 	};
 	std::vector<std::shared_ptr<Camera>> m_Cameras;
 	std::vector<std::string> m_MalformedCameras;
 	std::shared_ptr<Camera> FindCamera(const char* cameraName);
 	std::vector<std::shared_ptr<const Camera>> GetAlphabeticalCameras() const;
+
+	void SetupMirroredCameras();
 
 	struct StoryboardElement
 	{
