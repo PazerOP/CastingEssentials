@@ -14,6 +14,7 @@ enum class TFTeam;
 class IClientEntity;
 class C_BaseEntity;
 class C_BaseCombatWeapon;
+class C_BaseAnimating;
 
 class Player final
 {
@@ -30,6 +31,8 @@ public:
 	static bool IsConditionsRetrievalAvailable() { return s_ConditionsRetrievalAvailable; }
 
 	IClientEntity* GetEntity() const { return m_PlayerEntity.Get(); }
+	C_BaseEntity* GetBaseEntity() const;
+	C_BaseAnimating* GetBaseAnimating() const;
 
 	bool CheckCondition(TFCond condition) const;
 	TFClassType GetClass() const;

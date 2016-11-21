@@ -143,6 +143,18 @@ CSteamID Player::GetSteamID() const
 	return CSteamID();
 }
 
+C_BaseEntity * Player::GetBaseEntity() const
+{
+	auto entity = GetEntity();
+	return entity ? entity->GetBaseEntity() : nullptr;
+}
+
+C_BaseAnimating * Player::GetBaseAnimating() const
+{
+	auto entity = GetBaseEntity();
+	return entity ? entity->GetBaseAnimating() : nullptr;
+}
+
 bool Player::CheckCondition(TFCond condition) const
 {
 	if (IsValid())

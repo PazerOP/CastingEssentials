@@ -17,6 +17,7 @@
 #include <client/hltvcamera.h>
 #include <toolframework/ienginetool.h>
 #include <util_shared.h>
+#include <client/c_baseanimating.h>
 
 CameraTools::CameraTools()
 {
@@ -35,9 +36,9 @@ CameraTools::CameraTools()
 
 	m_TPLockAngles = new ConVar("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player.");
 
-	m_TPXShift = new ConVar("ce_tplock_xoffset", "20", FCVAR_NONE);
-	m_TPYShift = new ConVar("ce_tplock_yoffset", "-10", FCVAR_NONE);
-	m_TPZShift = new ConVar("ce_tplock_zoffset", "-40", FCVAR_NONE);
+	m_TPXShift = new ConVar("ce_tplock_xoffset", "18", FCVAR_NONE);
+	m_TPYShift = new ConVar("ce_tplock_yoffset", "20", FCVAR_NONE);
+	m_TPZShift = new ConVar("ce_tplock_zoffset", "-80", FCVAR_NONE);
 
 	m_TPLockPitch = new ConVar("ce_tplock_force_pitch", "0", FCVAR_NONE, "Value to force pitch to. Blank to follow player's eye angles.");
 	m_TPLockYaw = new ConVar("ce_tplock_force_yaw", "", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles.");
@@ -46,6 +47,8 @@ CameraTools::CameraTools()
 	m_TPLockXDPS = new ConVar("ce_tplock_dps_pitch", "360", FCVAR_NONE, "Max degrees per second for pitch.");
 	m_TPLockYDPS = new ConVar("ce_tplock_dps_yaw", "360", FCVAR_NONE, "Max degrees per second for yaw.");
 	m_TPLockZDPS = new ConVar("ce_tplock_dps_roll", "360", FCVAR_NONE, "Max degrees per second for roll.");
+
+	m_TPLockBone = new ConVar("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings.");
 
 	m_SpecPosition = new ConCommand("ce_cameratools_spec_pos", [](const CCommand& args) { GetModule()->SpecPosition(args); }, "Moves the camera to a given position.");
 
@@ -401,6 +404,23 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 		return false;
 	}
 
+	C_BaseAnimating* baseAnimating = targetPlayer->GetBaseAnimating();
+	if (!baseAnimating)
+		return false;
+
+	const Vector targetPos;
+	const int targetBone = baseAnimating->LookupBone(m_TPLockBone->GetString());
+	if (targetBone < 0)
+	{
+		DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", m_TPLockBone->GetString());
+		const_cast<Vector&>(targetPos) = targetPlayer->GetEyePosition();
+	}
+	else
+	{
+		QAngle dummy;
+		baseAnimating->GetBonePosition(targetBone, const_cast<Vector&>(targetPos), dummy);
+	}
+
 	QAngle idealAngles = targetPlayer->GetEyeAngles();
 
 	if (!IsStringEmpty(m_TPLockPitch->GetString()))
@@ -418,7 +438,7 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 		idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, m_TPLockZDPS->GetFloat() * frametime);
 	}
 
-	const Vector idealPos = CalcPosForAngle(targetPlayer->GetEyePosition(), idealAngles);
+	const Vector idealPos = CalcPosForAngle(targetPos/*targetPlayer->GetEyePosition()*/, idealAngles);
 
 	m_LastFrameAngle = idealAngles;
 	m_LastTargetPlayer = targetPlayer;

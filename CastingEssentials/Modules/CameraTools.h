@@ -55,6 +55,8 @@ private:
 	ConVar* m_TPLockYDPS;
 	ConVar* m_TPLockZDPS;
 
+	ConVar* m_TPLockBone;
+
 	ConCommand* m_SpecClass;
 	ConCommand* m_SpecSteamID;
 

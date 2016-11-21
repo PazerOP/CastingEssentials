@@ -26,6 +26,10 @@ class IClientNetworkable;
 class CBaseEntityList;
 class IHandleEntity;
 class IPrediction;
+class C_BaseAnimating;
+class CStudioHdr;
+class CBoneCache;
+struct matrix3x4_t;
 
 class HookManager final
 {
@@ -49,7 +53,13 @@ class HookManager final
 		C_HLTVCamera_SetMode,
 		C_HLTVCamera_SetPrimaryTarget,
 
+		C_BaseAnimating_GetBoneCache,
+		C_BaseAnimating_LockStudioHdr,
+		C_BaseAnimating_LookupBone,
+		C_BaseAnimating_GetBonePosition,
+
 		C_BaseEntity_Init,
+		C_BaseEntity_CalcAbsolutePosition,
 
 		Global_CreateEntityByName,
 		Global_GetLocalPlayerIndex,
@@ -159,6 +169,11 @@ class HookManager final
 	typedef void(__thiscall *RawSetCameraAngleFn)(C_HLTVCamera*, const QAngle&);
 	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);
 	typedef void(__thiscall *RawSetPrimaryTargetFn)(C_HLTVCamera*, int);
+	typedef CBoneCache*(__thiscall *RawGetBoneCacheFn)(C_BaseAnimating*, CStudioHdr*);
+	typedef void(__thiscall *RawLockStudioHdrFn)(C_BaseAnimating*);
+	typedef void(__thiscall *RawCalcAbsolutePositionFn)(C_BaseEntity*);
+	typedef int(__thiscall *RawLookupBoneFn)(C_BaseAnimating*, const char*);
+	typedef void(__thiscall *RawGetBonePositionFn)(C_BaseAnimating*, int, Vector&, QAngle&);
 	typedef int(*RawGetLocalPlayerIndexFn)();
 	typedef C_BaseEntity*(__cdecl *RawCreateEntityByNameFn)(const char* entityName);
 	typedef IClientNetworkable*(__cdecl *RawCreateTFGlowObjectFn)(int entNum, int serialNum);
@@ -167,6 +182,11 @@ class HookManager final
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
 	static RawSetPrimaryTargetFn GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
+	static RawGetBoneCacheFn GetRawFunc_C_BaseAnimating_GetBoneCache();
+	static RawLockStudioHdrFn GetRawFunc_C_BaseAnimating_LockStudioHdr();
+	static RawCalcAbsolutePositionFn GetRawFunc_C_BaseEntity_CalcAbsolutePosition();
+	static RawLookupBoneFn GetRawFunc_C_BaseAnimating_LookupBone();
+	static RawGetBonePositionFn GetRawFunc_C_BaseAnimating_GetBonePosition();
 	static RawGetLocalPlayerIndexFn GetRawFunc_Global_GetLocalPlayerIndex();
 	static RawCreateEntityByNameFn GetRawFunc_Global_CreateEntityByName();
 	static RawBaseEntityInitFn GetRawFunc_C_BaseEntity_Init();
@@ -196,7 +216,13 @@ public:
 	typedef ClassHook<Func::C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> C_HLTVCamera_SetMode;
 	typedef ClassHook<Func::C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> C_HLTVCamera_SetPrimaryTarget;
 
+	typedef GlobalClassHook<Func::C_BaseAnimating_GetBoneCache, false, C_BaseAnimating, CBoneCache*, CStudioHdr*> C_BaseAnimating_GetBoneCache;
+	typedef GlobalClassHook<Func::C_BaseAnimating_LockStudioHdr, false, C_BaseAnimating, void> C_BaseAnimating_LockStudioHdr;
+	typedef GlobalClassHook<Func::C_BaseAnimating_LookupBone, false, C_BaseAnimating, int, const char*> C_BaseAnimating_LookupBone;
+	typedef GlobalClassHook<Func::C_BaseAnimating_GetBonePosition, false, C_BaseAnimating, void, int, Vector&, QAngle&> C_BaseAnimating_GetBonePosition;
+
 	typedef GlobalClassHook<Func::C_BaseEntity_Init, false, C_BaseEntity, bool, int, int> C_BaseEntity_Init;
+	typedef GlobalClassHook<Func::C_BaseEntity_CalcAbsolutePosition, false, C_BaseEntity, void> C_BaseEntity_CalcAbsolutePosition;
 
 	typedef GlobalHook<Func::Global_GetLocalPlayerIndex, false, int> Global_GetLocalPlayerIndex;
 	typedef GlobalHook<Func::Global_CreateEntityByName, false, C_BaseEntity*, const char*> Global_CreateEntityByName;
@@ -303,7 +329,13 @@ using C_HLTVCamera_SetCameraAngle = HookManager::C_HLTVCamera_SetCameraAngle;
 using C_HLTVCamera_SetMode = HookManager::C_HLTVCamera_SetMode;
 using C_HLTVCamera_SetPrimaryTarget = HookManager::C_HLTVCamera_SetPrimaryTarget;
 
+using C_BaseAnimating_GetBoneCache = HookManager::C_BaseAnimating_GetBoneCache;
+using C_BaseAnimating_LockStudioHdr = HookManager::C_BaseAnimating_LockStudioHdr;
+using C_BaseAnimating_LookupBone = HookManager::C_BaseAnimating_LookupBone;
+using C_BaseAnimating_GetBonePosition = HookManager::C_BaseAnimating_GetBonePosition;
+
 using C_BaseEntity_Init = HookManager::C_BaseEntity_Init;
+using C_BaseEntity_CalcAbsolutePosition = HookManager::C_BaseEntity_CalcAbsolutePosition;
 
 using Global_GetLocalPlayerIndex = HookManager::Global_GetLocalPlayerIndex;
 using Global_CreateEntityByName = HookManager::Global_CreateEntityByName;
@@ -329,6 +361,38 @@ template<> inline C_HLTVCamera_SetPrimaryTarget::Functional HookManager::GetFunc
 	return std::bind(
 		[](RawSetPrimaryTargetFn func, C_HLTVCamera* pThis, int target) { func(pThis, target); },
 		GetRawFunc_C_HLTVCamera_SetPrimaryTarget(), GetHLTVCamera(), std::placeholders::_1);
+}
+
+template<> inline C_BaseAnimating_GetBoneCache::Functional HookManager::GetFunc<C_BaseAnimating_GetBoneCache>()
+{
+	return std::bind(
+		[](RawGetBoneCacheFn func, C_BaseAnimating* pThis, CStudioHdr* pStudioHdr) { return func(pThis, pStudioHdr); },
+		GetRawFunc_C_BaseAnimating_GetBoneCache(), std::placeholders::_1, std::placeholders::_2);
+}
+template<> inline C_BaseAnimating_LockStudioHdr::Functional HookManager::GetFunc<C_BaseAnimating_LockStudioHdr>()
+{
+	return std::bind(
+		[](RawLockStudioHdrFn func, C_BaseAnimating* pThis) { func(pThis); },
+		GetRawFunc_C_BaseAnimating_LockStudioHdr(), std::placeholders::_1);
+}
+template<> inline C_BaseAnimating_LookupBone::Functional HookManager::GetFunc<C_BaseAnimating_LookupBone>()
+{
+	return std::bind(
+		[](RawLookupBoneFn func, C_BaseAnimating* pThis, const char* szName) { return func(pThis, szName); },
+		GetRawFunc_C_BaseAnimating_LookupBone(), std::placeholders::_1, std::placeholders::_2);
+}
+template<> inline C_BaseAnimating_GetBonePosition::Functional HookManager::GetFunc<C_BaseAnimating_GetBonePosition>()
+{
+	return std::bind(
+		[](RawGetBonePositionFn func, C_BaseAnimating* pThis, int iBone, Vector& origin, QAngle& angles) { return func(pThis, iBone, origin, angles); },
+		GetRawFunc_C_BaseAnimating_GetBonePosition(), std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
+}
+
+template<> inline C_BaseEntity_CalcAbsolutePosition::Functional HookManager::GetFunc<C_BaseEntity_CalcAbsolutePosition>()
+{
+	return std::bind(
+		[](RawCalcAbsolutePositionFn func, C_BaseEntity* pThis) { func(pThis); },
+		GetRawFunc_C_BaseEntity_CalcAbsolutePosition(), std::placeholders::_1);
 }
 
 template<> inline Global_GetLocalPlayerIndex::Functional HookManager::GetFunc<Global_GetLocalPlayerIndex>()

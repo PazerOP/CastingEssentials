@@ -143,6 +143,91 @@ HookManager::RawSetPrimaryTargetFn HookManager::GetRawFunc_C_HLTVCamera_SetPrima
 	return s_SetPrimaryTargetFn;
 }
 
+HookManager::RawGetBoneCacheFn HookManager::GetRawFunc_C_BaseAnimating_GetBoneCache()
+{
+	static RawGetBoneCacheFn s_GetBoneCacheFn = nullptr;
+	if (!s_GetBoneCacheFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x83\xEC\x10\x56\x8B\xF1\x57\xFF\xB6";
+		constexpr const char* MASK = "xxxxxxxxxxxx";
+
+		s_GetBoneCacheFn = (RawGetBoneCacheFn)SignatureScan("client", SIG, MASK);
+
+		if (!s_GetBoneCacheFn)
+			throw bad_pointer("C_BaseAnimating::GetBoneCache");
+	}
+
+	return s_GetBoneCacheFn;
+}
+
+HookManager::RawLockStudioHdrFn HookManager::GetRawFunc_C_BaseAnimating_LockStudioHdr()
+{
+	static RawLockStudioHdrFn s_LockStudioHdrFn = nullptr;
+	if (!s_LockStudioHdrFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x83\xEC\x20\x56\x57\x6A\x01\x68\x00\x00\x00\x00\x8B\xF1";
+		constexpr const char* MASK = "xxxxxxxxxxx????xx";
+
+		s_LockStudioHdrFn = (RawLockStudioHdrFn)SignatureScan("client", SIG, MASK);
+
+		if (!s_LockStudioHdrFn)
+			throw bad_pointer("C_BaseAnimating::LockStudioHdr");
+	}
+
+	return s_LockStudioHdrFn;
+}
+
+HookManager::RawCalcAbsolutePositionFn HookManager::GetRawFunc_C_BaseEntity_CalcAbsolutePosition()
+{
+	static RawCalcAbsolutePositionFn s_CalcAbsolutePositionFn = nullptr;
+	if (!s_CalcAbsolutePositionFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x81\xEC\x00\x00\x00\x00\x80\x3D\x00\x00\x00\x00\x00\x53\x8B\xD9\x0F\x84";
+		constexpr const char* MASK = "xxxxx????xx?????xxxxx";
+
+		s_CalcAbsolutePositionFn = (RawCalcAbsolutePositionFn)SignatureScan("client", SIG, MASK);
+
+		if (!s_CalcAbsolutePositionFn)
+			throw bad_pointer("C_BaseEntity::CalcAbsolutePosition");
+	}
+
+	return s_CalcAbsolutePositionFn;
+}
+
+HookManager::RawLookupBoneFn HookManager::GetRawFunc_C_BaseAnimating_LookupBone()
+{
+	static RawLookupBoneFn s_LookupBoneFn = nullptr;
+	if (!s_LookupBoneFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x56\x8B\xF1\x80\xBE\x00\x00\x00\x00\x00\x74\x13\xFF\x75\x08\x33\xC0\x50\xE8\x00\x00\x00\x00\x83\xC4\x08\x5E\x5D\xC2\x04\x00\x83\xBE\x00\x00\x00\x00\x00\x75\x05\xE8\x00\x00\x00\x00\xFF\x75\x08\x8B\x86\x00\x00\x00\x00\x50\xE8\x00\x00\x00\x00\x83\xC4\x08\x5E\x5D\xC2\x04\x00";
+		constexpr const char* MASK = "xxxxxxxx?????xxxxxxxxx????xxxxxxxxxx?????xxx????xxxxx????xx????xxxxxxxx";
+
+		s_LookupBoneFn = (RawLookupBoneFn)SignatureScan("client", SIG, MASK);
+
+		if (!s_LookupBoneFn)
+			throw bad_pointer("C_BaseAnimating::LookupBone");
+	}
+
+	return s_LookupBoneFn;
+}
+
+HookManager::RawGetBonePositionFn HookManager::GetRawFunc_C_BaseAnimating_GetBonePosition()
+{
+	static RawGetBonePositionFn s_GetBonePositionFn = nullptr;
+	if (!s_GetBonePositionFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x83\xEC\x30\x56\x6A\x00";
+		constexpr const char* MASK = "xxxxxxxxx";
+
+		s_GetBonePositionFn = (RawGetBonePositionFn)SignatureScan("client", SIG, MASK);
+
+		if (!s_GetBonePositionFn)
+			throw bad_pointer("C_BaseAnimating::GetBoneTransform");
+	}
+
+	return s_GetBonePositionFn;
+}
+
 HookManager::RawGetLocalPlayerIndexFn HookManager::GetRawFunc_Global_GetLocalPlayerIndex()
 {
 	static RawGetLocalPlayerIndexFn s_GetLocalPlayerIndexFn = nullptr;

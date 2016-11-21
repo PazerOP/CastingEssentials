@@ -147,7 +147,7 @@ void MapFlythroughs::LoadConfig(const char* bspName)
 
 	KeyValuesAD kv("AutoCameras");
 	m_ConfigFilename = strprintf("addons/castingessentials/autocameras/%s.vdf", mapName.c_str());
-	if (!kv->LoadFromFile(Interfaces::GetFileSystem(), m_ConfigFilename.c_str()))
+	if (!kv->LoadFromFile(Interfaces::GetFileSystem(), m_ConfigFilename.c_str(), nullptr, true))
 	{
 		PluginWarning("Unable to load autocameras from %s!\n", m_ConfigFilename.c_str());
 		return;

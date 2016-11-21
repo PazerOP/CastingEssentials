@@ -1,4 +1,5 @@
 #include "PluginBase/Interfaces.h"
+#include "PluginBase/HookManager.h"
 
 #include <client/c_baseentity.h>
 #include <client/c_baseplayer.h>
@@ -9,8 +10,12 @@
 #include <engine/ivdebugoverlay.h>
 #include <engine/ivmodelinfo.h>
 #include <networkvar.h>
+#include <bone_setup.h>
 
 ConVar r_visualizetraces("r_visualizetraces", "0", FCVAR_CHEAT);
+
+bool C_BaseEntity::s_bAbsQueriesValid = true;
+bool C_BaseEntity::s_bAbsRecomputationEnabled = true;
 
 bool StandardFilterRules(IHandleEntity *pHandleEntity, int fContentsMask)
 {
@@ -253,4 +258,25 @@ bool IsBoxIntersectingBox(const Vector& boxMin1, const Vector& boxMax1,
 	if ((boxMin1[2] > boxMax2[2]) || (boxMax1[2] < boxMin2[2]))
 		return false;
 	return true;
+}
+
+void C_BaseAnimating::GetBonePosition(int iBone, Vector &origin, QAngle &angles)
+{
+	return GetHooks()->GetFunc<C_BaseAnimating_GetBonePosition>()(this, iBone, origin, angles);
+}
+void C_BaseEntity::CalcAbsolutePosition()
+{
+	return GetHooks()->GetFunc<C_BaseEntity_CalcAbsolutePosition>()(this);
+}
+int C_BaseAnimating::LookupBone(const char* szName)
+{
+	return GetHooks()->GetFunc<C_BaseAnimating_LookupBone>()(this, szName);
+}
+CBoneCache* C_BaseAnimating::GetBoneCache(CStudioHdr* hdr)
+{
+	return GetHooks()->GetFunc<C_BaseAnimating_GetBoneCache>()(this, hdr);
+}
+void C_BaseAnimating::LockStudioHdr()
+{
+	return GetHooks()->GetFunc<C_BaseAnimating_LockStudioHdr>()(this);
 }

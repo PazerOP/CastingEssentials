@@ -9,6 +9,7 @@
 
 class ConVar;
 class IConVar;
+class C_BaseEntity;
 
 class CameraSmooths : public Module
 {

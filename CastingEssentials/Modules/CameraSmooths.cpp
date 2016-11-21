@@ -260,6 +260,9 @@ bool CameraSmooths::IsThirdPersonCameraOverride()
 
 bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov)
 {
+	if (!enabled->GetBool())
+		return false;
+
 	if (!Interfaces::GetEngineClient()->IsHLTV())
 		return false;
 
