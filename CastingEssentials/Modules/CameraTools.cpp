@@ -163,6 +163,9 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle)
 		hltvcamera->m_iTraget2 = 0;
 		hltvcamera->m_flLastAngleUpdateTime = -1;
 
+		static ConVarRef fov_desired("fov_desired");
+		hltvcamera->m_flFOV = fov_desired.GetFloat();
+
 		GetHooks()->GetFunc<C_HLTVCamera_SetCameraAngle>()(hltvcamera->m_aCamAngle);
 	}
 	catch (bad_pointer &e)
