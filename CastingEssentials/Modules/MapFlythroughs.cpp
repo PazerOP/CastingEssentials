@@ -1,5 +1,6 @@
 #include "MapFlythroughs.h"
 #include "Misc/DebugOverlay.h"
+#include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -30,6 +31,7 @@ MapFlythroughs::MapFlythroughs()
 
 	ce_autocamera_mark_camera = new ConCommand("ce_autocamera_create", [](const CCommand& args) { GetModule()->MarkCamera(args); });
 	ce_autocamera_goto_camera = new ConCommand("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &MapFlythroughs::GotoCameraCompletion);
+	ce_autocamera_cycle = new ConCommand("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); }, "Switches to the next or previous autocamera. If not currently in an autocamera, switches to the nearest autocamera with a view of the current position.");
 
 	ce_autocamera_reload_config = new ConCommand("ce_autocamera_reload_config", [](const CCommand& args) { GetModule()->LoadConfig(); });
 
@@ -624,15 +626,171 @@ void MapFlythroughs::MarkCamera(const CCommand& args)
 		args.Arg(1), pos.x, pos.y, pos.z, angString.c_str());
 }
 
-void MapFlythroughs::GotoCamera(const CCommand& args)
+constexpr vec_t BitsToFloat_cx(unsigned long i)
+{
+	return *reinterpret_cast<vec_t*>(&i);
+}
+
+void MapFlythroughs::CycleCamera(const CCommand& args)
+{
+	if (m_Cameras.size() < 1)
+	{
+		Warning("%s: No defined cameras for this map!\n", ce_autocamera_cycle->GetName());
+		return;
+	}
+
+	if (args.ArgC() != 2)
+		goto Usage;
+
+	enum Direction
+	{
+		NEXT,
+		PREV,
+	} dir;
+
+	// Get direction from arguments
+	if (!strnicmp(args.Arg(1), "next", 4))
+		dir = NEXT;
+	else if (!strnicmp(args.Arg(1), "prev", 4))
+		dir = PREV;
+	else
+		goto Usage;
+
+	// Get current camera origin
+	const Vector camOrigin;
+	{
+		QAngle dummy;
+		Assert(CameraState::GetModule());
+		if (CameraState::GetModule())
+			CameraState::GetModule()->GetThisFramePluginView(const_cast<Vector&>(camOrigin), dummy);
+	}
+
+	// Find an existing autocamera with the current origin, then go backwards/forwards (based on file order)
+	{
+		bool matchedPos = false;
+		std::shared_ptr<Camera> prevCamera;
+		for (const auto& camera : m_Cameras)
+		{
+			if (AlmostEqual(camera->m_Pos, camOrigin))
+			{
+				matchedPos = true;
+
+				if (dir == PREV)
+				{
+					if (prevCamera)
+						return GotoCamera(prevCamera);
+					else
+						break;
+				}
+				else if (dir == NEXT)
+				{
+					prevCamera = camera;
+					continue;
+				}
+			}
+
+			if (dir == PREV)
+				prevCamera = camera;
+			else if (dir == NEXT && prevCamera)
+				return GotoCamera(camera);
+		}
+
+		if (matchedPos)
+		{
+			// If we made it here, there's an edge case where we were asked to go backward from
+			// the start of the list, or forward from the end of the list.
+			if (dir == PREV && !prevCamera)
+				return GotoCamera(m_Cameras.back());
+			else if (dir == NEXT && prevCamera == m_Cameras.back())
+				return GotoCamera(m_Cameras.front());
+			else
+				Error("[%s:%i] wat\n", __FUNCSIG__, __LINE__);
+		}
+	}
+
+	// If we're here, our camera position didn't match any autocamera definitions. Find autocameras
+	// with line of sight to the current position.
+	{
+		const Vector boxMins(camOrigin - Vector(0.5));
+		const Vector boxMaxs(camOrigin + Vector(0.5));
+
+		std::shared_ptr<Camera> idealCamera;
+		std::shared_ptr<Camera> idealCameraLOS;
+		for (const auto& camera : m_Cameras)
+		{
+			const auto idealCameraDist = idealCamera ? idealCamera->m_Pos.DistTo(camOrigin) : FLOAT32_NAN;
+			const auto idealCameraLOSDist = idealCameraLOS ? idealCameraLOS->m_Pos.DistTo(camOrigin) : FLOAT32_NAN;
+			const auto thisDist = camera->m_Pos.DistTo(camOrigin);
+
+			if (idealCameraLOS && (dir == NEXT) ? (idealCameraLOSDist < thisDist) : (idealCameraLOSDist > thisDist))
+				continue;	// Already have a better camera with LOS
+
+			constexpr float test = 100000;
+			Frustum_t frustum;
+			GeneratePerspectiveFrustum(camera->m_Pos, camera->m_DefaultAngle, 1, 100000, 90, (16.0 / 9.0), frustum);
+			
+			if (!R_CullBox(boxMins, boxMaxs, frustum))
+				continue;	// Not in frustum
+
+			CTraceFilterNoNPCsOrPlayer noPlayers(nullptr, COLLISION_GROUP_NONE);
+			trace_t tr;
+			UTIL_TraceLine(camera->m_Pos, camOrigin, MASK_OPAQUE, &noPlayers, &tr);
+
+			if (tr.fraction >= 1)
+			{
+				if (!idealCameraLOS || (dir == NEXT) ? (idealCameraLOSDist > thisDist) : (idealCameraLOSDist < thisDist))
+					idealCameraLOS = idealCamera = camera;
+			}
+			else if (!idealCamera || (dir == NEXT) ? (idealCameraDist > thisDist) : (idealCameraDist < thisDist))
+				idealCamera = camera;
+		}
+
+		if (idealCameraLOS)
+			return GotoCamera(idealCameraLOS);
+		else if (idealCamera)
+			return GotoCamera(idealCamera);
+	}
+
+	// If we're here, nobody was looking at this point, regardless of LOS :(
+	// Find the nearest/furthest camera.
+	{
+		std::shared_ptr<Camera> idealCamera;
+		for (const auto& camera : m_Cameras)
+		{
+			const auto idealCameraDist = idealCamera ? idealCamera->m_Pos.DistTo(camOrigin) : FLOAT32_NAN;
+			const auto thisDist = camera->m_Pos.DistTo(camOrigin);
+
+			if (idealCamera && (dir == NEXT) ? (idealCameraDist < thisDist) : (idealCameraDist > thisDist))
+				continue;	// Already have a better camera
+
+			idealCamera = camera;
+		}
+
+		if (idealCamera)
+			return GotoCamera(idealCamera);
+	}
+
+	Warning("%s: Unable to navigate to a camera for some reason.\n", ce_autocamera_cycle->GetName());
+	return;
+
+Usage:
+	Warning("%s: Usage: %s <prev/next>\n", ce_autocamera_cycle->GetName(), ce_autocamera_cycle->GetName());
+}
+
+void MapFlythroughs::GotoCamera(const std::shared_ptr<Camera>& camera)
 {
 	CameraTools* const ctools = CameraTools::GetModule();
 	if (!ctools)
 	{
-		PluginWarning("%s: Camera Tools module unavailable!\n", ce_autocamera_goto_camera->GetName());
+		PluginWarning("%s: Camera Tools module unavailable!\n", __FUNCSIG__);
 		return;
 	}
 
+	ctools->SpecPosition(camera->m_Pos, camera->m_DefaultAngle);
+}
+
+void MapFlythroughs::GotoCamera(const CCommand& args)
+{
 	if (args.ArgC() != 2)
 	{
 		Warning("Usage: %s <camera name>\n", ce_autocamera_goto_camera->GetName());
@@ -651,7 +809,7 @@ void MapFlythroughs::GotoCamera(const CCommand& args)
 		return;
 	}
 
-	ctools->SpecPosition(cam->m_Pos, cam->m_DefaultAngle);
+	GotoCamera(cam);
 }
 
 int MapFlythroughs::GotoCameraCompletion(const char* const partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])

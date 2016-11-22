@@ -27,6 +27,7 @@ private:
 	struct Trigger;
 	struct Shot;
 	struct Action;
+	struct Camera;
 
 	void LoadConfig();
 	void LoadConfig(const char* mapName);
@@ -53,7 +54,11 @@ private:
 	ConCommand* ce_autocamera_mark_camera;
 	void MarkCamera(const CCommand& args);
 
+	ConCommand* ce_autocamera_cycle;
+	void CycleCamera(const CCommand& args);
+
 	ConCommand* ce_autocamera_goto_camera;
+	void GotoCamera(const std::shared_ptr<Camera>& camera);
 	void GotoCamera(const CCommand& args);
 	static int GotoCameraCompletion(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
 
