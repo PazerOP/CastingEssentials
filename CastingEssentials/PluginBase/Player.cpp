@@ -270,12 +270,12 @@ bool Player::IsValid() const
 	if (!m_PlayerEntity.Get())
 		return false;
 
-	if (EntIndex() < 1 || EntIndex() > Interfaces::GetEngineTool()->GetMaxClients())
+	if (entindex() < 1 || entindex() > Interfaces::GetEngineTool()->GetMaxClients())
 		return false;
 
 	{
 		player_info_t info;
-		if (!GetHooks()->GetOriginal<IVEngineClient_GetPlayerInfo>()(EntIndex(), &info))
+		if (!GetHooks()->GetOriginal<IVEngineClient_GetPlayerInfo>()(entindex(), &info))
 			return false;
 
 		if (info.userID != m_UserID)
@@ -368,6 +368,15 @@ Player* Player::GetLocalPlayer()
 	return GetPlayer(localPlayerIndex, __FUNCSIG__);
 }
 
+Player* Player::GetLocalObserverTarget()
+{
+	const Player* const localPlayer = GetLocalPlayer();
+	if (!localPlayer)
+		return nullptr;
+
+	return Player::AsPlayer(localPlayer->GetObserverTarget());
+}
+
 Player* Player::GetPlayer(int entIndex, const char* functionName)
 {
 	if (!IsValidIndex(entIndex))
@@ -424,7 +433,7 @@ bool Player::IsAlive() const
 	return false;
 }
 
-int Player::EntIndex() const
+int Player::entindex() const
 {
 	if (m_PlayerEntity.IsValid())
 		return m_PlayerEntity.GetEntryIndex();
@@ -453,7 +462,7 @@ const player_info_t& Player::GetPlayerInfo() const
 		return retVal;
 	}();
 
-	if (!Interfaces::GetEngineClient()->GetPlayerInfo(EntIndex(), &m_CachedPlayerInfo))
+	if (!Interfaces::GetEngineClient()->GetPlayerInfo(entindex(), &m_CachedPlayerInfo))
 		return s_InvalidPlayerInfo;
 
 	return m_CachedPlayerInfo;

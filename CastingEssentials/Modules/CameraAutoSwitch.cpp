@@ -23,25 +23,11 @@
 
 #include "Controls/StubPanel.h"
 
-class CameraAutoSwitch::Panel : public vgui::StubPanel
-{
-public:
-	virtual void OnTick() override;
-
-	void SwitchToKiller(int player, float delay);
-private:
-	bool killerSwitch;
-	int killerSwitchPlayer;
-	float killerSwitchTime;
-};
-
 CameraAutoSwitch::CameraAutoSwitch()
 {
-	panel = nullptr;
-
-	enabled = new ConVar("ce_cameraautoswitch_enabled", "0", FCVAR_NONE, "enable automatic switching of camera", [](IConVar *var, const char *pOldValue, float flOldValue) { Modules().GetModule<CameraAutoSwitch>()->ToggleEnabled(var, pOldValue, flOldValue); });
+	enabled = new ConVar("ce_cameraautoswitch_enabled", "0", FCVAR_NONE, "enable automatic switching of camera");
 	m_SwitchToKiller = new ConVar("ce_cameraautoswitch_killer", "0", FCVAR_NONE, "switch to killer upon spectated player death", [](IConVar *var, const char *pOldValue, float flOldValue) { Modules().GetModule<CameraAutoSwitch>()->ToggleKillerEnabled(var, pOldValue, flOldValue); });
-	killer_delay = new ConVar("ce_cameraautoswitch_killer_delay", "0", FCVAR_NONE, "delay before switching to killer");
+	killer_delay = new ConVar("ce_cameraautoswitch_killer_delay", "0", FCVAR_NONE, "delay before switching to killer", true, 0, false, FLT_MAX, nullptr);
 }
 CameraAutoSwitch::~CameraAutoSwitch()
 {
@@ -100,84 +86,53 @@ bool CameraAutoSwitch::CheckDependencies()
 
 void CameraAutoSwitch::FireGameEvent(IGameEvent *event)
 {
-	if (enabled->GetBool() && m_SwitchToKiller->GetBool() && !strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH))
-	{
-		Player* localPlayer = Player::GetPlayer(Interfaces::GetEngineClient()->GetLocalPlayer(), __FUNCSIG__);
-		if (localPlayer)
-		{
-			if (localPlayer->GetObserverMode() == OBS_MODE_FIXED || localPlayer->GetObserverMode() == OBS_MODE_IN_EYE || localPlayer->GetObserverMode() == OBS_MODE_CHASE)
-			{
-				Player* targetPlayer = Player::AsPlayer(localPlayer->GetObserverTarget());
+	if (!strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH))
+		OnPlayerDeath(event);
 
-				if (targetPlayer)
-				{
-					if (Interfaces::GetEngineClient()->GetPlayerForUserID(event->GetInt("userid")) == targetPlayer->GetEntity()->entindex())
-					{
-						Player* killer = Player::GetPlayer(Interfaces::GetEngineClient()->GetPlayerForUserID(event->GetInt("attacker")), __FUNCSIG__);
-						if (killer)
-						{
-							if (killer_delay->GetFloat() > 0.0f)
-							{
-								if (panel)
-									panel->SwitchToKiller(killer->GetEntity()->entindex(), killer_delay->GetFloat());
-							}
-							else
-							{
-								try
-								{
-									GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(killer->GetEntity()->entindex());
-								}
-								catch (bad_pointer &e)
-								{
-									Warning("%s\n", e.what());
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	
 }
 
-void CameraAutoSwitch::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)
+void CameraAutoSwitch::OnPlayerDeath(IGameEvent* event)
 {
-	if (enabled->GetBool())
-	{
-		if (!panel)
-			panel.reset(new Panel());
-	}
-	else if (panel)
-		panel.reset();
-}
+	if (!enabled->GetBool() || !m_SwitchToKiller->GetBool())
+		return;
 
-void CameraAutoSwitch::ToggleKillerEnabled(IConVar *var, const char *pOldValue, float flOldValue)
-{
-	if (enabled->GetBool())
+	Assert(!strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH));
+
+	const auto targetUserID = Interfaces::GetEngineClient()->GetPlayerForUserID(event->GetInt("userid"));
+	if (!Player::IsValidIndex(targetUserID))
+		return;
+
+	Player* const localPlayer = Player::GetLocalPlayer();
+	if (!localPlayer)
+		return;
+
+	if (localPlayer->GetObserverMode() != OBS_MODE_FIXED && localPlayer->GetObserverMode() != OBS_MODE_IN_EYE && localPlayer->GetObserverMode() == OBS_MODE_CHASE)
+		return;
+
+	Player* const targetPlayer = Player::AsPlayer(localPlayer->GetObserverTarget());
+	if (!targetPlayer)
+		return;
+
+	// We only switch when our currently spectated player dies, don't care about other players dying
+	if (targetUserID != targetPlayer->GetEntity()->entindex())
+		return;
+
+	Player* const killer = Player::GetPlayer(Interfaces::GetEngineClient()->GetPlayerForUserID(event->GetInt("attacker")), __FUNCSIG__);
+	if (!killer)
+		return;
+
+	if (killer_delay->GetFloat() > 0.0f)
 	{
-		if (!Interfaces::GetGameEventManager()->FindListener(this, GAME_EVENT_PLAYER_DEATH))
-		{
-			Interfaces::GetGameEventManager()->AddListener(this, GAME_EVENT_PLAYER_DEATH, false);
-		}
+		// Switch with a delay
+		QueueSwitchToPlayer(killer->entindex(), targetPlayer->entindex(), killer_delay->GetFloat());
 	}
 	else
 	{
-		if (Interfaces::GetGameEventManager()->FindListener(this, GAME_EVENT_PLAYER_DEATH))
-		{
-			Interfaces::GetGameEventManager()->RemoveListener(this);
-		}
-	}
-}
-
-void CameraAutoSwitch::Panel::OnTick()
-{
-	if (killerSwitch && Interfaces::GetEngineTool()->HostTime() > killerSwitchTime)
-	{
-		killerSwitch = false;
-
+		// Switch immediately
 		try
 		{
-			GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(killerSwitchPlayer);
+			GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(killer->GetEntity()->entindex());
 		}
 		catch (bad_pointer &e)
 		{
@@ -186,9 +141,54 @@ void CameraAutoSwitch::Panel::OnTick()
 	}
 }
 
-void CameraAutoSwitch::Panel::SwitchToKiller(int player, float delay)
+void CameraAutoSwitch::ToggleKillerEnabled(IConVar *var, const char *pOldValue, float flOldValue)
 {
-	killerSwitch = true;
-	killerSwitchPlayer = player;
-	killerSwitchTime = Interfaces::GetEngineTool()->HostTime() + delay;
+	if (enabled->GetBool())
+	{
+		if (!Interfaces::GetGameEventManager()->FindListener(this, GAME_EVENT_PLAYER_DEATH))
+			Interfaces::GetGameEventManager()->AddListener(this, GAME_EVENT_PLAYER_DEATH, false);
+	}
+	else
+	{
+		if (Interfaces::GetGameEventManager()->FindListener(this, GAME_EVENT_PLAYER_DEATH))
+			Interfaces::GetGameEventManager()->RemoveListener(this);
+	}
+}
+
+void CameraAutoSwitch::OnTick(bool inGame)
+{
+	if (!inGame)
+	{
+		m_AutoSwitchQueued = false;
+		return;
+	}
+
+	if (enabled->GetBool() && m_AutoSwitchQueued && Interfaces::GetEngineTool()->HostTime() >= m_AutoSwitchTime)
+	{
+		m_AutoSwitchQueued = false;
+		Player* const localObserverTarget = Player::GetLocalObserverTarget();
+		if (localObserverTarget)
+		{
+			const int localObserverTargetIndex = localObserverTarget->entindex();
+			if (m_AutoSwitchFromPlayer == localObserverTargetIndex)
+			{
+				try
+				{
+					GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(m_AutoSwitchToPlayer);
+				}
+				catch (bad_pointer &e)
+				{
+					Warning("%s\n", e.what());
+				}
+			}
+		}		
+	}
+}
+
+void CameraAutoSwitch::QueueSwitchToPlayer(int toPlayer, int fromPlayer, float delay)
+{
+	m_AutoSwitchQueued = true;
+	m_AutoSwitchToPlayer = toPlayer;
+	m_AutoSwitchFromPlayer = fromPlayer;
+	m_AutoSwitchTime = Interfaces::GetEngineTool()->HostTime() + delay;
 }

@@ -24,6 +24,7 @@ public:
 	static Player* GetPlayer(int entIndex, const char* functionName = nullptr);
 	static bool IsValidIndex(int entIndex);
 	static Player* GetLocalPlayer();
+	static Player* GetLocalObserverTarget();
 
 	static bool CheckDependencies();
 	static bool IsNameRetrievalAvailable() { return s_NameRetrievalAvailable; }
@@ -46,7 +47,7 @@ public:
 	int GetUserID() const;
 	C_BaseCombatWeapon* GetWeapon(int i) const;
 	bool IsAlive() const;
-	int EntIndex() const;
+	int entindex() const;
 	const player_info_t& GetPlayerInfo() const;
 
 	Vector GetAbsOrigin() const;
