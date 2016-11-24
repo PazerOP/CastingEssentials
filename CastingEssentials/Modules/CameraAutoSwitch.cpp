@@ -88,8 +88,6 @@ void CameraAutoSwitch::FireGameEvent(IGameEvent *event)
 {
 	if (!strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH))
 		OnPlayerDeath(event);
-
-	
 }
 
 void CameraAutoSwitch::OnPlayerDeath(IGameEvent* event)

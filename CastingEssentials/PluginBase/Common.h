@@ -9,8 +9,8 @@
 //#define PLUGIN_VERSION "r7b1"
 
 static constexpr const char* PLUGIN_NAME = "CastingEssentials";
-extern const char* PLUGIN_VERSION_ID;
-extern const char* PLUGIN_FULL_VERSION;
+extern const char* const PLUGIN_VERSION_ID;
+extern const char* const PLUGIN_FULL_VERSION;
 
 static constexpr const char* s_ObserverModes[] =
 {
@@ -59,7 +59,7 @@ template<class... Parameters> __forceinline void PluginColorMsg(const Color& col
 
 inline bool IsInteger(const std::string &s)
 {
-	if (s.empty() || !isdigit(s[0]) || s[0] == '-' || s[0] == '+')
+	if (s.empty() || (!isdigit(s[0]) && s[0] != '-' && s[0] != '+'))
 		return false;
 
 	char *p;
@@ -168,7 +168,6 @@ inline float smootherstep(float x)
 	return 6.0f*(x*x*x*x*x) - 15.0f*(x*x*x*x) + 10.0f*(x*x*x);
 }
 
-extern CSteamID ParseSteamID(const char* input);
 extern std::string RenderSteamID(const CSteamID& id);
 
 extern bool ReparseForSteamIDs(const CCommand& in, CCommand& out);

@@ -155,7 +155,7 @@ void PlayerAliases::AddPlayerAlias(const CCommand& brokenCommand)
 	if (command.ArgC() != 3)
 		goto Usage;
 
-	const CSteamID& id = ParseSteamID(command.Arg(1));
+	const CSteamID id(command.Arg(1));
 	if (!id.IsValid())
 	{
 		Warning("Failed to parse steamid \"%s\"!\n", command.Arg(1));
@@ -188,7 +188,7 @@ void PlayerAliases::RemovePlayerAlias(const CCommand& brokenCommand)
 	if (command.ArgC() != 2)
 		goto Usage;
 
-	const CSteamID& id = ParseSteamID(command.Arg(1));
+	const CSteamID id(command.Arg(1));
 	if (!id.IsValid())
 	{
 		Warning("Failed to parse steamid \"%s\"!\n", command.Arg(1));

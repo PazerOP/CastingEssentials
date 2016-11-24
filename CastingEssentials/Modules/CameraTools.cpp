@@ -487,7 +487,7 @@ void CameraTools::SpecSteamID(const CCommand& command)
 		goto Usage;
 	}
 
-	parsed = ParseSteamID(newCommand.Arg(1));
+	parsed.SetFromString(newCommand.Arg(1), k_EUniverseInvalid);
 	if (!parsed.IsValid())
 	{
 		PluginWarning("%s: Unable to parse steamid\n", m_SpecSteamID->GetName());
@@ -497,9 +497,13 @@ void CameraTools::SpecSteamID(const CCommand& command)
 	for (Player* player : Player::Iterable())
 	{
 		if (player->GetSteamID() == parsed)
+		{
 			SpecPlayer(player->GetEntity()->entindex());
+			return;
+		}
 	}
 
+	Warning("%s: couldn't find a user with the steam id %s on the server\n", m_SpecSteamID->GetName(), RenderSteamID(parsed).c_str());
 	return;
 
 Usage:

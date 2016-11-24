@@ -1,4 +1,5 @@
 #include "Interfaces.h"
+#include "Misc/HLTVCameraHack.h"
 #include "PluginBase/HookManager.h"
 #include "Exceptions.h"
 
@@ -19,6 +20,7 @@
 #include <filesystem.h>
 #include <engine/ivdebugoverlay.h>
 #include <engine/IEngineTrace.h>
+#include <client/cliententitylist.h>
 
 IBaseClientDLL *Interfaces::pClientDLL = nullptr;
 IClientEngineTools *Interfaces::pClientEngineTools = nullptr;
@@ -40,10 +42,13 @@ bool Interfaces::vguiLibrariesAvailable = false;
 
 IClientMode*** Interfaces::s_ClientMode = nullptr;
 C_HLTVCamera** Interfaces::s_HLTVCamera = nullptr;
+C_HLTVCamera* HLTVCamera() { return Interfaces::GetHLTVCamera(); }
 
+CClientEntityList* cl_entitylist;
 CBaseEntityList *g_pEntityList;
 IVDebugOverlay* debugoverlay;
 IEngineTrace* enginetrace;
+IVEngineClient* engine;
 
 void Interfaces::Load(CreateInterfaceFn factory)
 {
@@ -76,9 +81,11 @@ void Interfaces::Load(CreateInterfaceFn factory)
 
 	// Built in declarations
 	{
-		g_pEntityList = dynamic_cast<CBaseEntityList *>(Interfaces::GetClientEntityList());
+		cl_entitylist = dynamic_cast<CClientEntityList*>(Interfaces::GetClientEntityList());
+		g_pEntityList = dynamic_cast<CBaseEntityList*>(Interfaces::GetClientEntityList());
 		debugoverlay = Interfaces::GetDebugOverlay();
 		enginetrace = Interfaces::GetEngineTrace();
+		engine = Interfaces::GetEngineClient();
 	}
 }
 

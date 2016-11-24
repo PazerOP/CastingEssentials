@@ -11,6 +11,7 @@
 #include <engine/ivmodelinfo.h>
 #include <networkvar.h>
 #include <bone_setup.h>
+#include <client/hltvcamera.h>
 
 ConVar r_visualizetraces("r_visualizetraces", "0", FCVAR_CHEAT);
 
@@ -279,4 +280,77 @@ CBoneCache* C_BaseAnimating::GetBoneCache(CStudioHdr* hdr)
 void C_BaseAnimating::LockStudioHdr()
 {
 	return GetHooks()->GetFunc<C_BaseAnimating_LockStudioHdr>()(this);
+}
+
+CBasePlayer *UTIL_PlayerByIndex(int entindex)
+{
+	return ToBasePlayer(ClientEntityList().GetEnt(entindex));
+}
+C_BaseEntity* CClientEntityList::GetBaseEntity(int entnum)
+{
+	IClientUnknown *pEnt = GetListedEntity(entnum);
+	return pEnt ? pEnt->GetBaseEntity() : 0;
+}
+bool C_HLTVCamera::IsPVSLocked()
+{
+	static ConVarRef tv_transmitall("tv_transmitall");
+	return !tv_transmitall.GetBool();
+}
+void C_HLTVCamera::SetPrimaryTarget(int entIndex)
+{
+	return GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(entIndex);
+}
+void CSteamID::SetFromString(const char* pchSteamID, EUniverse eDefaultUniverse)
+{
+	uint64 steam1_ID;
+
+	int steam2_ID1, steam2_ID2, steam2_ID3;
+
+	char steam3AccType;
+	int steam3_ID1, steam3_ID2;
+
+	if (sscanf(pchSteamID, "[%c:%i:%i]", &steam3AccType, &steam3_ID1, &steam3_ID2) == 3 ||
+		sscanf(pchSteamID, "%c:%i:%i", &steam3AccType, &steam3_ID1, &steam3_ID2) == 3)
+	{
+		EAccountType accountType;
+		if (steam3AccType == 'u' || steam3AccType == 'U')
+			accountType = k_EAccountTypeIndividual;
+		else if (steam3AccType == 'm' || steam3AccType == 'M')
+			accountType = k_EAccountTypeMultiseat;
+		else if (steam3AccType == 'G')
+			accountType = k_EAccountTypeGameServer;
+		else if (steam3AccType == 'A')
+			accountType = k_EAccountTypeAnonGameServer;
+		else if (steam3AccType == 'p' || steam3AccType == 'P')
+			accountType = k_EAccountTypePending;
+		else if (steam3AccType == 'C')
+			accountType = k_EAccountTypeContentServer;
+		else if (steam3AccType == 'g')
+			accountType = k_EAccountTypeClan;
+		else if (steam3AccType == 't' || steam3AccType == 'T' || steam3AccType == 'l' || steam3AccType == 'L' || steam3AccType == 'c')
+			accountType = k_EAccountTypeChat;
+		else if (steam3AccType == 'a')
+			accountType = k_EAccountTypeAnonUser;
+		else
+			accountType = k_EAccountTypeInvalid;
+
+		Set(steam3_ID2, (EUniverse)steam3_ID1, accountType);
+	}
+	else if (sscanf(pchSteamID, "STEAM_%i:%i:%i", &steam2_ID1, &steam2_ID2, &steam2_ID3) == 3)
+	{
+		Set(steam2_ID3 * 2 + steam2_ID2, (EUniverse)steam2_ID1, k_EAccountTypeIndividual);
+	}
+	else if (sscanf(pchSteamID, "%llu", &steam1_ID) == 1)
+	{
+		SetFromUint64(steam1_ID);
+	}
+	else
+	{
+		// Failed to parse
+		*this = k_steamIDNil;
+	}
+}
+CSteamID::CSteamID(const char* steamID, EUniverse eDefaultUniverse) : CSteamID()
+{
+	SetFromString(steamID, eDefaultUniverse);
 }
