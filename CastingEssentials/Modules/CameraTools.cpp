@@ -151,26 +151,37 @@ bool CameraTools::CheckDependencies()
 
 void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle)
 {
-	try
+	if (Interfaces::GetEngineClient()->IsHLTV())
 	{
-		HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
+		try
+		{
+			HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 
-		hltvcamera->m_nCameraMode = OBS_MODE_FIXED;
-		hltvcamera->m_iCameraMan = 0;
-		hltvcamera->m_vCamOrigin = pos;
-		hltvcamera->m_aCamAngle = angle;
-		hltvcamera->m_iTraget1 = 0;
-		hltvcamera->m_iTraget2 = 0;
-		hltvcamera->m_flLastAngleUpdateTime = -1;
+			hltvcamera->m_nCameraMode = OBS_MODE_FIXED;
+			hltvcamera->m_iCameraMan = 0;
+			hltvcamera->m_vCamOrigin = pos;
+			hltvcamera->m_aCamAngle = angle;
+			hltvcamera->m_iTraget1 = 0;
+			hltvcamera->m_iTraget2 = 0;
+			hltvcamera->m_flLastAngleUpdateTime = -1;
 
-		static ConVarRef fov_desired("fov_desired");
-		hltvcamera->m_flFOV = fov_desired.GetFloat();
+			static ConVarRef fov_desired("fov_desired");
+			hltvcamera->m_flFOV = fov_desired.GetFloat();
 
-		GetHooks()->GetFunc<C_HLTVCamera_SetCameraAngle>()(hltvcamera->m_aCamAngle);
+			GetHooks()->GetFunc<C_HLTVCamera_SetCameraAngle>()(hltvcamera->m_aCamAngle);
+		}
+		catch (bad_pointer &e)
+		{
+			Warning("%s\n", e.what());
+		}
 	}
-	catch (bad_pointer &e)
+	else
 	{
-		Warning("%s\n", e.what());
+		std::string buffer = strprintf("spec_mode %i\n", OBS_MODE_ROAMING);
+		Interfaces::GetEngineClient()->ServerCmd(buffer.c_str());
+
+		buffer = strprintf("spec_goto %f %f %f %f %f\n", pos.x, pos.y, pos.z, angle.x, angle.y);
+		Interfaces::GetEngineClient()->ServerCmd(buffer.c_str());
 	}
 }
 
@@ -322,10 +333,15 @@ void CameraTools::SpecClass(TFTeam team, TFClassType playerClass, int classIndex
 void CameraTools::SpecPlayer(int playerIndex)
 {
 	Player* player = Player::GetPlayer(playerIndex, __FUNCSIG__);
-
-	if (player)
+	if (!player)
 	{
-		if (!m_SpecPlayerAlive->GetBool() || player->IsAlive())
+		Warning("%s: Unable to find a player with an entindex of %i\n", __FUNCSIG__, playerIndex);
+		return;
+	}
+
+	if (!m_SpecPlayerAlive->GetBool() || player->IsAlive())
+	{
+		if (Interfaces::GetEngineClient()->IsHLTV())
 		{
 			try
 			{
@@ -339,6 +355,12 @@ void CameraTools::SpecPlayer(int playerIndex)
 			{
 				Warning("%s\n", e.what());
 			}
+		}
+		else
+		{
+			char buffer[32];
+			sprintf_s(buffer, "spec_player %i\n", playerIndex);
+			Interfaces::GetEngineClient()->ServerCmd(buffer);
 		}
 	}
 }
