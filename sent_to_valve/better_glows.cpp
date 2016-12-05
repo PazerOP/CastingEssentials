@@ -1,114 +1,61 @@
-#include "Graphics.h"
-#include "PluginBase/HookManager.h"
-#include "PluginBase/Interfaces.h"
+// Modifications by Matt Haynie, 2016
+// 
+// I dedicate any and all copyright interest in this software to the
+// public domain. I make this dedication for the benefit of the public at
+// large and to the detriment of my heirs and successors. I intend this
+// dedication to be an overt act of relinquishment in perpetuity of all
+// present and future rights to this software under copyright law.
 
-#include <convar.h>
-#include <debugoverlay_shared.h>
-
-#define GLOWS_ENABLE
-#include <client/glow_outline_effect.h>
-#include <view_shared.h>
-#include <materialsystem/itexture.h>
-#include <materialsystem/imaterial.h>
-#include <materialsystem/imaterialvar.h>
-#include <model_types.h>
-#include <shaderapi/ishaderapi.h>
-
-#include <random>
-
-#undef min
-#undef max
-
-static CGlowObjectManager* s_LocalGlowObjectManager;
-
-Graphics::Graphics()
+////////////////////////////
+// REQUIRED NEW MATERIALS //
+////////////////////////////
+// In this code's current state, 2 new vmt files must be added (only the first one
+// is required if you have FIXED_COPY_TEXTURE_TO_RENDER_TARGET 1, but I still 
+// recommend adding both so mat_showframebuffertexture will fully work)
+//
+//
+// materials/dev/glow_copy.vmt
+// Simple UnlitGeneric material that's just the FB texture with depth reads/writes
+// disabled, and translucent. There might already be a material in the game for this,
+// but I couldn't find it.
+/*
+UnlitGeneric
 {
-	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_NONE, "Enable/disable prop fading.");
-	ce_graphics_debug_glow = new ConVar("ce_graphics_debug_glow", "0");
-	ce_graphics_glow_stencil_final = new ConVar("ce_graphics_glow_stencil_final", "1");
-
-	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-
-	m_ApplyEntityGlowEffectsHook = GetHooks()->AddHook<CGlowObjectManager_ApplyEntityGlowEffects>(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9));
+	$basetexture "_rt_FullFrameFB"
+	$ignorez 1
+	$translucent 1
 }
-
-Graphics::~Graphics()
+*/
+//
+// materials/debug/debugfbtexture1.vmt
+// Should be basically the same as hl2_misc_dir.vpk/materials/debug/debugfbtexture0.
+// Very simple UnlitGeneric material that's just the FB texture.
+/*
+UnlitGeneric
 {
-	if (m_ComputeEntityFadeHook && GetHooks()->RemoveHook<Global_UTILComputeEntityFade>(m_ComputeEntityFadeHook, __FUNCSIG__))
-		m_ComputeEntityFadeHook = 0;
-
-	Assert(!m_ComputeEntityFadeHook);
+	$basetexture "_rt_FullFrameFB1"
+	"%noToolTexture" 1
 }
+*/
 
-unsigned char Graphics::ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale)
-{
-	constexpr auto max = std::numeric_limits<unsigned char>::max();
+// If you've added IMatRenderContext::OverrideDepthFunc (see ::DrawGlowOccluded below),
+// then you can enable this and have single-pass glows for "glow when occluded" outlines.
+// ***PLEASE*** increment MATERIAL_SYSTEM_INTERFACE_VERSION when you add this!
+#define ADDED_OVERRIDE_DEPTH_FUNC 0
 
-	if (ce_graphics_disable_prop_fades->GetBool())
-	{
-		GetHooks()->SetState<Global_UTILComputeEntityFade>(Hooking::HookAction::SUPERCEDE);
-		return max;
-	}
+// If you've fixed IMatRenderContext::CopyTextureToRenderTargetEx
+// (see CGlowObjectManager::RenderGlowModels below), then you can enable this and have
+// code that's a bit cleaner. Also, then you won't have to ship debug/debugfbtexture1.
+#define FIXED_COPY_TEXTURE_TO_RENDER_TARGET 0
 
-	return 0;
-}
-
-void Graphics::ApplyEntityGlowEffectsOverride(CGlowObjectManager * pThis, const CViewSetup * pSetup, int nSplitScreenSlot, CMatRenderContextPtr & pRenderContext, float flBloomScale, int x, int y, int w, int h)
-{
-	GetHooks()->SetState<CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::SUPERCEDE);
-	return pThis->ApplyEntityGlowEffects(pSetup, nSplitScreenSlot, pRenderContext, flBloomScale, x, y, w, h);
-}
-
-struct ShaderStencilState_t
-{
-	bool m_bEnable;
-	StencilOperation_t m_FailOp;
-	StencilOperation_t m_ZFailOp;
-	StencilOperation_t m_PassOp;
-	StencilComparisonFunction_t m_CompareFunc;
-	int m_nReferenceValue;
-	uint32 m_nTestMask;
-	uint32 m_nWriteMask;
-
-	ShaderStencilState_t()
-	{
-		m_bEnable = false;
-		m_PassOp = m_FailOp = m_ZFailOp = STENCILOPERATION_KEEP;
-		m_CompareFunc = STENCILCOMPARISONFUNCTION_ALWAYS;
-		m_nReferenceValue = 0;
-		m_nTestMask = m_nWriteMask = 0xFFFFFFFF;
-	}
-
-	void SetStencilState(CMatRenderContextPtr &pRenderContext)
-	{
-		pRenderContext->SetStencilEnable(m_bEnable);
-		pRenderContext->SetStencilFailOperation(m_FailOp);
-		pRenderContext->SetStencilZFailOperation(m_ZFailOp);
-		pRenderContext->SetStencilPassOperation(m_PassOp);
-		pRenderContext->SetStencilCompareFunction(m_CompareFunc);
-		pRenderContext->SetStencilReferenceValue(m_nReferenceValue);
-		pRenderContext->SetStencilTestMask(m_nTestMask);
-		pRenderContext->SetStencilWriteMask(m_nWriteMask);
-	}
-};
-void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
-{
-	if (m_hEntity.Get())
-	{
-		m_hEntity->DrawModel(STUDIO_RENDER);
-		C_BaseEntity *pAttachment = m_hEntity->FirstMoveChild();
-
-		while (pAttachment != NULL)
-		{
-			if (!s_LocalGlowObjectManager->HasGlowEffect(pAttachment) && pAttachment->ShouldDraw())
-			{
-				pAttachment->DrawModel(STUDIO_RENDER);
-			}
-			pAttachment = pAttachment->NextMovePeer();
-		}
-	}
-}
-
+// Not really necessary, but it's two different styles. I prefer style 0, but style 1 "closes off" partially occluded glows.
+// Style 0: http://steamcommunity.com/sharedfiles/filedetails/?id=813045718
+// Style 1: http://steamcommunity.com/sharedfiles/filedetails/?id=813045741
+static ConVar glow_outline_effect_stencil_mode("glow_outline_effect_stencil_mode", "0", 0, 
+	"\n\t0: Draws partially occluded glows in a more 3d-esque way, making them look more like they're actually surrounding the model."
+	"\n\t1: Draws partially occluded glows in a more 2d-esque way, which can make them more visible.",
+	true, 0, true, 1);
+	
 static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
 	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext)
 {
@@ -135,11 +82,6 @@ static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t
 		current.DrawModel();
 	}
 }
-
-static ConVar glow_outline_effect_stencil_mode("glow_outline_effect_stencil_mode", "0", 0, 
-	"\n\t0: Draws partially occluded glows in a more 3d-esque way, making them look more like they're actually surrounding the model."
-	"\n\t1: Draws partially occluded glows in a more 2d-esque way, which can make them more visible.",
-	true, 0, true, 1);
 
 static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
 	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext)
