@@ -43,7 +43,9 @@
     <Import Project="Properties\Shared.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -53,6 +55,9 @@
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Team Fortress 2\tf\addons\$(TargetFileName)"</Command>
     </PostBuildEvent>
+    <Link>
+      <AdditionalOptions>/EDITANDCONTINUE %(AdditionalOptions)</AdditionalOptions>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -94,6 +99,7 @@
     <ClCompile Include="Modules\CameraTools.cpp" />
     <ClCompile Include="Modules\ConsoleTools.cpp" />
     <ClCompile Include="Modules\FOVOverride.cpp" />
+    <ClCompile Include="Modules\Graphics.cpp" />
     <ClCompile Include="Modules\Killstreaks.cpp" />
     <ClCompile Include="Modules\LocalPlayer.cpp" />
     <ClCompile Include="Modules\MapConfigs.cpp" />
@@ -138,6 +144,7 @@
     <ClInclude Include="Modules\ConsoleTools.h" />
     <ClInclude Include="Modules\FOVOverride.h" />
     <ClInclude Include="Modules\FreezeInfo.h" />
+    <ClInclude Include="Modules\Graphics.h" />
     <ClInclude Include="Modules\Killstreaks.h" />
     <ClInclude Include="Modules\LocalPlayer.h" />
     <ClInclude Include="Modules\MapConfigs.h" />

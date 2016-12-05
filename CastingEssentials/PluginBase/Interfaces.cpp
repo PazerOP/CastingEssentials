@@ -21,6 +21,7 @@
 #include <engine/ivdebugoverlay.h>
 #include <engine/IEngineTrace.h>
 #include <client/cliententitylist.h>
+#include <shaderapi/ishaderapi.h>
 
 IBaseClientDLL *Interfaces::pClientDLL = nullptr;
 IClientEngineTools *Interfaces::pClientEngineTools = nullptr;
@@ -31,6 +32,8 @@ IGameEventManager2 *Interfaces::pGameEventManager = nullptr;
 IPrediction *Interfaces::pPrediction = nullptr;
 IVModelInfoClient *Interfaces::pModelInfoClient = nullptr;
 IVRenderView *Interfaces::pRenderView = nullptr;
+IMaterialSystem* Interfaces::pMaterialSystem = nullptr;
+IShaderAPI* Interfaces::s_ShaderAPI = nullptr;
 CSteamAPIContext *Interfaces::pSteamAPIContext = nullptr;
 IFileSystem* Interfaces::s_FileSystem = nullptr;
 IVDebugOverlay* Interfaces::s_DebugOverlay = nullptr;
@@ -49,6 +52,8 @@ CBaseEntityList *g_pEntityList;
 IVDebugOverlay* debugoverlay;
 IEngineTrace* enginetrace;
 IVEngineClient* engine;
+IVRenderView* render;
+//IMaterialSystem* materials;
 
 void Interfaces::Load(CreateInterfaceFn factory)
 {
@@ -64,6 +69,8 @@ void Interfaces::Load(CreateInterfaceFn factory)
 	pGameEventManager = (IGameEventManager2 *)factory(INTERFACEVERSION_GAMEEVENTSMANAGER2, nullptr);
 	pModelInfoClient = (IVModelInfoClient *)factory(VMODELINFO_CLIENT_INTERFACE_VERSION, nullptr);
 	pRenderView = (IVRenderView *)factory(VENGINE_RENDERVIEW_INTERFACE_VERSION, nullptr);
+	pMaterialSystem = (IMaterialSystem*)factory(MATERIAL_SYSTEM_INTERFACE_VERSION, nullptr);
+	s_ShaderAPI = (IShaderAPI*)factory(SHADERAPI_INTERFACE_VERSION, nullptr);
 	s_FileSystem = (IFileSystem*)factory(FILESYSTEM_INTERFACE_VERSION, nullptr);
 	s_DebugOverlay = (IVDebugOverlay*)factory(VDEBUG_OVERLAY_INTERFACE_VERSION, nullptr);
 	s_EngineTrace = (IEngineTrace*)factory(INTERFACEVERSION_ENGINETRACE_CLIENT, nullptr);
@@ -86,6 +93,8 @@ void Interfaces::Load(CreateInterfaceFn factory)
 		debugoverlay = Interfaces::GetDebugOverlay();
 		enginetrace = Interfaces::GetEngineTrace();
 		engine = Interfaces::GetEngineClient();
+		render = Interfaces::GetRenderView();
+		materials = Interfaces::GetMaterialSystem();
 	}
 }
 

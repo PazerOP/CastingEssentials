@@ -17,6 +17,7 @@
 #include "Modules/ConsoleTools.h"
 #include "Modules/FOVOverride.h"
 #include "Modules/FreezeInfo.h"
+#include "Modules/Graphics.h"
 #include "Modules/Killstreaks.h"
 #include "Modules/LocalPlayer.h"
 #include "Modules/MapConfigs.h"
@@ -68,6 +69,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
 	Modules().RegisterAndLoadModule<FOVOverride>("FOV Override");
 	Modules().RegisterAndLoadModule<FreezeInfo>("Freeze Info");
+	Modules().RegisterAndLoadModule<Graphics>("Graphics Enhancements");
 	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
 	Modules().RegisterAndLoadModule<MapConfigs>("Map Configs");

@@ -31,12 +31,21 @@ MapFlythroughs::MapFlythroughs()
 
 	ce_autocamera_mark_camera = new ConCommand("ce_autocamera_create", [](const CCommand& args) { GetModule()->MarkCamera(args); });
 	ce_autocamera_goto_camera = new ConCommand("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &MapFlythroughs::GotoCameraCompletion);
-	ce_autocamera_cycle = new ConCommand("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); }, "Switches to the next or previous autocamera. If not currently in an autocamera, switches to the nearest autocamera with a view of the current position.");
 
-	ce_autocamera_reload_config = new ConCommand("ce_autocamera_reload_config", [](const CCommand& args) { GetModule()->LoadConfig(); });
+	ce_autocamera_cycle = new ConCommand("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); },		
+		"\nUsage: ce_autocamera_cycle <next/prev>. Cycles forwards or backwards logically through the available autocameras. The behavior is as follows:\n"
+		"\tIf already spectating from the position of an autocamera, progress forwards/backwards through the autocameras based on file order.\n"
+		"\tIf our current position doesn't match any autocamera definintions, try to find the nearest/furthest autocamera that has line of sight (LOS) to our current position.\n"
+		"\tIf no autocameras have LOS to our current position, find the nearest/furthest autocamera with our current position in its view frustum.\n"
+		"\tIf our position is not in any autocamera's view frustum, find the nearest/furthest autocamera to our current position.");
+
+	ce_autocamera_reload_config = new ConCommand("ce_autocamera_reload_config", [](const CCommand& args) { GetModule()->LoadConfig(); },
+		"Reloads the autocamera definitions file (located in /tf/addons/castingessentials/autocameras/<mapname>.vdf)");
 
 	ce_autocamera_show_triggers = new ConVar("ce_autocamera_show_triggers", "0", FCVAR_UNREGISTERED, "Shows all triggers on the map.");
-	ce_autocamera_show_cameras = new ConVar("ce_autocamera_show_cameras", "0", FCVAR_NONE, "1 = Shows all cameras on the map. 2 = Shows view frustums as well.");
+	ce_autocamera_show_cameras = new ConVar("ce_autocamera_show_cameras", "0", FCVAR_NONE, 
+		"\n\t1 = Shows all cameras on the map.\n"
+		"\t2 = Shows view frustums as well.");
 
 	m_CreatingCameraTrigger = false;
 	m_CameraTriggerStart.Init();

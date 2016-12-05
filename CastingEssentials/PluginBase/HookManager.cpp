@@ -307,6 +307,38 @@ HookManager::RawBaseEntityInitFn HookManager::GetRawFunc_C_BaseEntity_Init()
 	return s_BaseEntityInitFn;
 }
 
+HookManager::RawUTILComputeEntityFadeFn HookManager::GetRawFunc_Global_UTILComputeEntityFade()
+{
+	static RawUTILComputeEntityFadeFn s_UTILComputeEntityFadeFn = nullptr;
+	if (!s_UTILComputeEntityFadeFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x83\xEC\x40\x80\x3D";
+		constexpr const char* MASK = "xxxxxxxx";
+
+		s_UTILComputeEntityFadeFn = (RawUTILComputeEntityFadeFn)SignatureScan("client", SIG, MASK);
+		if (!s_UTILComputeEntityFadeFn)
+			throw bad_pointer("UTIL_ComputeEntityFade");
+	}
+
+	return s_UTILComputeEntityFadeFn;
+}
+
+HookManager::RawApplyEntityGlowEffectsFn HookManager::GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects()
+{
+	static RawApplyEntityGlowEffectsFn s_RawApplyEntityGlowEffectsFn = nullptr;
+	if (!s_RawApplyEntityGlowEffectsFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x83\xEC\x3C\x53\x56\x57\x8B\xD9\x8B\x0D";
+		constexpr const char* MASK = "xxxxxxxxxxxxx";
+
+		s_RawApplyEntityGlowEffectsFn = (RawApplyEntityGlowEffectsFn)SignatureScan("client", SIG, MASK);
+		if (!s_RawApplyEntityGlowEffectsFn)
+			throw bad_pointer("CGlowObjectManager::ApplyEntityGlowEffects");
+	}
+
+	return s_RawApplyEntityGlowEffectsFn;
+}
+
 void HookManager::IngameStateChanged(bool inGame)
 {
 	if (inGame)
@@ -340,6 +372,9 @@ HookManager::HookManager()
 	m_Hook_C_HLTVCamera_SetPrimaryTarget.AttachHook(std::make_shared<C_HLTVCamera_SetPrimaryTarget::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetPrimaryTarget()));
 
 	m_Hook_C_BaseEntity_Init.AttachHook(std::make_shared<C_BaseEntity_Init::Inner>(GetRawFunc_C_BaseEntity_Init()));
+
+	m_Hook_CGlowObjectManager_ApplyEntityGlowEffects.AttachHook(std::make_shared<CGlowObjectManager_ApplyEntityGlowEffects::Inner>(GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects()));
 	
 	m_Hook_Global_GetLocalPlayerIndex.AttachHook(std::make_shared<Global_GetLocalPlayerIndex::Inner>(GetRawFunc_Global_GetLocalPlayerIndex()));
+	m_Hook_Global_UTILComputeEntityFade.AttachHook(std::make_shared<Global_UTILComputeEntityFade::Inner>(GetRawFunc_Global_UTILComputeEntityFade()));
 }

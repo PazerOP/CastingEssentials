@@ -45,20 +45,6 @@ namespace Hooking
 	protected:
 		static std::atomic<uint64> s_LastHook;
 
-		static int MFI_GetVTblOffset(void* mfp);
-		template<class F> static int VTableOffset(F func)
-		{
-			union
-			{
-				F p;
-				intptr_t i;
-			};
-
-			p = func;
-
-			return MFI_GetVTblOffset((void*)i);
-		}
-
 		std::recursive_mutex m_BaseHookMutex;
 		std::shared_ptr<IBaseHook> m_BaseHook;
 	};
