@@ -53,7 +53,7 @@
       <PreprocessorDefinitions>DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Team Fortress 2\tf\addons\$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Team Fortress 2\tf\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalOptions>/EDITANDCONTINUE %(AdditionalOptions)</AdditionalOptions>
@@ -79,7 +79,7 @@
       <AssemblyDebug>false</AssemblyDebug>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Team Fortress 2\tf\addons\$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Team Fortress 2\tf\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
