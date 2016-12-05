@@ -28,7 +28,11 @@ ProjectileOutlines::ProjectileOutlines()
 	ce_projectileoutlines_fade_end = new ConVar("ce_projectileoutlines_fade_end", "-1", FCVAR_NONE, "Distance from the camera at which projectile outlines finish fading out.");
 
 	// For some reason this isn't hooked up, wtf valve
-	ce_projectileoutlines_mode = new ConVar("ce_projectileoutlines_mode", "1", FCVAR_UNREGISTERED, "Modes:\n    0: always\n    1: only when occluded\n    2: only when model is visible", true, 0, true, 2);
+	ce_projectileoutlines_mode = new ConVar("ce_projectileoutlines_mode", "1", FCVAR_NONE,
+		"Modes:"
+		"\n\t0: always"
+		"\n\t1: only when occluded"
+		"\n\t2: only when model is visible", true, 0, true, 2);
 }
 
 ProjectileOutlines::~ProjectileOutlines()
