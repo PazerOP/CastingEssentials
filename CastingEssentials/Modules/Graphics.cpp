@@ -14,6 +14,7 @@
 #include <model_types.h>
 #include <shaderapi/ishaderapi.h>
 
+#include <algorithm>
 #include <random>
 
 #undef min
@@ -130,7 +131,7 @@ static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t
 
 		render->SetBlend(current.m_flGlowAlpha);
 		Vector vGlowColor = current.m_vGlowColor * current.m_flGlowAlpha;
-		render->SetColorModulation(&vGlowColor[0]); // This only sets rgb, not alpha
+		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
 
 		current.DrawModel();
 	}
@@ -226,7 +227,7 @@ static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || current.m_bRenderWhenUnoccluded)
 			continue;
 
-		render->SetBlend(current.m_flGlowAlpha);
+		render->SetBlend(1);
 		const Vector vGlowColor = current.m_vGlowColor * current.m_flGlowAlpha;
 		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
 
@@ -257,14 +258,15 @@ static void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_
 
 		render->SetBlend(current.m_flGlowAlpha);
 		Vector vGlowColor = current.m_vGlowColor * current.m_flGlowAlpha;
-		render->SetColorModulation(&vGlowColor[0]); // This only sets rgb, not alpha
+		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
 
 		current.DrawModel();
 	}
 }
 
-void CGlowObjectManager::RenderGlowModels(const CViewSetup *pSetup, int nSplitScreenSlot, CMatRenderContextPtr &pRenderContext)
-{	
+void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int nSplitScreenSlot, CMatRenderContextPtr & pRenderContext, float flBloomScale, int x, int y, int w, int h)
+{
+	PIXEvent pixEvent(pRenderContext, "RenderGlowModels");
 	ITexture* const pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
 	ITexture* const pRtFullFrameFB1 = materials->FindTexture("_rt_FullFrameFB1", TEXTURE_GROUP_RENDER_TARGET);
 
@@ -316,9 +318,34 @@ void CGlowObjectManager::RenderGlowModels(const CViewSetup *pSetup, int nSplitSc
 	// Copy MSAA'd glow models to _rt_FullFrameFB0
 	pRenderContext->CopyRenderTargetToTexture(pRtFullFrameFB0);
 
-	// Clear backbuffer color, we're going to use it as the target for the final outline
-	pRenderContext->ClearColor4ub(0, 0, 0, 0);
-	pRenderContext->ClearBuffers(true, false, false);
+	// Move original contents of the backbuffer from _rt_FullFrameFB1 to the backbuffer
+	{
+#if FIXED_COPY_TEXTURE_TO_RENDER_TARGET	// Coordinates don't seem to be mapped 1:1 properly, screen becomes slightly blurry
+		pRenderContext->CopyTextureToRenderTargetEx(0, pRtFullFrameFB1, nullptr);
+#else
+		pRenderContext->SetStencilEnable(false);
+
+		IMaterial* const pFullFrameFB1 = materials->FindMaterial("debug/debugfbtexture1", TEXTURE_GROUP_RENDER_TARGET);
+		pFullFrameFB1->AddRef();
+		pRenderContext->Bind(pFullFrameFB1);
+
+		const int nSrcWidth = pSetup->width;
+		const int nSrcHeight = pSetup->height;
+		int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
+		pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
+
+		pRenderContext->OverrideDepthEnable(true, false);
+		{
+			pRenderContext->DrawScreenSpaceRectangle(pFullFrameFB1,
+				0, 0, nViewportWidth, nViewportHeight,
+				0, 0, nSrcWidth - 1, nSrcHeight - 1,
+				pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
+		}
+		pRenderContext->OverrideDepthEnable(false, false);
+
+		pFullFrameFB1->Release();
+#endif
+	}
 
 	// Draw to backbuffer while stenciling out inside of models
 	{
@@ -359,70 +386,5 @@ void CGlowObjectManager::RenderGlowModels(const CViewSetup *pSetup, int nSplitSc
 	pRenderContext->OverrideAlphaWriteEnable(false, false);
 	pRenderContext->OverrideDepthEnable(false, false);
 
-	// No longer need glow models from _rt_FullFrameFB0, move backbuffer (final glows stenciled out) there
-	pRenderContext->CopyRenderTargetToTexture(pRtFullFrameFB0);
-
-	// Move original contents of the backbuffer from _rt_FullFrameFB1 to the backbuffer
-	{
-#if FIXED_COPY_TEXTURE_TO_RENDER_TARGET	// Coordinates don't seem to be mapped 1:1 properly, screen becomes slightly blurry
-		pRenderContext->CopyTextureToRenderTargetEx(0, pRtFullFrameFB1, nullptr);
-#else
-		IMaterial* const pFullFrameFB1 = materials->FindMaterial("debug/debugfbtexture1", TEXTURE_GROUP_RENDER_TARGET);
-		pFullFrameFB1->AddRef();
-		pRenderContext->Bind(pFullFrameFB1);
-
-		const int nSrcWidth = pSetup->width;
-		const int nSrcHeight = pSetup->height;
-		int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
-		pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
-
-		pRenderContext->OverrideDepthEnable(true, false);
-		{
-			pRenderContext->DrawScreenSpaceRectangle(pFullFrameFB1,
-				0, 0, nViewportWidth, nViewportHeight,
-				0, 0, nSrcWidth - 1, nSrcHeight - 1,
-				pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
-		}
-		pRenderContext->OverrideDepthEnable(false, false);
-
-		pFullFrameFB1->Release();
-#endif
-	}
-
-	// Let CGlowObjectManager::ApplyEntityGlowEffects draw final glows from _rt_FullFrameFB0 to the backbuffer,
-	// then we're all done!
-
 	pRenderContext->PopRenderTargetAndViewport();
-}
-
-void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int nSplitScreenSlot, CMatRenderContextPtr & pRenderContext, float flBloomScale, int x, int y, int w, int h)
-{
-	//=============================================
-	// Render the glow colors to _rt_FullFrameFB 
-	//=============================================
-	{
-		PIXEvent pixEvent(pRenderContext, "RenderGlowModels");
-		RenderGlowModels(pSetup, nSplitScreenSlot, pRenderContext);
-	}
-
-	// Get viewport
-	const int nSrcWidth = pSetup->width;
-	const int nSrcHeight = pSetup->height;
-	int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
-	pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
-
-	ITexture* const pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
-	IMaterial* const pGlowCopy = materials->FindMaterial("dev/glow_copy", TEXTURE_GROUP_OTHER);
-
-	if (!IsErrorMaterial(pGlowCopy))
-	{
-		pGlowCopy->AddRef();
-		pRenderContext->Bind(pGlowCopy);
-		pRenderContext->DrawScreenSpaceRectangle(pGlowCopy,
-			0, 0, nViewportWidth, nViewportHeight,
-			0, 0, nSrcWidth - 1, nSrcHeight - 1,
-			pRtFullFrameFB0->GetActualWidth(),
-			pRtFullFrameFB0->GetActualHeight());
-		pGlowCopy->Release();
-	}
 }
