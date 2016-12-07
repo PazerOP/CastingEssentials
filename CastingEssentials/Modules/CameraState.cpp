@@ -47,7 +47,7 @@ bool CameraState::IsThirdPersonCameraOverride()
 			m_ThisFrameIsThirdPerson = CameraTools::GetModule()->IsThirdPersonCameraOverride() || m_ThisFrameIsThirdPerson;
 
 		if (CameraSmooths::GetModule())
-			m_ThisFrameIsThirdPerson = CameraTools::GetModule()->IsThirdPersonCameraOverride() || m_ThisFrameIsThirdPerson;
+			m_ThisFrameIsThirdPerson = CameraSmooths::GetModule()->IsThirdPersonCameraOverride() || m_ThisFrameIsThirdPerson;
 	}
 
 	if (m_ThisFrameIsThirdPerson)
