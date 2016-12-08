@@ -25,7 +25,7 @@ static CGlowObjectManager* s_LocalGlowObjectManager;
 
 Graphics::Graphics()
 {
-	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_NONE, "Enable/disable prop fading.");
+	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading.");
 	ce_graphics_debug_glow = new ConVar("ce_graphics_debug_glow", "0");
 
 	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
@@ -82,15 +82,18 @@ struct ShaderStencilState_t
 
 	void SetStencilState(CMatRenderContextPtr &pRenderContext)
 	{
-		VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 		pRenderContext->SetStencilEnable(m_bEnable);
-		pRenderContext->SetStencilFailOperation(m_FailOp);
-		pRenderContext->SetStencilZFailOperation(m_ZFailOp);
-		pRenderContext->SetStencilPassOperation(m_PassOp);
-		pRenderContext->SetStencilCompareFunction(m_CompareFunc);
-		pRenderContext->SetStencilReferenceValue(m_nReferenceValue);
-		pRenderContext->SetStencilTestMask(m_nTestMask);
-		pRenderContext->SetStencilWriteMask(m_nWriteMask);
+
+		if (m_bEnable)
+		{
+			pRenderContext->SetStencilFailOperation(m_FailOp);
+			pRenderContext->SetStencilZFailOperation(m_ZFailOp);
+			pRenderContext->SetStencilPassOperation(m_PassOp);
+			pRenderContext->SetStencilCompareFunction(m_CompareFunc);
+			pRenderContext->SetStencilReferenceValue(m_nReferenceValue);
+			pRenderContext->SetStencilTestMask(m_nTestMask);
+			pRenderContext->SetStencilWriteMask(m_nWriteMask);
+		}
 	}
 };
 void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()

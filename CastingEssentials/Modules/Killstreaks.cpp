@@ -106,7 +106,7 @@ bool Killstreaks::CheckDependencies()
 		}
 	}
 
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 4; i++)
 	{
 		char buffer[32];
 		Entities::PropIndex(buffer, "m_nStreaks", i);

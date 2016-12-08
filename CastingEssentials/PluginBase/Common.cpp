@@ -76,3 +76,10 @@ Vector GetViewOrigin()
 
 	return view.origin;
 }
+
+void ApproachPosition(const Vector& target, Vector& current, float speed)
+{
+	const Vector dir = (target - current).Normalized();
+
+	current = current + dir * speed;
+}

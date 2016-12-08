@@ -183,6 +183,8 @@ extern bool ParseAngle(QAngle& a, const char* str);
 
 extern Vector GetViewOrigin();
 
+void ApproachPosition(const Vector& target, Vector& current, float speed);
+
 template <typename T, std::size_t N> constexpr std::size_t arraysize(T const (&)[N]) noexcept { return N; }
 
 constexpr float Rad2Deg(float radians)

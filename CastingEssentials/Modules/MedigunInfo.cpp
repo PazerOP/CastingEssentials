@@ -69,6 +69,7 @@ private:
 
 	bool alive;
 	int charges;
+	int charge;
 	float level;
 	TFMedigun medigun;
 	bool released;
@@ -379,7 +380,10 @@ void MedigunInfo::MedigunPanel::OnMedigunInfoUpdate(KeyValues *attributes)
 
 	// TODO: set up a custom message that doesn't spam a bunch of DialogVariables messages, forcing the panel to redraw 5 or 6 times.
 
-	SetDialogVariable("charge", int(floor(level * 100.0f)));
+	const int newCharge = int(floor(level * 100.0f));
+	if (charge != newCharge)
+		SetDialogVariable("charge", charge = newCharge);
+
 	if (medigun == TFMedigun::Vaccinator)
 	{
 		SetDialogVariable("charges", int(floor(level * 4.0f)));
