@@ -18,6 +18,7 @@ public:
 
 	int GetMaxHealth(int playerEntIndex);
 	bool IsAlive(int playerEntIndex);
+	int* GetKillstreak(int playerEntIndex);
 
 private:
 	bool CheckEntIndex(int playerEntIndex, const char* functionName);

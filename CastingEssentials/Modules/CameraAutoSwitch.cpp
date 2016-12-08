@@ -16,6 +16,7 @@
 #include <shareddefs.h>
 #include <toolframework/ienginetool.h>
 #include <vgui/IVGui.h>
+#include <vprof.h>
 
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -155,6 +156,7 @@ void CameraAutoSwitch::ToggleKillerEnabled(IConVar *var, const char *pOldValue, 
 
 void CameraAutoSwitch::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!inGame)
 	{
 		m_AutoSwitchQueued = false;

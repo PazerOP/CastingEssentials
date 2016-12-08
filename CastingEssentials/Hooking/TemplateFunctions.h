@@ -180,6 +180,7 @@ namespace Hooking{ namespace Internal
 		return fn;
 	}
 
+#pragma optimize("", off)
 	template<class GroupHookType, class Type, class RetVal, class... Args>
 	LocalVaArgsFnPtr<Type, RetVal, Args...> LocalVaArgsDetourFn(GroupHookType* hook)
 	{
@@ -194,17 +195,12 @@ namespace Hooking{ namespace Internal
 			constexpr std::size_t fmtParameter = sizeof...(Args)-1;
 			using FmtType = typename std::tuple_element<fmtParameter, std::tuple<Args...>>::type;
 			static_assert(std::is_same<FmtType, const char*>::value || std::is_same<FmtType, char*>::value, "Invalid format string type!");
-
-			std::tuple<Args...> blah(args...);
-
+			
 			// Fuck you, type system
-			const char** fmt = evil_cast<const char**>(&std::get<fmtParameter>(blah));
+			const char** fmt = std::get<fmtParameter>(std::make_tuple(&args...));
 
 			va_list vaArgList;
-			va_start(vaArgList, pThis);
-
-			char** parameters[] = { (char**)(&(va_arg(vaArgList, ArgType<Args>::type)))... };
-
+			va_start(vaArgList, *fmt);
 			std::string formatted = vstrprintf(*fmt, vaArgList);
 			va_end(vaArgList);
 
@@ -217,11 +213,12 @@ namespace Hooking{ namespace Internal
 
 			// Can't have variable arguments in std::function, overwrite the "format" parameter with
 			// the fully parsed buffer
-			*parameters[fmtParameter] = (char*)formatted.c_str();
+			*fmt = (char*)formatted.c_str();
 
 			// Now run all the hooks
 			return HookFunctionsInvoker<GroupHookType::BaseGroupHookType, RetVal, Args...>::Invoke(s_Hook, args...);
 		};
 		return fn;
 	}
+#pragma optimize("", on)
 } }

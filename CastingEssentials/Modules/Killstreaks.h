@@ -23,11 +23,6 @@ private:
 	class Panel;
 	std::unique_ptr<Panel> panel;
 
-	template<size_t size> static void PropIndex(int index, char(&buffer)[size])
-	{
-		sprintf_s(buffer, "%03i", index);
-	}
-
 	ConVar *enabled;
 	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
 };

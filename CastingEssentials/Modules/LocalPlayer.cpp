@@ -7,6 +7,7 @@
 #include <client/c_baseentity.h>
 #include <cdll_int.h>
 #include <convar.h>
+#include <vprof.h>
 
 #include <functional>
 
@@ -90,6 +91,7 @@ void LocalPlayer::ToggleTrackSpecTarget(IConVar *var, const char *pOldValue, flo
 
 int LocalPlayer::GetLocalPlayerIndexOverride()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (enabled->GetBool() && Player::IsValidIndex(player->GetInt()))
 	{
 		Player* localPlayer = Player::GetPlayer(player->GetInt(), __FUNCSIG__);
@@ -147,6 +149,7 @@ void LocalPlayer::SetToCurrentTarget()
 
 void LocalPlayer::TickPanel::OnTick()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (Interfaces::GetEngineClient()->IsInGame())
 		m_SetToCurrentTarget();
 }

@@ -5,12 +5,15 @@
 #include <steam/steamclientpublic.h>
 
 #pragma warning(disable : 4592)		// 'x': symbol will be dynamically initialized (implementation limitation)
+#pragma warning(disable : 4533)		// initialization of 'x' is skipped by 'instruction' -- should only be a warning, but is promoted error for some reason?
 
 //#define PLUGIN_VERSION "r7b1"
 
 static constexpr const char* PLUGIN_NAME = "CastingEssentials";
 extern const char* const PLUGIN_VERSION_ID;
 extern const char* const PLUGIN_FULL_VERSION;
+
+#define VPROF_BUDGETGROUP_CE _T("CastingEssentials")
 
 static constexpr const char* s_ObserverModes[] =
 {
@@ -211,3 +214,9 @@ private:
 	T* const m_Variable;
 	T m_OldValue;
 };
+
+// smh why were these omitted
+namespace std
+{
+	inline std::string to_string(const char* str) { return std::string(str); }
+}

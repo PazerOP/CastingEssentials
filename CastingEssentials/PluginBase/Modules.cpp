@@ -3,6 +3,7 @@
 #include "Controls/StubPanel.h"
 
 #include <cdll_int.h>
+#include <vprof.h>
 
 static ModuleManager s_ModuleManager;
 ModuleManager& Modules() { return s_ModuleManager; }
@@ -35,6 +36,8 @@ void ModuleManager::UnloadAllModules()
 
 void ModuleManager::Panel::OnTick()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+
 	const bool inGame = Interfaces::GetEngineClient()->IsInGame();
 	Modules().TickAllModules(inGame);
 

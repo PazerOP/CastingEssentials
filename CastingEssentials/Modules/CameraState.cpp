@@ -3,6 +3,8 @@
 #include "Modules/CameraTools.h"
 #include "Modules/CameraSmooths.h"
 
+#include <vprof.h>
+
 #undef min
 #undef max
 
@@ -18,6 +20,7 @@ CameraState::CameraState()
 
 bool CameraState::InToolModeOverride()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	m_LastFrameInToolMode = m_ThisFrameInToolMode;
 
 	m_ThisFrameInToolMode = false;
@@ -38,6 +41,7 @@ bool CameraState::InToolModeOverride()
 
 bool CameraState::IsThirdPersonCameraOverride()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	m_LastFrameIsThirdPerson = m_ThisFrameIsThirdPerson;
 
 	m_ThisFrameIsThirdPerson = false;
@@ -58,6 +62,7 @@ bool CameraState::IsThirdPersonCameraOverride()
 
 bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	m_LastFrameEngineView = m_ThisFrameEngineView;
 	m_LastFramePluginView = m_ThisFramePluginView;
 
@@ -83,6 +88,7 @@ bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 
 void CameraState::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (inGame)
 	{
 		if (!m_HooksAttached)

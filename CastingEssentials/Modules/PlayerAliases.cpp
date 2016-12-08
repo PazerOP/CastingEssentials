@@ -7,6 +7,7 @@
 #include <steam/steam_api.h>
 #include <cdll_int.h>
 #include <toolframework/ienginetool.h>
+#include <vprof.h>
 
 PlayerAliases::PlayerAliases()
 {
@@ -73,6 +74,7 @@ void PlayerAliases::StaticToggleEnabled(IConVar* var, const char* oldValue, floa
 
 bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	bool result = GetHooks()->GetHook<IVEngineClient_GetPlayerInfo>()->GetOriginal()(ent_num, pinfo);
 
 	if (ent_num < 1 || ent_num >= Interfaces::GetEngineTool()->GetMaxClients())
@@ -153,7 +155,10 @@ void PlayerAliases::AddPlayerAlias(const CCommand& brokenCommand)
 		return;
 
 	if (command.ArgC() != 3)
-		goto Usage;
+	{
+		Warning("Usage: %s <steam id> <name>\n", m_AddPlayerAlias->GetName());
+		return;
+	}
 
 	const CSteamID id(command.Arg(1));
 	if (!id.IsValid())
@@ -175,8 +180,6 @@ void PlayerAliases::AddPlayerAlias(const CCommand& brokenCommand)
 	}
 
 	return;
-Usage:
-	Warning("Usage: %s <steam id> <name>\n", m_AddPlayerAlias->GetName());
 }
 
 void PlayerAliases::RemovePlayerAlias(const CCommand& brokenCommand)

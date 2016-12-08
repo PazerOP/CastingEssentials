@@ -16,12 +16,10 @@ public:
 	static Graphics* GetModule() { return Modules().GetModule<Graphics>(); }
 
 	ConVar* GetDebugGlowConVar() const { return ce_graphics_debug_glow; }
-	ConVar* GetGlowStencilFinalConVar() const { return ce_graphics_glow_stencil_final; }
 
 private:
 	ConVar* ce_graphics_disable_prop_fades;
 	ConVar* ce_graphics_debug_glow;
-	ConVar* ce_graphics_glow_stencil_final;
 
 	int m_ComputeEntityFadeHook;
 	unsigned char ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale);

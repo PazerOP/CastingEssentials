@@ -7,6 +7,7 @@
 #include <PolyHook.h>
 
 #include <toolframework/ienginetool.h>
+#include <vprof.h>
 
 // smh windows
 #undef IGNORE
@@ -45,6 +46,11 @@ ProjectileOutlines::~ProjectileOutlines()
 
 void ProjectileOutlines::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+
+	if (!m_RocketsEnabled->GetBool() && !m_PillsEnabled->GetBool() && !m_StickiesEnabled->GetBool())
+		return;
+
 	if (inGame)
 	{
 		if (!m_Init)
@@ -111,7 +117,7 @@ void ProjectileOutlines::OnTick(bool inGame)
 				Lerp(smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start->GetFloat(), ce_projectileoutlines_fade_end->GetFloat(), 1, 0)), 0, 255) :
 				255;
 
-			Color* glowColor = Entities::GetEntityProp<Color*>(glowEntity, { "m_glowColor" });
+			Color* glowColor = Entities::GetEntityProp<Color*>(glowEntity, "m_glowColor");
 			if (!glowColor)
 				continue;
 
@@ -135,11 +141,11 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 
 	{
 		IClientEntity* glowEntity = handle.Get();
-		*Entities::GetEntityProp<bool*>(glowEntity, { "m_bDisabled" }) = false;
-		*Entities::GetEntityProp<int*>(glowEntity, { "m_iMode" }) = ce_projectileoutlines_mode->GetInt();
-		Entities::GetEntityProp<EHANDLE*>(glowEntity, { "m_hTarget" })->Set(projectileEntity->GetBaseEntity());
+		*Entities::GetEntityProp<bool*>(glowEntity, "m_bDisabled") = false;
+		*Entities::GetEntityProp<int*>(glowEntity, "m_iMode") = ce_projectileoutlines_mode->GetInt();
+		Entities::GetEntityProp<EHANDLE*>(glowEntity, "m_hTarget")->Set(projectileEntity->GetBaseEntity());
 
-		Color* color = Entities::GetEntityProp<Color*>(glowEntity, { "m_glowColor" });
+		Color* color = Entities::GetEntityProp<Color*>(glowEntity, "m_glowColor");
 		TFTeam* team = Entities::GetEntityTeam(projectileEntity);
 		if (team && *team == TFTeam::Blue)
 			*color = m_ColorBlu;
@@ -156,6 +162,7 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 
 void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!m_RocketsEnabled->GetBool())
 		return;
 	
@@ -167,6 +174,7 @@ void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 
 void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	const bool pills = m_PillsEnabled->GetBool();
 	const bool stickies = m_StickiesEnabled->GetBool();
 	if (!pills && !stickies)
@@ -175,7 +183,7 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 	if (!Entities::CheckEntityBaseclass(entity, "TFProjectile_Pipebomb"))
 		return;
 
-	const TFGrenadePipebombType type = *Entities::GetEntityProp<TFGrenadePipebombType*>(entity, { "m_iType" });
+	const TFGrenadePipebombType type = *Entities::GetEntityProp<TFGrenadePipebombType*>(entity, "m_iType");
 
 	if (pills && type == TFGrenadePipebombType::Pill)
 		m_GlowEntities.insert(std::make_pair<EHANDLE, EHANDLE>(entity->GetBaseEntity(), CreateGlowForEntity(entity)));

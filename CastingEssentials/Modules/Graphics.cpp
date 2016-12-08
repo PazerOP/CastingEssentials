@@ -13,6 +13,7 @@
 #include <materialsystem/imaterialvar.h>
 #include <model_types.h>
 #include <shaderapi/ishaderapi.h>
+#include <vprof.h>
 
 #include <algorithm>
 #include <random>
@@ -26,7 +27,6 @@ Graphics::Graphics()
 {
 	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_NONE, "Enable/disable prop fading.");
 	ce_graphics_debug_glow = new ConVar("ce_graphics_debug_glow", "0");
-	ce_graphics_glow_stencil_final = new ConVar("ce_graphics_glow_stencil_final", "1");
 
 	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
@@ -82,6 +82,7 @@ struct ShaderStencilState_t
 
 	void SetStencilState(CMatRenderContextPtr &pRenderContext)
 	{
+		VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 		pRenderContext->SetStencilEnable(m_bEnable);
 		pRenderContext->SetStencilFailOperation(m_FailOp);
 		pRenderContext->SetStencilZFailOperation(m_ZFailOp);
@@ -113,6 +114,7 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
 	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	ShaderStencilState_t stencilState;
 	stencilState.m_bEnable = true;
 	stencilState.m_nReferenceValue = 1;
@@ -123,13 +125,13 @@ static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t
 	stencilState.SetStencilState(pRenderContext);
 
 	pRenderContext->OverrideDepthEnable(false, false);
+	render->SetBlend(1);
 	for (int i = 0; i < glowObjectDefinitions.Count(); i++)
 	{
 		auto& current = glowObjectDefinitions[i];
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || !current.m_bRenderWhenUnoccluded)
 			continue;
 
-		render->SetBlend(current.m_flGlowAlpha);
 		Vector vGlowColor = current.m_vGlowColor * current.m_flGlowAlpha;
 		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
 
@@ -145,6 +147,7 @@ static ConVar glow_outline_effect_stencil_mode("glow_outline_effect_stencil_mode
 static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
 	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 #if ADDED_OVERRIDE_DEPTH_FUNC	// Enable this when the TF2 team has added IMatRenderContext::OverrideDepthFunc or similar.
 	ShaderStencilState_t stencilState;
 	stencilState.m_bEnable = true;
@@ -221,13 +224,13 @@ static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition
 	stencilState.SetStencilState(pRenderContext);
 
 	// Draw color+alpha, stenciling out pixels from the first pass
+	render->SetBlend(1);
 	for (int i = 0; i < glowObjectDefinitions.Count(); i++)
 	{
 		auto& current = glowObjectDefinitions[i];
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || current.m_bRenderWhenUnoccluded)
 			continue;
 
-		render->SetBlend(1);
 		const Vector vGlowColor = current.m_vGlowColor * current.m_flGlowAlpha;
 		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
 
@@ -239,6 +242,7 @@ static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition
 static void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
 	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	ShaderStencilState_t stencilState;
 	stencilState.m_bEnable = true;
 	stencilState.m_nReferenceValue = 1;
@@ -250,13 +254,13 @@ static void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_
 	stencilState.SetStencilState(pRenderContext);
 
 	pRenderContext->OverrideDepthEnable(true, false);
+	render->SetBlend(1);
 	for (int i = 0; i < glowObjectDefinitions.Count(); i++)
 	{
 		auto& current = glowObjectDefinitions[i];
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || current.m_bRenderWhenOccluded || !current.m_bRenderWhenUnoccluded)
 			continue;
 
-		render->SetBlend(current.m_flGlowAlpha);
 		Vector vGlowColor = current.m_vGlowColor * current.m_flGlowAlpha;
 		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
 
@@ -266,7 +270,26 @@ static void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_
 
 void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int nSplitScreenSlot, CMatRenderContextPtr & pRenderContext, float flBloomScale, int x, int y, int w, int h)
 {
-	PIXEvent pixEvent(pRenderContext, "RenderGlowModels");
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+	const PIXEvent pixEvent(pRenderContext, "ApplyEntityGlowEffects");
+
+	// Optimization: only do all the framebuffer shuffling if there's at least one glow to be drawn
+	{
+		bool atLeastOneGlow = false;
+
+		for (int i = 0; i < m_GlowObjectDefinitions.Count(); i++)
+		{
+			if (m_GlowObjectDefinitions[i].IsUnused() || !m_GlowObjectDefinitions[i].ShouldDraw(nSplitScreenSlot))
+				continue;
+
+			atLeastOneGlow = true;
+			break;
+		}
+
+		if (!atLeastOneGlow)
+			return;
+	}
+
 	ITexture* const pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
 	ITexture* const pRtFullFrameFB1 = materials->FindTexture("_rt_FullFrameFB1", TEXTURE_GROUP_RENDER_TARGET);
 
@@ -347,7 +370,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 #endif
 	}
 
-	// Draw to backbuffer while stenciling out inside of models
+	// Bloom glow models from _rt_FullFrameFB0 to backbuffer while stenciling out inside of models
 	{
 		// Set stencil state
 		ShaderStencilState_t stencilState;

@@ -14,6 +14,7 @@
 #include <convar.h>
 #include <igameevents.h>
 #include <shareddefs.h>
+#include <vprof.h>
 
 #include <PolyHook.h>
 
@@ -22,6 +23,7 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/player.h"
 #include "PluginBase/TFDefinitions.h"
+#include "PluginBase/TFPlayerResource.h"
 
 #include "Controls/StubPanel.h"
 
@@ -44,7 +46,6 @@ private:
 	int bluTopKillstreakPlayer;
 	std::map<int, int> currentKillstreaks;
 	int m_FireEventClientSideHook;
-	CHandle<C_BaseEntity> gameResourcesEntity;
 	int redTopKillstreak;
 	int redTopKillstreakPlayer;
 };
@@ -92,10 +93,10 @@ bool Killstreaks::CheckDependencies()
 
 	for (int i = 0; i < MAX_WEAPONS; i++)
 	{
-		char index[4];
-		PropIndex(i, index);
+		char buffer[32];
+		Entities::PropIndex(buffer, "m_hMyWeapons", i);
 
-		if (!Entities::RetrieveClassPropOffset("CTFPlayer", { "m_hMyWeapons", index }))
+		if (Entities::RetrieveClassPropOffset("CTFPlayer", buffer) < 0)
 		{
 			PluginWarning("Required property table m_hMyWeapons for CTFPlayer for module %s not available!\n", GetModuleName());
 
@@ -107,12 +108,12 @@ bool Killstreaks::CheckDependencies()
 
 	for (int i = 0; i < 3; i++)
 	{
-		char index[4];
-		PropIndex(i, index);
+		char buffer[32];
+		Entities::PropIndex(buffer, "m_nStreaks", i);
 
-		if (!Entities::RetrieveClassPropOffset("CTFPlayer", { "m_nStreaks", index }))
+		if (Entities::RetrieveClassPropOffset("CTFPlayer", buffer) < 0)
 		{
-			PluginWarning("Required property table m_nStreaks for CTFPlayer for module %s not available!\n", GetModuleName());
+			PluginWarning("Required property table %s for CTFPlayer for module %s not available!\n", buffer, GetModuleName());
 			ready = false;
 			break;
 		}
@@ -120,24 +121,24 @@ bool Killstreaks::CheckDependencies()
 
 	for (int i = 0; i <= MAX_PLAYERS; i++)
 	{
-		char index[4];
-		PropIndex(i, index);
+		char buffer[32];
+		Entities::PropIndex(buffer, "m_iStreaks", i);
 
-		if (!Entities::RetrieveClassPropOffset("CTFPlayerResource", { "m_iStreaks", index }))
+		if (Entities::RetrieveClassPropOffset("CTFPlayerResource", buffer) < 0)
 		{
-			PluginWarning("Required property table m_iStreaks for CTFPlayerResource for module %s not available!\n", GetModuleName());
+			PluginWarning("Required property table %s for CTFPlayerResource for module %s not available!\n", buffer, GetModuleName());
 			ready = false;
 			break;
 		}
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CWeaponMedigun", { "m_bHealing" }))
+	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_bHealing") < 0)
 	{
 		PluginWarning("Required property m_bHealing for CWeaponMedigun for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CWeaponMedigun", { "m_hHealingTarget" }))
+	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_hHealingTarget") < 0)
 	{
 		PluginWarning("Required property m_hHealingTarget for CWeaponMedigun for module %s not available!\n", GetModuleName());
 		ready = false;
@@ -193,10 +194,10 @@ Killstreaks::Panel::~Panel()
 		{
 			for (int i = 1; i <= MAX_PLAYERS; i++)
 			{
-				char index[4];
-				PropIndex(i, index);
+				char buffer[32];
+				Entities::PropIndex(buffer, "m_iStreaks", i);
 
-				int *killstreakGlobal = Entities::GetEntityProp<int *>(entity, { "m_iStreaks", index });
+				int *killstreakGlobal = Entities::GetEntityProp<int *>(entity, buffer);
 				*killstreakGlobal = 0;
 			}
 
@@ -215,10 +216,10 @@ Killstreaks::Panel::~Panel()
 		if (!playerEntity)
 			continue;
 
-		int *killstreakPrimary = Entities::GetEntityProp<int *>(playerEntity, { "m_nStreaks", "000" });
-		int *killstreakSecondary = Entities::GetEntityProp<int *>(playerEntity, { "m_nStreaks", "001" });
-		int *killstreakMelee = Entities::GetEntityProp<int *>(playerEntity, { "m_nStreaks", "002" });
-		int *killstreakPDA = Entities::GetEntityProp<int *>(playerEntity, { "m_nStreaks", "003" });
+		int *killstreakPrimary = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.000");
+		int *killstreakSecondary = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.001");
+		int *killstreakMelee = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.002");
+		int *killstreakPDA = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.003");
 
 		*killstreakPrimary = 0;
 		*killstreakSecondary = 0;
@@ -229,6 +230,7 @@ Killstreaks::Panel::~Panel()
 
 void Killstreaks::Panel::OnTick()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (Interfaces::GetEngineClient()->IsInGame())
 	{
 		if (!m_FireEventClientSideHook && GetHooks()->GetHook<IGameEventManager2_FireEventClientSide>())
@@ -236,22 +238,11 @@ void Killstreaks::Panel::OnTick()
 			m_FireEventClientSideHook = GetHooks()->AddHook<IGameEventManager2_FireEventClientSide>(std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
 		}
 
-		if (!gameResourcesEntity.IsValid() || !gameResourcesEntity.Get())
+		Assert(TFPlayerResource::GetPlayerResource());
+		if (!TFPlayerResource::GetPlayerResource())
 		{
-			const int maxEntity = Interfaces::GetClientEntityList()->GetHighestEntityIndex();
-			for (int i = 1; i <= maxEntity; i++)
-			{
-				IClientEntity *entity = Interfaces::GetClientEntityList()->GetClientEntity(i);
-
-				if (!entity)
-					continue;
-
-				if (Entities::CheckEntityBaseclass(entity, "TFPlayerResource"))
-				{
-					gameResourcesEntity = dynamic_cast<C_BaseEntity *>(entity);
-					break;
-				}
-			}
+			Warning("%s: TFPlayerResource unavailable!\n", Killstreaks::GetModuleName());
+			return;
 		}
 
 		for (Player* player : Player::Iterable())
@@ -265,12 +256,13 @@ void Killstreaks::Panel::OnTick()
 			if (!playerEntity)
 				continue;
 
-			int *killstreakPrimary = Entities::GetEntityProp<int *>(playerEntity, { "m_nStreaks", "000" });
-			int *killstreakSecondary = Entities::GetEntityProp<int *>(playerEntity, { "m_nStreaks", "001" });
-			int *killstreakMelee = Entities::GetEntityProp<int *>(playerEntity, { "m_nStreaks", "002" });
-			int *killstreakPDA = Entities::GetEntityProp<int *>(playerEntity, { "m_nStreaks", "003" });
+			int* const killstreakPrimary = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.000");
+			int* const killstreakSecondary = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.001");
+			int* const killstreakMelee = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.002");
+			int* const killstreakPDA = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.003");
 
-			int userid = player->GetUserID();
+			const int userid = player->GetUserID();
+			int* const killstreakGlobal = TFPlayerResource::GetPlayerResource()->GetKillstreak(player->entindex());
 
 			if (currentKillstreaks.find(userid) != currentKillstreaks.end())
 			{
@@ -278,15 +270,7 @@ void Killstreaks::Panel::OnTick()
 				*killstreakSecondary = currentKillstreaks[userid];
 				*killstreakMelee = currentKillstreaks[userid];
 				*killstreakPDA = currentKillstreaks[userid];
-
-				if (gameResourcesEntity.IsValid() && gameResourcesEntity.Get())
-				{
-					char index[4];
-					PropIndex(playerEntity->entindex(), index);
-
-					int *killstreakGlobal = Entities::GetEntityProp<int *>(gameResourcesEntity.Get(), { "m_iStreaks", index });
-					*killstreakGlobal = currentKillstreaks[userid];
-				}
+				*killstreakGlobal = currentKillstreaks[userid];
 			}
 			else
 			{
@@ -294,15 +278,7 @@ void Killstreaks::Panel::OnTick()
 				*killstreakSecondary = 0;
 				*killstreakMelee = 0;
 				*killstreakPDA = 0;
-
-				if (gameResourcesEntity.IsValid() && gameResourcesEntity.Get())
-				{
-					char index[4];
-					PropIndex(playerEntity->entindex(), index);
-
-					int *killstreakGlobal = Entities::GetEntityProp<int *>(gameResourcesEntity.Get(), { "m_iStreaks", index });
-					*killstreakGlobal = 0;
-				}
+				*killstreakGlobal = 0;
 			}
 		}
 	}
@@ -331,14 +307,14 @@ bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 	{
 		int userID = event->GetInt("userid", -1);
 
-		if (userID != -1)
+		if (userID > 0)
 			currentKillstreaks.erase(userID);
 	}
 	else if (!strcmp(eventName, "player_death"))
 	{
 		const int victimUserID = event->GetInt("userid", -1);
 		const int attackerUserID = event->GetInt("attacker", -1);
-		if (attackerUserID != -1)
+		if (attackerUserID > 0)
 		{
 			if (attackerUserID != victimUserID)
 			{
@@ -377,17 +353,17 @@ bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 		}
 
 		const int assisterUserID = event->GetInt("assister", -1);
-		if (assisterUserID != -1)
+		if (assisterUserID > 0)
 		{
 			Player* assister = Player::GetPlayer(Interfaces::GetEngineClient()->GetPlayerForUserID(assisterUserID), __FUNCSIG__);
 			if (assister)
 			{
 				for (int i = 0; i < MAX_WEAPONS; i++)
 				{
-					char index[4];
-					PropIndex(i, index);
+					char buffer[32];
+					Entities::PropIndex(buffer, "m_hMyWeapons", i);
 
-					IClientEntity *weapon = Entities::GetEntityProp<EHANDLE *>(assister->GetEntity(), { "m_hMyWeapons", index })->Get();
+					IClientEntity *weapon = Entities::GetEntityProp<EHANDLE *>(assister->GetEntity(), buffer)->Get();
 					if (!weapon || !Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
 						continue;
 
@@ -424,7 +400,7 @@ bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 			event->SetInt("kill_streak_assist", currentKillstreaks[assisterUserID]);
 		}
 
-		if (victimUserID != -1)
+		if (victimUserID > 0)
 			event->SetInt("kill_streak_victim", currentKillstreaks[victimUserID]);
 	}
 	else if (!strcmp(eventName, "teamplay_win_panel"))

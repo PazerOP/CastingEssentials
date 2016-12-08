@@ -19,6 +19,7 @@
 #include <debugoverlay_shared.h>
 #include <toolframework/ienginetool.h>
 #include <collisionutils.h>
+#include <vprof.h>
 
 #include <regex>
 
@@ -91,6 +92,7 @@ static Vector GetCrosshairTarget()
 
 void MapFlythroughs::OnTick(bool ingame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (ingame)
 	{
 		if (m_CreatingCameraTrigger)
@@ -505,6 +507,7 @@ bool MapFlythroughs::LoadAction(std::shared_ptr<StoryboardElement>& actionOut, K
 
 void MapFlythroughs::CheckTrigger(const std::shared_ptr<Trigger>& trigger, std::vector<C_BaseEntity*>& entities)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	Assert(trigger);
 	if (!trigger)
 		return;
@@ -871,6 +874,7 @@ constexpr float test(float input)
 
 void MapFlythroughs::DrawCameras()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	for (auto camera : m_Cameras)
 	{
 		Vector forward, up, right;

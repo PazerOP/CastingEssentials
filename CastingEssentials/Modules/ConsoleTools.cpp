@@ -2,6 +2,8 @@
 #include "PluginBase/HookManager.h"
 
 #include <convar.h>
+#include <vprof.h>
+
 #include <regex>
 
 class ConsoleTools::PauseFilter final
@@ -194,24 +196,28 @@ void ConsoleTools::DisableHooks()
 
 void ConsoleTools::ConsoleColorPrintfHook(const Color &clr, const char *message)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!m_FilterPaused && CheckFilters(message))
 		GetHooks()->GetHook<ICvar_ConsoleColorPrintf>()->SetState(Hooking::HookAction::SUPERCEDE);
 }
 
 void ConsoleTools::ConsoleDPrintfHook(const char *message)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!m_FilterPaused && CheckFilters(message))
 		GetHooks()->GetHook<ICvar_ConsoleDPrintf>()->SetState(Hooking::HookAction::SUPERCEDE);
 }
 
 void ConsoleTools::ConsolePrintfHook(const char *message)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!m_FilterPaused && CheckFilters(message))
 		GetHooks()->GetHook<ICvar_ConsolePrintf>()->SetState(Hooking::HookAction::SUPERCEDE);
 }
 
 bool ConsoleTools::CheckFilters(const std::string& message) const
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	for (std::string filter : m_Filters)
 	{
 		if (std::regex_search(message, std::regex(filter)))

@@ -1,6 +1,7 @@
 #include "TeamNames.h"
 
 #include <convar.h>
+#include <vprof.h>
 
 // Hi we're TOTALLY not hijacking a friend class that's eventually only declared in a cpp file
 class CCvar
@@ -37,6 +38,7 @@ void TeamNames::SwapTeamNames()
 
 void TeamNames::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	for (TeamConvars::Enum t = (TeamConvars::Enum)0; t < TeamConvars::Count; (*((int*)&t))++)
 	{
 		const bool originalChanged = !!m_LastServerValues[t].compare(m_OriginalCvars[t]->GetString()) && !!m_LastOverrideValues[t].compare(m_OriginalCvars[t]->GetString());

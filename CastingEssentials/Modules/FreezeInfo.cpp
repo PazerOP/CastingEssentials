@@ -6,6 +6,7 @@
 #include <toolframework/ienginetool.h>
 #include <vgui/IVGui.h>
 #include <vgui_controls/EditablePanel.h>
+#include <vprof.h>
 
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -91,6 +92,7 @@ bool FreezeInfo::CheckDependencies()
 
 void FreezeInfo::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (inGame && enabled->GetBool())
 	{
 		if (!m_Panel)
@@ -126,6 +128,7 @@ void FreezeInfo::OnTick(bool inGame)
 
 void FreezeInfo::PostEntityPacketReceivedHook()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (m_Panel)
 		m_Panel->PostEntityPacketReceivedHook();
 }
@@ -149,6 +152,7 @@ FreezeInfo::Panel::Panel(vgui::Panel *parent, const char *panelName) : vgui::Edi
 
 void FreezeInfo::Panel::OnTick()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	const float interval = Interfaces::GetEngineTool()->HostTime() - lastUpdate;
 	if (interval > threshold)
 	{
@@ -176,5 +180,6 @@ void FreezeInfo::Panel::SetDisplayThreshold(float displayThreshold)
 
 void FreezeInfo::Panel::PostEntityPacketReceivedHook()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	lastUpdate = Interfaces::GetEngineTool()->HostTime();
 }

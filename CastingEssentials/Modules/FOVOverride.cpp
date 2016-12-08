@@ -5,6 +5,7 @@
 #include <convar.h>
 #include <icliententity.h>
 #include <shareddefs.h>
+#include <vprof.h>
 
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -61,12 +62,14 @@ bool FOVOverride::CheckDependencies()
 
 bool FOVOverride::InToolModeOverride()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	GetHooks()->SetState<IClientEngineTools_InToolMode>(Hooking::HookAction::SUPERCEDE);
 	return true;
 }
 
 bool FOVOverride::SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!Interfaces::GetEngineClient()->IsInGame())
 		return false;
 

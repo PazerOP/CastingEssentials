@@ -44,11 +44,21 @@ bool TFPlayerResource::IsAlive(int playerEntIndex)
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
 		return false;
 
-	char buffer[8];
-	sprintf_s(buffer, "%.3i", playerEntIndex);
+	char buffer[32];
+	Entities::PropIndex(buffer, "m_bAlive", playerEntIndex);
 
-	auto result = *Entities::GetEntityProp<bool*>(dynamic_cast<C_BaseEntity *>(m_PlayerResourceEntity.Get()), { "m_bAlive", buffer });
-	return result;
+	return *Entities::GetEntityProp<bool*>(dynamic_cast<C_BaseEntity *>(m_PlayerResourceEntity.Get()), buffer);
+}
+
+int* TFPlayerResource::GetKillstreak(int playerEntIndex)
+{
+	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
+		return false;
+
+	char buffer[32];
+	Entities::PropIndex(buffer, "m_iStreaks", playerEntIndex);
+
+	return Entities::GetEntityProp<int*>(dynamic_cast<C_BaseEntity *>(m_PlayerResourceEntity.Get()), buffer);
 }
 
 int TFPlayerResource::GetMaxHealth(int playerEntIndex)
@@ -56,11 +66,10 @@ int TFPlayerResource::GetMaxHealth(int playerEntIndex)
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
 		return false;
 
-	char buffer[8];
-	sprintf_s(buffer, "%.3i", playerEntIndex);
+	char buffer[32];
+	Entities::PropIndex(buffer, "m_iMaxHealth", playerEntIndex);
 
-	auto result = *Entities::GetEntityProp<int*>(dynamic_cast<C_BaseEntity*>(m_PlayerResourceEntity.Get()), { "m_iMaxHealth", buffer });
-	return result;
+	return *Entities::GetEntityProp<int*>(dynamic_cast<C_BaseEntity*>(m_PlayerResourceEntity.Get()), buffer);
 }
 
 bool TFPlayerResource::CheckEntIndex(int playerEntIndex, const char* functionName)

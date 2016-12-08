@@ -23,6 +23,7 @@
 #include <client/iclientmode.h>
 #include <KeyValues.h>
 #include <client/c_basecombatweapon.h>
+#include <vprof.h>
 
 #include <vector>
 
@@ -103,25 +104,25 @@ bool MedigunInfo::CheckDependencies()
 		ready = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CWeaponMedigun", { "m_iItemDefinitionIndex" }))
+	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_iItemDefinitionIndex") < 0)
 	{
 		PluginWarning("Required property m_iItemDefinitionIndex for CWeaponMedigun for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CWeaponMedigun", { "m_bChargeRelease" }))
+	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_bChargeRelease") < 0)
 	{
 		PluginWarning("Required property m_bChargeRelease for CWeaponMedigun for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CWeaponMedigun", { "m_nChargeResistType" }))
+	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_nChargeResistType") < 0)
 	{
 		PluginWarning("Required property m_nChargeResistType for CWeaponMedigun for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CWeaponMedigun", { "m_flChargeLevel" }))
+	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_flChargeLevel") < 0)
 	{
 		PluginWarning("Required property m_flChargeLevel for CWeaponMedigun for module %s not available!\n", GetModuleName());
 		ready = false;
@@ -147,6 +148,7 @@ bool MedigunInfo::CheckDependencies()
 
 void MedigunInfo::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (inGame && enabled->GetBool())
 	{
 		if (!m_MainPanel)
@@ -230,6 +232,7 @@ void MedigunInfo::MainPanel::LoadControlSettings(const char *dialogResourceName,
 
 void MedigunInfo::MainPanel::OnTick()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	vgui::EditablePanel::OnTick();
 
 	size_t bluMediguns = 0;
@@ -360,6 +363,7 @@ void MedigunInfo::MainPanel::OnTick()
 
 void MedigunInfo::MedigunPanel::OnMedigunInfoUpdate(KeyValues *attributes)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	bool reloadSettings = (alive != attributes->GetBool("alive") || charges != attributes->GetInt("charges") || medigun != (TFMedigun)attributes->GetInt("medigun") || released != attributes->GetBool("released") || resistType != (TFResistType)attributes->GetInt("resistType") || team != (TFTeam)attributes->GetInt("team"));
 
 	alive = attributes->GetBool("alive");
@@ -388,6 +392,7 @@ void MedigunInfo::MedigunPanel::OnMedigunInfoUpdate(KeyValues *attributes)
 
 void MedigunInfo::MedigunPanel::OnReloadControlSettings(KeyValues *attributes)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	KeyValues *conditions = new KeyValues("conditions");
 
 	if (alive)

@@ -16,6 +16,7 @@
 #include <icliententity.h>
 #include <engine/IEngineTrace.h>
 #include <util_shared.h>
+#include <vprof.h>
 
 #undef max
 #include <algorithm>
@@ -232,6 +233,7 @@ float CameraSmooths::GetVisibility(int entIndex)
 
 bool CameraSmooths::InToolModeOverride()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!Interfaces::GetEngineClient()->IsHLTV())
 		return false;
 
@@ -246,6 +248,7 @@ bool CameraSmooths::InToolModeOverride()
 
 bool CameraSmooths::IsThirdPersonCameraOverride()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!Interfaces::GetEngineClient()->IsHLTV())
 		return false;
 
@@ -260,6 +263,7 @@ bool CameraSmooths::IsThirdPersonCameraOverride()
 
 bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!enabled->GetBool())
 		return false;
 
@@ -429,6 +433,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 void CameraSmooths::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (inGame)
 	{
 		if (ce_camerasmooths_debug_los->GetBool())

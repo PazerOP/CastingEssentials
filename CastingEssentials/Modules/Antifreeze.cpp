@@ -9,6 +9,7 @@
 #include <vgui/IPanel.h>
 #include <vgui/IVGui.h>
 #include <vgui_controls/Panel.h>
+#include <vprof.h>
 
 class AntiFreeze::Panel : public vgui::Panel
 {
@@ -66,6 +67,8 @@ bool AntiFreeze::CheckDependencies()
 
 void AntiFreeze::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+
 	if (inGame && enabled->GetBool())
 	{
 		if (!m_Panel)

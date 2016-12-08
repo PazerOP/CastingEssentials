@@ -71,37 +71,37 @@ bool Player::CheckDependencies()
 	if (!Interfaces::AreSteamLibrariesAvailable())
 		PluginWarning("Steam libraries for player helper class not available (required for accuracy in retrieving Steam IDs)!\n");
 
-	if (!Entities::RetrieveClassPropOffset("CTFPlayer", { "m_nPlayerCond" }))
+	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_nPlayerCond") < 0)
 	{
 		PluginWarning("Required property m_nPlayerCond for CTFPlayer for player helper class not available!\n");
 		s_ConditionsRetrievalAvailable = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CTFPlayer", { "_condition_bits" }))
+	if (Entities::RetrieveClassPropOffset("CTFPlayer", "_condition_bits") < 0)
 	{
 		PluginWarning("Required property _condition_bits for CTFPlayer for player helper class not available!\n");
 		s_ConditionsRetrievalAvailable = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CTFPlayer", { "m_nPlayerCondEx" }))
+	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_nPlayerCondEx") < 0)
 	{
 		PluginWarning("Required property m_nPlayerCondEx for CTFPlayer for player helper class not available!\n");
 		s_ConditionsRetrievalAvailable = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CTFPlayer", { "m_nPlayerCondEx2" }))
+	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_nPlayerCondEx2") < 0)
 	{
 		PluginWarning("Required property m_nPlayerCondEx2 for CTFPlayer for player helper class not available!\n");
 		s_ConditionsRetrievalAvailable = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CTFPlayer", { "m_nPlayerCondEx3" }))
+	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_nPlayerCondEx3") < 0)
 	{
 		PluginWarning("Required property m_nPlayerCondEx3 for CTFPlayer for player helper class not available!\n");
 		s_ConditionsRetrievalAvailable = false;
 	}
 
-	if (!Entities::RetrieveClassPropOffset("CTFPlayer", { "m_iClass" }))
+	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_iClass") < 0)
 	{
 		PluginWarning("Required property m_iClass for CTFPlayer for player helper class not available!\n");
 		s_ClassRetrievalAvailable = false;
@@ -601,9 +601,9 @@ C_BaseCombatWeapon *Player::GetWeapon(int i) const
 	{
 		if (CheckCache() || !m_CachedWeapons[i])
 		{
-			char buffer[8];
-			sprintf_s(buffer, "%.3i", i);
-			m_CachedWeapons[i] = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>*>(GetEntity(), { "m_hMyWeapons", buffer });
+			char buffer[32];
+			Entities::PropIndex(buffer, "m_hMyWeapons", i);
+			m_CachedWeapons[i] = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>*>(GetEntity(), buffer);
 		}
 
 		if (m_CachedWeapons[i])
