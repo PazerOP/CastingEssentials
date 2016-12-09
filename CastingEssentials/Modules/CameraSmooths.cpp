@@ -275,6 +275,9 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 	const Vector& lastFramePos = CameraState::GetModule()->GetLastFramePluginViewOrigin();
 	const QAngle& lastFrameAng = CameraState::GetModule()->GetLastFramePluginViewAngles();
 
+	const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
+	const float hosttime = Interfaces::GetEngineTool()->HostTime();
+
 	if (hltvcamera->m_nCameraMode == OBS_MODE_IN_EYE || hltvcamera->m_nCameraMode == OBS_MODE_CHASE)
 	{
 		if (hltvcamera->m_iTraget1 != smoothEndTarget || (hltvcamera->m_nCameraMode != smoothEndMode && !smoothInProgress))
@@ -337,10 +340,9 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 			m_SmoothStartAng = lastFrameAng;
 			m_SmoothBeginPos = m_SmoothStartPos = lastFramePos;
-			m_SmoothStartTime = Interfaces::GetEngineTool()->HostTime();
+			m_SmoothStartTime = hosttime;
 			m_LastOverallProgress = m_LastAngPercentage = 0;
-			smoothInProgress = true; // moveVector.Length() < max_distance->GetFloat() &&
-										//(max_angle_difference->GetFloat() < 0 || angle < max_angle_difference->GetFloat());
+			smoothInProgress = true; 
 		}
 	}
 	else
@@ -350,7 +352,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 	{
 		GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
 
-		const float percentage = (Interfaces::GetEngineTool()->HostTime() - m_SmoothStartTime) / ce_camerasmooths_duration->GetFloat();
+		const float percentage = (hosttime - m_SmoothStartTime) / ce_camerasmooths_duration->GetFloat();
 		const float posPercentage = EaseOut(percentage, ce_camerasmooths_pos_bias->GetFloat());
 
 		if (percentage < 1)
@@ -365,14 +367,14 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 			// What's the furthest we're allowed to travel this frame?
 			const float maxDistThisFrame = max_speed->GetFloat() > 0 ?
-				max_speed->GetFloat() * Interfaces::GetEngineTool()->HostFrameTime() :
+				max_speed->GetFloat() * frametime :
 				std::numeric_limits<float>::infinity();
 
 			// Clamp camera translation to max speed
 			if (posDifference > maxDistThisFrame)
 			{
 				m_SmoothStartPos = origin = VectorLerp(m_SmoothStartPos, idealPos, maxDistThisFrame / posDifference);
-				m_SmoothStartTime = Interfaces::GetEngineTool()->HostTime();
+				m_SmoothStartTime = hosttime;
 			}
 			else
 				origin = idealPos;
