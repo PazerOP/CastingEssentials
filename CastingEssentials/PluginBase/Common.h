@@ -182,6 +182,7 @@ extern bool ParseVector(Vector& v, const char* str);
 extern bool ParseAngle(QAngle& a, const char* str);
 
 extern Vector GetViewOrigin();
+extern int GetConLine();
 
 void ApproachPosition(const Vector& target, Vector& current, float speed);
 

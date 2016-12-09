@@ -394,9 +394,9 @@ void CameraTools::OnTick(bool inGame)
 
 			if (mode >= 0)
 			{
-				Interfaces::GetEngineClient()->Con_NPrintf(0, "Current spec_mode: %i %s",
+				Interfaces::GetEngineClient()->Con_NPrintf(GetConLine(), "Current spec_mode: %i %s",
 					mode, mode >= 0 && mode < NUM_OBSERVER_MODES ? s_ObserverModes[mode] : "INVALID");
-				Interfaces::GetEngineClient()->Con_NPrintf(1, "Current target: %i%s",
+				Interfaces::GetEngineClient()->Con_NPrintf(GetConLine(), "Current target: %i%s",
 					target, target == 0 ? " (None)" : (strprintf(" (%s)", playerName.c_str())).c_str());
 			}
 		}

@@ -5,6 +5,7 @@
 #include <characterset.h>
 #include <cdll_int.h>
 #include <view_shared.h>
+#include <toolframework/ienginetool.h>
 
 #include <regex>
 
@@ -82,4 +83,19 @@ void ApproachPosition(const Vector& target, Vector& current, float speed)
 	const Vector dir = (target - current).Normalized();
 
 	current = current + dir * speed;
+}
+
+int GetConLine()
+{
+	static int s_LastConLine = 0;
+	static int s_LastFrame = 0;
+	
+	const int thisFrame = Interfaces::GetEngineTool()->HostFrameCount();
+	if (thisFrame != s_LastFrame)
+	{
+		s_LastConLine = 0;
+		s_LastFrame = thisFrame;
+	}
+
+	return s_LastConLine++;
 }
