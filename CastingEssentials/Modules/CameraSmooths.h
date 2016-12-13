@@ -22,12 +22,11 @@ public:
 
 	static bool CheckDependencies();
 
-	bool IsSmoothing() const { return smoothInProgress; }
+	bool IsSmoothing() const { return m_InProgress; }
 private:
-	bool smoothEnding;
-	int smoothEndMode;
-	int smoothEndTarget;
-	bool smoothInProgress;
+	int m_EndMode;
+	int m_EndTarget;
+	bool m_InProgress;
 	float m_LastHostTime;
 	float m_StartDist;
 
@@ -42,10 +41,10 @@ private:
 	bool IsThirdPersonCameraOverride() const override;
 	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov) override;
 	
-	ConVar *ce_smoothing_enabled;
-	ConVar *ce_smoothing_fov;
+	ConVar* ce_smoothing_enabled;
+	ConVar* ce_smoothing_fov;
 	ConVar* ce_smoothing_force_distance;
-	ConVar *ce_smoothing_max_distance;
+	ConVar* ce_smoothing_max_distance;
 
 	ConVar* ce_smoothing_linear_speed;
 	ConVar* ce_smoothing_bezier_dist;

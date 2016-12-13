@@ -63,10 +63,9 @@ static const Vector TEST_POINTS[27] =
 
 CameraSmooths::CameraSmooths()
 {
-	smoothEnding = false;
-	smoothEndMode = OBS_MODE_NONE;
-	smoothEndTarget = 0;
-	smoothInProgress = false;
+	m_EndMode = OBS_MODE_NONE;
+	m_EndTarget = 0;
+	m_InProgress = false;
 	m_LastHostTime = 0;
 
 	ce_smoothing_enabled = new ConVar("ce_smoothing_enabled", "0", FCVAR_NONE, "Enables smoothing between spectator targets.");
@@ -236,7 +235,7 @@ float CameraSmooths::GetVisibility(int entIndex)
 	return 0;
 }
 
-// Returns the distance to target.
+// Returns the distance to target. See https://www.desmos.com/calculator/fspe3a4hd6
 static float ComputeSmooth(float time, float startTime, float totalDist, float maxSpeed, float bezierDist, float bezierDuration, float& percent)
 {
 	// x = time in seconds
@@ -297,7 +296,7 @@ bool CameraSmooths::InToolModeOverride() const
 	if (!Interfaces::GetEngineClient()->IsHLTV())
 		return false;
 
-	if (smoothInProgress)
+	if (m_InProgress)
 		return true;
 
 	return false;
@@ -309,7 +308,7 @@ bool CameraSmooths::IsThirdPersonCameraOverride() const
 	if (!Interfaces::GetEngineClient()->IsHLTV())
 		return false;
 
-	if (smoothInProgress)
+	if (m_InProgress)
 		return true;
 
 	return false;
@@ -334,10 +333,10 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 	if (hltvcamera->m_nCameraMode == OBS_MODE_IN_EYE || hltvcamera->m_nCameraMode == OBS_MODE_CHASE)
 	{
-		if (hltvcamera->m_iTraget1 != smoothEndTarget || (hltvcamera->m_nCameraMode != smoothEndMode && !smoothInProgress))
+		if (hltvcamera->m_iTraget1 != m_EndTarget || (hltvcamera->m_nCameraMode != m_EndMode && !m_InProgress))
 		{
-			smoothEndMode = hltvcamera->m_nCameraMode;
-			smoothEndTarget = hltvcamera->m_iTraget1;
+			m_EndMode = hltvcamera->m_nCameraMode;
+			m_EndTarget = hltvcamera->m_iTraget1;
 
 			Vector currentForward;
 			AngleVectors(lastFrameAng, &currentForward);
@@ -353,19 +352,19 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 				{
 					if (ce_smoothing_debug->GetBool())
 						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, angle difference was %1.0f degrees.\n\n", GetModuleName(), angle);
-					smoothInProgress = false;
+					m_InProgress = false;
 					return false;
 				}
 
 				if (ce_smoothing_debug->GetBool())
 					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed angle test with difference of %1.0f degrees.\n", GetModuleName(), angle);
 
-				const float visibility = GetVisibility(smoothEndTarget);
+				const float visibility = GetVisibility(m_EndTarget);
 				if (visibility <= 0)
 				{
 					if (ce_smoothing_debug->GetBool())
 						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, no visibility to new target\n\n", GetModuleName());
-					smoothInProgress = false;
+					m_InProgress = false;
 					return false;
 				}
 
@@ -376,7 +375,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 				{
 					if (ce_smoothing_debug->GetBool())
 						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, distance of %1.0f units > %s (%1.0f units)\n\n", GetModuleName(), distance, ce_smoothing_max_distance->GetName(), ce_smoothing_max_distance->GetFloat());
-					smoothInProgress = false;
+					m_InProgress = false;
 					return false;
 				}
 
@@ -394,16 +393,16 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 			m_SmoothStartAng = lastFrameAng;
 			m_SmoothStartPos = lastFramePos;
-			m_SmoothStartTime = m_LastHostTime;
 			m_StartDist = m_SmoothStartPos.DistTo(origin);
+			m_SmoothStartTime = m_LastHostTime;
 			m_LastOverallProgress = m_LastAngPercentage = 0;
-			smoothInProgress = true;
+			m_InProgress = true;
 		}
 	}
 	else
-		smoothInProgress = false;
+		m_InProgress = false;
 
-	if (smoothInProgress)
+	if (m_InProgress)
 	{
 		const Vector targetPos = origin;
 		const float distToTarget = lastFramePos.DistTo(targetPos);
@@ -427,8 +426,10 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 		if (percent >= 1)
 		{
-			smoothEnding = true;
-			smoothInProgress = false;
+			m_InProgress = false;
+
+			if (hltvcamera)
+				GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(m_EndMode);
 		}
 		else
 		{
@@ -465,19 +466,10 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			return true;
 		}
 	}
-	
-	if (smoothEnding)
-	{
-		Assert(!smoothInProgress);
 
-		if (hltvcamera)
-			GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(smoothEndMode);
-	}
-
-	smoothEnding = false;
-	smoothEndMode = hltvcamera->m_nCameraMode;
-	smoothEndTarget = hltvcamera->m_iTraget1;
-	smoothInProgress = false;
+	m_EndMode = hltvcamera->m_nCameraMode;
+	m_EndTarget = hltvcamera->m_iTraget1;
+	m_InProgress = false;
 	m_LastHostTime = hosttime;
 
 	return false;
