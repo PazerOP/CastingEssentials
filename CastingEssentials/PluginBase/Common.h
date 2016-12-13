@@ -3,6 +3,7 @@
 #include <dbg.h>
 #include <string>
 #include <steam/steamclientpublic.h>
+#include <mathlib/mathlib.h>
 
 #pragma warning(disable : 4592)		// 'x': symbol will be dynamically initialized (implementation limitation)
 #pragma warning(disable : 4533)		// initialization of 'x' is skipped by 'instruction' -- should only be a warning, but is promoted error for some reason?
@@ -157,9 +158,17 @@ inline float EaseIn(float x, float bias = 0.5)
 	//Assert(bias >= 0 && bias <= 1);
 	return std::pow(1 - std::pow(1 - x, bias), 1 / bias);
 }
+inline float EaseOut2(float x, float bias = 0.35)
+{
+	return 1 - std::pow(-x + 1, 1 / bias);
+}
 inline float EaseInSlope(float x, float bias = 0.5)
 {
 	return std::pow(1 - std::pow(1 - x, bias), (1 / bias) - 1) * std::pow(1 - x, bias - 1);
+}
+__forceinline float Bezier(float t, float x0, float x1, float x2)
+{
+	return Lerp(t, Lerp(t, x0, x1), Lerp(t, x1, x2));
 }
 
 inline float smoothstep(float x)
@@ -184,7 +193,7 @@ extern bool ParseAngle(QAngle& a, const char* str);
 extern Vector GetViewOrigin();
 extern int GetConLine();
 
-void ApproachPosition(const Vector& target, Vector& current, float speed);
+Vector ApproachVector(const Vector& from, const Vector& to, float speed);
 
 template <typename T, std::size_t N> constexpr std::size_t arraysize(T const (&)[N]) noexcept { return N; }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PluginBase/ICameraOverride.h"
 #include "PluginBase/Modules.h"
 
 #include <mathlib/vector.h>
@@ -11,7 +12,7 @@ class ConVar;
 class IConVar;
 class C_BaseEntity;
 
-class CameraSmooths : public Module
+class CameraSmooths : public Module, public ICameraOverride
 {
 public:
 	CameraSmooths();
@@ -27,40 +28,38 @@ private:
 	int smoothEndMode;
 	int smoothEndTarget;
 	bool smoothInProgress;
-	QAngle smoothLastAngles;
-	Vector smoothLastOrigin;
-	float smoothLastTime;
+	float m_LastHostTime;
+	float m_StartDist;
 
-	Vector m_SmoothBeginPos;
-
+	float m_LastAngPercentage;
+	float m_LastOverallProgress;
+	
 	Vector m_SmoothStartPos;
 	QAngle m_SmoothStartAng;
 	float m_SmoothStartTime;
 
-	float m_LastOverallProgress;
-	float m_LastAngPercentage;
-
-	bool InToolModeOverride();
-	bool IsThirdPersonCameraOverride();
-	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov);
-
-	ConVar *enabled;
-	ConVar *max_angle;
-	ConVar* ce_camerasmooths_min_distance;
-	ConVar *max_distance;
-	ConVar *max_speed;
-	ConVar* ce_camerasmooths_duration;
-
-	ConVar* ce_camerasmooths_pos_bias;
-	ConVar* ce_camerasmooths_ang_bias;
-
-	ConVar* ce_camerasmooths_debug;
-	ConVar* ce_camerasmooths_debug_los;
-
-	ConVar* ce_camerasmooths_check_los;
-	ConVar* ce_camerasmooths_los_buffer;
+	bool InToolModeOverride() const override;
+	bool IsThirdPersonCameraOverride() const override;
+	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov) override;
 	
-	ConVar* ce_camerasmooths_avoid_scoped_snipers;
+	ConVar *ce_smoothing_enabled;
+	ConVar *ce_smoothing_fov;
+	ConVar* ce_smoothing_force_distance;
+	ConVar *ce_smoothing_max_distance;
+
+	ConVar* ce_smoothing_linear_speed;
+	ConVar* ce_smoothing_bezier_dist;
+	ConVar* ce_smoothing_bezier_duration;
+
+	ConVar* ce_smoothing_ang_bias;
+
+	ConVar* ce_smoothing_mode;
+
+	ConVar* ce_smoothing_debug;
+	ConVar* ce_smoothing_debug_los;
+
+	ConVar* ce_smoothing_check_los;
+	ConVar* ce_smoothing_los_buffer;
 
 	struct CollisionTest
 	{
@@ -80,6 +79,4 @@ private:
 	void OnTick(bool inGame) override;
 
 	static constexpr Color DBGMSG_COLOR = Color(255, 205, 68, 255);
-
-	friend class CameraState;
 };

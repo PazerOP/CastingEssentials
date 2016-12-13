@@ -260,5 +260,8 @@
     <ClInclude Include="Modules\Graphics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PluginBase\ICameraOverride.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
 #pragma once
+#include "PluginBase/ICameraOverride.h"
 #include "PluginBase/Modules.h"
 
 #include <mathlib/vector.h>
@@ -15,7 +16,7 @@ class C_HLTVCamera;
 class C_BaseEntity;
 class Player;
 
-class CameraTools final : public Module
+class CameraTools final : public Module, public ICameraOverride
 {
 public:
 	CameraTools();
@@ -79,12 +80,10 @@ private:
 
 	Vector CalcPosForAngle(const Vector& orbitCenter, const QAngle& angle);
 
-	bool InToolModeOverride() { return m_ViewOverride; }
-	bool IsThirdPersonCameraOverride() { return m_ViewOverride; }
-	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov);
+	bool InToolModeOverride() const override { return m_ViewOverride; }
+	bool IsThirdPersonCameraOverride() const override { return m_ViewOverride; }
+	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov) override;
 	bool m_ViewOverride;
 	QAngle m_LastFrameAngle;
 	Player* m_LastTargetPlayer;
-
-	friend class CameraState;
 };

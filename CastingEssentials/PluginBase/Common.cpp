@@ -78,11 +78,11 @@ Vector GetViewOrigin()
 	return view.origin;
 }
 
-void ApproachPosition(const Vector& target, Vector& current, float speed)
+Vector ApproachVector(const Vector& from, const Vector& to, float speed)
 {
-	const Vector dir = (target - current).Normalized();
+	const Vector dir = (to - from).Normalized();
 
-	current = current + dir * speed;
+	return from + dir * speed;
 }
 
 int GetConLine()

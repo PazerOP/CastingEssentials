@@ -27,10 +27,10 @@ bool CameraState::InToolModeOverride()
 
 	{
 		if (CameraTools::GetModule())
-			m_ThisFrameInToolMode = CameraTools::GetModule()->InToolModeOverride() || m_ThisFrameInToolMode;
+			m_ThisFrameInToolMode = static_cast<ICameraOverride*>(CameraTools::GetModule())->InToolModeOverride() || m_ThisFrameInToolMode;
 
 		if (CameraSmooths::GetModule())
-			m_ThisFrameInToolMode = CameraSmooths::GetModule()->InToolModeOverride() || m_ThisFrameInToolMode;
+			m_ThisFrameInToolMode = static_cast<ICameraOverride*>(CameraSmooths::GetModule())->InToolModeOverride() || m_ThisFrameInToolMode;
 	}
 
 	if (m_ThisFrameInToolMode)
@@ -48,10 +48,10 @@ bool CameraState::IsThirdPersonCameraOverride()
 
 	{
 		if (CameraTools::GetModule())
-			m_ThisFrameIsThirdPerson = CameraTools::GetModule()->IsThirdPersonCameraOverride() || m_ThisFrameIsThirdPerson;
+			m_ThisFrameIsThirdPerson = static_cast<ICameraOverride*>(CameraTools::GetModule())->IsThirdPersonCameraOverride() || m_ThisFrameIsThirdPerson;
 
 		if (CameraSmooths::GetModule())
-			m_ThisFrameIsThirdPerson = CameraSmooths::GetModule()->IsThirdPersonCameraOverride() || m_ThisFrameIsThirdPerson;
+			m_ThisFrameIsThirdPerson = static_cast<ICameraOverride*>(CameraSmooths::GetModule())->IsThirdPersonCameraOverride() || m_ThisFrameIsThirdPerson;
 	}
 
 	if (m_ThisFrameIsThirdPerson)
@@ -71,12 +71,12 @@ bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 
 	bool retVal = false;
 	if (CameraTools::GetModule())
-		retVal = CameraTools::GetModule()->SetupEngineViewOverride(origin, angles, fov) || retVal;
+		retVal = static_cast<ICameraOverride*>(CameraTools::GetModule())->SetupEngineViewOverride(origin, angles, fov) || retVal;
 
 	m_ThisFramePluginView.Set(origin, angles, fov);
 
 	if (CameraSmooths::GetModule())
-		retVal = CameraSmooths::GetModule()->SetupEngineViewOverride(origin, angles, fov) || retVal;
+		retVal = static_cast<ICameraOverride*>(CameraSmooths::GetModule())->SetupEngineViewOverride(origin, angles, fov) || retVal;
 
 	m_ThisFramePluginView.Set(origin, angles, fov);
 

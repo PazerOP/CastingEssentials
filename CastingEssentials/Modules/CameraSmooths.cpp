@@ -18,6 +18,7 @@
 #include <util_shared.h>
 #include <vprof.h>
 
+#undef min
 #undef max
 #include <algorithm>
 
@@ -66,26 +67,30 @@ CameraSmooths::CameraSmooths()
 	smoothEndMode = OBS_MODE_NONE;
 	smoothEndTarget = 0;
 	smoothInProgress = false;
-	smoothLastTime = 0;
+	m_LastHostTime = 0;
 
-	enabled = new ConVar("ce_smoothing_enabled", "0", FCVAR_NONE, "smooth transition between camera positions");
-	max_angle = new ConVar("ce_smoothing_max_angle", "45", FCVAR_NONE, "max angle difference at which smoothing will be performed", true, 0, true, 180);
-	max_distance = new ConVar("ce_smoothing_max_distance", "2250", FCVAR_NONE, "max distance at which smoothing will be performed");
-	ce_camerasmooths_min_distance = new ConVar("ce_smoothing_min_distance", "128", FCVAR_NONE, "Always smooth if we're closer than this distance.");
-	max_speed = new ConVar("ce_smoothing_max_speed", "2000", FCVAR_NONE, "max units per second to move view");
-	ce_camerasmooths_duration = new ConVar("ce_smoothing_duration", "0.5", FCVAR_NONE, "Duration over which to smooth the camera.");
+	ce_smoothing_enabled = new ConVar("ce_smoothing_enabled", "0", FCVAR_NONE, "Enables smoothing between spectator targets.");
+	ce_smoothing_fov = new ConVar("ce_smoothing_fov", "45", FCVAR_NONE, "Only targets within this FOV will be smoothed to.", true, 0, true, 180);
+	ce_smoothing_max_distance = new ConVar("ce_smoothing_max_distance", "2250", FCVAR_NONE, "max distance at which smoothing will be performed");
+	ce_smoothing_force_distance = new ConVar("ce_smoothing_force_distance", "128", FCVAR_NONE, "Always smooth if we're closer than this distance.");
 
-	ce_camerasmooths_ang_bias = new ConVar("ce_smoothing_ang_bias", "0.65", FCVAR_NONE, "biasAmt for angle smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1);
-	ce_camerasmooths_pos_bias = new ConVar("ce_smoothing_pos_bias", "0.75", FCVAR_NONE, "biasAmt for position smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1);
+	ce_smoothing_linear_speed = new ConVar("ce_smoothing_linear_speed", "875", FCVAR_NONE, "Speed at which to approach the bezier curve start.");
+	ce_smoothing_bezier_dist = new ConVar("ce_smoothing_bezier_dist", "1000", FCVAR_NONE, "Units from target to begin the bezier smooth.");
+	ce_smoothing_bezier_duration = new ConVar("ce_smoothing_bezier_duration", "0.65", FCVAR_NONE, "Duration over which to smooth the camera.");
 
-	ce_camerasmooths_check_los = new ConVar("ce_smoothing_check_los", "1", FCVAR_NONE, "Make sure we have LOS to the player we're smoothing to.");
+	ce_smoothing_ang_bias = new ConVar("ce_smoothing_ang_bias", "0.85", FCVAR_NONE, "biasAmt for angle smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1);
 
-	ce_camerasmooths_los_buffer = new ConVar("ce_smoothing_los_buffer", "32", FCVAR_NONE, "Additional space to give ourselves so we can sorta see around corners.");
+	ce_smoothing_mode = new ConVar("ce_smoothing_mode", "1", FCVAR_NONE,
+		"\nDifferent modes for smoothing to targets."
+		"\n\t0: Clamp distance to target."
+		"\n\t1: Lerp between start position and target.",
+		true, 0, true, 1);
 
-	ce_camerasmooths_debug_los = new ConVar("ce_smoothing_debug_los", "0", FCVAR_NONE, "Draw points associated with LOS checking for camera smooths.");
-	ce_camerasmooths_debug = new ConVar("ce_smoothing_debug", "0", FCVAR_NONE, "Prints debugging info about camera smooths to the console.");
+	ce_smoothing_debug = new ConVar("ce_smoothing_debug", "0", FCVAR_NONE, "Prints debugging info about camera smooths to the console.");
+	ce_smoothing_debug_los = new ConVar("ce_smoothing_debug_los", "0", FCVAR_NONE, "Draw points associated with LOS checking for camera smooths.");
 
-	ce_camerasmooths_avoid_scoped_snipers = new ConVar("ce_smoothing_avoid_scoped_snipers", "0", FCVAR_NONE, "DHW HACK: Don't smooth to scoped snipers.");
+	ce_smoothing_check_los = new ConVar("ce_smoothing_check_los", "1", FCVAR_NONE, "Make sure we have LOS to the player we're smoothing to.");
+	ce_smoothing_los_buffer = new ConVar("ce_smoothing_los_buffer", "32", FCVAR_NONE, "Additional space to give ourselves so we can sorta see around corners.");
 }
 
 bool CameraSmooths::CheckDependencies()
@@ -169,7 +174,7 @@ void CameraSmooths::UpdateCollisionTests()
 
 			const TFClassType playerClass = player->GetClass();
 			const Vector eyePos = player->GetEyePosition();
-			const Vector buffer(ce_camerasmooths_los_buffer->GetFloat());
+			const Vector buffer(ce_smoothing_los_buffer->GetFloat());
 			newTest.m_Mins = eyePos - buffer;
 			newTest.m_Maxs = eyePos + buffer;
 
@@ -231,32 +236,81 @@ float CameraSmooths::GetVisibility(int entIndex)
 	return 0;
 }
 
-bool CameraSmooths::InToolModeOverride()
+// Returns the distance to target.
+static float ComputeSmooth(float time, float startTime, float totalDist, float maxSpeed, float bezierDist, float bezierDuration, float& percent)
+{
+	// x = time in seconds
+	// y = distance to target
+
+	const float slope = maxSpeed;
+
+	constexpr float x0 = 0;
+	constexpr float y0 = 0;
+
+	const float y2 = totalDist;
+	const float x2 = y2 / slope;
+
+	const float x3 = x2 + bezierDuration;
+	const float y3 = y2;
+
+	if (totalDist <= bezierDist)
+	{
+		constexpr float splitPoint = 0;
+		
+		constexpr float x1 = 0;
+		constexpr float y1 = 0;
+
+		percent = (time - startTime) / x3;
+
+		return totalDist - Bezier(percent, y1, y2, y3);
+	}
+	else
+	{
+		const float splitPoint = 1 - (bezierDist / totalDist);
+
+		const float x1 = splitPoint * (y3 / slope);
+		const float y1 = splitPoint * totalDist;
+
+		const float bezierBeginX = x1;
+		//const float bezierBeginY = y1;
+
+		const float t = time - startTime;
+		percent = t / x3;
+
+		if (t < bezierBeginX)
+		{
+			// Simple linear interp between 0 and y1
+			const float lerp = Lerp<float>(t / bezierBeginX, 0, y1);
+			return totalDist - lerp;
+		}
+		else
+		{
+			const float bezier = Bezier((t - bezierBeginX) / (x3 - bezierBeginX), y1, y2, y3);
+			return totalDist - bezier;
+		}
+	}
+}
+
+bool CameraSmooths::InToolModeOverride() const
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!Interfaces::GetEngineClient()->IsHLTV())
 		return false;
 
 	if (smoothInProgress)
-	{
-		GetHooks()->SetState<IClientEngineTools_InToolMode>(Hooking::HookAction::SUPERCEDE);
 		return true;
-	}
 
 	return false;
 }
 
-bool CameraSmooths::IsThirdPersonCameraOverride()
+bool CameraSmooths::IsThirdPersonCameraOverride() const
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!Interfaces::GetEngineClient()->IsHLTV())
 		return false;
 
 	if (smoothInProgress)
-	{
-		GetHooks()->SetState<IClientEngineTools_IsThirdPersonCamera>(Hooking::HookAction::SUPERCEDE);
 		return true;
-	}
 
 	return false;
 }
@@ -264,7 +318,7 @@ bool CameraSmooths::IsThirdPersonCameraOverride()
 bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (!enabled->GetBool())
+	if (!ce_smoothing_enabled->GetBool())
 		return false;
 
 	if (!Interfaces::GetEngineClient()->IsHLTV())
@@ -292,57 +346,58 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			const float angle = Rad2Deg(std::acosf(currentForward.Dot(deltaPos) / (currentForward.Length() + deltaPos.Length())));
 			const float distance = deltaPos.Length();
 
-			const bool forceSmooth = distance <= ce_camerasmooths_min_distance->GetFloat();
+			const bool forceSmooth = distance <= ce_smoothing_force_distance->GetFloat();
 			if (!forceSmooth)
 			{
-				if (angle > max_angle->GetFloat())
+				if (angle > ce_smoothing_fov->GetFloat())
 				{
-					if (ce_camerasmooths_debug->GetBool())
+					if (ce_smoothing_debug->GetBool())
 						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, angle difference was %1.0f degrees.\n\n", GetModuleName(), angle);
 					smoothInProgress = false;
 					return false;
 				}
 
-				if (ce_camerasmooths_debug->GetBool())
+				if (ce_smoothing_debug->GetBool())
 					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed angle test with difference of %1.0f degrees.\n", GetModuleName(), angle);
 
 				const float visibility = GetVisibility(smoothEndTarget);
 				if (visibility <= 0)
 				{
-					if (ce_camerasmooths_debug->GetBool())
+					if (ce_smoothing_debug->GetBool())
 						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, no visibility to new target\n\n", GetModuleName());
 					smoothInProgress = false;
 					return false;
 				}
 
-				if (ce_camerasmooths_debug->GetBool())
+				if (ce_smoothing_debug->GetBool())
 					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed LOS test (%1.0f%% visible)\n", GetModuleName(), visibility * 100);
 
-				if (max_distance->GetFloat() > 0 && distance > max_distance->GetFloat())
+				if (ce_smoothing_max_distance->GetFloat() > 0 && distance > ce_smoothing_max_distance->GetFloat())
 				{
-					if (ce_camerasmooths_debug->GetBool())
-						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, distance of %1.0f units > %s (%1.0f units)\n\n", GetModuleName(), distance, max_distance->GetName(), max_distance->GetFloat());
+					if (ce_smoothing_debug->GetBool())
+						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, distance of %1.0f units > %s (%1.0f units)\n\n", GetModuleName(), distance, ce_smoothing_max_distance->GetName(), ce_smoothing_max_distance->GetFloat());
 					smoothInProgress = false;
 					return false;
 				}
 
-				if (ce_camerasmooths_debug->GetBool())
-					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed distance test, %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, max_distance->GetName(), max_distance->GetFloat());
+				if (ce_smoothing_debug->GetBool())
+					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed distance test, %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_smoothing_max_distance->GetName(), ce_smoothing_max_distance->GetFloat());
 			}
 			else
 			{
-				if (ce_camerasmooths_debug->GetBool())
-					ConColorMsg(DBGMSG_COLOR, "[%s] Forcing smooth, distance of %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_camerasmooths_min_distance->GetName(), ce_camerasmooths_min_distance->GetFloat());
+				if (ce_smoothing_debug->GetBool())
+					ConColorMsg(DBGMSG_COLOR, "[%s] Forcing smooth, distance of %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_smoothing_force_distance->GetName(), ce_smoothing_force_distance->GetFloat());
 			}
 
-			if (ce_camerasmooths_debug->GetBool())
+			if (ce_smoothing_debug->GetBool())
 				ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth!\n\n", GetModuleName());
 
 			m_SmoothStartAng = lastFrameAng;
-			m_SmoothBeginPos = m_SmoothStartPos = lastFramePos;
-			m_SmoothStartTime = hosttime;
+			m_SmoothStartPos = lastFramePos;
+			m_SmoothStartTime = m_LastHostTime;
+			m_StartDist = m_SmoothStartPos.DistTo(origin);
 			m_LastOverallProgress = m_LastAngPercentage = 0;
-			smoothInProgress = true; 
+			smoothInProgress = true;
 		}
 	}
 	else
@@ -350,44 +405,47 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 
 	if (smoothInProgress)
 	{
-		GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
+		const Vector targetPos = origin;
+		const float distToTarget = lastFramePos.DistTo(targetPos);
 
-		const float percentage = (hosttime - m_SmoothStartTime) / ce_camerasmooths_duration->GetFloat();
-		const float posPercentage = EaseOut(percentage, ce_camerasmooths_pos_bias->GetFloat());
+		float percent;
 
-		if (percentage < 1)
+		const float targetDist = ComputeSmooth(
+			hosttime, m_SmoothStartTime,
+			m_StartDist,
+			ce_smoothing_linear_speed->GetFloat(),
+			ce_smoothing_bezier_dist->GetFloat(),
+			ce_smoothing_bezier_duration->GetFloat(),
+			percent);
+
+		if (ce_smoothing_debug->GetBool())
 		{
-			const Vector targetPos = origin;
+			GetConLine();
+			engine->Con_NPrintf(GetConLine(), "%%: %1.1f", percent * 100);
+			engine->Con_NPrintf(GetConLine(), "targetDist: %1.0f", targetDist);
+		}
 
-			// If we had uncapped speed, we'd be here.
-			const Vector idealPos = VectorLerp(m_SmoothStartPos, targetPos, posPercentage);
+		if (percent >= 1)
+		{
+			smoothEnding = true;
+			smoothInProgress = false;
+		}
+		else
+		{
+			if (ce_smoothing_mode->GetInt() == 0)
+				origin = ApproachVector(targetPos, lastFramePos, targetDist);
+			else if (ce_smoothing_mode->GetInt() == 1)
+				origin = VectorLerp(m_SmoothStartPos, targetPos, RemapVal(targetDist, m_StartDist, 0, 0, 1));
 
-			// How far would we have to travel this frame to get to our ideal position?
-			const float posDifference = lastFramePos.DistTo(idealPos);
-
-			// What's the furthest we're allowed to travel this frame?
-			const float maxDistThisFrame = max_speed->GetFloat() > 0 ?
-				max_speed->GetFloat() * frametime :
-				std::numeric_limits<float>::infinity();
-
-			// Clamp camera translation to max speed
-			if (posDifference > maxDistThisFrame)
-			{
-				m_SmoothStartPos = origin = VectorLerp(m_SmoothStartPos, idealPos, maxDistThisFrame / posDifference);
-				m_SmoothStartTime = hosttime;
-			}
-			else
-				origin = idealPos;
-
-			const float overallPercentage = std::max(1 - (origin.DistTo(targetPos) / m_SmoothBeginPos.DistTo(targetPos)), m_LastOverallProgress);
+			// Angles
 			{
 				// Percentage this frame
-				const float percentThisFrame = overallPercentage - m_LastOverallProgress;
+				const float percentThisFrame = percent - m_LastOverallProgress;
 
-				const float adjustedPercentage = percentThisFrame / (1 - overallPercentage);
+				const float adjustedPercentage = percentThisFrame / (1 - percent);
 
 				// Angle percentage is determined by overall progress towards our goal position
-				const float angPercentage = EaseIn(overallPercentage, ce_camerasmooths_ang_bias->GetFloat());
+				const float angPercentage = EaseIn(percent, ce_smoothing_ang_bias->GetFloat());
 
 				const float angPercentThisFrame = angPercentage - m_LastAngPercentage;
 				const float adjustedAngPercentage = angPercentThisFrame / (1 - angPercentage);
@@ -401,15 +459,9 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 				angles.z = ApproachAngle(angles.z, lastFrameAng.z, distz * adjustedAngPercentage);
 
 				m_LastAngPercentage = angPercentage;
+				m_LastOverallProgress = percent;
 			}
 
-			m_LastOverallProgress = overallPercentage;
-			return true;
-		}
-		else
-		{
-			smoothInProgress = false;
-			smoothEnding = true;
 			return true;
 		}
 	}
@@ -426,9 +478,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 	smoothEndMode = hltvcamera->m_nCameraMode;
 	smoothEndTarget = hltvcamera->m_iTraget1;
 	smoothInProgress = false;
-	smoothLastAngles = angles;
-	smoothLastOrigin = origin;
-	smoothLastTime = Interfaces::GetEngineTool()->HostTime();
+	m_LastHostTime = hosttime;
 
 	return false;
 }
@@ -438,7 +488,7 @@ void CameraSmooths::OnTick(bool inGame)
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (inGame)
 	{
-		if (ce_camerasmooths_debug_los->GetBool())
+		if (ce_smoothing_debug_los->GetBool())
 			DrawCollisionTests();
 	}
 }
