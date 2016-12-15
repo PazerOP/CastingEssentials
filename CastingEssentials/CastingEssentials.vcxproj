@@ -100,6 +100,7 @@
     <ClCompile Include="Modules\ConsoleTools.cpp" />
     <ClCompile Include="Modules\FOVOverride.cpp" />
     <ClCompile Include="Modules\Graphics.cpp" />
+    <ClCompile Include="Modules\Killfeed.cpp" />
     <ClCompile Include="Modules\Killstreaks.cpp" />
     <ClCompile Include="Modules\LocalPlayer.cpp" />
     <ClCompile Include="Modules\MapConfigs.cpp" />
@@ -145,6 +146,7 @@
     <ClInclude Include="Modules\FOVOverride.h" />
     <ClInclude Include="Modules\FreezeInfo.h" />
     <ClInclude Include="Modules\Graphics.h" />
+    <ClInclude Include="Modules\Killfeed.h" />
     <ClInclude Include="Modules\Killstreaks.h" />
     <ClInclude Include="Modules\LocalPlayer.h" />
     <ClInclude Include="Modules\MapConfigs.h" />

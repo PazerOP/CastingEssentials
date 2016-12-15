@@ -1,8 +1,4 @@
 #include "Plugin.h"
-#include <materialsystem/imaterialsystem.h>
-#include <tier1/tier1.h>
-#include <tier2/tier2.h>
-#include <tier3/tier3.h>
 
 #include "Interfaces.h"
 #include "Modules.h"
@@ -18,6 +14,7 @@
 #include "Modules/FOVOverride.h"
 #include "Modules/FreezeInfo.h"
 #include "Modules/Graphics.h"
+#include "Modules/Killfeed.h"
 #include "Modules/Killstreaks.h"
 #include "Modules/LocalPlayer.h"
 #include "Modules/MapConfigs.h"
@@ -70,6 +67,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<FOVOverride>("FOV Override");
 	Modules().RegisterAndLoadModule<FreezeInfo>("Freeze Info");
 	Modules().RegisterAndLoadModule<Graphics>("Graphics Enhancements");
+	Modules().RegisterAndLoadModule<Killfeed>("Killfeed Fixes");
 	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
 	Modules().RegisterAndLoadModule<MapConfigs>("Map Configs");

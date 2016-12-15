@@ -33,6 +33,7 @@ struct matrix3x4_t;
 class CGlowObjectManager;
 class CViewSetup;
 class CMatRenderContextPtr;
+class CHudTexture;
 
 class HookManager final
 {
@@ -55,6 +56,8 @@ class HookManager final
 		C_HLTVCamera_SetCameraAngle,
 		C_HLTVCamera_SetMode,
 		C_HLTVCamera_SetPrimaryTarget,
+
+		CHudBaseDeathNotice_GetIcon,
 
 		C_BaseAnimating_GetBoneCache,
 		C_BaseAnimating_LockStudioHdr,
@@ -186,6 +189,7 @@ class HookManager final
 	typedef bool(__thiscall *RawBaseEntityInitFn)(C_BaseEntity* pThis, int entnum, int iSerialNum);
 	typedef unsigned char(__cdecl *RawUTILComputeEntityFadeFn)(C_BaseEntity* pEntity, float flMinDist, float flMaxDist, float flFadeScale);
 	typedef void(__thiscall *RawApplyEntityGlowEffectsFn)(CGlowObjectManager*, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int);
+	typedef CHudTexture*(__stdcall *RawGetIconFn)(const char* szIcon, int eIconFormat);
 
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
@@ -200,6 +204,7 @@ class HookManager final
 	static RawBaseEntityInitFn GetRawFunc_C_BaseEntity_Init();
 	static RawUTILComputeEntityFadeFn GetRawFunc_Global_UTILComputeEntityFade();
 	static RawApplyEntityGlowEffectsFn GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects();
+	static RawGetIconFn GetRawFunc_CHudBaseDeathNotice_GetIcon();
 
 public:
 	HookManager();
@@ -225,6 +230,8 @@ public:
 	typedef ClassHook<Func::C_HLTVCamera_SetCameraAngle, false, C_HLTVCamera, void, const QAngle&> C_HLTVCamera_SetCameraAngle;
 	typedef ClassHook<Func::C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> C_HLTVCamera_SetMode;
 	typedef ClassHook<Func::C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> C_HLTVCamera_SetPrimaryTarget;
+
+	typedef GlobalHook<Func::CHudBaseDeathNotice_GetIcon, false, CHudTexture*, const char*, int> CHudBaseDeathNotice_GetIcon;
 
 	typedef GlobalClassHook<Func::C_BaseAnimating_GetBoneCache, false, C_BaseAnimating, CBoneCache*, CStudioHdr*> C_BaseAnimating_GetBoneCache;
 	typedef GlobalClassHook<Func::C_BaseAnimating_LockStudioHdr, false, C_BaseAnimating, void> C_BaseAnimating_LockStudioHdr;
@@ -346,6 +353,8 @@ using C_HLTVCamera_SetCameraAngle = HookManager::C_HLTVCamera_SetCameraAngle;
 using C_HLTVCamera_SetMode = HookManager::C_HLTVCamera_SetMode;
 using C_HLTVCamera_SetPrimaryTarget = HookManager::C_HLTVCamera_SetPrimaryTarget;
 
+using CHudBaseDeathNotice_GetIcon = HookManager::CHudBaseDeathNotice_GetIcon;
+
 using C_BaseAnimating_GetBoneCache = HookManager::C_BaseAnimating_GetBoneCache;
 using C_BaseAnimating_LockStudioHdr = HookManager::C_BaseAnimating_LockStudioHdr;
 using C_BaseAnimating_LookupBone = HookManager::C_BaseAnimating_LookupBone;
@@ -381,6 +390,13 @@ template<> inline C_HLTVCamera_SetPrimaryTarget::Functional HookManager::GetFunc
 	return std::bind(
 		[](RawSetPrimaryTargetFn func, C_HLTVCamera* pThis, int target) { func(pThis, target); },
 		GetRawFunc_C_HLTVCamera_SetPrimaryTarget(), GetHLTVCamera(), std::placeholders::_1);
+}
+
+template<> inline CHudBaseDeathNotice_GetIcon::Functional HookManager::GetFunc<CHudBaseDeathNotice_GetIcon>()
+{
+	return std::bind(
+		GetRawFunc_CHudBaseDeathNotice_GetIcon(),
+		std::placeholders::_1, std::placeholders::_2);
 }
 
 template<> inline C_BaseAnimating_GetBoneCache::Functional HookManager::GetFunc<C_BaseAnimating_GetBoneCache>()

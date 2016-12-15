@@ -239,11 +239,16 @@ int Player::GetUserID() const
 std::string Player::GetName() const
 {
 	if (IsValid())
-	{
-		player_info_t playerInfo;
-		if (Interfaces::GetEngineClient()->GetPlayerInfo(GetEntity()->entindex(), &playerInfo))
-			return playerInfo.name;
-	}
+		return GetPlayerInfo().name;
+
+	return std::string();
+}
+
+std::string Player::GetName(int entIndex)
+{
+	Player* player = GetPlayer(entIndex, __FUNCSIG__);
+	if (player)
+		return player->GetName();
 
 	return std::string();
 }
@@ -353,7 +358,8 @@ Player::Iterator& Player::Iterator::operator++()
 
 bool Player::IsValidIndex(int entIndex)
 {
-	if (entIndex < 1 || entIndex > Interfaces::GetEngineTool()->GetMaxClients())
+	const auto maxclients = Interfaces::GetEngineTool()->GetMaxClients();
+	if (entIndex < 1 || entIndex > maxclients)
 		return false;
 
 	return true;
@@ -408,6 +414,17 @@ Player* Player::GetPlayer(int entIndex, const char* functionName)
 		return nullptr;
 
 	return p;
+}
+
+Player* Player::GetPlayerFromUserID(int userID)
+{
+	for (Player* player : Player::Iterable())
+	{
+		if (player->GetUserID() == userID)
+			return player;
+	}
+
+	return nullptr;
 }
 
 Player* Player::AsPlayer(IClientEntity* entity)

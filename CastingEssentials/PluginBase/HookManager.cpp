@@ -339,6 +339,22 @@ HookManager::RawApplyEntityGlowEffectsFn HookManager::GetRawFunc_CGlowObjectMana
 	return s_RawApplyEntityGlowEffectsFn;
 }
 
+HookManager::RawGetIconFn HookManager::GetRawFunc_CHudBaseDeathNotice_GetIcon()
+{
+	static RawGetIconFn s_RawGetIconFn = nullptr;
+	if (!s_RawGetIconFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x81\xEC\x00\x00\x00\x00\x83\x7D\x0C\x00\x56";
+		constexpr const char* MASK = "xxxxx????xxxxx";
+
+		s_RawGetIconFn = (RawGetIconFn)SignatureScan("client", SIG, MASK);
+		if (!s_RawGetIconFn)
+			throw bad_pointer("CHudBaseDeathNotice_GetIcon");
+	}
+
+	return s_RawGetIconFn;
+}
+
 void HookManager::IngameStateChanged(bool inGame)
 {
 	if (inGame)

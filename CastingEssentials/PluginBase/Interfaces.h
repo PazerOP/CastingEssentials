@@ -43,6 +43,8 @@ public:
 
 	// #include <toolframework/ienginetool.h>
 	static IEngineTool* GetEngineTool() { return pEngineTool; }
+
+	// #include <igameevents.h>
 	static IGameEventManager2* GetGameEventManager() { return pGameEventManager; }
 
 	// #include <iprediction.h>

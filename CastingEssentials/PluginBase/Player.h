@@ -22,6 +22,7 @@ public:
 	static void Unload();
 	static Player* AsPlayer(IClientEntity* entity);
 	static Player* GetPlayer(int entIndex, const char* functionName = nullptr);
+	static Player* GetPlayerFromUserID(int userID);
 	static bool IsValidIndex(int entIndex);
 	static Player* GetLocalPlayer();
 	static Player* GetLocalObserverTarget();
@@ -40,6 +41,7 @@ public:
 	int GetHealth() const;
 	int GetMaxHealth() const;
 	std::string GetName() const;
+	static std::string GetName(int entIndex);
 	int GetObserverMode() const;
 	C_BaseEntity* GetObserverTarget() const;
 	CSteamID GetSteamID() const;
@@ -57,6 +59,7 @@ public:
 
 	bool IsValid() const;
 
+private:
 	class Iterator
 	{
 		friend class Player;
@@ -76,17 +79,6 @@ public:
 		int m_Index;
 	};
 
-	static Iterator begin() { return Iterator(); }
-	static Iterator end();
-
-	class Iterable
-	{
-	public:
-		Iterator begin() { return Player::begin(); }
-		Iterator end() { return Player::end(); }
-	};
-
-private:
 	Player() = delete;
 	Player(CHandle<IClientEntity> handle, int userID);
 	Player(const Player& other) = delete;
@@ -112,4 +104,15 @@ private:
 	mutable player_info_t m_CachedPlayerInfo;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
+
+public:
+	static Iterator begin() { return Iterator(); }
+	static Iterator end();
+
+	class Iterable
+	{
+	public:
+		Iterator begin() { return Player::begin(); }
+		Iterator end() { return Player::end(); }
+	};
 };
