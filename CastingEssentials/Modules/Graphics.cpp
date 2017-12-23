@@ -107,6 +107,26 @@ struct ShaderStencilState_t
 	}
 };
 
+static thread_local std::map<int, std::vector<int>> s_MoveChildren;
+static void BuildMoveChildMap()
+{
+	s_MoveChildren.clear();
+
+	IClientEntityList* const entityList = Interfaces::GetClientEntityList();
+	for (int i = 0; i < entityList->GetHighestEntityIndex(); i++)
+	{
+		C_BaseEntity* child = dynamic_cast<C_BaseEntity*>(entityList->GetClientEntity(i));
+		if (!child || !child->ShouldDraw())
+			continue;
+
+		EHANDLE* moveparent = Entities::GetEntityProp<EHANDLE*>(child, "moveparent");
+		if (!moveparent || !moveparent->IsValid())
+			continue;
+
+		s_MoveChildren[moveparent->ToInt()].push_back(EHANDLE(child).ToInt());
+	}
+}
+
 void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 {
 	C_BaseEntity* const ent = m_hEntity.Get();
@@ -114,44 +134,14 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 	{
 		ent->DrawModel(STUDIO_RENDER);
 
-		IClientEntityList* const entityList = Interfaces::GetClientEntityList();
-		for (int i = 0; i < entityList->GetHighestEntityIndex(); i++)
+		// Draw all move children
 		{
-#if 0
-			C_BaseEntity* test = dynamic_cast<C_BaseEntity*>(entityList->GetClientEntity(i));
-			if (!test || !Entities::CheckEntityBaseclass(test, "TFWearable"))
-				continue;
-
-			ClientClass* localClass = test->GetClientClass();
-
-			int* m_iParentAttachment = Entities::GetEntityProp<int*>(test, "m_iParentAttachment");
-
-			int* m_hOwnerEntityInt = Entities::GetEntityProp<int*>(test, "m_hOwnerEntity");
-			EHANDLE* m_hOwnerEntity = Entities::GetEntityProp<EHANDLE*>(test, "m_hOwnerEntity");
-			C_BaseEntity* m_hOwnerEntityEnt = m_hOwnerEntity ? m_hOwnerEntity->Get() : nullptr;
-			ClientClass* m_hOwnerEntityClientClass = m_hOwnerEntityEnt ? m_hOwnerEntityEnt->GetClientClass() : nullptr;
-
-			int* moveparentInt = Entities::GetEntityProp<int*>(test, "moveparent");
-			EHANDLE* moveparent = Entities::GetEntityProp<EHANDLE*>(test, "moveparent");
-			C_BaseEntity* moveparentEntity = moveparent ? moveparent->Get() : nullptr;
-			ClientClass* moveparentClientClass = moveparentEntity ? moveparentEntity->GetClientClass() : nullptr;
-
-			if (moveparentEntity != ent)
-				continue;
-
-			PluginWarning("boop");
-#endif
-			C_BaseEntity* currentEnt = dynamic_cast<C_BaseEntity*>(entityList->GetClientEntity(i));
-			if (!currentEnt || !currentEnt->ShouldDraw())
-				continue;
-
-			EHANDLE* moveparent = Entities::GetEntityProp<EHANDLE*>(currentEnt, "moveparent");
-			C_BaseEntity* moveparentEntity = moveparent ? moveparent->Get() : nullptr;
-
-			if (moveparentEntity != ent)
-				continue;
-
-			currentEnt->DrawModel(STUDIO_RENDER);
+			auto found = s_MoveChildren.find(EHANDLE(ent).ToInt());
+			if (found != s_MoveChildren.end())
+			{
+				for (int handleInt : found->second)
+					EHANDLE::FromIndex(handleInt)->DrawModel(STUDIO_RENDER);
+			}
 		}
 
 		C_BaseEntity *pAttachment = ent->FirstMoveChild();
@@ -376,10 +366,11 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 
 		// Set override material for glow color
 		g_pStudioRender->ForcedMaterialOverride(materials->FindMaterial("dev/glow_color", TEXTURE_GROUP_OTHER, true));
-
-		// Draw "glow always" objects
 		pRenderContext->OverrideColorWriteEnable(true, true);
 		pRenderContext->OverrideAlphaWriteEnable(true, true);
+
+		// Build ourselves a map of move children
+		BuildMoveChildMap();
 
 		// Draw "glow when visible" objects
 		DrawGlowVisible(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
