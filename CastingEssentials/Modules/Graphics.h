@@ -20,6 +20,8 @@ public:
 private:
 	ConVar* ce_graphics_disable_prop_fades;
 	ConVar* ce_graphics_debug_glow;
+	ConVar* ce_graphics_glow_intensity;
+	ConVar* ce_graphics_improved_glows;
 
 	int m_ComputeEntityFadeHook;
 	unsigned char ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale);

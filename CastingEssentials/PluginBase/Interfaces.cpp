@@ -43,7 +43,7 @@ ISpatialPartition* Interfaces::s_SpatialPartition = nullptr;
 bool Interfaces::steamLibrariesAvailable = false;
 bool Interfaces::vguiLibrariesAvailable = false;
 
-IClientMode*** Interfaces::s_ClientMode = nullptr;
+IClientMode* Interfaces::s_ClientMode = nullptr;
 C_HLTVCamera** Interfaces::s_HLTVCamera = nullptr;
 C_HLTVCamera* HLTVCamera() { return Interfaces::GetHLTVCamera(); }
 
@@ -128,21 +128,25 @@ IClientMode* Interfaces::GetClientMode()
 {
 	if (!s_ClientMode)
 	{
-		constexpr const char* SIG = "\xC7\x05\x00\x00\x00\x00\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x68\x00\x00\x00\x00\x8B\xC8";
-		constexpr const char* MASK = "xx????????x????x????xx";
-		constexpr auto OFFSET = 2;
+		constexpr const char* SIG = "\xA1????\xA8\x01\x75\x1F\x83\xC8\x01\xB9????\xA3????\xE8????\x68????\xE8????\x83\xC4\x04\xB8????\xC3\xCC\xCC\x8B\x0D????";
+		constexpr const char* MASK = "x????xxxxxxxx????x????x????x????x????xxxx????xxxxx????";
+		constexpr auto OFFSET = 0;
 
-		s_ClientMode = (IClientMode***)((char*)SignatureScan("client", SIG, MASK) + OFFSET);
+		typedef IClientMode* (*GetClientModeFn)();
 
-		if (!s_ClientMode)
+		auto fn = (GetClientModeFn)((char*)SignatureScan("client", SIG, MASK) + OFFSET);
+
+		if (!fn)
 			throw bad_pointer("IClientMode");
+
+		IClientMode* icm = fn();
+		if (!icm)
+			throw bad_pointer("IClientMode");
+
+		s_ClientMode = icm;
 	}
 
-	IClientMode* deref = **s_ClientMode;
-	if (!deref)
-		throw bad_pointer("IClientMode");
-
-	return deref;
+	return s_ClientMode;
 }
 
 HLTVCameraOverride* Interfaces::GetHLTVCamera()

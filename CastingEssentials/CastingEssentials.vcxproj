@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -13,19 +13,19 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{32223B45-9C65-421A-A318-EB05D25ACA80}</ProjectGuid>
     <RootNamespace>CastingEssentials</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -51,9 +51,10 @@
     <ClCompile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>_CRT_NO_VA_START_VALIDATION;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Team Fortress 2\tf\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "$(TF_GAME_DIR)\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalOptions>/EDITANDCONTINUE %(AdditionalOptions)</AdditionalOptions>
@@ -79,12 +80,11 @@
       <AssemblyDebug>false</AssemblyDebug>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "D:\Steam\steamapps\common\Team Fortress 2\tf\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "$(TF_GAME_DIR)\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)\sdk2013\mp\src\public\tier0\memoverride.cpp" />
-    <ClCompile Include="..\polyhook\PolyHook\PolyHook.cpp" />
     <ClCompile Include="..\sdk2013\mp\src\public\vgui_controls\vgui_controls.cpp" />
     <ClCompile Include="Controls\ImageProgressBar.cpp" />
     <ClCompile Include="Controls\VariableLabel.cpp" />

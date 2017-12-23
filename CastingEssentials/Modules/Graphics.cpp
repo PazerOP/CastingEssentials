@@ -27,6 +27,8 @@ Graphics::Graphics()
 {
 	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading.");
 	ce_graphics_debug_glow = new ConVar("ce_graphics_debug_glow", "0");
+	ce_graphics_glow_intensity = new ConVar("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity");
+	ce_graphics_improved_glows = new ConVar("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?");
 
 	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
@@ -56,8 +58,15 @@ unsigned char Graphics::ComputeEntityFadeOveride(C_BaseEntity* entity, float min
 
 void Graphics::ApplyEntityGlowEffectsOverride(CGlowObjectManager * pThis, const CViewSetup * pSetup, int nSplitScreenSlot, CMatRenderContextPtr & pRenderContext, float flBloomScale, int x, int y, int w, int h)
 {
-	GetHooks()->SetState<CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::SUPERCEDE);
-	return pThis->ApplyEntityGlowEffects(pSetup, nSplitScreenSlot, pRenderContext, flBloomScale, x, y, w, h);
+	if (ce_graphics_improved_glows->GetBool())
+	{
+		GetHooks()->SetState<CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::SUPERCEDE);
+		pThis->ApplyEntityGlowEffects(pSetup, nSplitScreenSlot, pRenderContext, flBloomScale, x, y, w, h);
+	}
+	else
+	{
+		GetHooks()->SetState<CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::IGNORE);
+	}
 }
 
 struct ShaderStencilState_t
@@ -135,14 +144,15 @@ static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || !current.m_bRenderWhenUnoccluded)
 			continue;
 
-		Vector vGlowColor = current.m_vGlowColor * current.m_flGlowAlpha;
+		static ConVarRef ce_graphics_glow_intensity("ce_graphics_glow_intensity");
+		const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
 		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
 
 		current.DrawModel();
 	}
 }
 
-static ConVar glow_outline_effect_stencil_mode("glow_outline_effect_stencil_mode", "0", 0, 
+static ConVar glow_outline_effect_stencil_mode("glow_outline_effect_stencil_mode", "0", 0,
 	"\n\t0: Draws partially occluded glows in a more 3d-esque way, making them look more like they're actually surrounding the model."
 	"\n\t1: Draws partially occluded glows in a more 2d-esque way, which can make them more visible.",
 	true, 0, true, 1);
@@ -182,7 +192,7 @@ static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition
 	}
 
 	pRenderContext->OverrideDepthFunc(false, SHADER_DEPTHFUNC_NEAREROREQUAL)
-#else	// 2-pass as a proof of concept so I can take a nice screenshot.	
+#else	// 2-pass as a proof of concept so I can take a nice screenshot.
 	pRenderContext->OverrideDepthEnable(true, false);
 
 	ShaderStencilState_t stencilState;
@@ -234,7 +244,8 @@ static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || current.m_bRenderWhenUnoccluded)
 			continue;
 
-		const Vector vGlowColor = current.m_vGlowColor * current.m_flGlowAlpha;
+		static ConVarRef ce_graphics_glow_intensity("ce_graphics_glow_intensity");
+		const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
 		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
 
 		current.DrawModel();
@@ -264,7 +275,8 @@ static void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || current.m_bRenderWhenOccluded || !current.m_bRenderWhenUnoccluded)
 			continue;
 
-		Vector vGlowColor = current.m_vGlowColor * current.m_flGlowAlpha;
+		static ConVarRef ce_graphics_glow_intensity("ce_graphics_glow_intensity");
+		const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
 		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
 
 		current.DrawModel();

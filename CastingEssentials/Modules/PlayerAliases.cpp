@@ -77,7 +77,7 @@ bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	bool result = GetHooks()->GetHook<IVEngineClient_GetPlayerInfo>()->GetOriginal()(ent_num, pinfo);
 
-	if (ent_num < 1 || ent_num >= Interfaces::GetEngineTool()->GetMaxClients())
+	if (ent_num < 1 || ent_num > Interfaces::GetEngineTool()->GetMaxClients())
 		return result;
 
 	Player* player = Player::GetPlayer(ent_num, __FUNCSIG__);

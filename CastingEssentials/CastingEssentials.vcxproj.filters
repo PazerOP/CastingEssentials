@@ -72,9 +72,6 @@
     <ClCompile Include="Modules\MedigunInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\polyhook\PolyHook\PolyHook.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Controls\VariableLabel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

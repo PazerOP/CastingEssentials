@@ -278,7 +278,11 @@ void Killstreaks::Panel::OnTick()
 				*killstreakSecondary = 0;
 				*killstreakMelee = 0;
 				*killstreakPDA = 0;
-				*killstreakGlobal = 0;
+
+				if (killstreakGlobal)
+					*killstreakGlobal = 0;
+				else
+					PluginWarning("Unable to clear out global killstreaks counter for player %i\n", player->entindex());
 			}
 		}
 	}

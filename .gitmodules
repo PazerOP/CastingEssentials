@@ -4,5 +4,5 @@
 	branch = master
 [submodule "polyhook"]
 	path = polyhook
-	url = https://github.com/stevemk14ebr/PolyHook
+url=https://github.com/PazerOP/PolyHook
 	branch = master

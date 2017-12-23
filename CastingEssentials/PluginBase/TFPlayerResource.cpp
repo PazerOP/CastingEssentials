@@ -74,7 +74,7 @@ int TFPlayerResource::GetMaxHealth(int playerEntIndex)
 
 bool TFPlayerResource::CheckEntIndex(int playerEntIndex, const char* functionName)
 {
-	if (playerEntIndex < 1 || playerEntIndex >= Interfaces::GetEngineTool()->GetMaxClients())
+	if (playerEntIndex < 1 || playerEntIndex > Interfaces::GetEngineTool()->GetMaxClients())
 	{
 		PluginWarning("Out of range playerEntIndex %i in %s()\n", playerEntIndex, functionName);
 		return false;

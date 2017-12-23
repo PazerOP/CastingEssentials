@@ -343,7 +343,7 @@ Player::Iterator::Iterator()
 Player::Iterator& Player::Iterator::operator++()
 {
 	// Find the next valid player
-	for (int i = m_Index + 1; i < Interfaces::GetEngineTool()->GetMaxClients(); i++)
+	for (int i = m_Index + 1; i <= Interfaces::GetEngineTool()->GetMaxClients(); i++)
 	{
 		if (!GetPlayer(i) || !GetPlayer(i)->IsValid())
 			continue;

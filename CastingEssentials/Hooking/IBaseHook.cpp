@@ -1,6 +1,6 @@
 #include "IBaseHook.h"
 
-#include <PolyHook.h>
+#include <PolyHook.hpp>
 #include <Windows.h>
 
 #include <map>
@@ -220,7 +220,7 @@ std::shared_ptr<IBaseHook> Hooking::CreateVTableSwapHook(void* instance, void* d
 int ::Hooking::Internal::MFI_GetVTblOffset(void * mfp)
 {
 	// Code stolen from SourceHook
-	static_assert(_MSC_VER == 1900, "Only verified on VS2015!");
+	//static_assert(_MSC_VER == 1900, "Only verified on VS2015!");
 
 	unsigned char *addr = (unsigned char*)mfp;
 	if (*addr == 0xE9)		// Jmp

@@ -105,7 +105,7 @@ private:
 	static bool steamLibrariesAvailable;
 	static bool vguiLibrariesAvailable;
 
-	static IClientMode*** s_ClientMode;
+	static IClientMode* s_ClientMode;
 	static C_HLTVCamera** s_HLTVCamera;
 
 	Interfaces() { }

@@ -254,17 +254,19 @@ void MedigunInfo::MainPanel::OnTick()
 			continue;
 		}
 
-		TFClassType cls = player->GetClass();
-		if (cls != TFClassType::Medic)
-			continue;
-
 		TFTeam team = player->GetTeam();
 		if (team != TFTeam::Blue && team != TFTeam::Red)
+			continue;
+
+		TFClassType cls = player->GetClass();
+		if (cls != TFClassType::Medic)
 			continue;
 
 		for (int weaponIndex = 0; weaponIndex < MAX_WEAPONS; weaponIndex++)
 		{
 			C_BaseCombatWeapon *weapon = player->GetWeapon(weaponIndex);
+
+			auto clientClass = weapon->GetClientClass();
 
 			if (weapon && Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
 			{
