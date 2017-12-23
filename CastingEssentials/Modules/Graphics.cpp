@@ -1,6 +1,7 @@
 #include "Graphics.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
+#include "PluginBase/Entities.h"
 
 #include <convar.h>
 #include <debugoverlay_shared.h>
@@ -105,13 +106,55 @@ struct ShaderStencilState_t
 		}
 	}
 };
+
 void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 {
-	if (m_hEntity.Get())
+	C_BaseEntity* const ent = m_hEntity.Get();
+	if (ent)
 	{
-		m_hEntity->DrawModel(STUDIO_RENDER);
-		C_BaseEntity *pAttachment = m_hEntity->FirstMoveChild();
+		ent->DrawModel(STUDIO_RENDER);
 
+		IClientEntityList* const entityList = Interfaces::GetClientEntityList();
+		for (int i = 0; i < entityList->GetHighestEntityIndex(); i++)
+		{
+#if 0
+			C_BaseEntity* test = dynamic_cast<C_BaseEntity*>(entityList->GetClientEntity(i));
+			if (!test || !Entities::CheckEntityBaseclass(test, "TFWearable"))
+				continue;
+
+			ClientClass* localClass = test->GetClientClass();
+
+			int* m_iParentAttachment = Entities::GetEntityProp<int*>(test, "m_iParentAttachment");
+
+			int* m_hOwnerEntityInt = Entities::GetEntityProp<int*>(test, "m_hOwnerEntity");
+			EHANDLE* m_hOwnerEntity = Entities::GetEntityProp<EHANDLE*>(test, "m_hOwnerEntity");
+			C_BaseEntity* m_hOwnerEntityEnt = m_hOwnerEntity ? m_hOwnerEntity->Get() : nullptr;
+			ClientClass* m_hOwnerEntityClientClass = m_hOwnerEntityEnt ? m_hOwnerEntityEnt->GetClientClass() : nullptr;
+
+			int* moveparentInt = Entities::GetEntityProp<int*>(test, "moveparent");
+			EHANDLE* moveparent = Entities::GetEntityProp<EHANDLE*>(test, "moveparent");
+			C_BaseEntity* moveparentEntity = moveparent ? moveparent->Get() : nullptr;
+			ClientClass* moveparentClientClass = moveparentEntity ? moveparentEntity->GetClientClass() : nullptr;
+
+			if (moveparentEntity != ent)
+				continue;
+
+			PluginWarning("boop");
+#endif
+			C_BaseEntity* currentEnt = dynamic_cast<C_BaseEntity*>(entityList->GetClientEntity(i));
+			if (!currentEnt || !currentEnt->ShouldDraw())
+				continue;
+
+			EHANDLE* moveparent = Entities::GetEntityProp<EHANDLE*>(currentEnt, "moveparent");
+			C_BaseEntity* moveparentEntity = moveparent ? moveparent->Get() : nullptr;
+
+			if (moveparentEntity != ent)
+				continue;
+
+			currentEnt->DrawModel(STUDIO_RENDER);
+		}
+
+		C_BaseEntity *pAttachment = ent->FirstMoveChild();
 		while (pAttachment != NULL)
 		{
 			if (!s_LocalGlowObjectManager->HasGlowEffect(pAttachment) && pAttachment->ShouldDraw())
