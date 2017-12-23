@@ -12,7 +12,7 @@
 
 std::unordered_map<const char*, std::unordered_map<const char*, int>> Entities::s_ClassPropOffsets;
 
-bool Entities::CheckEntityBaseclass(IClientEntity * entity, const char * baseclass)
+bool Entities::CheckEntityBaseclass(IClientNetworkable* entity, const char* baseclass)
 {
 	ClientClass *clientClass = entity->GetClientClass();
 	if (clientClass)
@@ -21,7 +21,7 @@ bool Entities::CheckEntityBaseclass(IClientEntity * entity, const char * basecla
 	return false;
 }
 
-bool Entities::CheckClassBaseclass(ClientClass * clientClass, const char * baseclass)
+bool Entities::CheckClassBaseclass(ClientClass* clientClass, const char* baseclass)
 {
 	RecvTable *sTable = clientClass->m_pRecvTable;
 	if (sTable)
@@ -30,7 +30,7 @@ bool Entities::CheckClassBaseclass(ClientClass * clientClass, const char * basec
 	return false;
 }
 
-bool Entities::CheckTableBaseclass(RecvTable * sTable, const char * baseclass)
+bool Entities::CheckTableBaseclass(RecvTable* sTable, const char* baseclass)
 {
 	const char* tName = sTable->GetName();
 
@@ -131,7 +131,7 @@ int Entities::FindExistingPropOffset(const char* className, const char* property
 
 		break;
 	}
-	
+
 	if (bThrow)
 		throw invalid_class_prop("Unable to find existing prop");
 	else
@@ -254,7 +254,7 @@ bool Entities::GetSubProp(RecvTable* table, const char* propName, RecvProp*& pro
 	return false;
 }
 
-void* Entities::GetEntityProp(IClientEntity* entity, const char* propertyString)
+void* Entities::GetEntityProp(IClientNetworkable* entity, const char* propertyString)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	auto const className = entity->GetClientClass()->GetName();
@@ -263,5 +263,5 @@ void* Entities::GetEntityProp(IClientEntity* entity, const char* propertyString)
 	if (offset < 0)
 		throw invalid_class_prop(entity->GetClientClass()->GetName());
 
-	return (void *)(size_t(entity) + size_t(offset));
+	return (void *)(size_t(entity->GetDataTableBasePtr()) + size_t(offset));
 }

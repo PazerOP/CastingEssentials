@@ -5,7 +5,7 @@
 #include <vector>
 #include <unordered_map>
 
-class IClientEntity;
+class IClientNetworkable;
 class RecvTable;
 class RecvProp;
 class ClientClass;
@@ -25,11 +25,11 @@ public:
 		sprintf_s(buffer, "%s.%03i", base, index);
 	}
 
-	template<typename T> __forceinline static T GetEntityProp(IClientEntity* entity, const char* propertyString)
+	template<typename T> __forceinline static T GetEntityProp(IClientNetworkable* entity, const char* propertyString)
 	{
 		return reinterpret_cast<T>(GetEntityProp(entity, propertyString));
 	}
-	template<typename T, class... Args> inline static T GetEntityProp(IClientEntity* entity, Args... propertyNames)
+	template<typename T, class... Args> inline static T GetEntityProp(IClientNetworkable* entity, Args... propertyNames)
 	{
 		static_assert(sizeof...(Args) > 0, "Must have at least 1 value in propertyTree");
 
@@ -41,17 +41,12 @@ public:
 
 		return GetEntityProp<T>(entity, finalBuffer.c_str());
 	}
-	template<typename T> [[deprecated("deprecated due to performance issues")]]
-		__forceinline static T GetEntityProp(IClientEntity* entity, std::vector<const char*> propertyTree)
-	{
-		static_assert(false, "deprecated due to performance issues");
-	}
 
-	static bool CheckEntityBaseclass(IClientEntity* entity, const char* baseclass);
+	static bool CheckEntityBaseclass(IClientNetworkable* entity, const char* baseclass);
 
 	static ClientClass* GetClientClass(const char* className);
 
-	__forceinline static TFTeam* GetEntityTeam(IClientEntity* entity) { return GetEntityProp<TFTeam*>(entity, "m_iTeamNum"); }
+	__forceinline static TFTeam* GetEntityTeam(IClientNetworkable* entity) { return GetEntityProp<TFTeam*>(entity, "m_iTeamNum"); }
 
 private:
 	Entities() = delete;
@@ -64,8 +59,7 @@ private:
 	static std::vector<std::string> ConvertStringToTree(const char* str);
 
 	static bool GetSubProp(RecvTable* table, const char* propName, RecvProp*& prop, int& offset);
-	static void* GetEntityProp(IClientEntity* entity, const char* propertyString);
-	static void* GetEntityProp(IClientEntity* entity, const std::vector<const char*>& propertyTree);
+	static void* GetEntityProp(IClientNetworkable* entity, const char* propertyString);
 
 	static std::unordered_map<const char*, std::unordered_map<const char*, int>> s_ClassPropOffsets;
 	static int FindExistingPropOffset(const char* className, const char* propertyString, bool bThrow = true);
