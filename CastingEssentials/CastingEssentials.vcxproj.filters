@@ -126,6 +126,9 @@
     <ClCompile Include="Modules\Killfeed.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Misc\Polyhook.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">

@@ -16,7 +16,7 @@
 #include <shareddefs.h>
 #include <vprof.h>
 
-#include <PolyHook.h>
+#include <PolyHook.hpp>
 
 #include "PluginBase/entities.h"
 #include "PluginBase/HookManager.h"

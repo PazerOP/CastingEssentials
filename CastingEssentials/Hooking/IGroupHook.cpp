@@ -1,5 +1,5 @@
 #include "IGroupHook.h"
-#include <PolyHook.h>
+#include <PolyHook.hpp>
 
 using namespace Hooking;
 

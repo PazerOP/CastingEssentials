@@ -4,7 +4,7 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Exceptions.h"
 
-#include <PolyHook.h>
+#include <PolyHook.hpp>
 
 #include <Windows.h>
 #include <Psapi.h>

@@ -92,6 +92,7 @@
     <ClCompile Include="Hooking\IGroupHook.cpp" />
     <ClCompile Include="Misc\DebugOverlay.cpp" />
     <ClCompile Include="Misc\MissingDefinitions.cpp" />
+    <ClCompile Include="Misc\Polyhook.cpp" />
     <ClCompile Include="Modules\Antifreeze.cpp" />
     <ClCompile Include="Modules\CameraAutoSwitch.cpp" />
     <ClCompile Include="Modules\CameraSmooths.cpp" />

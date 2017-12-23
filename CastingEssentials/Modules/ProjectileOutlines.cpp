@@ -4,7 +4,7 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/TFDefinitions.h"
 
-#include <PolyHook.h>
+#include <PolyHook.hpp>
 
 #include <toolframework/ienginetool.h>
 #include <vprof.h>
