@@ -90,6 +90,7 @@ CameraSmooths::CameraSmooths()
 
 	ce_smoothing_check_los = new ConVar("ce_smoothing_check_los", "1", FCVAR_NONE, "Make sure we have LOS to the player we're smoothing to.");
 	ce_smoothing_los_buffer = new ConVar("ce_smoothing_los_buffer", "32", FCVAR_NONE, "Additional space to give ourselves so we can sorta see around corners.");
+	ce_smoothing_los_min = new ConVar("ce_smoothing_los_min", "0", FCVAR_NONE, "Minimum percentage of points that must pass the LOS check before we allow ourselves to smooth to a target.", true, 0, true, 1);
 }
 
 bool CameraSmooths::CheckDependencies()
@@ -360,7 +361,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed angle test with difference of %1.0f degrees.\n", GetModuleName(), angle);
 
 				const float visibility = GetVisibility(m_EndTarget);
-				if (visibility <= 0)
+				if (visibility <= ce_smoothing_los_min->GetFloat())
 				{
 					if (ce_smoothing_debug->GetBool())
 						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, no visibility to new target\n\n", GetModuleName());

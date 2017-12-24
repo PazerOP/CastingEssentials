@@ -59,6 +59,7 @@ private:
 
 	ConVar* ce_smoothing_check_los;
 	ConVar* ce_smoothing_los_buffer;
+	ConVar* ce_smoothing_los_min;
 
 	struct CollisionTest
 	{
