@@ -11,6 +11,9 @@ MapConfigs::MapConfigs()
 
 void MapConfigs::LevelInitPreEntity()
 {
+	if (!ce_mapconfigs_enabled->GetBool())
+		return;
+
 	const char* const bspName = Interfaces::GetEngineClient()->GetLevelName();
 	std::string mapName(bspName);
 	mapName.erase(mapName.size() - 4, 4);	// remove .bsp
