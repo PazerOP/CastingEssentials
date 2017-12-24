@@ -266,8 +266,6 @@ void MedigunInfo::MainPanel::OnTick()
 		{
 			C_BaseCombatWeapon *weapon = player->GetWeapon(weaponIndex);
 
-			auto clientClass = weapon->GetClientClass();
-
 			if (weapon && Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
 			{
 				MedigunPanel *medigunPanel = nullptr;
