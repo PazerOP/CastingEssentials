@@ -383,6 +383,8 @@ HookManager::HookManager()
 
 	m_Hook_IPrediction_PostEntityPacketReceived.AttachHook(std::make_shared<IPrediction_PostEntityPacketReceived::Inner>(Interfaces::GetPrediction(), &IPrediction::PostEntityPacketReceived));
 
+	m_Hook_IStudioRender_ForcedMaterialOverride.AttachHook(std::make_shared<IStudioRender_ForcedMaterialOverride::Inner>(g_pStudioRender, &IStudioRender::ForcedMaterialOverride));
+
 	m_Hook_C_HLTVCamera_SetCameraAngle.AttachHook(std::make_shared<C_HLTVCamera_SetCameraAngle::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetCameraAngle()));
 	m_Hook_C_HLTVCamera_SetMode.AttachHook(std::make_shared<C_HLTVCamera_SetMode::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));
 	m_Hook_C_HLTVCamera_SetPrimaryTarget.AttachHook(std::make_shared<C_HLTVCamera_SetPrimaryTarget::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetPrimaryTarget()));

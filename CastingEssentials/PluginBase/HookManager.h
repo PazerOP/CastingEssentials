@@ -6,6 +6,7 @@
 #include "PluginBase/Modules.h"
 
 #include <basehandle.h>
+#include <istudiorender.h>
 
 #include <memory>
 #include <vector>
@@ -34,6 +35,8 @@ class CGlowObjectManager;
 class CViewSetup;
 class CMatRenderContextPtr;
 class CHudTexture;
+class IStudioRender;
+class IMaterial;
 
 class HookManager final
 {
@@ -52,6 +55,8 @@ class HookManager final
 		IGameEventManager2_FireEventClientSide,
 
 		IPrediction_PostEntityPacketReceived,
+
+		IStudioRender_ForcedMaterialOverride,
 
 		C_HLTVCamera_SetCameraAngle,
 		C_HLTVCamera_SetMode,
@@ -227,6 +232,8 @@ public:
 
 	typedef VirtualHook<Func::IPrediction_PostEntityPacketReceived, false, IPrediction, void> IPrediction_PostEntityPacketReceived;
 
+	typedef VirtualHook<Func::IStudioRender_ForcedMaterialOverride, false, IStudioRender, void, IMaterial*, OverrideType_t> IStudioRender_ForcedMaterialOverride;
+
 	typedef ClassHook<Func::C_HLTVCamera_SetCameraAngle, false, C_HLTVCamera, void, const QAngle&> C_HLTVCamera_SetCameraAngle;
 	typedef ClassHook<Func::C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> C_HLTVCamera_SetMode;
 	typedef ClassHook<Func::C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> C_HLTVCamera_SetPrimaryTarget;
@@ -260,6 +267,7 @@ public:
 	template<> IVEngineClient_GetPlayerInfo* GetHook<IVEngineClient_GetPlayerInfo>() { return &m_Hook_IVEngineClient_GetPlayerInfo; }
 	template<> IGameEventManager2_FireEventClientSide* GetHook<IGameEventManager2_FireEventClientSide>() { return &m_Hook_IGameEventManager2_FireEventClientSide; }
 	template<> IPrediction_PostEntityPacketReceived* GetHook<IPrediction_PostEntityPacketReceived>() { return &m_Hook_IPrediction_PostEntityPacketReceived; }
+	template<> IStudioRender_ForcedMaterialOverride* GetHook<IStudioRender_ForcedMaterialOverride>() { return &m_Hook_IStudioRender_ForcedMaterialOverride; }
 	template<> C_HLTVCamera_SetCameraAngle* GetHook<C_HLTVCamera_SetCameraAngle>() { return &m_Hook_C_HLTVCamera_SetCameraAngle; }
 	template<> C_HLTVCamera_SetMode* GetHook<C_HLTVCamera_SetMode>() { return &m_Hook_C_HLTVCamera_SetMode; }
 	template<> C_HLTVCamera_SetPrimaryTarget* GetHook<C_HLTVCamera_SetPrimaryTarget>() { return &m_Hook_C_HLTVCamera_SetPrimaryTarget; }
@@ -316,6 +324,8 @@ private:
 
 	IPrediction_PostEntityPacketReceived m_Hook_IPrediction_PostEntityPacketReceived;
 
+	IStudioRender_ForcedMaterialOverride m_Hook_IStudioRender_ForcedMaterialOverride;
+
 	C_HLTVCamera_SetCameraAngle m_Hook_C_HLTVCamera_SetCameraAngle;
 	C_HLTVCamera_SetMode m_Hook_C_HLTVCamera_SetMode;
 	C_HLTVCamera_SetPrimaryTarget m_Hook_C_HLTVCamera_SetPrimaryTarget;
@@ -348,6 +358,8 @@ using IVEngineClient_GetPlayerInfo = HookManager::IVEngineClient_GetPlayerInfo;
 using IGameEventManager2_FireEventClientSide = HookManager::IGameEventManager2_FireEventClientSide;
 
 using IPrediction_PostEntityPacketReceived = HookManager::IPrediction_PostEntityPacketReceived;
+
+using IStudioRender_ForcedMaterialOverride = HookManager::IStudioRender_ForcedMaterialOverride;
 
 using C_HLTVCamera_SetCameraAngle = HookManager::C_HLTVCamera_SetCameraAngle;
 using C_HLTVCamera_SetMode = HookManager::C_HLTVCamera_SetMode;

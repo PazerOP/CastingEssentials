@@ -119,6 +119,17 @@ void Interfaces::Unload()
 
 	pSteamAPIContext = nullptr;
 
+	// Built in declarations
+	cl_entitylist = nullptr;
+	g_pEntityList = nullptr;
+	debugoverlay = nullptr;
+	enginetrace = nullptr;
+	engine = nullptr;
+	engine = nullptr;
+	render = nullptr;
+	materials = nullptr;
+	g_pStudioRender = nullptr;
+
 	DisconnectTier3Libraries();
 	DisconnectTier2Libraries();
 	DisconnectTier1Libraries();

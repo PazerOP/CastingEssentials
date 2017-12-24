@@ -24,16 +24,22 @@
 
 static CGlowObjectManager* s_LocalGlowObjectManager;
 
+// Should we use a hook to disable IStudioRender::ForcedMaterialOverride?
+static bool s_DisableForcedMaterialOverride = false;
+
 Graphics::Graphics()
 {
 	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading.");
 	ce_graphics_debug_glow = new ConVar("ce_graphics_debug_glow", "0");
+	ce_graphics_glow_silhouettes = new ConVar("ce_graphics_glow_silhouettes", "1", FCVAR_NONE, "Turns outlines into silhouettes.");
 	ce_graphics_glow_intensity = new ConVar("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity");
 	ce_graphics_improved_glows = new ConVar("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?");
 
 	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
 	m_ApplyEntityGlowEffectsHook = GetHooks()->AddHook<CGlowObjectManager_ApplyEntityGlowEffects>(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9));
+
+	m_ForcedMaterialOverrideHook = GetHooks()->AddHook<IStudioRender_ForcedMaterialOverride>(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 Graphics::~Graphics()
@@ -42,6 +48,16 @@ Graphics::~Graphics()
 		m_ComputeEntityFadeHook = 0;
 
 	Assert(!m_ComputeEntityFadeHook);
+
+	if (m_ApplyEntityGlowEffectsHook && GetHooks()->RemoveHook<CGlowObjectManager_ApplyEntityGlowEffects>(m_ApplyEntityGlowEffectsHook, __FUNCSIG__))
+		m_ApplyEntityGlowEffectsHook = 0;
+
+	Assert(!m_ApplyEntityGlowEffectsHook);
+
+	if (m_ForcedMaterialOverrideHook && GetHooks()->RemoveHook<IStudioRender_ForcedMaterialOverride>(m_ForcedMaterialOverrideHook, __FUNCSIG__))
+		m_ForcedMaterialOverrideHook = 0;
+
+	Assert(!m_ForcedMaterialOverrideHook);
 }
 
 unsigned char Graphics::ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale)
@@ -67,6 +83,19 @@ void Graphics::ApplyEntityGlowEffectsOverride(CGlowObjectManager * pThis, const 
 	else
 	{
 		GetHooks()->SetState<CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::IGNORE);
+	}
+}
+
+void Graphics::ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_t overrideType)
+{
+	if (s_DisableForcedMaterialOverride)
+	{
+		GetHooks()->SetState<IStudioRender_ForcedMaterialOverride>(Hooking::HookAction::SUPERCEDE);
+		// Do nothing
+	}
+	else
+	{
+		GetHooks()->SetState<IStudioRender_ForcedMaterialOverride>(Hooking::HookAction::IGNORE);
 	}
 }
 
@@ -96,12 +125,17 @@ struct ShaderStencilState_t
 
 		if (m_bEnable)
 		{
-			pRenderContext->SetStencilFailOperation(m_FailOp);
-			pRenderContext->SetStencilZFailOperation(m_ZFailOp);
-			pRenderContext->SetStencilPassOperation(m_PassOp);
 			pRenderContext->SetStencilCompareFunction(m_CompareFunc);
+
+			if (m_CompareFunc != STENCILCOMPARISONFUNCTION_ALWAYS)
+				pRenderContext->SetStencilFailOperation(m_FailOp);
+			if (m_CompareFunc != STENCILCOMPARISONFUNCTION_ALWAYS && m_CompareFunc != STENCILCOMPARISONFUNCTION_NEVER)
+				pRenderContext->SetStencilTestMask(m_nTestMask);
+			if (m_CompareFunc != STENCILCOMPARISONFUNCTION_NEVER)
+				pRenderContext->SetStencilPassOperation(m_PassOp);
+
+			pRenderContext->SetStencilZFailOperation(m_ZFailOp);
 			pRenderContext->SetStencilReferenceValue(m_nReferenceValue);
-			pRenderContext->SetStencilTestMask(m_nTestMask);
 			pRenderContext->SetStencilWriteMask(m_nWriteMask);
 		}
 	}
@@ -254,8 +288,8 @@ static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition
 		}
 	}
 
-	pRenderContext->OverrideAlphaWriteEnable(false, true);
-	pRenderContext->OverrideColorWriteEnable(false, true);
+	pRenderContext->OverrideAlphaWriteEnable(true, true);
+	pRenderContext->OverrideColorWriteEnable(true, true);
 
 	pRenderContext->OverrideDepthEnable(false, false);
 
@@ -322,20 +356,24 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 	const PIXEvent pixEvent(pRenderContext, "ApplyEntityGlowEffects");
 
 	// Optimization: only do all the framebuffer shuffling if there's at least one glow to be drawn
+	bool anyGlowAlways = false;
+	bool anyGlowOccluded = false;
+	bool anyGlowVisible = false;
 	{
-		bool atLeastOneGlow = false;
-
 		for (int i = 0; i < m_GlowObjectDefinitions.Count(); i++)
 		{
-			if (m_GlowObjectDefinitions[i].IsUnused() || !m_GlowObjectDefinitions[i].ShouldDraw(nSplitScreenSlot))
+			auto& current = m_GlowObjectDefinitions[i];
+			if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot))
 				continue;
 
-			atLeastOneGlow = true;
+			anyGlowAlways = anyGlowAlways || current.m_bRenderWhenOccluded && current.m_bRenderWhenUnoccluded;
+			anyGlowOccluded = anyGlowOccluded || current.m_bRenderWhenOccluded && !current.m_bRenderWhenUnoccluded;
+			anyGlowVisible = anyGlowVisible || !current.m_bRenderWhenOccluded && current.m_bRenderWhenUnoccluded;
 			break;
 		}
 
-		if (!atLeastOneGlow)
-			return;
+		if (!anyGlowAlways && !anyGlowOccluded && !anyGlowVisible)
+			return;	// Early out
 	}
 
 	ITexture* const pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
@@ -365,7 +403,10 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 		const float flOrigBlend = render->GetBlend();
 
 		// Set override material for glow color
-		g_pStudioRender->ForcedMaterialOverride(materials->FindMaterial("dev/glow_color", TEXTURE_GROUP_OTHER, true));
+		g_pStudioRender->ForcedMaterialOverride(materials->FindMaterial("dev/glow_color", TEXTURE_GROUP_OTHER, true), OVERRIDE_BUILD_SHADOWS);
+		// HACK: Disable IStudioRender::ForcedMaterialOverride so ubers don't change it away from dev/glow_color
+		s_DisableForcedMaterialOverride = true;
+
 		pRenderContext->OverrideColorWriteEnable(true, true);
 		pRenderContext->OverrideAlphaWriteEnable(true, true);
 
@@ -373,19 +414,29 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 		BuildMoveChildMap();
 
 		// Draw "glow when visible" objects
-		DrawGlowVisible(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
+		if (anyGlowVisible)
+			DrawGlowVisible(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
 
 		// Draw "glow when occluded" objects
-		DrawGlowOccluded(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
+		if (anyGlowOccluded)
+			DrawGlowOccluded(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
 
 		// Draw "glow always" objects
-		DrawGlowAlways(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
+		if (anyGlowAlways)
+			DrawGlowAlways(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
 
+		// Re-enable IStudioRender::ForcedMaterialOverride
+		s_DisableForcedMaterialOverride = false;
+		// Disable dev/glow_color override
 		g_pStudioRender->ForcedMaterialOverride(NULL);
+
 		render->SetColorModulation(vOrigColor.Base());
 		render->SetBlend(flOrigBlend);
 		pRenderContext->OverrideDepthEnable(false, false);
 	}
+
+	pRenderContext->OverrideAlphaWriteEnable(true, true);
+	pRenderContext->OverrideColorWriteEnable(true, true);
 
 	// Copy MSAA'd glow models to _rt_FullFrameFB0
 	pRenderContext->CopyRenderTargetToTexture(pRtFullFrameFB0);
@@ -421,35 +472,62 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 
 	// Bloom glow models from _rt_FullFrameFB0 to backbuffer while stenciling out inside of models
 	{
-		// Set stencil state
-		ShaderStencilState_t stencilState;
-		stencilState.m_bEnable = true;
-		stencilState.m_nWriteMask = 0; // We're not changing stencil
-		stencilState.m_nReferenceValue = 1;
-		stencilState.m_nTestMask = 1;
-		stencilState.m_CompareFunc = STENCILCOMPARISONFUNCTION_NOTEQUAL;
-		stencilState.m_PassOp = STENCILOPERATION_KEEP;
-		stencilState.m_FailOp = STENCILOPERATION_KEEP;
-		stencilState.m_ZFailOp = STENCILOPERATION_KEEP;
-		stencilState.SetStencilState(pRenderContext);
+		static ConVarRef ce_graphics_glow_silhouettes("ce_graphics_glow_silhouettes");
 
-		ITexture* const pRtQuarterSize1 = materials->FindTexture("_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET);
-		IMaterial* const pMatHaloAddToScreen = materials->FindMaterial("dev/halo_add_to_screen", TEXTURE_GROUP_OTHER, true);
+		if (ce_graphics_glow_silhouettes.GetBool())
+		{
+			IMaterial* const fbTexture0Transluscent = materials->FindMaterial("debug/debugfbtexture0_transluscent", TEXTURE_GROUP_RENDER_TARGET);
+			fbTexture0Transluscent->AddRef();
+			pRenderContext->Bind(fbTexture0Transluscent);
 
-		// Write to alpha
-		pRenderContext->OverrideAlphaWriteEnable(true, true);
+			const int nSrcWidth = pSetup->width;
+			const int nSrcHeight = pSetup->height;
+			int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
+			pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
 
-		const int nSrcWidth = pSetup->width;
-		const int nSrcHeight = pSetup->height;
-		int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
-		pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
+			pRenderContext->OverrideDepthEnable(true, false);
+			{
+				pRenderContext->DrawScreenSpaceRectangle(fbTexture0Transluscent,
+					0, 0, nViewportWidth, nViewportHeight,
+					0, 0, nSrcWidth - 1, nSrcHeight - 1,
+					pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
+			}
+			pRenderContext->OverrideDepthEnable(false, false);
 
-		// Draw quad
-		pRenderContext->DrawScreenSpaceRectangle(pMatHaloAddToScreen,
-			0, 0, nViewportWidth, nViewportHeight,
-			0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
-			pRtQuarterSize1->GetActualWidth(),
-			pRtQuarterSize1->GetActualHeight());
+			fbTexture0Transluscent->Release();
+		}
+		else
+		{
+			// Set stencil state
+			ShaderStencilState_t stencilState;
+			stencilState.m_bEnable = true;
+			stencilState.m_nWriteMask = 0; // We're not changing stencil
+			stencilState.m_nReferenceValue = 1;
+			stencilState.m_nTestMask = 1;
+			stencilState.m_CompareFunc = STENCILCOMPARISONFUNCTION_NOTEQUAL;
+			stencilState.m_PassOp = STENCILOPERATION_KEEP;
+			stencilState.m_FailOp = STENCILOPERATION_KEEP;
+			stencilState.m_ZFailOp = STENCILOPERATION_KEEP;
+			stencilState.SetStencilState(pRenderContext);
+
+			ITexture* const pRtQuarterSize1 = materials->FindTexture("_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET);
+			IMaterial* const pMatHaloAddToScreen = materials->FindMaterial("dev/halo_add_to_screen", TEXTURE_GROUP_OTHER, true);
+
+			// Write to alpha
+			pRenderContext->OverrideAlphaWriteEnable(true, true);
+
+			const int nSrcWidth = pSetup->width;
+			const int nSrcHeight = pSetup->height;
+			int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
+			pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
+
+			// Draw quad
+			pRenderContext->DrawScreenSpaceRectangle(pMatHaloAddToScreen,
+				0, 0, nViewportWidth, nViewportHeight,
+				0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
+				pRtQuarterSize1->GetActualWidth(),
+				pRtQuarterSize1->GetActualHeight());
+		}
 	}
 
 	// Done with all of our "advanced" 3D rendering.
