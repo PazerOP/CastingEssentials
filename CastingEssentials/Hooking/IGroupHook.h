@@ -24,10 +24,16 @@ namespace Hooking
 
 	enum class HookType
 	{
+		// Detours a global function.
 		Global,
 		GlobalClass,
 		Class,
-		Virtual
+
+		// Detours a specific instance of a class (replaces a function pointer in a duplicated vtable).
+		Virtual,
+
+		// Detours all instances of a class (replaces a function pointer in the global vtable).
+		VirtualGlobal,
 	};
 
 	class IGroupHook
@@ -41,6 +47,7 @@ namespace Hooking
 		virtual void InitHook() = 0;
 
 		virtual HookType GetType() const = 0;
+		virtual int GetUniqueHookID() const = 0;
 
 	protected:
 		static std::atomic<uint64> s_LastHook;

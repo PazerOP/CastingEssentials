@@ -266,7 +266,7 @@ HookManager::RawCreateTFGlowObjectFn HookManager::GetRawFunc_Global_CreateTFGlow
 	static RawCreateTFGlowObjectFn s_CreateTFGlowObjectFn = nullptr;
 	if (!s_CreateTFGlowObjectFn)
 	{
-		constexpr const char* SIG = 
+		constexpr const char* SIG =
 			"\x55"					// push ebp
 			"\x8B\xEC"				// mov ebp, esp
 			"\x57"					// push edi
@@ -355,6 +355,22 @@ HookManager::RawGetIconFn HookManager::GetRawFunc_CHudBaseDeathNotice_GetIcon()
 	return s_RawGetIconFn;
 }
 
+HookManager::RawShouldDrawLocalPlayerFn HookManager::GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer()
+{
+	static RawShouldDrawLocalPlayerFn s_RawShouldDrawLocalPlayerFn = nullptr;
+	if (!s_RawShouldDrawLocalPlayerFn)
+	{
+		constexpr const char* SIG = "\x8B\x0D????\x85\xC9\x74\x3B\x8B\x01";
+		constexpr const char* MASK = "xx????xxxxxx";
+
+		s_RawShouldDrawLocalPlayerFn = (RawShouldDrawLocalPlayerFn)SignatureScan("client", SIG, MASK);
+		if (!s_RawShouldDrawLocalPlayerFn)
+			throw bad_pointer("C_BasePlayer_ShouldDrawLocalPlayer");
+	}
+
+	return s_RawShouldDrawLocalPlayerFn;
+}
+
 void HookManager::IngameStateChanged(bool inGame)
 {
 	if (inGame)
@@ -379,6 +395,8 @@ HookManager::HookManager()
 	m_Hook_IClientEngineTools_IsThirdPersonCamera.AttachHook(std::make_shared<IClientEngineTools_IsThirdPersonCamera::Inner>(Interfaces::GetClientEngineTools(), &IClientEngineTools::IsThirdPersonCamera));
 	m_Hook_IClientEngineTools_SetupEngineView.AttachHook(std::make_shared<IClientEngineTools_SetupEngineView::Inner>(Interfaces::GetClientEngineTools(), &IClientEngineTools::SetupEngineView));
 
+	//m_Hook_IClientRenderable_DrawModel.AttachHook(std::make_shared<IClientRenderable_DrawModel::Inner>(Interfaces::))
+
 	m_Hook_IVEngineClient_GetPlayerInfo.AttachHook(std::make_shared<IVEngineClient_GetPlayerInfo::Inner>(Interfaces::GetEngineClient(), &IVEngineClient::GetPlayerInfo));
 
 	m_Hook_IPrediction_PostEntityPacketReceived.AttachHook(std::make_shared<IPrediction_PostEntityPacketReceived::Inner>(Interfaces::GetPrediction(), &IPrediction::PostEntityPacketReceived));
@@ -392,7 +410,7 @@ HookManager::HookManager()
 	m_Hook_C_BaseEntity_Init.AttachHook(std::make_shared<C_BaseEntity_Init::Inner>(GetRawFunc_C_BaseEntity_Init()));
 
 	m_Hook_CGlowObjectManager_ApplyEntityGlowEffects.AttachHook(std::make_shared<CGlowObjectManager_ApplyEntityGlowEffects::Inner>(GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects()));
-	
+
 	m_Hook_Global_GetLocalPlayerIndex.AttachHook(std::make_shared<Global_GetLocalPlayerIndex::Inner>(GetRawFunc_Global_GetLocalPlayerIndex()));
 	m_Hook_Global_UTILComputeEntityFade.AttachHook(std::make_shared<Global_UTILComputeEntityFade::Inner>(GetRawFunc_Global_UTILComputeEntityFade()));
 }

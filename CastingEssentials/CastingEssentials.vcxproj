@@ -51,7 +51,7 @@
     <ClCompile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>_CRT_NO_VA_START_VALIDATION;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
     </ClCompile>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(TF_GAME_DIR)\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
@@ -126,6 +126,7 @@
     <ClInclude Include="Controls\ImageProgressBar.h" />
     <ClInclude Include="Controls\VariableLabel.h" />
     <ClInclude Include="Hooking\BaseGroupHook.h" />
+    <ClInclude Include="Hooking\GroupGlobalVirtualHook.h" />
     <ClInclude Include="Hooking\TemplateFunctions.h" />
     <ClInclude Include="Hooking\GroupClassHook.h" />
     <ClInclude Include="Hooking\GroupGlobalHook.h" />

@@ -7,7 +7,7 @@
 
 namespace Hooking
 {
-	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
+	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
 	class BaseGroupHook : public IGroupHook
 	{
 		static_assert(std::is_enum<FuncEnumType>::value, "FuncEnumType must be an enum!");
@@ -17,8 +17,8 @@ namespace Hooking
 		static constexpr FuncEnumType HOOK_ID = Dumb();
 		typedef RetVal RetVal;
 
-		typedef std::function<RetVal(Args...)> Functional;
-		typedef BaseGroupHook<FuncEnumType, hookID, RetVal, Args...> SelfType;
+		using Functional = FunctionalType;
+		typedef BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...> SelfType;
 		typedef SelfType BaseGroupHookType;
 
 		virtual void SetState(HookAction action) override;
@@ -31,8 +31,8 @@ namespace Hooking
 		BaseGroupHook();
 		virtual ~BaseGroupHook();
 
-		std::recursive_mutex m_HooksTableMutex;
-		std::map<uint64, Functional> m_HooksTable;
+		std::recursive_mutex m_HooksTableMutex;		// Mutex for m_HooksTable
+		std::map<uint64, Functional> m_HooksTable;	// Map of hook indices to std::function callbacks
 		static thread_local std::stack<HookAction>* s_HookResults;
 
 		template<class _RetVal> struct Stupid { static _RetVal InvokeHookFunctions(Args... args); };
@@ -91,22 +91,22 @@ namespace Hooking
 		static IGroupHook* s_This;
 	};
 
-	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
-	IGroupHook* BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>::s_This = nullptr;
+	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
+	IGroupHook* BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::s_This = nullptr;
 
-	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
-	thread_local std::stack<HookAction>* BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>::s_HookResults = nullptr;
+	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
+	thread_local std::stack<HookAction>* BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::s_HookResults = nullptr;
 
-	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
-	inline void BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>::SetState(HookAction action)
+	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
+	inline void BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::SetState(HookAction action)
 	{
 		Assert(s_HookResults);
 		if (s_HookResults)
 			s_HookResults->push(action);
 	}
 
-	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
-	inline int BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>::AddHook(const Functional& newHook)
+	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
+	inline int BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::AddHook(const Functional& newHook)
 	{
 		const auto newIndex = ++s_LastHook;
 
@@ -122,8 +122,8 @@ namespace Hooking
 		return newIndex;
 	}
 
-	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
-	inline bool BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>::RemoveHook(int hookID, const char* funcName)
+	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
+	inline bool BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::RemoveHook(int hookID, const char* funcName)
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_HooksTableMutex);
 
@@ -139,23 +139,23 @@ namespace Hooking
 		return true;
 	}
 
-	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
-	inline BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>::BaseGroupHook()
+	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
+	inline BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::BaseGroupHook()
 	{
 		Assert(!s_This);
 		s_This = this;
 	}
-	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
-	inline BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>::~BaseGroupHook()
+	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
+	inline BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::~BaseGroupHook()
 	{
 		Assert(!m_HooksTable.size());
 		Assert(s_This == this);
 		s_This = nullptr;
 	}
 
-	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
+	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
 	template<class _RetVal>
-	inline _RetVal BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>::Stupid<_RetVal>::InvokeHookFunctions(Args... args)
+	inline _RetVal BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::Stupid<_RetVal>::InvokeHookFunctions(Args... args)
 	{
 		// Run all the hooks
 		std::lock_guard<std::recursive_mutex> locker(This()->m_HooksTableMutex);

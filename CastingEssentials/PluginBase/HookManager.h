@@ -3,6 +3,7 @@
 #include "Hooking/GroupManualClassHook.h"
 #include "Hooking/GroupClassHook.h"
 #include "Hooking/GroupVirtualHook.h"
+#include "Hooking/GroupGlobalVirtualHook.h"
 #include "PluginBase/Modules.h"
 
 #include <basehandle.h>
@@ -37,6 +38,7 @@ class CMatRenderContextPtr;
 class CHudTexture;
 class IStudioRender;
 class IMaterial;
+class IClientRenderable;
 
 class HookManager final
 {
@@ -57,6 +59,8 @@ class HookManager final
 		IPrediction_PostEntityPacketReceived,
 
 		IStudioRender_ForcedMaterialOverride,
+
+		IClientRenderable_DrawModel,
 
 		C_HLTVCamera_SetCameraAngle,
 		C_HLTVCamera_SetMode,
@@ -84,7 +88,7 @@ class HookManager final
 
 	enum ShimType;
 	template<class HookType, class... Args> class HookShim final :
-		public Hooking::BaseGroupHook<ShimType, (ShimType)HookType::HOOK_ID, typename HookType::RetVal, Args...>
+		public Hooking::BaseGroupHook<ShimType, (ShimType)HookType::HOOK_ID, typename HookType::Functional, typename HookType::RetVal, Args...>
 	{
 	public:
 		~HookShim()
@@ -113,10 +117,10 @@ class HookManager final
 
 		void SetState(Hooking::HookAction action) override { Assert(m_InnerHook); m_InnerHook->SetState(action); }
 
-	private:
 		friend class HookManager;
 
 		void InitHook() override { }
+		int GetUniqueHookID() const { return (int)HOOK_ID; }
 
 		typedef HookType Inner;
 		void AttachHook(const std::shared_ptr<HookType>& innerHook)
@@ -130,6 +134,8 @@ class HookManager final
 			for (auto hooks : m_HooksTable)
 				AddInnerHook(hooks.first, hooks.second);
 		}
+
+	private:
 		void DetachHook()
 		{
 			Assert(m_InnerHook);
@@ -173,6 +179,8 @@ class HookManager final
 
 	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using VirtualHook =
 		HookShim<Hooking::GroupVirtualHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
+	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using GlobalVirtualHook =
+		HookShim<Hooking::GroupGlobalVirtualHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
 	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using ClassHook =
 		HookShim<Hooking::GroupClassHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
 	template<Func fn, bool vaArgs, class RetVal, class... Args> using GlobalHook =
@@ -195,6 +203,7 @@ class HookManager final
 	typedef unsigned char(__cdecl *RawUTILComputeEntityFadeFn)(C_BaseEntity* pEntity, float flMinDist, float flMaxDist, float flFadeScale);
 	typedef void(__thiscall *RawApplyEntityGlowEffectsFn)(CGlowObjectManager*, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int);
 	typedef CHudTexture*(__stdcall *RawGetIconFn)(const char* szIcon, int eIconFormat);
+	typedef bool(*RawShouldDrawLocalPlayerFn)();
 
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
@@ -214,6 +223,7 @@ class HookManager final
 public:
 	HookManager();
 	static RawCreateTFGlowObjectFn GetRawFunc_Global_CreateTFGlowObject();
+	static RawShouldDrawLocalPlayerFn GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer();
 
 	static bool Load();
 	static bool Unload();
@@ -225,6 +235,8 @@ public:
 	typedef VirtualHook<Func::IClientEngineTools_InToolMode, false, IClientEngineTools, bool> IClientEngineTools_InToolMode;
 	typedef VirtualHook<Func::IClientEngineTools_IsThirdPersonCamera, false, IClientEngineTools, bool> IClientEngineTools_IsThirdPersonCamera;
 	typedef VirtualHook<Func::IClientEngineTools_SetupEngineView, false, IClientEngineTools, bool, Vector&, QAngle&, float&> IClientEngineTools_SetupEngineView;
+
+	typedef GlobalVirtualHook<Func::IClientRenderable_DrawModel, false, IClientRenderable, int, int> IClientRenderable_DrawModel;
 
 	typedef VirtualHook<Func::IVEngineClient_GetPlayerInfo, false, IVEngineClient, bool, int, player_info_t*> IVEngineClient_GetPlayerInfo;
 
@@ -264,6 +276,7 @@ public:
 	template<> IClientEngineTools_InToolMode* GetHook<IClientEngineTools_InToolMode>() { return &m_Hook_IClientEngineTools_InToolMode; }
 	template<> IClientEngineTools_IsThirdPersonCamera* GetHook<IClientEngineTools_IsThirdPersonCamera>() { return &m_Hook_IClientEngineTools_IsThirdPersonCamera; }
 	template<> IClientEngineTools_SetupEngineView* GetHook<IClientEngineTools_SetupEngineView>() { return &m_Hook_IClientEngineTools_SetupEngineView; }
+	template<> IClientRenderable_DrawModel* GetHook<IClientRenderable_DrawModel>() { return &m_Hook_IClientRenderable_DrawModel; }
 	template<> IVEngineClient_GetPlayerInfo* GetHook<IVEngineClient_GetPlayerInfo>() { return &m_Hook_IVEngineClient_GetPlayerInfo; }
 	template<> IGameEventManager2_FireEventClientSide* GetHook<IGameEventManager2_FireEventClientSide>() { return &m_Hook_IGameEventManager2_FireEventClientSide; }
 	template<> IPrediction_PostEntityPacketReceived* GetHook<IPrediction_PostEntityPacketReceived>() { return &m_Hook_IPrediction_PostEntityPacketReceived; }
@@ -318,6 +331,8 @@ private:
 	IClientEngineTools_IsThirdPersonCamera m_Hook_IClientEngineTools_IsThirdPersonCamera;
 	IClientEngineTools_SetupEngineView m_Hook_IClientEngineTools_SetupEngineView;
 
+	IClientRenderable_DrawModel m_Hook_IClientRenderable_DrawModel;
+
 	IVEngineClient_GetPlayerInfo m_Hook_IVEngineClient_GetPlayerInfo;
 
 	IGameEventManager2_FireEventClientSide m_Hook_IGameEventManager2_FireEventClientSide;
@@ -352,6 +367,8 @@ using ICvar_ConsolePrintf = HookManager::ICvar_ConsolePrintf;
 using IClientEngineTools_InToolMode = HookManager::IClientEngineTools_InToolMode;
 using IClientEngineTools_IsThirdPersonCamera = HookManager::IClientEngineTools_IsThirdPersonCamera;
 using IClientEngineTools_SetupEngineView = HookManager::IClientEngineTools_SetupEngineView;
+
+using IClientRenderable_DrawModel = HookManager::IClientRenderable_DrawModel;
 
 using IVEngineClient_GetPlayerInfo = HookManager::IVEngineClient_GetPlayerInfo;
 

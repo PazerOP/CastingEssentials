@@ -3,12 +3,12 @@
 
 namespace Hooking
 {
-	template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class OriginalFnType, class DetourFnType, class RetVal, class... Args>
-	class BaseGroupGlobalHook : public BaseGroupHook<FuncEnumType, hookID, RetVal, Args...>
+	template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class OriginalFnType, class DetourFnType, class FunctionalType, class RetVal, class... Args>
+	class BaseGroupGlobalHook : public BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>
 	{
 		static_assert(!vaArgs || (sizeof...(Args) >= 1), "Must have at least 1 concrete argument defined for a variable-argument function");
 	public:
-		typedef BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, RetVal, Args...> BaseGroupGlobalHookType;
+		typedef BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, RetVal, Args...> BaseGroupGlobalHookType;
 		typedef BaseGroupGlobalHookType SelfType;
 		typedef OriginalFnType OriginalFnType;
 		typedef DetourFnType DetourFnType;
@@ -16,12 +16,13 @@ namespace Hooking
 		BaseGroupGlobalHook(OriginalFnType fn, DetourFnType detour = nullptr)
 		{
 			m_OriginalFunction = fn;
-			Assert(m_OriginalFunction);
+			//Assert(m_OriginalFunction); we pass in null for GroupGlobalVirtualHook >.>
 
 			m_DetourFunction = detour;
 		}
 
 		virtual HookType GetType() const override { return HookType::Global; }
+		virtual int GetUniqueHookID() const override { return (int)hookID; }
 
 	protected:
 		static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
@@ -91,7 +92,7 @@ namespace Hooking
 	// Non variable-arguments version
 	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
 	class GroupGlobalHook<FuncEnumType, hookID, false, RetVal, Args...> final :
-		public BaseGroupGlobalHook<FuncEnumType, hookID, false, Internal::GlobalDetourFnPtr<RetVal, Args...>, Internal::GlobalDetourFnPtr<RetVal, Args...>, RetVal, Args...>
+		public BaseGroupGlobalHook<FuncEnumType, hookID, false, Internal::GlobalDetourFnPtr<RetVal, Args...>, Internal::GlobalDetourFnPtr<RetVal, Args...>, Internal::GlobalFunctionalType<RetVal, Args...>, RetVal, Args...>
 	{
 	public:
 		typedef GroupGlobalHook<FuncEnumType, hookID, false, RetVal, Args...> GroupGlobalHookType;
@@ -118,10 +119,11 @@ namespace Hooking
 		GroupGlobalHook(const SelfType& other) = delete;
 	};
 
+#if 0
 	// Variable arguments version
 	template<class FuncEnumType, FuncEnumType hookID, class RetVal, class... Args>
 	class GroupGlobalHook<FuncEnumType, hookID, true, RetVal, Args...> final :
-		public BaseGroupGlobalHook<FuncEnumType, hookID, true, Internal::GlobalVaArgsFnPtr<RetVal, Args...>, Internal::GlobalVaArgsFnPtr<RetVal, Args...>, RetVal, Args...>
+		public BaseGroupGlobalHook<FuncEnumType, hookID, true, Internal::GlobalVaArgsFnPtr<RetVal, Args...>, Internal::GlobalVaArgsFnPtr<RetVal, Args...>, Internal::GlobalFunctionalType<RetVal, Args...>, RetVal, Args...>
 	{
 	public:
 		typedef GroupGlobalHook<FuncEnumType, hookID, true, RetVal, Args...> SelfType;
@@ -136,4 +138,5 @@ namespace Hooking
 		GroupGlobalHook() = delete;
 		GroupGlobalHook(const SelfType& other) = delete;
 	};
+#endif
 }

@@ -269,5 +269,8 @@
     <ClInclude Include="Modules\Killfeed.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Hooking\GroupGlobalVirtualHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

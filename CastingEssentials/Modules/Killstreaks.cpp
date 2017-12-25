@@ -38,10 +38,6 @@ public:
 private:
 	bool FireEventClientSideOverride(IGameEvent *event);
 
-	std::unique_ptr<PLH::VFuncSwap> m_Detour;
-
-	static bool __fastcall DetourFnTest(IGameEventManager2*, void*, IGameEvent*);
-
 	int bluTopKillstreak;
 	int bluTopKillstreakPlayer;
 	std::map<int, int> currentKillstreaks;

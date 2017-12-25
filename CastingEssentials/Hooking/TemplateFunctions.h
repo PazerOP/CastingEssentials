@@ -166,6 +166,21 @@ namespace Hooking{ namespace Internal
 	};
 
 	template<class GroupHookType, class Type, class RetVal, class... Args>
+	LocalDetourFnPtr<Type, RetVal, Args...> SharedLocalDetourFn(GroupHookType* hook)
+	{
+		static GroupHookType* s_Hook;
+		s_Hook = hook;
+		Assert(s_Hook);
+
+		LocalDetourFnPtr<Type, RetVal, Args...> fn = [](Type* pThis, void*, Args... args)
+		{
+			Assert(s_Hook->GetType() == HookType::VirtualGlobal);
+			return HookFunctionsInvoker<GroupHookType::BaseGroupHookType, RetVal, Type*, Args...>::Invoke(s_Hook, pThis, args...);
+		};
+		return fn;
+	}
+
+	template<class GroupHookType, class Type, class RetVal, class... Args>
 	LocalDetourFnPtr<Type, RetVal, Args...> LocalDetourFn(GroupHookType* hook)
 	{
 		static GroupHookType* s_Hook;
@@ -195,7 +210,7 @@ namespace Hooking{ namespace Internal
 			constexpr std::size_t fmtParameter = sizeof...(Args)-1;
 			using FmtType = typename std::tuple_element<fmtParameter, std::tuple<Args...>>::type;
 			static_assert(std::is_same<FmtType, const char*>::value || std::is_same<FmtType, char*>::value, "Invalid format string type!");
-			
+
 			// Fuck you, type system
 			const char** fmt = std::get<fmtParameter>(std::make_tuple(&args...));
 

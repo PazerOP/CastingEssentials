@@ -1,13 +1,15 @@
 #pragma once
 #include "GroupClassHook.h"
 
+#include <type_traits>
+
 namespace Hooking
 {
-	template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class OriginalFnType, class DetourFnType, class MemFnType, class Type, class RetVal, class... Args>
-	class BaseGroupVirtualHook : public BaseGroupClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, Type, RetVal, Args...>
+	template<class FuncEnumType, FuncEnumType hookID, bool vaArgs, class OriginalFnType, class DetourFnType, class MemFnType, class FunctionalType, class Type, class RetVal, class... Args>
+	class BaseGroupVirtualHook : public BaseGroupClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, Type, RetVal, Args...>
 	{
 	public:
-		typedef BaseGroupVirtualHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, MemFnType, Type, RetVal, Args...> BaseGroupVirtualHookType;
+		typedef BaseGroupVirtualHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, MemFnType, FunctionalType, Type, RetVal, Args...> BaseGroupVirtualHookType;
 		typedef BaseGroupVirtualHookType SelfType;
 		typedef BaseGroupClassHookType BaseType;
 		typedef MemFnType MemFnType;
@@ -19,6 +21,7 @@ namespace Hooking
 		}
 
 		virtual HookType GetType() const override { return HookType::Virtual; }
+		virtual int GetUniqueHookID() const override { return (int)hookID; }
 
 	protected:
 		MemFnType m_MemberFunction;
@@ -55,10 +58,12 @@ namespace Hooking
 	// Non variable-arguments version
 	template<class FuncEnumType, FuncEnumType hookID, class Type, class RetVal, class... Args>
 	class GroupVirtualHook<FuncEnumType, hookID, false, Type, RetVal, Args...> :
-		public BaseGroupVirtualHook<FuncEnumType, hookID, false, Internal::LocalFnPtr<Type, RetVal, Args...>, Internal::LocalDetourFnPtr<Type, RetVal, Args...>, Internal::MemberFnPtr<Type, RetVal, Args...>, Type, RetVal, Args...>
+		public BaseGroupVirtualHook<FuncEnumType, hookID, false, Internal::LocalFnPtr<Type, RetVal, Args...>, Internal::LocalDetourFnPtr<Type, RetVal, Args...>, Internal::MemberFnPtr<Type, RetVal, Args...>, Internal::GlobalFunctionalType<RetVal, Args...>, Type, RetVal, Args...>
 	{
+		auto GetSelf() const { return this; }
 	public:
-		typedef BaseGroupVirtualHookType BaseType;
+		using SelfType = GroupVirtualHook<FuncEnumType, hookID, false, Type, RetVal, Args...>;
+		using BaseType = BaseGroupVirtualHookType;
 
 		GroupVirtualHook(Type* instance, MemFnType fn, DetourFnType detour = nullptr) : BaseType(instance, fn, detour) { }
 		GroupVirtualHook(Type* instance, RetVal(Type::*fn)(Args...) const, DetourFnType detour = nullptr) :
@@ -75,11 +80,11 @@ namespace Hooking
 	// Variable arguments version
 	template<class FuncEnumType, FuncEnumType hookID, class Type, class RetVal, class... Args>
 	class GroupVirtualHook<FuncEnumType, hookID, true, Type, RetVal, Args...> :
-		public BaseGroupVirtualHook<FuncEnumType, hookID, true, Internal::LocalVaArgsFnPtr<Type, RetVal, Args...>, Internal::LocalVaArgsFnPtr<Type, RetVal, Args...>, Internal::MemFnVaArgsPtr<Type, RetVal, Args...>, Type, RetVal, Args...>
+		public BaseGroupVirtualHook<FuncEnumType, hookID, true, Internal::LocalVaArgsFnPtr<Type, RetVal, Args...>, Internal::LocalVaArgsFnPtr<Type, RetVal, Args...>, Internal::MemFnVaArgsPtr<Type, RetVal, Args...>, Internal::GlobalFunctionalType<RetVal, Args...>, Type, RetVal, Args...>
 	{
 	public:
-		typedef GroupVirtualHook<FuncEnumType, hookID, true, Type, RetVal, Args...> SelfType;
-		typedef BaseGroupVirtualHookType BaseType;
+		using SelfType = GroupVirtualHook<FuncEnumType, hookID, true, Type, RetVal, Args...>;
+		using BaseType = BaseGroupVirtualHookType;
 
 		GroupVirtualHook(Type* instance, MemFnType fn, DetourFnType detour = nullptr) : BaseType(instance, fn, detour) { }
 		GroupVirtualHook(Type* instance, RetVal(Type::*fn)(Args..., ...) const, DetourFnType detour = nullptr) :

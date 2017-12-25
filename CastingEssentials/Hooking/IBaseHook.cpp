@@ -7,6 +7,8 @@
 
 using namespace Hooking;
 
+// A VFuncSwapHook replaces the function pointer in the vtable for a given class. This means
+// all instances of the class will take the detour.
 class VFuncSwapHook final : public IBaseHook
 {
 public:
@@ -93,6 +95,7 @@ bool VFuncSwapHook::Unhook()
 	return true;
 }
 
+// Detours a function.
 class DetourHook : public IBaseHook
 {
 public:
@@ -117,6 +120,9 @@ std::shared_ptr<IBaseHook> Hooking::CreateDetour(void* func, void* detourFunc)
 	return std::shared_ptr<IBaseHook>(new DetourHook(func, detourFunc));
 }
 
+// A VTableSwapHook duplicates the vtable for a class, replaces a given function pointer with a detour, then
+// points the given instance of the class at the new vtable. This means only a specific instance of a class
+// takes the detour.
 class VTableSwapHook final : public IBaseHook
 {
 public:
