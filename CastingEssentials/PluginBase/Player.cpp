@@ -22,6 +22,7 @@ std::unique_ptr<Player> Player::s_Players[ABSOLUTE_PLAYER_LIMIT];
 
 Player::Player(CHandle<IClientEntity> handle, int userID) : m_PlayerEntity(handle), m_UserID(userID)
 {
+	m_CachedPlayerEntity = nullptr;
 }
 
 void Player::Unload()
@@ -267,6 +268,22 @@ TFClassType Player::GetClass() const
 	return TFClassType::Unknown;
 }
 
+int Player::GetHealth() const
+{
+	if (IsValid())
+	{
+		if (CheckCache() || !m_CachedHealth)
+			m_CachedHealth = Entities::GetEntityProp<int*>(GetEntity(), "m_iHealth");
+
+		Assert(m_CachedHealth);
+		if (m_CachedHealth)
+			return *m_CachedHealth;
+	}
+
+	Assert(!"Called " __FUNCTION__ "() on an invalid player!");
+	return 0;
+}
+
 bool Player::IsValid() const
 {
 	if (!m_PlayerEntity.IsValid())
@@ -306,6 +323,7 @@ bool Player::CheckCache() const
 
 		m_CachedTeam = nullptr;
 		m_CachedClass = nullptr;
+		m_CachedHealth = nullptr;
 		m_CachedObserverMode = nullptr;
 		m_CachedObserverTarget = nullptr;
 

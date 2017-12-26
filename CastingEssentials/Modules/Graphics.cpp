@@ -1,7 +1,9 @@
 #include "Graphics.h"
+#include "Controls/StubPanel.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Entities.h"
+#include "PluginBase/Player.h"
 
 #include <convar.h>
 #include <debugoverlay_shared.h>
@@ -27,6 +29,21 @@ static CGlowObjectManager* s_LocalGlowObjectManager;
 // Should we use a hook to disable IStudioRender::ForcedMaterialOverride?
 static bool s_DisableForcedMaterialOverride = false;
 
+class Graphics::TickPanel final : public virtual vgui::StubPanel
+{
+public:
+	TickPanel(Graphics* instance)
+	{
+		m_Instance = instance;
+		Assert(m_Instance);
+	};
+
+	void OnTick() override;
+
+private:
+	Graphics* m_Instance;
+};
+
 Graphics::Graphics()
 {
 	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading.");
@@ -34,12 +51,15 @@ Graphics::Graphics()
 	ce_graphics_glow_silhouettes = new ConVar("ce_graphics_glow_silhouettes", "1", FCVAR_NONE, "Turns outlines into silhouettes.");
 	ce_graphics_glow_intensity = new ConVar("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity");
 	ce_graphics_improved_glows = new ConVar("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?");
+	ce_graphics_fix_invisible_players = new ConVar("ce_graphics_fix_invisible_players", "1", FCVAR_NONE, "Fix a case where players are invisible if you're firstperson speccing them when the round starts.");
 
 	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
 	m_ApplyEntityGlowEffectsHook = GetHooks()->AddHook<CGlowObjectManager_ApplyEntityGlowEffects>(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9));
 
 	m_ForcedMaterialOverrideHook = GetHooks()->AddHook<IStudioRender_ForcedMaterialOverride>(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2));
+
+	m_Panel.reset(new Graphics::TickPanel(this));
 }
 
 Graphics::~Graphics()
@@ -540,4 +560,33 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 	pRenderContext->OverrideDepthEnable(false, false);
 
 	pRenderContext->PopRenderTargetAndViewport();
+}
+
+void Graphics::TickPanel::OnTick()
+{
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);;
+	if (!Interfaces::GetEngineClient()->IsInGame())
+		return;
+
+	if (m_Instance->ce_graphics_fix_invisible_players->GetBool())
+	{
+		for (Player* p : Player::Iterable())
+		{
+			if (!p)
+				continue;
+
+			auto entity = p->GetBaseEntity();
+			if (!entity)
+				continue;
+
+			if (entity->RenderHandle() == INVALID_CLIENT_RENDER_HANDLE)
+			{
+				if (!entity->ShouldDraw())
+					continue;
+
+				PluginMsg("[ce_graphics_fix_invisible_players] Forced player %i into client leaf system.\n", entity->entindex());
+				entity->AddToLeafSystem();
+			}
+		}
+	}
 }

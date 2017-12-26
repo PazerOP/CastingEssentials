@@ -51,7 +51,7 @@
     <ClCompile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>_CRT_NO_VA_START_VALIDATION;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(TF_GAME_DIR)\custom\CastingEssentials\addons\$(TargetFileName)"</Command>

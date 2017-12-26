@@ -98,6 +98,7 @@ private:
 	mutable void* m_CachedPlayerEntity;
 	mutable TFTeam* m_CachedTeam;
 	mutable TFClassType* m_CachedClass;
+	mutable int* m_CachedHealth;
 	mutable int* m_CachedObserverMode;
 	mutable CHandle<C_BaseEntity>* m_CachedObserverTarget;
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedWeapons[MAX_WEAPONS];

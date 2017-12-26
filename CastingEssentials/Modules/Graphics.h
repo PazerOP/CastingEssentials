@@ -25,6 +25,10 @@ private:
 	ConVar* ce_graphics_glow_silhouettes;
 	ConVar* ce_graphics_glow_intensity;
 	ConVar* ce_graphics_improved_glows;
+	ConVar* ce_graphics_fix_invisible_players;
+
+	class TickPanel;
+	std::unique_ptr<TickPanel> m_Panel;
 
 	int m_ComputeEntityFadeHook;
 	unsigned char ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale);
