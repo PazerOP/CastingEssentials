@@ -8,6 +8,7 @@
 
 #include <basehandle.h>
 #include <istudiorender.h>
+#include <ivrenderview.h>
 
 #include <memory>
 #include <vector>
@@ -39,6 +40,7 @@ class CHudTexture;
 class IStudioRender;
 class IMaterial;
 class IClientRenderable;
+class C_TFPlayer;
 
 class HookManager final
 {
@@ -72,6 +74,9 @@ class HookManager final
 		C_BaseAnimating_LockStudioHdr,
 		C_BaseAnimating_LookupBone,
 		C_BaseAnimating_GetBonePosition,
+		C_BaseAnimating_DrawModel,
+		C_BaseAnimating_InternalDrawModel,
+		C_TFPlayer_DrawModel,
 
 		C_BaseEntity_Init,
 		C_BaseEntity_CalcAbsolutePosition,
@@ -82,6 +87,8 @@ class HookManager final
 		Global_GetLocalPlayerIndex,
 		Global_CreateTFGlowObject,
 		Global_UTILComputeEntityFade,
+		Global_DrawOpaqueRenderable,
+		Global_DrawTranslucentRenderable,
 
 		Count,
 	};
@@ -196,11 +203,16 @@ class HookManager final
 	typedef void(__thiscall *RawCalcAbsolutePositionFn)(C_BaseEntity*);
 	typedef int(__thiscall *RawLookupBoneFn)(C_BaseAnimating*, const char*);
 	typedef void(__thiscall *RawGetBonePositionFn)(C_BaseAnimating*, int, Vector&, QAngle&);
+	typedef int(__thiscall *RawBaseAnimatingDrawModelFn)(C_BaseAnimating*, int);
+	typedef int(__thiscall *Raw_C_BaseAnimating_InternalDrawModel)(C_BaseAnimating* pThis, int flags);
+	typedef int(__thiscall *RawTFPlayerDrawModelFn)(C_TFPlayer*, int);
 	typedef int(*RawGetLocalPlayerIndexFn)();
 	typedef C_BaseEntity*(__cdecl *RawCreateEntityByNameFn)(const char* entityName);
 	typedef IClientNetworkable*(__cdecl *RawCreateTFGlowObjectFn)(int entNum, int serialNum);
 	typedef bool(__thiscall *RawBaseEntityInitFn)(C_BaseEntity* pThis, int entnum, int iSerialNum);
 	typedef unsigned char(__cdecl *RawUTILComputeEntityFadeFn)(C_BaseEntity* pEntity, float flMinDist, float flMaxDist, float flFadeScale);
+	typedef void(__cdecl *RawDrawOpaqueRenderableFn)(IClientRenderable* pEnt, bool bTwoPass, ERenderDepthMode DepthMode, int nDefaultFlags);
+	typedef void(__cdecl *RawDrawTranslucentRenderableFn)(IClientRenderable* pEnt, bool bTwoPass, bool bShadowDepth, bool bIgnoreDepth);
 	typedef void(__thiscall *RawApplyEntityGlowEffectsFn)(CGlowObjectManager*, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int);
 	typedef CHudTexture*(__stdcall *RawGetIconFn)(const char* szIcon, int eIconFormat);
 	typedef bool(*RawShouldDrawLocalPlayerFn)();
@@ -213,10 +225,15 @@ class HookManager final
 	static RawCalcAbsolutePositionFn GetRawFunc_C_BaseEntity_CalcAbsolutePosition();
 	static RawLookupBoneFn GetRawFunc_C_BaseAnimating_LookupBone();
 	static RawGetBonePositionFn GetRawFunc_C_BaseAnimating_GetBonePosition();
+	static RawBaseAnimatingDrawModelFn GetRawFunc_C_BaseAnimating_DrawModel();
+	static Raw_C_BaseAnimating_InternalDrawModel GetRawFunc_C_BaseAnimating_InternalDrawModel();
+	static RawTFPlayerDrawModelFn GetRawFunc_C_TFPlayer_DrawModel();
 	static RawGetLocalPlayerIndexFn GetRawFunc_Global_GetLocalPlayerIndex();
 	static RawCreateEntityByNameFn GetRawFunc_Global_CreateEntityByName();
 	static RawBaseEntityInitFn GetRawFunc_C_BaseEntity_Init();
 	static RawUTILComputeEntityFadeFn GetRawFunc_Global_UTILComputeEntityFade();
+	static RawDrawOpaqueRenderableFn GetRawFunc_Global_DrawOpaqueRenderable();
+	static RawDrawTranslucentRenderableFn GetRawFunc_Global_DrawTranslucentRenderable();
 	static RawApplyEntityGlowEffectsFn GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects();
 	static RawGetIconFn GetRawFunc_CHudBaseDeathNotice_GetIcon();
 
@@ -256,6 +273,10 @@ public:
 	typedef GlobalClassHook<Func::C_BaseAnimating_LockStudioHdr, false, C_BaseAnimating, void> C_BaseAnimating_LockStudioHdr;
 	typedef GlobalClassHook<Func::C_BaseAnimating_LookupBone, false, C_BaseAnimating, int, const char*> C_BaseAnimating_LookupBone;
 	typedef GlobalClassHook<Func::C_BaseAnimating_GetBonePosition, false, C_BaseAnimating, void, int, Vector&, QAngle&> C_BaseAnimating_GetBonePosition;
+	typedef GlobalClassHook<Func::C_BaseAnimating_DrawModel, false, C_BaseAnimating, int, int> C_BaseAnimating_DrawModel;
+	typedef GlobalClassHook<Func::C_BaseAnimating_InternalDrawModel, false, C_BaseAnimating, int, int> C_BaseAnimating_InternalDrawModel;
+
+	typedef GlobalClassHook<Func::C_TFPlayer_DrawModel, false, C_TFPlayer, int, int> C_TFPlayer_DrawModel;
 
 	typedef GlobalClassHook<Func::C_BaseEntity_Init, false, C_BaseEntity, bool, int, int> C_BaseEntity_Init;
 	typedef GlobalClassHook<Func::C_BaseEntity_CalcAbsolutePosition, false, C_BaseEntity, void> C_BaseEntity_CalcAbsolutePosition;
@@ -266,6 +287,8 @@ public:
 	typedef GlobalHook<Func::Global_CreateEntityByName, false, C_BaseEntity*, const char*> Global_CreateEntityByName;
 	typedef GlobalHook<Func::Global_CreateTFGlowObject, false, IClientNetworkable*, int, int> Global_CreateTFGlowObject;
 	typedef GlobalHook<Func::Global_UTILComputeEntityFade, false, unsigned char, C_BaseEntity*, float, float, float> Global_UTILComputeEntityFade;
+	typedef GlobalHook<Func::Global_DrawOpaqueRenderable, false, void, IClientRenderable*, bool, ERenderDepthMode, int> Global_DrawOpaqueRenderable;
+	typedef GlobalHook<Func::Global_DrawTranslucentRenderable, false, void, IClientRenderable*, bool, bool, bool> Global_DrawTranslucentRenderable;
 
 	template<class Hook> typename Hook::Functional GetFunc() { static_assert(false, "Invalid hook type"); }
 
@@ -284,9 +307,14 @@ public:
 	template<> C_HLTVCamera_SetCameraAngle* GetHook<C_HLTVCamera_SetCameraAngle>() { return &m_Hook_C_HLTVCamera_SetCameraAngle; }
 	template<> C_HLTVCamera_SetMode* GetHook<C_HLTVCamera_SetMode>() { return &m_Hook_C_HLTVCamera_SetMode; }
 	template<> C_HLTVCamera_SetPrimaryTarget* GetHook<C_HLTVCamera_SetPrimaryTarget>() { return &m_Hook_C_HLTVCamera_SetPrimaryTarget; }
+	template<> C_BaseAnimating_DrawModel* GetHook<C_BaseAnimating_DrawModel>() { return &m_Hook_C_BaseAnimating_DrawModel; }
+	template<> C_BaseAnimating_InternalDrawModel* GetHook<C_BaseAnimating_InternalDrawModel>() { return &m_Hook_C_BaseAnimating_InternalDrawModel; }
+	template<> C_TFPlayer_DrawModel* GetHook<C_TFPlayer_DrawModel>() { return &m_Hook_C_TFPlayer_DrawModel; }
 	template<> C_BaseEntity_Init* GetHook<C_BaseEntity_Init>() { return &m_Hook_C_BaseEntity_Init; }
 	template<> Global_GetLocalPlayerIndex* GetHook<Global_GetLocalPlayerIndex>() { return &m_Hook_Global_GetLocalPlayerIndex; }
 	template<> Global_UTILComputeEntityFade* GetHook<Global_UTILComputeEntityFade>() { return &m_Hook_Global_UTILComputeEntityFade; }
+	template<> Global_DrawOpaqueRenderable* GetHook<Global_DrawOpaqueRenderable>() { return &m_Hook_Global_DrawOpaqueRenderable; }
+	template<> Global_DrawTranslucentRenderable* GetHook<Global_DrawTranslucentRenderable>() { return &m_Hook_Global_DrawTranslucentRenderable; }
 	template<> CGlowObjectManager_ApplyEntityGlowEffects* GetHook<CGlowObjectManager_ApplyEntityGlowEffects>() { return &m_Hook_CGlowObjectManager_ApplyEntityGlowEffects; }
 
 	template<class Hook> int AddHook(const typename Hook::Functional& hook)
@@ -345,10 +373,16 @@ private:
 	C_HLTVCamera_SetMode m_Hook_C_HLTVCamera_SetMode;
 	C_HLTVCamera_SetPrimaryTarget m_Hook_C_HLTVCamera_SetPrimaryTarget;
 
+	C_BaseAnimating_DrawModel m_Hook_C_BaseAnimating_DrawModel;
+	C_BaseAnimating_InternalDrawModel m_Hook_C_BaseAnimating_InternalDrawModel;
+	C_TFPlayer_DrawModel m_Hook_C_TFPlayer_DrawModel;
+
 	C_BaseEntity_Init m_Hook_C_BaseEntity_Init;
 
 	Global_GetLocalPlayerIndex m_Hook_Global_GetLocalPlayerIndex;
 	Global_UTILComputeEntityFade m_Hook_Global_UTILComputeEntityFade;
+	Global_DrawOpaqueRenderable m_Hook_Global_DrawOpaqueRenderable;
+	Global_DrawTranslucentRenderable m_Hook_Global_DrawTranslucentRenderable;
 	CGlowObjectManager_ApplyEntityGlowEffects m_Hook_CGlowObjectManager_ApplyEntityGlowEffects;
 
 	void IngameStateChanged(bool inGame);
@@ -388,6 +422,9 @@ using C_BaseAnimating_GetBoneCache = HookManager::C_BaseAnimating_GetBoneCache;
 using C_BaseAnimating_LockStudioHdr = HookManager::C_BaseAnimating_LockStudioHdr;
 using C_BaseAnimating_LookupBone = HookManager::C_BaseAnimating_LookupBone;
 using C_BaseAnimating_GetBonePosition = HookManager::C_BaseAnimating_GetBonePosition;
+using C_BaseAnimating_DrawModel = HookManager::C_BaseAnimating_DrawModel;
+using C_BaseAnimating_InternalDrawModel = HookManager::C_BaseAnimating_InternalDrawModel;
+using C_TFPlayer_DrawModel = HookManager::C_TFPlayer_DrawModel;
 
 using C_BaseEntity_Init = HookManager::C_BaseEntity_Init;
 using C_BaseEntity_CalcAbsolutePosition = HookManager::C_BaseEntity_CalcAbsolutePosition;
@@ -398,6 +435,8 @@ using Global_GetLocalPlayerIndex = HookManager::Global_GetLocalPlayerIndex;
 using Global_CreateEntityByName = HookManager::Global_CreateEntityByName;
 using Global_CreateTFGlowObject = HookManager::Global_CreateTFGlowObject;
 using Global_UTILComputeEntityFade = HookManager::Global_UTILComputeEntityFade;
+using Global_DrawOpaqueRenderable = HookManager::Global_DrawOpaqueRenderable;
+using Global_DrawTranslucentRenderable = HookManager::Global_DrawTranslucentRenderable;
 
 extern void* SignatureScan(const char* moduleName, const char* signature, const char* mask);
 extern HookManager* GetHooks();

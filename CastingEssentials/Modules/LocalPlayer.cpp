@@ -11,6 +11,8 @@
 #include <convar.h>
 #include <debugoverlay_shared.h>
 #include <vprof.h>
+#include <toolframework/ienginetool.h>
+#include <model_types.h>
 
 #include <functional>
 
@@ -154,17 +156,105 @@ void LocalPlayer::SetToCurrentTarget()
 
 #include "PluginBase/Entities.h"
 
-static int DrawModelOverride(IClientRenderable* renderable, int flags)
+static int TFPlayerDrawModelOverride(C_TFPlayer* pPlayer, int flags)
 {
-	auto hook = GetHooks()->GetHook<IClientRenderable_DrawModel>();
+	auto hook = GetHooks()->GetHook<C_TFPlayer_DrawModel>();
 	hook->SetState(Hooking::HookAction::IGNORE);
 
-	if (!renderable)
+	extern bool g_RenderingGlowModel;
+	if (g_RenderingGlowModel)
 		return 0;
 
-	auto unknown = renderable->GetIClientUnknown();
+	if (!pPlayer)
+		return 0;
+
+	// C_TFPlayer uses multiple inheritance in 2017 TF2. We don't have the 2017 class declaration
+	// available, so we just have to guess the offset.
+	IClientUnknown* unknown = reinterpret_cast<IClientUnknown*>((size_t*)pPlayer - 1);
 	if (!unknown)
 		return 0;
+
+	auto entity = unknown->GetIClientEntity();
+	if (!entity)
+		return 0;
+
+	const int entindex = entity->entindex();
+	if (entindex != 10)
+		return 0;
+	//if (entindex < 1 || entindex > Interfaces::GetEngineClient()->GetMaxClients())
+	//	return 0;
+
+	auto networkable = unknown->GetClientNetworkable();
+	if (!networkable)
+		return 0;
+
+	auto animating = dynamic_cast<C_BaseAnimating*>(unknown->GetBaseEntity());
+	if (!animating)
+		return 0;
+
+	if (!Entities::CheckEntityBaseclass(networkable, "TFPlayer"))
+		return 0;
+
+	Player* player = Player::GetPlayer(entindex, __FUNCSIG__);
+	if (!player)
+		return 0;
+
+	static int s_PlayerDrawCounts[MAX_PLAYERS];
+	static int s_LastFrameIndex = -1;
+	const auto frameindex = Interfaces::GetEngineTool()->HostFrameCount();
+	if (frameindex != s_LastFrameIndex)
+	{
+		memset(s_PlayerDrawCounts, 0, sizeof(s_PlayerDrawCounts));
+		s_LastFrameIndex = frameindex;
+	}
+
+	const auto drawIndex = s_PlayerDrawCounts[entindex]++;
+
+	hook->SetState(Hooking::HookAction::SUPERCEDE);
+
+	int result = hook->GetOriginal()(pPlayer, flags);
+
+	char buffer[256];
+	sprintf_s(buffer,
+		"Flags: %i, Result: %i, Model: %p, ShouldDraw: %s",
+		flags, result, animating->GetModel(),
+		animating->ShouldDraw() ? "true" : "false");
+
+	NDebugOverlay::Text(player->GetEyePosition() + Vector(0, 0, 10) * drawIndex, buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+	if (result == 0)
+		PluginMsg("Skipped player draw\n");
+
+	return result;
+}
+
+static int s_ExpectedDrawModelCount = 0;
+static int s_ActualDrawModelCount = 0;
+static int BaseAnimatingDrawModelOverride(C_BaseAnimating* animating, int flags)
+{
+	auto hook = GetHooks()->GetHook<C_BaseAnimating_DrawModel>();
+	hook->SetState(Hooking::HookAction::IGNORE);
+
+	extern bool g_RenderingGlowModel;
+	if (g_RenderingGlowModel)
+		return 0;
+
+	if (!animating)
+		return 0;
+
+	auto unknown = animating->GetIClientUnknown();
+	if (!unknown)
+		return 0;
+
+	auto entity = unknown->GetIClientEntity();
+	if (!entity)
+		return 0;
+
+	const int entindex = entity->entindex();
+	if (entindex != 10)
+		return 0;
+	//if (entindex < 1 || entindex > Interfaces::GetEngineClient()->GetMaxClients())
+	//	return 0;
 
 	auto networkable = unknown->GetClientNetworkable();
 	if (!networkable)
@@ -173,24 +263,129 @@ static int DrawModelOverride(IClientRenderable* renderable, int flags)
 	if (!Entities::CheckEntityBaseclass(networkable, "TFPlayer"))
 		return 0;
 
+	Player* player = Player::GetPlayer(entindex, __FUNCSIG__);
+	if (!player)
+		return 0;
+
+	s_ExpectedDrawModelCount++;
+
+	static int s_PlayerDrawCounts[MAX_PLAYERS];
+	static int s_LastFrameIndex = -1;
+	const auto frameindex = Interfaces::GetEngineTool()->HostFrameCount();
+	if (frameindex != s_LastFrameIndex)
+	{
+		memset(s_PlayerDrawCounts, 0, sizeof(s_PlayerDrawCounts));
+		s_LastFrameIndex = frameindex;
+	}
+
+	const auto drawIndex = s_PlayerDrawCounts[entindex]++;
+
+	hook->SetState(Hooking::HookAction::SUPERCEDE);
+
+	int result = hook->GetOriginal()(animating, flags);
+
+	char buffer[256];
+	sprintf_s(buffer,
+		"Flags: %i, Result: %i, Model: %p, ShouldDraw: %s",
+		flags, result, animating->GetModel(),
+		animating->ShouldDraw() ? "true" : "false");
+
+	//NDebugOverlay::Text(player->GetEyePosition() + Vector(0, 0, 10) * drawIndex, buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+	if (result == 0)
+		PluginMsg("Skipped player draw\n");
+
+	return result;
+}
+
+static int DrawModelOverride(IClientRenderable* renderable, int flags)
+{
+	auto hook = GetHooks()->GetHook<IClientRenderable_DrawModel>();
+	hook->SetState(Hooking::HookAction::IGNORE);
+
+	extern bool g_RenderingGlowModel;
+	if (g_RenderingGlowModel)
+		return 0;
+
+	if (!renderable)
+		return 0;
+
+	auto unknown = renderable->GetIClientUnknown();
+	if (!unknown)
+		return 0;
+
 	auto entity = unknown->GetIClientEntity();
 	if (!entity)
 		return 0;
 
-	Player* player = Player::GetPlayer(entity->entindex(), __FUNCSIG__);
+	const int entindex = entity->entindex();
+	if (entindex != 10)
+		return 0;
+	//if (entindex < 1 || entindex > Interfaces::GetEngineClient()->GetMaxClients())
+	//	return 0;
+
+	auto networkable = unknown->GetClientNetworkable();
+	if (!networkable)
+		return 0;
+
+	if (!Entities::CheckEntityBaseclass(networkable, "TFPlayer"))
+		return 0;
+
+	Player* player = Player::GetPlayer(entindex, __FUNCSIG__);
 	if (!player)
 		return 0;
 
+	static int s_PlayerDrawCounts[MAX_PLAYERS];
+	static int s_LastFrameIndex = -1;
+	const auto frameindex = Interfaces::GetEngineTool()->HostFrameCount();
+	if (frameindex != s_LastFrameIndex)
+	{
+		memset(s_PlayerDrawCounts, 0, sizeof(s_PlayerDrawCounts));
+		s_LastFrameIndex = frameindex;
+	}
+
+	const auto drawIndex = s_PlayerDrawCounts[entindex]++;
+
 	hook->SetState(Hooking::HookAction::SUPERCEDE);
+
 	int result = hook->GetOriginal()(renderable, flags);
 
 	char buffer[256];
 	sprintf_s(buffer,
-		"Flags:  %i\n"
-		"Result: %i",
-		flags, result);
+		"Flags: %i, Result: %i, Model: %p, ShouldDraw: %s",
+		flags, result, renderable->GetModel(),
+		renderable->ShouldDraw() ? "true" : "false");
 
-	NDebugOverlay::Text(player->GetEyePosition() + Vector(0, 0, 10), buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+	//NDebugOverlay::Text(player->GetEyePosition() + Vector(0, 0, 10) * drawIndex, buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+	return result;
+}
+
+static void DrawOpaqueRenderableOverride(IClientRenderable* pEnt, bool bTwoPass, ERenderDepthMode DepthMode, int nDefaultFlags)
+{
+	auto hook = GetHooks()->GetHook<Global_DrawOpaqueRenderable>();
+	hook->SetState(Hooking::HookAction::SUPERCEDE);
+	hook->GetOriginal()(pEnt, bTwoPass, DepthMode, nDefaultFlags);
+}
+
+static void DrawTranslucentRenderableOverride(IClientRenderable* pEnt, bool bTwoPass, bool bShadowDepth, bool bIgnoreDepth)
+{
+	auto hook = GetHooks()->GetHook<Global_DrawTranslucentRenderable>();
+	hook->SetState(Hooking::HookAction::SUPERCEDE);
+	hook->GetOriginal()(pEnt, bTwoPass, bShadowDepth, bIgnoreDepth);
+}
+
+static int C_BaseAnimating_InternalDrawModelOverride(C_BaseAnimating* pThis, int flags)
+{
+	auto hook = GetHooks()->GetHook<C_BaseAnimating_InternalDrawModel>();
+	hook->SetState(Hooking::HookAction::SUPERCEDE);
+	int result = hook->GetOriginal()(pThis, flags);
+
+	extern bool g_RenderingGlowModel;
+	auto unknown = pThis->GetIClientUnknown();
+	auto entity = unknown ? unknown->GetIClientEntity() : nullptr;
+	const int entindex = entity ? entity->entindex() : -1;
+	auto networkable = unknown->GetClientNetworkable();
 
 	return result;
 }
@@ -203,37 +398,45 @@ void LocalPlayer::TickPanel::OnTick()
 
 	//static std::map<int, std::shared_ptr<IClientRenderable_DrawModel>> s_DrawModelHooks;
 	//static std::unique_ptr<IClientRenderable_DrawModel> s_DrawModelHook;
-	static bool s_AddedHook = false;
-
-	for (Player* player : Player::Iterable())
+	static bool s_AddedHooks = false;
+	if (!s_AddedHooks)
 	{
-		if (!player)
-			continue;
+		for (Player* player : Player::Iterable())
+		{
+			if (!player)
+				continue;
 
-		char buffer[256];
+			char buffer[256];
 #if 0
-		sprintf_s(buffer, "Local player: %s", player == Player::GetLocalPlayer() ? "true" : "false");
-		NDebugOverlay::Text(player->GetAbsOrigin(), buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+			sprintf_s(buffer, "Local player: %s", player == Player::GetLocalPlayer() ? "true" : "false");
+			NDebugOverlay::Text(player->GetAbsOrigin(), buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
-		sprintf_s(buffer, "ShouldDraw(): %s", player->GetBaseEntity()->ShouldDraw() ? "true" : "false");
-		NDebugOverlay::Text(player->GetAbsOrigin() + Vector(0, 0, 10), buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+			sprintf_s(buffer, "ShouldDraw(): %s", player->GetBaseEntity()->ShouldDraw() ? "true" : "false");
+			NDebugOverlay::Text(player->GetAbsOrigin() + Vector(0, 0, 10), buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 #endif
 
-		auto animating = player->GetBaseAnimating();
+			auto animating = player->GetBaseAnimating();
 
-		if (!s_AddedHook)
-		{
-			s_AddedHook = true;
 			auto hook = GetHooks()->GetHook<IClientRenderable_DrawModel>();
 			//s_DrawModelHook.reset(new IClientRenderable_DrawModel());
 
 			hook->AttachHook(std::make_shared<IClientRenderable_DrawModel::Inner>((IClientRenderable*)animating, &IClientRenderable::DrawModel));
 
 			hook->AddHook(std::bind(&DrawModelOverride, std::placeholders::_1, std::placeholders::_2));
-		}
 
-		//sprintf_s(buffer, "Nodraw? %s", (animating->GetEffects() & EF_NODRAW) ? "true" : "false");
-		//NDebugOverlay::Text(player->GetEyePosition() + Vector(0, 0, 10), buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+			GetHooks()->AddHook<C_BaseAnimating_DrawModel>(std::bind(&BaseAnimatingDrawModelOverride, std::placeholders::_1, std::placeholders::_2));
+			GetHooks()->AddHook<C_BaseAnimating_InternalDrawModel>(std::bind(&C_BaseAnimating_InternalDrawModelOverride, std::placeholders::_1, std::placeholders::_2));
+			GetHooks()->AddHook<C_TFPlayer_DrawModel>(std::bind(&TFPlayerDrawModelOverride, std::placeholders::_1, std::placeholders::_2));
+			GetHooks()->AddHook<Global_DrawOpaqueRenderable>(std::bind(&DrawOpaqueRenderableOverride, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+			GetHooks()->AddHook<Global_DrawTranslucentRenderable>(std::bind(&DrawTranslucentRenderableOverride, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+			//GetHooks()->GetHook<C_TFPlayer_DrawModel>()->InitHook();
+
+			s_AddedHooks = true;
+			break;
+
+			//sprintf_s(buffer, "Nodraw? %s", (animating->GetEffects() & EF_NODRAW) ? "true" : "false");
+			//NDebugOverlay::Text(player->GetEyePosition() + Vector(0, 0, 10), buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+		}
 	}
 
 	engine->Con_NPrintf(0, "ShouldDrawLocalPlayer: %s", HookManager::GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer() ? "true" : "false");

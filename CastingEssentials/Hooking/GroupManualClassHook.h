@@ -34,7 +34,12 @@ namespace Hooking
 			if (m_BaseHook)
 			{
 				OriginalFnType originalFnPtr = reinterpret_cast<OriginalFnType>(m_BaseHook->GetOriginalFunction());
-				RetVal(*patch)(OriginalFnType, Type*, Args...) = [](OriginalFnType oFn, Type* instance, Args... args) { return oFn(instance, args...); };
+				Assert(originalFnPtr);
+				RetVal(*patch)(OriginalFnType, Type*, Args...) = [](OriginalFnType oFn, Type* instance, Args... args)
+				{
+					Assert(oFn);
+					return oFn(instance, args...);
+				};
 
 				std::function<RetVal(Type*, Args...)> fn = std::bind(patch, originalFnPtr, std::placeholders::_1, (std::_Ph<(int)(Is + 2)>{})...);
 
@@ -66,14 +71,7 @@ namespace Hooking
 		GroupManualClassHook(const SelfType& other) = delete;
 
 	protected:
-		DetourFnType DefaultDetourFn()
-		{
-			DetourFnType fn = [](Type* pThis, void*, Args... args)
-			{
-				return Internal::HookFunctionsInvoker<BaseGroupHookType, RetVal, Type*, Args...>::Invoke(This(), pThis, args...);
-			};
-			return fn;
-		}
+		DetourFnType DefaultDetourFn() { return Internal::SharedLocalDetourFn<SelfType, Type, RetVal, Args...>(this); }
 	};
 
 #if 0

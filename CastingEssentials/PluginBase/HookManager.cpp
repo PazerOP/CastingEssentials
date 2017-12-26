@@ -228,6 +228,56 @@ HookManager::RawGetBonePositionFn HookManager::GetRawFunc_C_BaseAnimating_GetBon
 	return s_GetBonePositionFn;
 }
 
+HookManager::RawBaseAnimatingDrawModelFn HookManager::GetRawFunc_C_BaseAnimating_DrawModel()
+{
+	static RawBaseAnimatingDrawModelFn s_DrawModelFn = nullptr;
+	if (!s_DrawModelFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x83\xEC\x20\x8B\x15????\x53\x33\xDB\x56";
+		constexpr const char* MASK = "xxxxxxxx????xxxx";
+
+		s_DrawModelFn = (RawBaseAnimatingDrawModelFn)SignatureScan("client", SIG, MASK);
+
+		if (!s_DrawModelFn)
+			throw bad_pointer("C_BaseAnimating::DrawModel");
+	}
+
+	return s_DrawModelFn;
+}
+
+HookManager::Raw_C_BaseAnimating_InternalDrawModel HookManager::GetRawFunc_C_BaseAnimating_InternalDrawModel()
+{
+	static Raw_C_BaseAnimating_InternalDrawModel fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x81\xEC????\x53\x56\x57\x8B\xF9\xC6\x45\xFF\x00\x8B\x87";
+		constexpr const char* MASK = "xxxxx????xxxxxxxxxxx";
+
+		fn = (Raw_C_BaseAnimating_InternalDrawModel)SignatureScan("client", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("C_BaseAnimating::InternalDrawModel");
+	}
+
+	return fn;
+}
+
+HookManager::RawTFPlayerDrawModelFn HookManager::GetRawFunc_C_TFPlayer_DrawModel()
+{
+	static RawTFPlayerDrawModelFn s_DrawModelFn = nullptr;
+	if (!s_DrawModelFn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x51\x57\x8B\xF9\x80\x7F\x54\x17";
+		constexpr const char* MASK = "xxxxxxxxxxx";
+
+		s_DrawModelFn = (RawTFPlayerDrawModelFn)SignatureScan("client", SIG, MASK);
+
+		if (!s_DrawModelFn)
+			throw bad_pointer("C_TFPlayer::DrawModel");
+	}
+
+	return s_DrawModelFn;
+}
+
 HookManager::RawGetLocalPlayerIndexFn HookManager::GetRawFunc_Global_GetLocalPlayerIndex()
 {
 	static RawGetLocalPlayerIndexFn s_GetLocalPlayerIndexFn = nullptr;
@@ -323,6 +373,38 @@ HookManager::RawUTILComputeEntityFadeFn HookManager::GetRawFunc_Global_UTILCompu
 	return s_UTILComputeEntityFadeFn;
 }
 
+HookManager::RawDrawOpaqueRenderableFn HookManager::GetRawFunc_Global_DrawOpaqueRenderable()
+{
+	static RawDrawOpaqueRenderableFn fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x83\xEC\x20\x8B\x0D????\x53\x56\x33\xF6";
+		constexpr const char* MASK = "xxxxxxxx????xxxx";
+
+		fn = (RawDrawOpaqueRenderableFn)SignatureScan("client", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("DrawOpaqueRenderable");
+	}
+
+	return fn;
+}
+
+HookManager::RawDrawTranslucentRenderableFn HookManager::GetRawFunc_Global_DrawTranslucentRenderable()
+{
+	static RawDrawTranslucentRenderableFn fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x83\xEC\x0C\x53\x8B\x5D\x08\x8B\xCB\x8B\x03\xFF\x50\x34";
+		constexpr const char* MASK = "xxxxxxxxxxxxxxxxx";
+
+		fn = (RawDrawTranslucentRenderableFn)SignatureScan("client", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("DrawTranslucentRenderable");
+	}
+
+	return fn;
+}
+
 HookManager::RawApplyEntityGlowEffectsFn HookManager::GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects()
 {
 	static RawApplyEntityGlowEffectsFn s_RawApplyEntityGlowEffectsFn = nullptr;
@@ -407,10 +489,16 @@ HookManager::HookManager()
 	m_Hook_C_HLTVCamera_SetMode.AttachHook(std::make_shared<C_HLTVCamera_SetMode::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetMode()));
 	m_Hook_C_HLTVCamera_SetPrimaryTarget.AttachHook(std::make_shared<C_HLTVCamera_SetPrimaryTarget::Inner>(Interfaces::GetHLTVCamera(), GetRawFunc_C_HLTVCamera_SetPrimaryTarget()));
 
+	m_Hook_C_BaseAnimating_DrawModel.AttachHook(std::make_shared<C_BaseAnimating_DrawModel::Inner>(GetRawFunc_C_BaseAnimating_DrawModel()));
+	m_Hook_C_BaseAnimating_InternalDrawModel.AttachHook(std::make_shared<C_BaseAnimating_InternalDrawModel::Inner>(GetRawFunc_C_BaseAnimating_InternalDrawModel()));
+	m_Hook_C_TFPlayer_DrawModel.AttachHook(std::make_shared<C_TFPlayer_DrawModel::Inner>(GetRawFunc_C_TFPlayer_DrawModel()));
+
 	m_Hook_C_BaseEntity_Init.AttachHook(std::make_shared<C_BaseEntity_Init::Inner>(GetRawFunc_C_BaseEntity_Init()));
 
 	m_Hook_CGlowObjectManager_ApplyEntityGlowEffects.AttachHook(std::make_shared<CGlowObjectManager_ApplyEntityGlowEffects::Inner>(GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects()));
 
 	m_Hook_Global_GetLocalPlayerIndex.AttachHook(std::make_shared<Global_GetLocalPlayerIndex::Inner>(GetRawFunc_Global_GetLocalPlayerIndex()));
 	m_Hook_Global_UTILComputeEntityFade.AttachHook(std::make_shared<Global_UTILComputeEntityFade::Inner>(GetRawFunc_Global_UTILComputeEntityFade()));
+	m_Hook_Global_DrawOpaqueRenderable.AttachHook(std::make_shared<Global_DrawOpaqueRenderable::Inner>(GetRawFunc_Global_DrawOpaqueRenderable()));
+	m_Hook_Global_DrawTranslucentRenderable.AttachHook(std::make_shared<Global_DrawTranslucentRenderable::Inner>(GetRawFunc_Global_DrawTranslucentRenderable()));
 }

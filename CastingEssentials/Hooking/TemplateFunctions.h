@@ -174,7 +174,7 @@ namespace Hooking{ namespace Internal
 
 		LocalDetourFnPtr<Type, RetVal, Args...> fn = [](Type* pThis, void*, Args... args)
 		{
-			Assert(s_Hook->GetType() == HookType::VirtualGlobal);
+			Assert(s_Hook->GetType() == HookType::GlobalClass || s_Hook->GetType() == HookType::VirtualGlobal);
 			return HookFunctionsInvoker<GroupHookType::BaseGroupHookType, RetVal, Type*, Args...>::Invoke(s_Hook, pThis, args...);
 		};
 		return fn;

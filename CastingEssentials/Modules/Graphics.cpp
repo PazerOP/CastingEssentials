@@ -161,8 +161,10 @@ static void BuildMoveChildMap()
 	}
 }
 
+bool g_RenderingGlowModel;
 void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 {
+	g_RenderingGlowModel = true;
 	C_BaseEntity* const ent = m_hEntity.Get();
 	if (ent)
 	{
@@ -188,6 +190,7 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 			pAttachment = pAttachment->NextMovePeer();
 		}
 	}
+	g_RenderingGlowModel = false;
 }
 
 static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,

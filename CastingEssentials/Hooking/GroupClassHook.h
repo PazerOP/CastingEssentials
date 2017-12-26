@@ -57,7 +57,7 @@ namespace Hooking
 
 		template<std::size_t... Is> Functional GetOriginalImpl(std::index_sequence<Is...>)
 		{
-			Assert(GetType() == HookType::Class || GetType() == HookType::Virtual || GetType() == HookType::VirtualGlobal);
+			Assert(GetType() == HookType::Class || GetType() == HookType::Virtual);
 
 			// Make sure we're initialized so we don't have any nasty race conditions
 			InitHook();
