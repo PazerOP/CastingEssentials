@@ -22,6 +22,7 @@ class IEngineTrace;
 class ISpatialPartition;
 class IMaterialSystem;
 class IShaderAPI;
+class IClientLeafSystem;
 
 class Interfaces final
 {
@@ -84,6 +85,9 @@ public:
 	// #include <ispatialpartition.h>
 	static ISpatialPartition* GetSpatialPartition() { return s_SpatialPartition; }
 
+	// #include <clientleafsystem.h>
+	static IClientLeafSystem* GetClientLeafSystem() { return s_ClientLeafSystem; }
+
 private:
 	static IBaseClientDLL *pClientDLL;
 	static IClientEngineTools *pClientEngineTools;
@@ -101,6 +105,7 @@ private:
 	static IVDebugOverlay* s_DebugOverlay;
 	static IEngineTrace* s_EngineTrace;
 	static ISpatialPartition* s_SpatialPartition;
+	static IClientLeafSystem* s_ClientLeafSystem;
 
 	static bool steamLibrariesAvailable;
 	static bool vguiLibrariesAvailable;

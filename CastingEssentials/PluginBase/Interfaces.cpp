@@ -39,6 +39,7 @@ IFileSystem* Interfaces::s_FileSystem = nullptr;
 IVDebugOverlay* Interfaces::s_DebugOverlay = nullptr;
 IEngineTrace* Interfaces::s_EngineTrace = nullptr;
 ISpatialPartition* Interfaces::s_SpatialPartition = nullptr;
+IClientLeafSystem* Interfaces::s_ClientLeafSystem = nullptr;
 
 bool Interfaces::steamLibrariesAvailable = false;
 bool Interfaces::vguiLibrariesAvailable = false;
@@ -53,6 +54,7 @@ IVDebugOverlay* debugoverlay;
 IEngineTrace* enginetrace;
 IVEngineClient* engine;
 IVRenderView* render;
+IClientLeafSystem* g_pClientLeafSystem;
 //IMaterialSystem* materials;
 
 void Interfaces::Load(CreateInterfaceFn factory)
@@ -82,6 +84,7 @@ void Interfaces::Load(CreateInterfaceFn factory)
 	pClientDLL = (IBaseClientDLL*)gameClientFactory(CLIENT_DLL_INTERFACE_VERSION, nullptr);
 	pClientEntityList = (IClientEntityList*)gameClientFactory(VCLIENTENTITYLIST_INTERFACE_VERSION, nullptr);
 	pPrediction = (IPrediction *)gameClientFactory(VCLIENT_PREDICTION_INTERFACE_VERSION, nullptr);
+	s_ClientLeafSystem = (IClientLeafSystem*)gameClientFactory(CLIENTLEAFSYSTEM_INTERFACE_VERSION, nullptr);
 
 	pSteamAPIContext = new CSteamAPIContext();
 	steamLibrariesAvailable = SteamAPI_InitSafe() && pSteamAPIContext->Init();
@@ -95,6 +98,7 @@ void Interfaces::Load(CreateInterfaceFn factory)
 		engine = Interfaces::GetEngineClient();
 		render = Interfaces::GetRenderView();
 		materials = Interfaces::GetMaterialSystem();
+		g_pClientLeafSystem = Interfaces::GetClientLeafSystem();
 	}
 }
 
@@ -129,6 +133,7 @@ void Interfaces::Unload()
 	render = nullptr;
 	materials = nullptr;
 	g_pStudioRender = nullptr;
+	g_pClientLeafSystem = nullptr;
 
 	DisconnectTier3Libraries();
 	DisconnectTier2Libraries();

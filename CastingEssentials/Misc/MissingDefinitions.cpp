@@ -269,6 +269,25 @@ void C_BaseEntity::CalcAbsolutePosition()
 {
 	return GetHooks()->GetFunc<C_BaseEntity_CalcAbsolutePosition>()(this);
 }
+void C_BaseEntity::AddToLeafSystem()
+{
+	AddToLeafSystem(GetRenderGroup());
+}
+void C_BaseEntity::AddToLeafSystem(RenderGroup_t group)
+{
+	if (m_hRender == INVALID_CLIENT_RENDER_HANDLE)
+	{
+		// create new renderer handle
+		ClientLeafSystem()->AddRenderable(this, group);
+		ClientLeafSystem()->EnableAlternateSorting(m_hRender, m_bAlternateSorting);
+	}
+	else
+	{
+		// handle already exists, just update group & origin
+		ClientLeafSystem()->SetRenderGroup(m_hRender, group);
+		ClientLeafSystem()->RenderableChanged(m_hRender);
+	}
+}
 int C_BaseAnimating::LookupBone(const char* szName)
 {
 	return GetHooks()->GetFunc<C_BaseAnimating_LookupBone>()(this, szName);
