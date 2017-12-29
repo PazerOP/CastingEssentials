@@ -16,6 +16,9 @@ extern const char* const PLUGIN_FULL_VERSION;
 
 #define VPROF_BUDGETGROUP_CE _T("CastingEssentials")
 
+// For passing into strspn or whatever
+static constexpr const char* WHITESPACE_CHARS = "\t\n\v\f\r ";
+
 static constexpr const char* s_ObserverModes[] =
 {
 	"None",
@@ -44,6 +47,7 @@ class CCommand;
 class ConVar;
 class Vector;
 class QAngle;
+class KeyValues;
 
 template<class... Parameters> __forceinline void PluginMsg(const char* fmt, Parameters... param)
 {
@@ -186,12 +190,16 @@ extern bool ReparseForSteamIDs(const CCommand& in, CCommand& out);
 
 extern void SwapConVars(ConVar& var1, ConVar& var2);
 
+extern Color ConVarGetColor(const ConVar& var);
+
 extern bool ParseFloat3(const char* str, float& f1, float& f2, float& f3);
 extern bool ParseVector(Vector& v, const char* str);
 extern bool ParseAngle(QAngle& a, const char* str);
 
 extern Vector GetViewOrigin();
 extern int GetConLine();
+
+extern std::string KeyValuesDumpAsString(KeyValues* kv, int indentLevel = 0);
 
 Vector ApproachVector(const Vector& from, const Vector& to, float speed);
 

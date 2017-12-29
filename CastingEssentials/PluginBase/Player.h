@@ -48,6 +48,7 @@ public:
 	TFTeam GetTeam() const;
 	int GetUserID() const;
 	C_BaseCombatWeapon* GetWeapon(int i) const;
+	C_BaseCombatWeapon* GetActiveWeapon() const;
 	bool IsAlive() const;
 	int entindex() const;
 	const player_info_t& GetPlayerInfo() const;
@@ -102,6 +103,7 @@ private:
 	mutable int* m_CachedObserverMode;
 	mutable CHandle<C_BaseEntity>* m_CachedObserverTarget;
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedWeapons[MAX_WEAPONS];
+	mutable CHandle<C_BaseCombatWeapon>* m_CachedActiveWeapon;
 	mutable player_info_t m_CachedPlayerInfo;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];

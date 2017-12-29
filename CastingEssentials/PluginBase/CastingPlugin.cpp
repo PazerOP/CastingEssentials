@@ -14,8 +14,10 @@
 #include "Modules/FOVOverride.h"
 #include "Modules/FreezeInfo.h"
 #include "Modules/Graphics.h"
+#include "Modules/ItemSchema.h"
 #include "Modules/Killfeed.h"
 #include "Modules/Killstreaks.h"
+#include "Modules/LoadoutIcons.h"
 #include "Modules/LocalPlayer.h"
 #include "Modules/MapConfigs.h"
 #include "Modules/MapFlythroughs.h"
@@ -25,7 +27,7 @@
 #include "Modules/SteamTools.h"
 #include "Modules/TeamNames.h"
 
-const char* const PLUGIN_VERSION_ID = "r13";
+const char* const PLUGIN_VERSION_ID = "r14";
 const char* const PLUGIN_FULL_VERSION = strdup(strprintf("%s %s", PLUGIN_NAME, PLUGIN_VERSION_ID).c_str());
 
 class CastingPlugin final : public Plugin
@@ -51,7 +53,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	//PluginMsg("_CrtCheckMemory() result: %i\n", _CrtCheckMemory());
 	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF);
 #endif
-	
+
 	Interfaces::Load(interfaceFactory);
 	HookManager::Load();
 	Modules().Init();
@@ -67,8 +69,10 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<FOVOverride>("FOV Override");
 	Modules().RegisterAndLoadModule<FreezeInfo>("Freeze Info");
 	Modules().RegisterAndLoadModule<Graphics>("Graphics Enhancements");
+	Modules().RegisterAndLoadModule<ItemSchema>("Item Schema");
 	Modules().RegisterAndLoadModule<Killfeed>("Killfeed Fixes");
 	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
+	Modules().RegisterAndLoadModule<LoadoutIcons>("Loadout Icons");
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
 	Modules().RegisterAndLoadModule<MapConfigs>("Map Configs");
 	Modules().RegisterAndLoadModule<MapFlythroughs>("Map Flythroughs");

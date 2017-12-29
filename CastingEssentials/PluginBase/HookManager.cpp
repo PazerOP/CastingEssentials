@@ -453,6 +453,38 @@ HookManager::RawShouldDrawLocalPlayerFn HookManager::GetRawFunc_C_BasePlayer_Sho
 	return s_RawShouldDrawLocalPlayerFn;
 }
 
+HookManager::Raw_EditablePanel_GetDialogVariables HookManager::GetRawFunc_EditablePanel_GetDialogVariables()
+{
+	static Raw_EditablePanel_GetDialogVariables fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x56\x8B\xF1\x8B\x86????\x85\xC0\x75\x2A";
+		constexpr const char* MASK = "xxxxx????xxxx";
+
+		fn = (Raw_EditablePanel_GetDialogVariables)SignatureScan("client", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("vgui::EditablePanel::GetDialogVariables");
+	}
+
+	return fn;
+}
+
+HookManager::Raw_ImagePanel_SetImage HookManager::GetRawFunc_ImagePanel_SetImage()
+{
+	static Raw_ImagePanel_SetImage fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x53\x57\x8B\x7D\x08\x8B\xD9\x85\xFF\x74\x18";
+		constexpr const char* MASK = "xxxxxxxxxxxxxx";
+
+		fn = (Raw_ImagePanel_SetImage)SignatureScan("client", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("vgui::EditablePanel::SetImage");
+	}
+
+	return fn;
+}
+
 void HookManager::IngameStateChanged(bool inGame)
 {
 	if (inGame)

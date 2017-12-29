@@ -14,10 +14,13 @@
 LoadoutIcons::LoadoutIcons()
 {
 	ce_loadout_enabled = new ConVar("ce_loadout_enabled", "0", FCVAR_NONE, "Enable weapon icons inside player panels in the specgui.");
-	ce_loadout_reload_settings = new ConCommand("ce_loadout_reload_settings", []() { GetModule()->ReloadSettings(); }, "Reload settings for the loadout icons panels from the resource file.");
+	ce_loadout_filter_active_red = new ConVar("ce_loadout_filter_active_red", "255 255 255 255", FCVAR_NONE, "drawcolor_override for red team's active loadout items.");
+	ce_loadout_filter_active_blu = new ConVar("ce_loadout_filter_active_blu", "255 255 255 255", FCVAR_NONE, "drawcolor_override for blu team's active loadout items.");
+	ce_loadout_filter_inactive_red = new ConVar("ce_loadout_filter_inactive_red", "255 255 255 255", FCVAR_NONE, "drawcolor_override for red team's inactive loadout items.");
+	ce_loadout_filter_inactive_blu = new ConVar("ce_loadout_filter_inactive_blu", "255 255 255 255", FCVAR_NONE, "drawcolor_override for blu team's inactive loadout items.");
 
-	memset(m_ActiveWeapons, 0, sizeof(m_ActiveWeapons));
 	memset(m_Weapons, 0, sizeof(m_Weapons));
+	memset(m_ActiveWeaponIndices, 0, sizeof(m_ActiveWeaponIndices));
 }
 
 bool LoadoutIcons::CheckDependencies()
@@ -35,51 +38,7 @@ void LoadoutIcons::OnTick(bool ingame)
 	}
 	else
 	{
-		DeleteIconPanels();
-	}
-}
-
-void LoadoutIcons::ReloadSettings()
-{
-	// Just delete all the panels, they'll be re-added automatically next frame
-	DeleteIconPanels();
-}
-
-void LoadoutIcons::DeleteIconPanels()
-{
-	vgui::VPANEL specguiPanel = GetSpecGUI();
-	if (!specguiPanel)
-		return;
-
-	const auto specguiChildCount = g_pVGuiPanel->GetChildCount(specguiPanel);
-	for (int playerPanelIndex = 0; playerPanelIndex < specguiChildCount; playerPanelIndex++)
-	{
-		vgui::VPANEL playerPanel = g_pVGuiPanel->GetChild(specguiPanel, playerPanelIndex);
-		const char* playerPanelName = g_pVGuiPanel->GetName(playerPanel);
-		if (strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
-			continue;
-
-		for (int loadoutPanelIndex = 0; loadoutPanelIndex < g_pVGuiPanel->GetChildCount(playerPanel); loadoutPanelIndex++)
-		{
-			vgui::VPANEL loadoutPanel = g_pVGuiPanel->GetChild(playerPanel, loadoutPanelIndex);
-			const char* loadoutPanelName = g_pVGuiPanel->GetName(loadoutPanel);
-			bool isMatch = false;
-			for (int i = 0; i < arraysize(LOADOUT_IMG_NAMES); i++)
-			{
-				if (!stricmp(LOADOUT_IMG_NAMES[i], loadoutPanelName))
-				{
-					isMatch = true;
-					break;
-				}
-			}
-
-			if (!isMatch)
-				continue;
-
-			vgui::Panel* realLoadoutPanel = g_pVGuiPanel->GetPanel(loadoutPanel, "CastingEssentials");
-			realLoadoutPanel->DeletePanel();
-			loadoutPanelIndex--;
-		}
+		//DeleteIconPanels();
 	}
 }
 
@@ -125,15 +84,19 @@ void LoadoutIcons::GatherWeapons()
 		const auto playerIndex = player->entindex() - 1;
 
 		auto activeWeapon = Entities::GetEntityProp<EHANDLE*>(player->GetEntity(), "m_hActiveWeapon");
-		m_ActiveWeapons[playerIndex] = activeWeapon ? ItemSchema::GetModule()->GetBaseItemID(GetWeaponDefinitionIndex(activeWeapon->Get())) : -1;
+		m_Weapons[playerIndex][IDX_ACTIVE] = activeWeapon ? ItemSchema::GetModule()->GetBaseItemID(GetWeaponDefinitionIndex(activeWeapon->Get())) : -1;
 
-		for (int weaponIndex = 0; weaponIndex < 3; weaponIndex++)
+		for (int weaponIndex = 0; weaponIndex < 5; weaponIndex++)
 		{
 			C_BaseCombatWeapon* weapon = player->GetWeapon(weaponIndex);
 			if (!weapon)
 				continue;
 
-			m_Weapons[playerIndex][weaponIndex] = ItemSchema::GetModule()->GetBaseItemID(GetWeaponDefinitionIndex(weapon));
+			auto currentID = ItemSchema::GetModule()->GetBaseItemID(GetWeaponDefinitionIndex(weapon));
+			if (currentID == m_Weapons[playerIndex][IDX_ACTIVE])
+				m_ActiveWeaponIndices[playerIndex] = weaponIndex;
+
+			m_Weapons[playerIndex][weaponIndex] = currentID;
 		}
 	}
 }
@@ -152,87 +115,92 @@ void LoadoutIcons::DrawIcons()
 		if (strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
 			continue;
 
-		const int playerIndex = atoi(&playerPanelName[11]);	// Skip over the "playerpanel" part
-
 		vgui::EditablePanel* player = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerPanel, "ClientDLL"));
-		if (!PlayerPanelHasIcons(player))
-			PlayerPanelInitIcons(player);
 
 		PlayerPanelUpdateIcons(player);
 	}
 }
 
-bool LoadoutIcons::PlayerPanelHasIcons(vgui::EditablePanel* player)
+void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 {
-	for (int i = 0; i < arraysize(LOADOUT_IMG_NAMES); i++)
+	const int playerIndex = GetPlayerIndex(playerPanel);
+
+	// Force get the panel even though we're in a different module
+	const auto playerVPANEL = playerPanel->GetVPanel();
+	for (int i = 0; i < g_pVGuiPanel->GetChildCount(playerVPANEL); i++)
 	{
-		if (!player->FindChildByName(LOADOUT_IMG_NAMES[i]))
-			return false;
-	}
+		auto childVPANEL = g_pVGuiPanel->GetChild(playerVPANEL, i);
+		auto childPanelName = g_pVGuiPanel->GetName(childVPANEL);
 
-	return true;
-}
+		auto iconPanel = g_pVGuiPanel->GetPanel(childVPANEL, "ClientDLL");
 
-void LoadoutIcons::PlayerPanelInitIcons(vgui::EditablePanel* player)
-{
-	std::unique_ptr<vgui::EditablePanel> tempPanel(new vgui::EditablePanel(player, "LoadoutIconsTemp"));
-	tempPanel->LoadControlSettings("Resource/UI/LoadoutIcons.res");
-
-	for (int i = 0; i < tempPanel->GetChildCount(); i++)
-	{
-		vgui::Panel* childPanel = tempPanel->GetChild(i);
-		const char* childPanelName = childPanel->GetName();
-
-		bool shouldAdd = false;
-		// Only add ones that are in our array
-		for (int n = 0; n < arraysize(LOADOUT_IMG_NAMES); n++)
+		for (int team = 0; team < arraysize(TEAM_NAMES); team++)
 		{
-			if (!stricmp(LOADOUT_IMG_NAMES[n], childPanelName))
+			for (int iconIndex = 0; iconIndex < arraysize(LOADOUT_ICONS); iconIndex++)
 			{
-				shouldAdd = true;
+				char buffer[32];
+				sprintf_s(buffer, "%s%s", LOADOUT_ICONS[iconIndex], TEAM_NAMES[team]);
+
+				if (stricmp(childPanelName, buffer))
+					continue;
+
+				const auto weaponIndex = m_Weapons[playerIndex][iconIndex];
+
+				if (playerIndex < 0 || playerIndex >= MAX_PLAYERS || weaponIndex < 0)
+				{
+					iconPanel->SetVisible(false);
+				}
+				else
+				{
+					char materialBuffer[32];
+					sprintf_s(materialBuffer, "loadout_icons/%i", weaponIndex);
+
+					// Dumb, evil, unsafe hacks
+					auto hackImgPanel = reinterpret_cast<vgui::ImagePanel*>(iconPanel);
+
+					HookManager::GetRawFunc_ImagePanel_SetImage()(hackImgPanel, materialBuffer);
+
+					Color* m_FillColor = (Color*)(((DWORD*)hackImgPanel) + 94);
+					Color* m_DrawColor = (Color*)(((DWORD*)hackImgPanel) + 95);
+
+					if (iconIndex == IDX_ACTIVE || m_ActiveWeaponIndices[playerIndex] == iconIndex)
+					{
+						*m_DrawColor = ConVarGetColor(team == TEAM_RED ? *ce_loadout_filter_active_red : *ce_loadout_filter_active_blu);
+					}
+					else
+					{
+						*m_DrawColor = ConVarGetColor(team == TEAM_RED ? *ce_loadout_filter_inactive_red : *ce_loadout_filter_inactive_blu);
+					}
+
+#if 0
+					// Just set our settings through the vgui::Panel::GetSettings/SetSettings virtual function.
+					// Less flexible and slower than just calling the correct functions, but I believe there's
+					// been a change between how VS2015 (valve code) and VS2017 handles virtual inheritance.
+					// Trying to call functions on any subclass of vgui::Panel results in a crash.
+					KeyValuesAD temp(new KeyValues("tempKV"));
+					iconPanel->GetSettings(temp);
+
+					temp->SetString("image", materialBuffer);
+
+					if (iconIndex == IDX_ACTIVE || m_ActiveWeaponIndices[playerIndex] == iconIndex)
+					{
+						temp->SetString("drawcolor_override", team == TEAM_RED ? ce_loadout_filter_active_red->GetString() : ce_loadout_filter_active_blu->GetString());
+					}
+					else
+					{
+						temp->SetString("drawcolor_override", team == TEAM_RED ? ce_loadout_filter_inactive_red->GetString() : ce_loadout_filter_inactive_blu->GetString());
+					}
+
+					auto test = KeyValuesDumpAsString(temp);
+
+					iconPanel->ApplySettings(temp);
+#endif
+					iconPanel->SetVisible(true);
+				}
+
 				break;
 			}
 		}
-
-		if (!shouldAdd)
-			continue;
-
-		if (player->FindChildByName(childPanelName))
-			continue;	// Skip panels that are already there
-
-		// Move the child panel into the player panel
-		childPanel->SetParent(player);
-		i--;
-	}
-}
-
-void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* player)
-{
-	vgui::ImagePanel* item1Img = dynamic_cast<vgui::ImagePanel*>(player->FindChildByName(LOADOUT_IMG_NAMES[0]));
-	Assert(item1Img);
-	if (!item1Img)
-		return;
-
-	const int playerIndex = GetPlayerIndex(player);
-	if (playerIndex < 0 || playerIndex >= MAX_PLAYERS)
-	{
-		item1Img->SetVisible(false);
-		return;
-	}
-
-	const int weapon = m_ActiveWeapons[playerIndex];
-
-	if (weapon < 0)
-	{
-		item1Img->SetVisible(false);
-	}
-	else
-	{
-		char materialBuffer[32];
-		sprintf_s(materialBuffer, "loadout_icons/%i", weapon);
-
-		item1Img->SetImage(materialBuffer);
-		item1Img->SetVisible(true);
 	}
 }
 

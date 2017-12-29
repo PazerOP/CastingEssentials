@@ -42,6 +42,12 @@ class IMaterial;
 class IClientRenderable;
 class C_TFPlayer;
 
+namespace vgui
+{
+	class EditablePanel;
+	class ImagePanel;
+}
+
 class HookManager final
 {
 	enum class Func
@@ -216,6 +222,8 @@ class HookManager final
 	typedef void(__thiscall *RawApplyEntityGlowEffectsFn)(CGlowObjectManager*, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int);
 	typedef CHudTexture*(__stdcall *RawGetIconFn)(const char* szIcon, int eIconFormat);
 	typedef bool(*RawShouldDrawLocalPlayerFn)();
+	typedef KeyValues*(__thiscall *Raw_EditablePanel_GetDialogVariables)(vgui::EditablePanel* pThis);
+	typedef void(__thiscall *Raw_ImagePanel_SetImage)(vgui::ImagePanel* pThis, const char* imageName);
 
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
@@ -241,6 +249,8 @@ public:
 	HookManager();
 	static RawCreateTFGlowObjectFn GetRawFunc_Global_CreateTFGlowObject();
 	static RawShouldDrawLocalPlayerFn GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer();
+	static Raw_EditablePanel_GetDialogVariables GetRawFunc_EditablePanel_GetDialogVariables();
+	static Raw_ImagePanel_SetImage GetRawFunc_ImagePanel_SetImage();
 
 	static bool Load();
 	static bool Unload();

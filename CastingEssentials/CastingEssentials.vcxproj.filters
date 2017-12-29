@@ -129,6 +129,12 @@
     <ClCompile Include="Misc\Polyhook.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\LoadoutIcons.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\ItemSchema.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -270,6 +276,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Hooking\GroupGlobalVirtualHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\LoadoutIcons.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\ItemSchema.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

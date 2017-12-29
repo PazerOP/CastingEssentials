@@ -326,6 +326,7 @@ bool Player::CheckCache() const
 		m_CachedHealth = nullptr;
 		m_CachedObserverMode = nullptr;
 		m_CachedObserverTarget = nullptr;
+		m_CachedActiveWeapon = nullptr;
 
 		for (auto& wpn : m_CachedWeapons)
 			wpn = nullptr;
@@ -643,6 +644,20 @@ C_BaseCombatWeapon *Player::GetWeapon(int i) const
 
 		if (m_CachedWeapons[i])
 			return m_CachedWeapons[i]->Get();
+	}
+
+	return nullptr;
+}
+
+C_BaseCombatWeapon* Player::GetActiveWeapon() const
+{
+	if (IsValid())
+	{
+		if (CheckCache() || !m_CachedActiveWeapon)
+			m_CachedActiveWeapon = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>*>(GetEntity(), "m_hActiveWeapon");
+
+		if (m_CachedActiveWeapon)
+			return *m_CachedActiveWeapon;
 	}
 
 	return nullptr;

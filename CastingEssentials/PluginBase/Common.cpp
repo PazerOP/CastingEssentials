@@ -4,8 +4,9 @@
 #include <convar.h>
 #include <characterset.h>
 #include <cdll_int.h>
-#include <view_shared.h>
+#include <KeyValues.h>
 #include <toolframework/ienginetool.h>
+#include <view_shared.h>
 
 #include <regex>
 
@@ -36,6 +37,17 @@ void SwapConVars(ConVar& var1, ConVar& var2)
 	const std::string value1(var1.GetString());
 	var1.SetValue(var2.GetString());
 	var2.SetValue(value1.c_str());
+}
+
+Color ConVarGetColor(const ConVar& var)
+{
+	byte r, g, b, a;
+	int parsed = sscanf_s(var.GetString(), "%hhu %hhu %hhu %hhu", &r, &g, &b, &a);
+
+	if (parsed == 3 || parsed == 4)
+		return Color(r, g, b, a);
+	else
+		return Color(255, 255, 255, 255);
 }
 
 bool ParseFloat3(const char* str, float& f1, float& f2, float& f3)
@@ -89,7 +101,7 @@ int GetConLine()
 {
 	static int s_LastConLine = 0;
 	static int s_LastFrame = 0;
-	
+
 	const int thisFrame = Interfaces::GetEngineTool()->HostFrameCount();
 	if (thisFrame != s_LastFrame)
 	{
@@ -98,4 +110,23 @@ int GetConLine()
 	}
 
 	return s_LastConLine++;
+}
+
+std::string KeyValuesDumpAsString(KeyValues* kv, int indentLevel)
+{
+	class DumpContext : public IKeyValuesDumpContextAsText
+	{
+	public:
+		bool KvWriteText(const char* text) override
+		{
+			m_String += text;
+			return true;
+		}
+
+		std::string m_String;
+	};
+
+	DumpContext context;
+	kv->Dump(&context, indentLevel);
+	return context.m_String;
 }

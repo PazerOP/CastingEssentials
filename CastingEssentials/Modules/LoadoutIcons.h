@@ -9,6 +9,7 @@ class IClientNetworkable;
 
 namespace vgui
 {
+	class Panel;
 	class ImagePanel;
 	class EditablePanel;
 	typedef unsigned int VPANEL;
@@ -27,14 +28,9 @@ protected:
 	void OnTick(bool ingame) override;
 
 private:
-	void ReloadSettings();
-	void DeleteIconPanels();
-
 	void GatherWeapons();
 	void DrawIcons();
-	bool PlayerPanelHasIcons(vgui::EditablePanel* player);
-	void PlayerPanelInitIcons(vgui::EditablePanel* player);
-	void PlayerPanelUpdateIcons(vgui::EditablePanel* player);
+	void PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel);
 
 	static int GetPlayerIndex(vgui::EditablePanel* playerPanel);
 
@@ -43,17 +39,42 @@ private:
 	static vgui::VPANEL GetSpecGUI();
 
 	ConVar* ce_loadout_enabled;
-	ConCommand* ce_loadout_reload_settings;
+	ConVar* ce_loadout_filter_active_red;
+	ConVar* ce_loadout_filter_active_blu;
+	ConVar* ce_loadout_filter_inactive_red;
+	ConVar* ce_loadout_filter_inactive_blu;
 
-	int m_ActiveWeapons[MAX_PLAYERS];
-	int m_Weapons[MAX_PLAYERS][3];
+	enum ItemIndex
+	{
+		IDX_1,
+		IDX_2,
+		IDX_3,
+		IDX_4,
+		IDX_5,
 
-	static constexpr int IMG_PANEL_COUNT = 3;
-	static constexpr const char* LOADOUT_IMG_NAMES[] = {
+		IDX_ACTIVE
+	};
+
+	enum TeamIndex
+	{
+		TEAM_RED,
+		TEAM_BLU,
+	};
+
+	static constexpr const char* LOADOUT_ICONS[] = {
 		"LoadoutIconsItem1",
 		"LoadoutIconsItem2",
 		"LoadoutIconsItem3",
+		"LoadoutIconsItem4",
+		"LoadoutIconsItem5",
+		"LoadoutIconsActiveItem",
 	};
 
-	static_assert(arraysize(LOADOUT_IMG_NAMES) == IMG_PANEL_COUNT, "You forgot to update the array");
+	static constexpr const char* TEAM_NAMES[] = {
+		"Red",
+		"Blue"
+	};
+
+	byte m_ActiveWeaponIndices[MAX_PLAYERS];	// Index into m_Weapons
+	int m_Weapons[MAX_PLAYERS][arraysize(LOADOUT_ICONS)];
 };
