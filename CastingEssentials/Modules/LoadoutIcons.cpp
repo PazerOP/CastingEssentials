@@ -25,8 +25,32 @@ LoadoutIcons::LoadoutIcons()
 
 bool LoadoutIcons::CheckDependencies()
 {
-	// Development
-	return true;
+	bool ready = true;
+
+	if (!g_pVGuiPanel)
+	{
+		PluginWarning("Required interface vgui::IPanel for module %s not available!\n", GetModuleName());
+		ready = false;
+	}
+
+	if (!Interfaces::GetClientMode())
+	{
+		PluginWarning("Required interface IClientMode for module %s not available!\n", GetModuleName());
+		ready = false;
+	}
+
+	try
+	{
+		HookManager::GetRawFunc_EditablePanel_GetDialogVariables();
+		HookManager::GetRawFunc_ImagePanel_SetImage();
+	}
+	catch (bad_pointer ex)
+	{
+		PluginWarning("No signature match found for %s, required for module %s!\n", ex.what(), GetModuleName());
+		ready = false;
+	}
+
+	return ready;
 }
 
 void LoadoutIcons::OnTick(bool ingame)
@@ -35,10 +59,6 @@ void LoadoutIcons::OnTick(bool ingame)
 	{
 		GatherWeapons();
 		DrawIcons();
-	}
-	else
-	{
-		//DeleteIconPanels();
 	}
 }
 
@@ -172,29 +192,6 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 						*m_DrawColor = ConVarGetColor(team == TEAM_RED ? *ce_loadout_filter_inactive_red : *ce_loadout_filter_inactive_blu);
 					}
 
-#if 0
-					// Just set our settings through the vgui::Panel::GetSettings/SetSettings virtual function.
-					// Less flexible and slower than just calling the correct functions, but I believe there's
-					// been a change between how VS2015 (valve code) and VS2017 handles virtual inheritance.
-					// Trying to call functions on any subclass of vgui::Panel results in a crash.
-					KeyValuesAD temp(new KeyValues("tempKV"));
-					iconPanel->GetSettings(temp);
-
-					temp->SetString("image", materialBuffer);
-
-					if (iconIndex == IDX_ACTIVE || m_ActiveWeaponIndices[playerIndex] == iconIndex)
-					{
-						temp->SetString("drawcolor_override", team == TEAM_RED ? ce_loadout_filter_active_red->GetString() : ce_loadout_filter_active_blu->GetString());
-					}
-					else
-					{
-						temp->SetString("drawcolor_override", team == TEAM_RED ? ce_loadout_filter_inactive_red->GetString() : ce_loadout_filter_inactive_blu->GetString());
-					}
-
-					auto test = KeyValuesDumpAsString(temp);
-
-					iconPanel->ApplySettings(temp);
-#endif
 					iconPanel->SetVisible(true);
 				}
 

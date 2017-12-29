@@ -142,6 +142,7 @@ bool MedigunInfo::CheckDependencies()
 	catch (bad_pointer)
 	{
 		PluginWarning("Module %s requires IClientMode, which cannot be verified at this time!\n", GetModuleName());
+		ready = false;
 	}
 
 	return ready;
