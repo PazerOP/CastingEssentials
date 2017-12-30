@@ -23,6 +23,7 @@ std::unique_ptr<Player> Player::s_Players[ABSOLUTE_PLAYER_LIMIT];
 Player::Player(CHandle<IClientEntity> handle, int userID) : m_PlayerEntity(handle), m_UserID(userID)
 {
 	m_CachedPlayerEntity = nullptr;
+	m_LastValidatedFrame = 0;
 }
 
 void Player::Unload()
@@ -237,21 +238,21 @@ int Player::GetUserID() const
 	return 0;
 }
 
-std::string Player::GetName() const
+const char* Player::GetName() const
 {
 	if (IsValid())
 		return GetPlayerInfo().name;
 
-	return std::string();
+	return nullptr;
 }
 
-std::string Player::GetName(int entIndex)
+const char* Player::GetName(int entIndex)
 {
 	Player* player = GetPlayer(entIndex, __FUNCSIG__);
 	if (player)
 		return player->GetName();
 
-	return std::string();
+	return nullptr;
 }
 
 TFClassType Player::GetClass() const
@@ -286,6 +287,10 @@ int Player::GetHealth() const
 
 bool Player::IsValid() const
 {
+	const auto framecount = Interfaces::GetEngineTool()->HostFrameCount();
+	if (m_LastValidatedFrame == framecount)
+		return true;
+
 	if (!m_PlayerEntity.IsValid())
 		return false;
 
@@ -309,6 +314,7 @@ bool Player::IsValid() const
 	//if (!Entities::CheckEntityBaseclass(playerEntity, "TFPlayer"))
 	//	return false;
 
+	m_LastValidatedFrame = framecount;
 	return true;
 }
 
@@ -327,6 +333,8 @@ bool Player::CheckCache() const
 		m_CachedObserverMode = nullptr;
 		m_CachedObserverTarget = nullptr;
 		m_CachedActiveWeapon = nullptr;
+
+		m_CachedPlayerInfoLastUpdateFrame = 0;
 
 		for (auto& wpn : m_CachedWeapons)
 			wpn = nullptr;
@@ -427,10 +435,11 @@ Player* Player::GetPlayer(int entIndex, const char* functionName)
 			return nullptr;
 
 		s_Players[entIndex - 1] = std::unique_ptr<Player>(p = new Player(playerEntity, info.userID));
-	}
 
-	if (!p || !p->IsValid())
-		return nullptr;
+		// Check again
+		if (!p || !p->IsValid())
+			return nullptr;
+	}
 
 	return p;
 }
@@ -498,10 +507,17 @@ const player_info_t& Player::GetPlayerInfo() const
 		return retVal;
 	}();
 
-	if (!Interfaces::GetEngineClient()->GetPlayerInfo(entindex(), &m_CachedPlayerInfo))
-		return s_InvalidPlayerInfo;
+	const auto framecount = Interfaces::GetEngineTool()->HostFrameCount();
+	if (m_CachedPlayerInfoLastUpdateFrame == framecount)
+		return m_CachedPlayerInfo;
 
-	return m_CachedPlayerInfo;
+	if (Interfaces::GetEngineClient()->GetPlayerInfo(entindex(), &m_CachedPlayerInfo))
+	{
+		m_CachedPlayerInfoLastUpdateFrame = framecount;
+		return m_CachedPlayerInfo;
+	}
+
+	return s_InvalidPlayerInfo;
 }
 
 Vector Player::GetAbsOrigin() const

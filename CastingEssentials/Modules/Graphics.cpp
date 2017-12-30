@@ -29,21 +29,6 @@ static CGlowObjectManager* s_LocalGlowObjectManager;
 // Should we use a hook to disable IStudioRender::ForcedMaterialOverride?
 static bool s_DisableForcedMaterialOverride = false;
 
-class Graphics::TickPanel final : public virtual vgui::StubPanel
-{
-public:
-	TickPanel(Graphics* instance)
-	{
-		m_Instance = instance;
-		Assert(m_Instance);
-	};
-
-	void OnTick() override;
-
-private:
-	Graphics* m_Instance;
-};
-
 Graphics::Graphics()
 {
 	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading.");
@@ -58,8 +43,6 @@ Graphics::Graphics()
 	m_ApplyEntityGlowEffectsHook = GetHooks()->AddHook<CGlowObjectManager_ApplyEntityGlowEffects>(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9));
 
 	m_ForcedMaterialOverrideHook = GetHooks()->AddHook<IStudioRender_ForcedMaterialOverride>(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2));
-
-	m_Panel.reset(new Graphics::TickPanel(this));
 }
 
 Graphics::~Graphics()
@@ -562,13 +545,13 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 	pRenderContext->PopRenderTargetAndViewport();
 }
 
-void Graphics::TickPanel::OnTick()
+void Graphics::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);;
 	if (!Interfaces::GetEngineClient()->IsInGame())
 		return;
 
-	if (m_Instance->ce_graphics_fix_invisible_players->GetBool())
+	if (ce_graphics_fix_invisible_players->GetBool())
 	{
 		for (Player* p : Player::Iterable())
 		{

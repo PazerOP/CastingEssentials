@@ -29,7 +29,5 @@ private:
 	static void GetFirstPrefabType(const char* prefabsGroup, char* prefabOut, size_t maxOutSize);
 	int GetFirstItemUsingPrefab(KeyValues* items, const char* prefabName);
 
-	// O(1) lookup
-	std::unique_ptr<int> m_Mappings;
-	size_t m_MappingsSize;
+	std::map<int, int> m_Mappings;
 };

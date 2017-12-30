@@ -26,12 +26,16 @@ bool ItemSchema::CheckDependencies()
 
 int ItemSchema::GetBaseItemID(int specializedID) const
 {
-	if (specializedID < 0 || (size_t)specializedID > m_MappingsSize)
+	if (specializedID < 0)
 		return specializedID;
 
-	return m_Mappings.get()[specializedID];
+	auto found = m_Mappings.find(specializedID);
+
+	return found == m_Mappings.end() ? specializedID : found->second;
 }
 
+#pragma warning(push)
+#pragma warning(disable : 4706)	// Assignment within conditional expression
 void ItemSchema::LoadItemSchema()
 {
 	KeyValues::AutoDelete basekv(new KeyValues("none"));
@@ -54,7 +58,7 @@ void ItemSchema::LoadItemSchema()
 
 	size_t mappingCount = 0;
 
-	std::map<int, std::vector<int>> mappings;
+	std::map<int, std::vector<int>> parentToChildMappings;
 	int maxItemID = 0;
 
 	do
@@ -76,32 +80,23 @@ void ItemSchema::LoadItemSchema()
 
 		if (firstFoundPrefab < itemID)
 		{
-			mappings[firstFoundPrefab].push_back(itemID);
+			parentToChildMappings[firstFoundPrefab].push_back(itemID);
 			maxItemID = max(maxItemID, itemID);
 			mappingCount++;
 		}
 
 	} while (item = item->GetNextTrueSubKey());
 
-	PluginMsg("Generated item schema mappings: %zu down to %zu.\n", mappingCount, mappings.size());
+	PluginMsg("Generated item schema mappings: %zu down to %zu.\n", mappingCount, parentToChildMappings.size());
 
-	// Just allocate an array for O(1) lookup
-	m_MappingsSize = maxItemID + 1;
-	m_Mappings.reset(new int[m_MappingsSize]);
-
-	// Assign them to their index
-	for (size_t i = 0; i < m_MappingsSize; i++)
-		m_Mappings.get()[i] = (int)i;
-
-	for (const auto& mapping : mappings)
+	// Turn parent-to-child map into child-to-parent map
+	for (const auto& mapping : parentToChildMappings)
 	{
 		for (const auto& child : mapping.second)
-		{
-			Assert(child < m_MappingsSize);
-			m_Mappings.get()[child] = mapping.first;
-		}
+			m_Mappings[child] = mapping.first;
 	}
 }
+#pragma warning(pop)
 
 void ItemSchema::GetFirstPrefabType(const char* prefabsGroup, char* prefabOut, size_t maxOutSize)
 {
@@ -113,6 +108,8 @@ void ItemSchema::GetFirstPrefabType(const char* prefabsGroup, char* prefabOut, s
 	*prefabOut = '\0';
 }
 
+#pragma warning(push)
+#pragma warning(disable : 4706)	// Assignment within conditional expression
 int ItemSchema::GetFirstItemUsingPrefab(KeyValues* items, const char* prefabName)
 {
 	Assert(items);
@@ -158,3 +155,4 @@ int ItemSchema::GetFirstItemUsingPrefab(KeyValues* items, const char* prefabName
 
 	return -1;
 }
+#pragma warning(pop)

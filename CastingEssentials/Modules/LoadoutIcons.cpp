@@ -4,12 +4,14 @@
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
+#include "PluginBase/TFDefinitions.h"
 
 #include <client/c_basecombatweapon.h>
 #include <client/iclientmode.h>
 #include <vgui/IVGui.h>
 #include "vgui_controls/EditablePanel.h"
 #include "vgui_controls/ImagePanel.h"
+#include <vprof.h>
 
 LoadoutIcons::LoadoutIcons()
 {
@@ -55,6 +57,7 @@ bool LoadoutIcons::CheckDependencies()
 
 void LoadoutIcons::OnTick(bool ingame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (ingame && ce_loadout_enabled->GetBool())
 	{
 		GatherWeapons();
@@ -99,6 +102,7 @@ vgui::VPANEL LoadoutIcons::GetSpecGUI()
 
 void LoadoutIcons::GatherWeapons()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	for (Player* player : Player::Iterable())
 	{
 		const auto playerIndex = player->entindex() - 1;
@@ -123,6 +127,7 @@ void LoadoutIcons::GatherWeapons()
 
 void LoadoutIcons::DrawIcons()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	vgui::VPANEL specguiPanel = GetSpecGUI();
 	if (!specguiPanel)
 		return;
@@ -144,6 +149,18 @@ void LoadoutIcons::DrawIcons()
 void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 {
 	const int playerIndex = GetPlayerIndex(playerPanel);
+	if (playerIndex < 0 || playerIndex >= MAX_PLAYERS)
+		return;
+
+	TFTeam team = TFTeam::Unassigned;
+	{
+		auto player = Player::GetPlayer(playerIndex + 1, __FUNCSIG__);
+		if (player)
+			team = player->GetTeam();
+
+		if (team != TFTeam::Red && team != TFTeam::Blue)
+			return;
+	}
 
 	// Force get the panel even though we're in a different module
 	const auto playerVPANEL = playerPanel->GetVPanel();
@@ -152,51 +169,48 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 		auto childVPANEL = g_pVGuiPanel->GetChild(playerVPANEL, i);
 		auto childPanelName = g_pVGuiPanel->GetName(childVPANEL);
 
-		auto iconPanel = g_pVGuiPanel->GetPanel(childVPANEL, "ClientDLL");
-
-		for (int team = 0; team < arraysize(TEAM_NAMES); team++)
+		for (int iconIndex = 0; iconIndex < arraysize(LOADOUT_ICONS); iconIndex++)
 		{
-			for (int iconIndex = 0; iconIndex < arraysize(LOADOUT_ICONS); iconIndex++)
+			char buffer[32];
+			sprintf_s(buffer, "%s%s", LOADOUT_ICONS[iconIndex], TF_TEAM_NAMES[(int)team]);
+
+			if (stricmp(childPanelName, buffer))
+				continue;
+
+			auto iconPanel = g_pVGuiPanel->GetPanel(childVPANEL, "ClientDLL");
+
+			const auto weaponIndex = m_Weapons[playerIndex][iconIndex];
+
+			if (weaponIndex < 0)
 			{
-				char buffer[32];
-				sprintf_s(buffer, "%s%s", LOADOUT_ICONS[iconIndex], TEAM_NAMES[team]);
+				iconPanel->SetVisible(false);
+			}
+			else
+			{
+				char materialBuffer[32];
+				sprintf_s(materialBuffer, "loadout_icons/%i_%s", weaponIndex, TF_TEAM_NAMES[(int)team]);
 
-				if (stricmp(childPanelName, buffer))
-					continue;
+				// Dumb, evil, unsafe hacks
+				auto hackImgPanel = reinterpret_cast<vgui::ImagePanel*>(iconPanel);
 
-				const auto weaponIndex = m_Weapons[playerIndex][iconIndex];
+				HookManager::GetRawFunc_ImagePanel_SetImage()(hackImgPanel, materialBuffer);
 
-				if (playerIndex < 0 || playerIndex >= MAX_PLAYERS || weaponIndex < 0)
+				//Color* m_FillColor = (Color*)(((DWORD*)hackImgPanel) + 94);
+				Color* m_DrawColor = (Color*)(((DWORD*)hackImgPanel) + 95);
+
+				if (iconIndex == IDX_ACTIVE || m_ActiveWeaponIndices[playerIndex] == iconIndex)
 				{
-					iconPanel->SetVisible(false);
+					*m_DrawColor = ConVarGetColor(team == TFTeam::Red ? *ce_loadout_filter_active_red : *ce_loadout_filter_active_blu);
 				}
 				else
 				{
-					char materialBuffer[32];
-					sprintf_s(materialBuffer, "loadout_icons/%i", weaponIndex);
-
-					// Dumb, evil, unsafe hacks
-					auto hackImgPanel = reinterpret_cast<vgui::ImagePanel*>(iconPanel);
-
-					HookManager::GetRawFunc_ImagePanel_SetImage()(hackImgPanel, materialBuffer);
-
-					Color* m_FillColor = (Color*)(((DWORD*)hackImgPanel) + 94);
-					Color* m_DrawColor = (Color*)(((DWORD*)hackImgPanel) + 95);
-
-					if (iconIndex == IDX_ACTIVE || m_ActiveWeaponIndices[playerIndex] == iconIndex)
-					{
-						*m_DrawColor = ConVarGetColor(team == TEAM_RED ? *ce_loadout_filter_active_red : *ce_loadout_filter_active_blu);
-					}
-					else
-					{
-						*m_DrawColor = ConVarGetColor(team == TEAM_RED ? *ce_loadout_filter_inactive_red : *ce_loadout_filter_inactive_blu);
-					}
-
-					iconPanel->SetVisible(true);
+					*m_DrawColor = ConVarGetColor(team == TFTeam::Red ? *ce_loadout_filter_inactive_red : *ce_loadout_filter_inactive_blu);
 				}
 
-				break;
+				iconPanel->SetVisible(true);
 			}
+
+			break;
 		}
 	}
 }
@@ -213,7 +227,7 @@ int LoadoutIcons::GetPlayerIndex(vgui::EditablePanel* playerPanel)
 	// Find the player
 	for (Player* player : Player::Iterable())
 	{
-		if (!strcmp(player->GetName().c_str(), playername))
+		if (!strcmp(player->GetName(), playername))
 			return player->entindex() - 1;
 	}
 

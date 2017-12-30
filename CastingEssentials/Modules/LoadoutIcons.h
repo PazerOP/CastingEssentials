@@ -55,12 +55,6 @@ private:
 		IDX_ACTIVE
 	};
 
-	enum TeamIndex
-	{
-		TEAM_RED,
-		TEAM_BLU,
-	};
-
 	static constexpr const char* LOADOUT_ICONS[] = {
 		"LoadoutIconsItem1",
 		"LoadoutIconsItem2",
@@ -68,11 +62,6 @@ private:
 		"LoadoutIconsItem4",
 		"LoadoutIconsItem5",
 		"LoadoutIconsActiveItem",
-	};
-
-	static constexpr const char* TEAM_NAMES[] = {
-		"Red",
-		"Blue"
 	};
 
 	byte m_ActiveWeaponIndices[MAX_PLAYERS];	// Index into m_Weapons

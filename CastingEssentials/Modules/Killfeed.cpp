@@ -92,7 +92,7 @@ void Killfeed::OnTick(bool inGame)
 				// Now we should just have "Assister", try to find a player with that name
 				for (Player* assister : Player::Iterable())
 				{
-					if (!strcmp(assister->GetName().c_str(), killerAndAssisterName.c_str()))
+					if (!strcmp(assister->GetName(), killerAndAssisterName.c_str()))
 					{
 						// Matches our local player
 						if (assister->entindex() == localPlayerIndex)

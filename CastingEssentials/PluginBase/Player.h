@@ -40,8 +40,8 @@ public:
 	TFClassType GetClass() const;
 	int GetHealth() const;
 	int GetMaxHealth() const;
-	std::string GetName() const;
-	static std::string GetName(int entIndex);
+	const char* GetName() const;
+	static const char* GetName(int entIndex);
 	int GetObserverMode() const;
 	C_BaseEntity* GetObserverTarget() const;
 	CSteamID GetSteamID() const;
@@ -104,7 +104,11 @@ private:
 	mutable CHandle<C_BaseEntity>* m_CachedObserverTarget;
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedWeapons[MAX_WEAPONS];
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedActiveWeapon;
+
+	mutable uint32_t m_CachedPlayerInfoLastUpdateFrame;
 	mutable player_info_t m_CachedPlayerInfo;
+
+	mutable uint32_t m_LastValidatedFrame;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
 

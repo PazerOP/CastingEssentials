@@ -213,10 +213,10 @@ void CameraTools::ShowUsers(const CCommand& command)
 	Msg("%i Players:\n", red.size() + blu.size());
 
 	for (size_t i = 0; i < red.size(); i++)
-		ConColorMsg(Color(255, 128, 128, 255), "    alias player_red%i \"%s %s\"		// %s (%s)\n", i, m_SpecSteamID->GetName(), RenderSteamID(red[i]->GetSteamID().ConvertToUint64()).c_str(), red[i]->GetName().c_str(), TF_CLASS_NAMES[(int)red[i]->GetClass()]);
+		ConColorMsg(Color(255, 128, 128, 255), "    alias player_red%i \"%s %s\"		// %s (%s)\n", i, m_SpecSteamID->GetName(), RenderSteamID(red[i]->GetSteamID().ConvertToUint64()).c_str(), red[i]->GetName(), TF_CLASS_NAMES[(int)red[i]->GetClass()]);
 
 	for (size_t i = 0; i < blu.size(); i++)
-		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s (%s)\n", i, m_SpecSteamID->GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName().c_str(), TF_CLASS_NAMES[(int)blu[i]->GetClass()]);
+		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s (%s)\n", i, m_SpecSteamID->GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName(), TF_CLASS_NAMES[(int)blu[i]->GetClass()]);
 }
 
 void CameraTools::SpecClass(const CCommand& command)

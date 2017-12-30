@@ -19,6 +19,9 @@ public:
 
 	ConVar* GetDebugGlowConVar() const { return ce_graphics_debug_glow; }
 
+protected:
+	void OnTick(bool inGame) override;
+
 private:
 	ConVar* ce_graphics_disable_prop_fades;
 	ConVar* ce_graphics_debug_glow;
@@ -26,9 +29,6 @@ private:
 	ConVar* ce_graphics_glow_intensity;
 	ConVar* ce_graphics_improved_glows;
 	ConVar* ce_graphics_fix_invisible_players;
-
-	class TickPanel;
-	std::unique_ptr<TickPanel> m_Panel;
 
 	int m_ComputeEntityFadeHook;
 	unsigned char ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale);

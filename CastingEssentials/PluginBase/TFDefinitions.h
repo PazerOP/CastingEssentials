@@ -55,6 +55,14 @@ enum class TFTeam
 	Blue = 3
 };
 
+static constexpr const char* TF_TEAM_NAMES[] = 
+{
+	"Unassigned",
+	"Spectator",
+	"Red",
+	"Blue",
+};
+
 enum TFCond
 {
 	TFCond_Slowed = 0,
