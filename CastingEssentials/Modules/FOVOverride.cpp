@@ -80,7 +80,7 @@ bool FOVOverride::SetupEngineViewOverride(Vector &origin, QAngle &angles, float 
 			return false;
 
 		Player* const targetPlayer = Player::GetPlayer(target, __FUNCSIG__);
-		if (Interfaces::GetHLTVCamera()->m_nCameraMode == OBS_MODE_IN_EYE && targetPlayer->CheckCondition(TFCond_Zoomed))
+		if (Interfaces::GetHLTVCamera()->m_nCameraMode == OBS_MODE_IN_EYE && targetPlayer && targetPlayer->CheckCondition(TFCond_Zoomed))
 			return false;
 	}
 	else
