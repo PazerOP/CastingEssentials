@@ -3,6 +3,7 @@
 #include "Entities.h"
 #include "TFDefinitions.h"
 #include "HookManager.h"
+#include "Modules/ItemSchema.h"
 #include <cdll_int.h>
 #include <icliententity.h>
 #include <steam/steam_api.h>
@@ -10,6 +11,7 @@
 #include <toolframework/ienginetool.h>
 #include "TFPlayerResource.h"
 #include <client/hltvcamera.h>
+#include <client/c_basecombatweapon.h>
 
 bool Player::s_ClassRetrievalAvailable = false;
 bool Player::s_ComparisonAvailable = false;
@@ -455,6 +457,17 @@ Player* Player::GetPlayerFromUserID(int userID)
 	return nullptr;
 }
 
+Player* Player::GetPlayerFromName(const char* exactName)
+{
+	for (Player* player : Player::Iterable())
+	{
+		if (!strcmp(player->GetName(), exactName))
+			return player;
+	}
+
+	return nullptr;
+}
+
 Player* Player::AsPlayer(IClientEntity* entity)
 {
 	if (!entity)
@@ -518,6 +531,45 @@ const player_info_t& Player::GetPlayerInfo() const
 	}
 
 	return s_InvalidPlayerInfo;
+}
+
+C_BaseCombatWeapon* Player::GetMedigun(TFMedigun* medigunType) const
+{
+	if (!IsValid())
+		goto Failed;
+
+	for (int i = 0; i < MAX_WEAPONS; i++)
+	{
+		C_BaseCombatWeapon* weapon = GetWeapon(i);
+		if (!weapon || !Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
+			continue;
+
+		if (medigunType)
+		{
+			const auto itemdefIndex = Entities::GetEntityProp<int*>(weapon, "m_iItemDefinitionIndex");
+			if (!itemdefIndex)
+				continue;
+
+			const auto baseID = ItemSchema::GetModule()->GetBaseItemID(*itemdefIndex);
+
+			switch (baseID)
+			{
+				case 29:	*medigunType = TFMedigun::MediGun; break;
+				case 35:	*medigunType = TFMedigun::Kritzkrieg; break;
+				case 411:	*medigunType = TFMedigun::QuickFix; break;
+				case 998:	*medigunType = TFMedigun::Vaccinator; break;
+				default:	*medigunType = TFMedigun::Unknown; break;
+			}
+		}
+
+		return weapon;
+	}
+
+Failed:
+	if (medigunType)
+		*medigunType = TFMedigun::Unknown;
+
+	return nullptr;
 }
 
 Vector Player::GetAbsOrigin() const

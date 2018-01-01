@@ -55,7 +55,7 @@ enum class TFTeam
 	Blue = 3
 };
 
-static constexpr const char* TF_TEAM_NAMES[] = 
+static constexpr const char* TF_TEAM_NAMES[] =
 {
 	"Unassigned",
 	"Spectator",
@@ -281,11 +281,27 @@ enum class TFMedigun
 	Vaccinator
 };
 
+static constexpr const char* TF_MEDIGUN_NAMES[] =
+{
+	"Unknown",
+	"MediGun",
+	"Kritzkrieg",
+	"QuickFix",
+	"Vaccinator",
+};
+
 enum class TFResistType
 {
 	Bullet,
 	Explosive,
 	Fire
+};
+
+static constexpr const char* TF_RESIST_TYPE_NAMES[] =
+{
+	"Bullet",
+	"Explosive",
+	"Fire",
 };
 
 enum class TFGrenadePipebombType

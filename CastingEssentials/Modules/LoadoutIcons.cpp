@@ -1,5 +1,6 @@
 #include "LoadoutIcons.h"
 #include "ItemSchema.h"
+#include "Misc/HUDHacking.h"
 #include "PluginBase/Entities.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -78,28 +79,6 @@ int LoadoutIcons::GetWeaponDefinitionIndex(IClientNetworkable* networkable)
 	return *definitionIndex;
 }
 
-vgui::VPANEL LoadoutIcons::GetSpecGUI()
-{
-	auto clientMode = Interfaces::GetClientMode();
-	if (!clientMode)
-		return 0;
-
-	auto viewport = clientMode->GetViewport();
-	if (!viewport)
-		return 0;
-
-	auto viewportPanel = viewport->GetVPanel();
-	const auto viewportChildCount = g_pVGuiPanel->GetChildCount(viewportPanel);
-	for (int specguiIndex = 0; specguiIndex < viewportChildCount; specguiIndex++)
-	{
-		vgui::VPANEL specguiPanel = g_pVGuiPanel->GetChild(viewportPanel, specguiIndex);
-		if (!strcmp(g_pVGuiPanel->GetName(specguiPanel), "specgui"))
-			return specguiPanel;
-	}
-
-	return 0;
-}
-
 void LoadoutIcons::GatherWeapons()
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
@@ -128,7 +107,7 @@ void LoadoutIcons::GatherWeapons()
 void LoadoutIcons::DrawIcons()
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	vgui::VPANEL specguiPanel = GetSpecGUI();
+	vgui::VPANEL specguiPanel = HUDHacking::GetSpecGUI();
 	if (!specguiPanel)
 		return;
 
@@ -169,7 +148,7 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 		auto childVPANEL = g_pVGuiPanel->GetChild(playerVPANEL, i);
 		auto childPanelName = g_pVGuiPanel->GetName(childVPANEL);
 
-		for (int iconIndex = 0; iconIndex < arraysize(LOADOUT_ICONS); iconIndex++)
+		for (uint_fast8_t iconIndex = 0; iconIndex < arraysize(LOADOUT_ICONS); iconIndex++)
 		{
 			char buffer[32];
 			sprintf_s(buffer, "%s%s", LOADOUT_ICONS[iconIndex], TF_TEAM_NAMES[(int)team]);
@@ -217,19 +196,6 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 
 int LoadoutIcons::GetPlayerIndex(vgui::EditablePanel* playerPanel)
 {
-	if (!playerPanel)
-		return -1;
-
-	auto dv = HookManager::GetRawFunc_EditablePanel_GetDialogVariables()(playerPanel);
-
-	const char* playername = dv->GetString("playername");
-
-	// Find the player
-	for (Player* player : Player::Iterable())
-	{
-		if (!strcmp(player->GetName(), playername))
-			return player->entindex() - 1;
-	}
-
-	return -1;
+	auto player = HUDHacking::GetPlayerFromPanel(playerPanel);
+	return (player ? player->entindex() : 0) - 1;
 }

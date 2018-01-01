@@ -10,6 +10,7 @@
 enum TFCond;
 enum class TFClassType;
 enum class TFTeam;
+enum class TFMedigun;
 
 class IClientEntity;
 class C_BaseEntity;
@@ -23,6 +24,7 @@ public:
 	static Player* AsPlayer(IClientEntity* entity);
 	static Player* GetPlayer(int entIndex, const char* functionName = nullptr);
 	static Player* GetPlayerFromUserID(int userID);
+	static Player* GetPlayerFromName(const char* exactName);
 	static bool IsValidIndex(int entIndex);
 	static Player* GetLocalPlayer();
 	static Player* GetLocalObserverTarget();
@@ -52,6 +54,8 @@ public:
 	bool IsAlive() const;
 	int entindex() const;
 	const player_info_t& GetPlayerInfo() const;
+
+	C_BaseCombatWeapon* GetMedigun(TFMedigun* medigunType = nullptr) const;
 
 	Vector GetAbsOrigin() const;
 	QAngle GetAbsAngles() const;
@@ -105,10 +109,10 @@ private:
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedWeapons[MAX_WEAPONS];
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedActiveWeapon;
 
-	mutable uint32_t m_CachedPlayerInfoLastUpdateFrame;
+	mutable int m_CachedPlayerInfoLastUpdateFrame;
 	mutable player_info_t m_CachedPlayerInfo;
 
-	mutable uint32_t m_LastValidatedFrame;
+	mutable int m_LastValidatedFrame;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
 

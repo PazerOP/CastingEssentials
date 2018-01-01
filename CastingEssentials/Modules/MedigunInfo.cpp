@@ -9,7 +9,9 @@
 */
 
 #include "MedigunInfo.h"
+#include "Misc/HUDHacking.h"
 #include "PluginBase/Entities.h"
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
@@ -20,6 +22,7 @@
 #include "vgui/ISurface.h"
 #include "vgui/IVGui.h"
 #include "vgui_controls/EditablePanel.h"
+#include "vgui_controls/ImagePanel.h"
 #include <client/iclientmode.h>
 #include <KeyValues.h>
 #include <client/c_basecombatweapon.h>
@@ -179,9 +182,88 @@ void MedigunInfo::OnTick(bool inGame)
 			if (!m_MainPanel->IsEnabled())
 				m_MainPanel->SetEnabled(true);
 		}
+
+		UpdateEmbeddedPanels();
 	}
 	else if (m_MainPanel)
 		m_MainPanel.reset();
+}
+
+void MedigunInfo::UpdateEmbeddedPanels()
+{
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+	auto specguivpanel = HUDHacking::GetSpecGUI();
+	if (!specguivpanel)
+		return;
+
+	const auto specguiChildCount = g_pVGuiPanel->GetChildCount(specguivpanel);
+	for (int playerPanelIndex = 0; playerPanelIndex < specguiChildCount; playerPanelIndex++)
+	{
+		vgui::VPANEL playerPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
+		const char* playerPanelName = g_pVGuiPanel->GetName(playerPanel);
+		if (strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
+			continue;
+
+		vgui::EditablePanel* player = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerPanel, "ClientDLL"));
+
+		UpdateEmbeddedPanel(player);
+	}
+}
+
+void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
+{
+	Player* player = HUDHacking::GetPlayerFromPanel(playerPanel);
+	if (!player)
+		return;
+
+	const bool isMedic = player->GetClass() == TFClassType::Medic;
+	const auto team = player->GetTeam();
+
+	const auto playerVPanel = playerPanel->GetVPanel();
+	for (int childIndex = 0; childIndex < g_pVGuiPanel->GetChildCount(playerVPanel); childIndex++)
+	{
+		const auto childVPanel = g_pVGuiPanel->GetChild(playerVPanel, childIndex);
+		const auto childName = g_pVGuiPanel->GetName(childVPanel);
+
+		const bool isBlueIcon = !strcmp(childName, EMBEDDED_ICON_BLUE);
+		const bool isRedIcon = !isBlueIcon && !strcmp(childName, EMBEDDED_ICON_RED);
+
+		if (!isBlueIcon && !isRedIcon)
+			continue;
+
+		const auto childPanel = g_pVGuiPanel->GetPanel(childVPanel, "ClientDLL");
+
+		if (!isMedic || isBlueIcon && team == TFTeam::Red || isRedIcon && team == TFTeam::Blue)
+		{
+			childPanel->SetVisible(false);
+			continue;
+		}
+
+		childPanel->SetVisible(true);
+
+		TFMedigun medigunType;
+		C_BaseCombatWeapon* medigun = player->GetMedigun(&medigunType);
+		if (!medigun || medigunType == TFMedigun::Unknown)
+			continue;
+
+		char materialBuf[128];
+		sprintf_s(materialBuf, "hud/mediguninfo/%s_%s", TF_MEDIGUN_NAMES[(int)medigunType], TF_TEAM_NAMES[(int)team]);
+
+		if (medigunType == TFMedigun::Vaccinator)
+		{
+			auto resistType = Entities::GetEntityProp<TFResistType*>(medigun, "m_nChargeResistType");
+			if (!resistType)
+			{
+				PluginWarning("Failed to get m_nChargeResistType prop for medigun\n");
+				continue;
+			}
+
+			strcat_s(materialBuf, TF_RESIST_TYPE_NAMES[(int)*resistType]);
+		}
+
+		vgui::ImagePanel* imgPanel = dynamic_cast<vgui::ImagePanel*>(g_pVGuiPanel->GetPanel(childVPanel, "ClientDLL"));
+		HookManager::GetRawFunc_ImagePanel_SetImage()(imgPanel, materialBuf);
+	}
 }
 
 void MedigunInfo::ReloadSettings()
@@ -442,3 +524,4 @@ void MedigunInfo::MedigunPanel::OnReloadControlSettings(KeyValues *attributes)
 
 	LoadControlSettings("Resource/UI/MedigunPanel.res", nullptr, nullptr, conditions);
 }
+

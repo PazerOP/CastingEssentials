@@ -36,8 +36,6 @@ private:
 
 	static int GetWeaponDefinitionIndex(IClientNetworkable* networkable);
 
-	static vgui::VPANEL GetSpecGUI();
-
 	ConVar* ce_loadout_enabled;
 	ConVar* ce_loadout_filter_active_red;
 	ConVar* ce_loadout_filter_active_blu;

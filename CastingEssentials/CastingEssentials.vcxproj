@@ -91,6 +91,7 @@
     <ClCompile Include="Hooking\IBaseHook.cpp" />
     <ClCompile Include="Hooking\IGroupHook.cpp" />
     <ClCompile Include="Misc\DebugOverlay.cpp" />
+    <ClCompile Include="Misc\HUDHacking.cpp" />
     <ClCompile Include="Misc\MissingDefinitions.cpp" />
     <ClCompile Include="Misc\Polyhook.cpp" />
     <ClCompile Include="Modules\Antifreeze.cpp" />
@@ -141,6 +142,7 @@
     <ClInclude Include="Hooking\VariablePusher.h" />
     <ClInclude Include="Misc\DebugOverlay.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
+    <ClInclude Include="Misc\HUDHacking.h" />
     <ClInclude Include="Modules\Antifreeze.h" />
     <ClInclude Include="Modules\CameraState.h" />
     <ClInclude Include="Modules\CameraAutoSwitch.h" />
