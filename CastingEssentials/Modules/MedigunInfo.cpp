@@ -398,7 +398,7 @@ void MedigunInfo::MedigunPanel::OnMedigunInfoUpdate(KeyValues *attributes)
 void MedigunInfo::MedigunPanel::OnReloadControlSettings(KeyValues *attributes)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	KeyValues *conditions = new KeyValues("conditions");
+	KeyValues::AutoDelete conditions("conditions");
 
 	if (alive)
 		conditions->SetBool("player-alive", true);
