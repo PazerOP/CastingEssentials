@@ -437,6 +437,22 @@ HookManager::RawGetIconFn HookManager::GetRawFunc_CHudBaseDeathNotice_GetIcon()
 	return s_RawGetIconFn;
 }
 
+HookManager::Raw_ProgressBar_ApplySettings HookManager::GetRawFunc_ProgressBar_ApplySettings()
+{
+	static Raw_ProgressBar_ApplySettings fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\xD9\xEE\x53";
+		constexpr const char* MASK = "xxxxxx";
+
+		fn = (Raw_ProgressBar_ApplySettings)SignatureScan("client", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("vgui::ProgressBar::ApplySettings");
+	}
+
+	return fn;
+}
+
 HookManager::RawShouldDrawLocalPlayerFn HookManager::GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer()
 {
 	static RawShouldDrawLocalPlayerFn s_RawShouldDrawLocalPlayerFn = nullptr;
@@ -524,6 +540,7 @@ HookManager::HookManager()
 	m_Hook_C_BaseAnimating_DrawModel.AttachHook(std::make_shared<C_BaseAnimating_DrawModel::Inner>(GetRawFunc_C_BaseAnimating_DrawModel()));
 	m_Hook_C_BaseAnimating_InternalDrawModel.AttachHook(std::make_shared<C_BaseAnimating_InternalDrawModel::Inner>(GetRawFunc_C_BaseAnimating_InternalDrawModel()));
 	m_Hook_C_TFPlayer_DrawModel.AttachHook(std::make_shared<C_TFPlayer_DrawModel::Inner>(GetRawFunc_C_TFPlayer_DrawModel()));
+	m_Hook_vgui_ProgressBar_ApplySettings.AttachHook(std::make_shared<vgui_ProgressBar_ApplySettings::Inner>(GetRawFunc_ProgressBar_ApplySettings()));
 
 	m_Hook_C_BaseEntity_Init.AttachHook(std::make_shared<C_BaseEntity_Init::Inner>(GetRawFunc_C_BaseEntity_Init()));
 

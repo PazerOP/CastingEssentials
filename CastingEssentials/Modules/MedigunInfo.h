@@ -35,6 +35,9 @@ private:
 		TFTeam m_Team;
 	};
 
+	void CollectMedigunData();
+	std::map<int, Data> m_MedigunPanelData;
+
 	class MainPanel;
 	std::unique_ptr<MainPanel> m_MainPanel;
 	class MedigunPanel;
@@ -50,4 +53,6 @@ private:
 
 	static constexpr const char* EMBEDDED_ICON_RED = "MedigunIconRed";
 	static constexpr const char* EMBEDDED_ICON_BLUE = "MedigunIconBlue";
+	static constexpr const char* EMBEDDED_PROGRESS_RED = "MedigunChargeRed";
+	static constexpr const char* EMBEDDED_PROGRESS_BLUE = "MedigunChargeBlue";
 };

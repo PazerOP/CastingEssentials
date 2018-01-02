@@ -14,6 +14,7 @@
 #include "Modules/FOVOverride.h"
 #include "Modules/FreezeInfo.h"
 #include "Modules/Graphics.h"
+#include "Modules/HUDHacking.h"
 #include "Modules/ItemSchema.h"
 #include "Modules/Killfeed.h"
 #include "Modules/Killstreaks.h"
@@ -57,6 +58,8 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Interfaces::Load(interfaceFactory);
 	HookManager::Load();
 	Modules().Init();
+
+	Modules().RegisterAndLoadModule<HUDHacking>("Evil HUD Modifications");
 
 	// CameraTools and CameraSmooths depend on CameraState
 	Modules().RegisterAndLoadModule<CameraState>("Camera State");

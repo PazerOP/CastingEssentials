@@ -9,7 +9,7 @@
 */
 
 #include "MedigunInfo.h"
-#include "Misc/HUDHacking.h"
+#include "Modules/HUDHacking.h"
 #include "PluginBase/Entities.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -151,6 +151,37 @@ bool MedigunInfo::CheckDependencies()
 	return ready;
 }
 
+void MedigunInfo::CollectMedigunData()
+{
+	m_MedigunPanelData.clear();
+
+	for (Player* player : Player::Iterable())
+	{
+		if (player->GetClass() != TFClassType::Medic)
+			continue;
+
+		Data& medigunData = m_MedigunPanelData.insert(std::make_pair(player->entindex() - 1, Data())).first->second;
+		medigunData.m_Alive = player->IsAlive();
+		medigunData.m_Team = player->GetTeam();
+
+		if (medigunData.m_Alive)
+		{
+			C_BaseCombatWeapon* medigun = player->GetMedigun(&medigunData.m_Type);
+			if (!medigun || medigunData.m_Type == TFMedigun::Unknown)
+			{
+				PluginWarning("Medic %s has no medigun or their medigun was not recognized!\n", player->GetName());
+				continue;
+			}
+
+			medigunData.m_Charge = *Entities::GetEntityProp<float *>(medigun, "m_flChargeLevel");
+			medigunData.m_Popped = *Entities::GetEntityProp<bool *>(medigun, "m_bChargeRelease");
+
+			if (medigunData.m_Type == TFMedigun::Vaccinator)
+				medigunData.m_ResistType = *Entities::GetEntityProp<TFResistType*>(medigun, { "m_nChargeResistType" });
+		}
+	}
+}
+
 void MedigunInfo::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
@@ -183,6 +214,7 @@ void MedigunInfo::OnTick(bool inGame)
 				m_MainPanel->SetEnabled(true);
 		}
 
+		CollectMedigunData();
 		UpdateEmbeddedPanels();
 	}
 	else if (m_MainPanel)
@@ -216,9 +248,6 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 	if (!player)
 		return;
 
-	const bool isMedic = player->GetClass() == TFClassType::Medic;
-	const auto team = player->GetTeam();
-
 	const auto playerVPanel = playerPanel->GetVPanel();
 	for (int childIndex = 0; childIndex < g_pVGuiPanel->GetChildCount(playerVPanel); childIndex++)
 	{
@@ -227,13 +256,17 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 
 		const bool isBlueIcon = !strcmp(childName, EMBEDDED_ICON_BLUE);
 		const bool isRedIcon = !isBlueIcon && !strcmp(childName, EMBEDDED_ICON_RED);
+		const bool isProgressRed = !isBlueIcon && !isRedIcon && !strcmp(childName, EMBEDDED_PROGRESS_BLUE);
+		const bool isProgressBlue = !isBlueIcon && !isRedIcon && !isProgressRed && !strcmp(childName, EMBEDDED_PROGRESS_RED);
 
-		if (!isBlueIcon && !isRedIcon)
+		// We need to control the visibility of our progress bars
+		if (!isBlueIcon && !isRedIcon && !isProgressRed && !isProgressBlue)
 			continue;
 
 		const auto childPanel = g_pVGuiPanel->GetPanel(childVPanel, "ClientDLL");
 
-		if (!isMedic || isBlueIcon && team == TFTeam::Red || isRedIcon && team == TFTeam::Blue)
+		const auto& foundData = m_MedigunPanelData.find(player->entindex() - 1);
+		if (foundData == m_MedigunPanelData.end())
 		{
 			childPanel->SetVisible(false);
 			continue;
@@ -241,27 +274,23 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 
 		childPanel->SetVisible(true);
 
-		TFMedigun medigunType;
-		C_BaseCombatWeapon* medigun = player->GetMedigun(&medigunType);
-		if (!medigun || medigunType == TFMedigun::Unknown)
+		// Icon-only stuff below
+		if (!isBlueIcon && !isRedIcon)
 			continue;
 
+		const Data& data = foundData->second;
+
 		char materialBuf[128];
-		sprintf_s(materialBuf, "hud/mediguninfo/%s_%s", TF_MEDIGUN_NAMES[(int)medigunType], TF_TEAM_NAMES[(int)team]);
+		sprintf_s(materialBuf, "hud/mediguninfo/%s_%s", TF_MEDIGUN_NAMES[(int)data.m_Type], TF_TEAM_NAMES[(int)data.m_Team]);
 
-		if (medigunType == TFMedigun::Vaccinator)
-		{
-			auto resistType = Entities::GetEntityProp<TFResistType*>(medigun, "m_nChargeResistType");
-			if (!resistType)
-			{
-				PluginWarning("Failed to get m_nChargeResistType prop for medigun\n");
-				continue;
-			}
-
-			strcat_s(materialBuf, TF_RESIST_TYPE_NAMES[(int)*resistType]);
-		}
+		if (data.m_Type == TFMedigun::Vaccinator)
+			strcat_s(materialBuf, TF_RESIST_TYPE_NAMES[(int)data.m_ResistType]);
 
 		vgui::ImagePanel* imgPanel = dynamic_cast<vgui::ImagePanel*>(g_pVGuiPanel->GetPanel(childVPanel, "ClientDLL"));
+		Assert(imgPanel);
+		if (!imgPanel)
+			continue;
+
 		HookManager::GetRawFunc_ImagePanel_SetImage()(imgPanel, materialBuf);
 	}
 }
@@ -322,114 +351,64 @@ void MedigunInfo::MainPanel::OnTick()
 	size_t bluMediguns = 0;
 	size_t redMediguns = 0;
 
-	for (Player* player : Player::Iterable())
+	for (const auto& pair : GetModule()->m_MedigunPanelData)
 	{
-		Assert(player);
-		if (!player)
+		const auto& data = pair.second;
+
+		MedigunPanel* medigunPanel;
+		int x, y;
+
+		if (data.m_Team == TFTeam::Red)
 		{
-			PluginWarning("null player in %s!\n", __FUNCSIG__);
-			continue;
-		}
+			redMediguns++;
 
-		if (!player->IsValid())
-		{
-			PluginWarning("Invalid player in %s!\n", __FUNCSIG__);
-			continue;
-		}
-
-		TFTeam team = player->GetTeam();
-		if (team != TFTeam::Blue && team != TFTeam::Red)
-			continue;
-
-		TFClassType cls = player->GetClass();
-		if (cls != TFClassType::Medic)
-			continue;
-
-		for (int weaponIndex = 0; weaponIndex < MAX_WEAPONS; weaponIndex++)
-		{
-			C_BaseCombatWeapon *weapon = player->GetWeapon(weaponIndex);
-
-			if (weapon && Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
+			if (redMediguns > redMedigunPanels.size())
 			{
-				MedigunPanel *medigunPanel = nullptr;
-				int x, y;
-
-				if (team == TFTeam::Red)
-				{
-					redMediguns++;
-
-					if (redMediguns > redMedigunPanels.size())
-					{
-						medigunPanel = new MedigunPanel(this, "MedigunPanel");
-						AddActionSignalTarget(medigunPanel);
-						redMedigunPanels.push_back(medigunPanel);
-					}
-					else
-					{
-						medigunPanel = redMedigunPanels.at(redMediguns - 1);
-					}
-
-					x = redBaseX + (redOffsetX * (redMediguns - 1));
-					y = redBaseY + (redOffsetY * (redMediguns - 1));
-				}
-				else if (team == TFTeam::Blue)
-				{
-					bluMediguns++;
-
-					if (bluMediguns > bluMedigunPanels.size())
-					{
-						medigunPanel = new MedigunPanel(this, "MedigunPanel");
-						AddActionSignalTarget(medigunPanel);
-						bluMedigunPanels.push_back(medigunPanel);
-					}
-					else
-					{
-						medigunPanel = bluMedigunPanels.at(bluMediguns - 1);
-					}
-
-					x = bluBaseX + (bluOffsetX * (bluMediguns - 1));
-					y = bluBaseY + (bluOffsetY * (bluMediguns - 1));
-				}
-				else
-					continue;	// We will never get here, but VS2015 won't shut up about potentially uninititialized local variables x and y
-
-				KeyValues *medigunInfo = new KeyValues("MedigunInfo");
-
-				int itemDefinitionIndex = *Entities::GetEntityProp<int *>(weapon, { "m_iItemDefinitionIndex" });
-				TFMedigun type = TFMedigun::Unknown;
-				if (itemDefinitionIndex == 29 || itemDefinitionIndex == 211 || itemDefinitionIndex == 663 || itemDefinitionIndex == 796 || itemDefinitionIndex == 805 || itemDefinitionIndex == 885 || itemDefinitionIndex == 894 || itemDefinitionIndex == 903 || itemDefinitionIndex == 912 || itemDefinitionIndex == 961 || itemDefinitionIndex == 970 || itemDefinitionIndex == 15008 || itemDefinitionIndex == 15010 || itemDefinitionIndex == 15025 || itemDefinitionIndex == 15039 || itemDefinitionIndex == 15050)
-				{
-					type = TFMedigun::MediGun;
-				}
-				else if (itemDefinitionIndex == 35)
-				{
-					type = TFMedigun::Kritzkrieg;
-				}
-				else if (itemDefinitionIndex == 411)
-				{
-					type = TFMedigun::QuickFix;
-				}
-				else if (itemDefinitionIndex == 998)
-				{
-					type = TFMedigun::Vaccinator;
-				}
-
-				float level = *Entities::GetEntityProp<float *>(weapon, { "m_flChargeLevel" });
-
-				medigunInfo->SetBool("alive", player->IsAlive());
-				medigunInfo->SetInt("charges", type == TFMedigun::Vaccinator ? int(floor(level * 4.0f)) : int(floor(level)));
-				medigunInfo->SetFloat("level", level);
-				medigunInfo->SetInt("medigun", (int)type);
-				medigunInfo->SetBool("released", *Entities::GetEntityProp<bool *>(weapon, { "m_bChargeRelease" }));
-				medigunInfo->SetInt("resistType", *Entities::GetEntityProp<int *>(weapon, { "m_nChargeResistType" }));
-				medigunInfo->SetInt("team", (int)team);
-
-				PostMessage(medigunPanel, medigunInfo);
-				medigunPanel->SetPos(x, y);
-
-				break;
+				medigunPanel = new MedigunPanel(this, "MedigunPanel");
+				AddActionSignalTarget(medigunPanel);
+				redMedigunPanels.push_back(medigunPanel);
 			}
+			else
+			{
+				medigunPanel = redMedigunPanels.at(redMediguns - 1);
+			}
+
+			x = redBaseX + (redOffsetX * (redMediguns - 1));
+			y = redBaseY + (redOffsetY * (redMediguns - 1));
 		}
+		else if (data.m_Team == TFTeam::Blue)
+		{
+			bluMediguns++;
+
+			if (bluMediguns > bluMedigunPanels.size())
+			{
+				medigunPanel = new MedigunPanel(this, "MedigunPanel");
+				AddActionSignalTarget(medigunPanel);
+				bluMedigunPanels.push_back(medigunPanel);
+			}
+			else
+			{
+				medigunPanel = bluMedigunPanels.at(bluMediguns - 1);
+			}
+
+			x = bluBaseX + (bluOffsetX * (bluMediguns - 1));
+			y = bluBaseY + (bluOffsetY * (bluMediguns - 1));
+		}
+		else
+			continue;	// We will never get here, but VS2015 won't shut up about potentially uninititialized local variables x and y
+
+		KeyValues *medigunInfo = new KeyValues("MedigunInfo");
+
+		medigunInfo->SetBool("alive", data.m_Alive);
+		medigunInfo->SetInt("charges", data.m_Type == TFMedigun::Vaccinator ? int(floor(data.m_Charge * 4.0f)) : int(floor(data.m_Charge)));
+		medigunInfo->SetFloat("level", data.m_Charge);
+		medigunInfo->SetInt("medigun", (int)data.m_Type);
+		medigunInfo->SetBool("released", data.m_Popped);
+		medigunInfo->SetInt("resistType", (int)data.m_ResistType);
+		medigunInfo->SetInt("team", (int)data.m_Team);
+
+		PostMessage(medigunPanel, medigunInfo);
+		medigunPanel->SetPos(x, y);
 	}
 
 	while (redMediguns < redMedigunPanels.size())

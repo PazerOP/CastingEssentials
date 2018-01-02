@@ -46,6 +46,7 @@ namespace vgui
 {
 	class EditablePanel;
 	class ImagePanel;
+	class ProgressBar;
 }
 
 class HookManager final
@@ -83,6 +84,7 @@ class HookManager final
 		C_BaseAnimating_DrawModel,
 		C_BaseAnimating_InternalDrawModel,
 		C_TFPlayer_DrawModel,
+		vgui_ProgressBar_ApplySettings,
 
 		C_BaseEntity_Init,
 		C_BaseEntity_CalcAbsolutePosition,
@@ -224,6 +226,7 @@ class HookManager final
 	typedef bool(*RawShouldDrawLocalPlayerFn)();
 	typedef KeyValues*(__thiscall *Raw_EditablePanel_GetDialogVariables)(vgui::EditablePanel* pThis);
 	typedef void(__thiscall *Raw_ImagePanel_SetImage)(vgui::ImagePanel* pThis, const char* imageName);
+	typedef void(__thiscall *Raw_ProgressBar_ApplySettings)(vgui::ProgressBar* pThis, KeyValues* pSettings);
 
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
@@ -244,6 +247,7 @@ class HookManager final
 	static RawDrawTranslucentRenderableFn GetRawFunc_Global_DrawTranslucentRenderable();
 	static RawApplyEntityGlowEffectsFn GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects();
 	static RawGetIconFn GetRawFunc_CHudBaseDeathNotice_GetIcon();
+	static Raw_ProgressBar_ApplySettings GetRawFunc_ProgressBar_ApplySettings();
 
 public:
 	HookManager();
@@ -288,6 +292,8 @@ public:
 
 	typedef GlobalClassHook<Func::C_TFPlayer_DrawModel, false, C_TFPlayer, int, int> C_TFPlayer_DrawModel;
 
+	typedef GlobalClassHook<Func::vgui_ProgressBar_ApplySettings, false, vgui::ProgressBar, void, KeyValues*> vgui_ProgressBar_ApplySettings;
+
 	typedef GlobalClassHook<Func::C_BaseEntity_Init, false, C_BaseEntity, bool, int, int> C_BaseEntity_Init;
 	typedef GlobalClassHook<Func::C_BaseEntity_CalcAbsolutePosition, false, C_BaseEntity, void> C_BaseEntity_CalcAbsolutePosition;
 
@@ -326,6 +332,7 @@ public:
 	template<> Global_DrawOpaqueRenderable* GetHook<Global_DrawOpaqueRenderable>() { return &m_Hook_Global_DrawOpaqueRenderable; }
 	template<> Global_DrawTranslucentRenderable* GetHook<Global_DrawTranslucentRenderable>() { return &m_Hook_Global_DrawTranslucentRenderable; }
 	template<> CGlowObjectManager_ApplyEntityGlowEffects* GetHook<CGlowObjectManager_ApplyEntityGlowEffects>() { return &m_Hook_CGlowObjectManager_ApplyEntityGlowEffects; }
+	template<> vgui_ProgressBar_ApplySettings* GetHook<vgui_ProgressBar_ApplySettings>() { return &m_Hook_vgui_ProgressBar_ApplySettings; }
 
 	template<class Hook> int AddHook(const typename Hook::Functional& hook)
 	{
@@ -386,6 +393,7 @@ private:
 	C_BaseAnimating_DrawModel m_Hook_C_BaseAnimating_DrawModel;
 	C_BaseAnimating_InternalDrawModel m_Hook_C_BaseAnimating_InternalDrawModel;
 	C_TFPlayer_DrawModel m_Hook_C_TFPlayer_DrawModel;
+	vgui_ProgressBar_ApplySettings m_Hook_vgui_ProgressBar_ApplySettings;
 
 	C_BaseEntity_Init m_Hook_C_BaseEntity_Init;
 
@@ -435,6 +443,7 @@ using C_BaseAnimating_GetBonePosition = HookManager::C_BaseAnimating_GetBonePosi
 using C_BaseAnimating_DrawModel = HookManager::C_BaseAnimating_DrawModel;
 using C_BaseAnimating_InternalDrawModel = HookManager::C_BaseAnimating_InternalDrawModel;
 using C_TFPlayer_DrawModel = HookManager::C_TFPlayer_DrawModel;
+using vgui_ProgressBar_ApplySettings = HookManager::vgui_ProgressBar_ApplySettings;
 
 using C_BaseEntity_Init = HookManager::C_BaseEntity_Init;
 using C_BaseEntity_CalcAbsolutePosition = HookManager::C_BaseEntity_CalcAbsolutePosition;

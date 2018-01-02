@@ -1,6 +1,6 @@
 #include "LoadoutIcons.h"
 #include "ItemSchema.h"
-#include "Misc/HUDHacking.h"
+#include "Modules/HUDHacking.h"
 #include "PluginBase/Entities.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"

@@ -6,6 +6,25 @@
 #include <client/iclientmode.h>
 #include <KeyValues.h>
 #include <vgui_controls/Panel.h>
+#include <vgui_controls/ProgressBar.h>
+
+HUDHacking::HUDHacking()
+{
+	m_ProgressBarApplySettingsHook = GetHooks()->AddHook<vgui_ProgressBar_ApplySettings>(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2));
+}
+
+HUDHacking::~HUDHacking()
+{
+	if (m_ProgressBarApplySettingsHook && GetHooks()->RemoveHook<vgui_ProgressBar_ApplySettings>(m_ProgressBarApplySettingsHook, __FUNCTION__))
+		m_ProgressBarApplySettingsHook = 0;
+
+	Assert(!m_ProgressBarApplySettingsHook);
+}
+
+bool HUDHacking::CheckDependencies()
+{
+	return true;
+}
 
 vgui::VPANEL HUDHacking::GetSpecGUI()
 {
@@ -53,4 +72,27 @@ Color* HUDHacking::GetFillColor(vgui::ImagePanel* imgPanel)
 Color* HUDHacking::GetDrawColor(vgui::ImagePanel* imgPanel)
 {
 	return imgPanel ? (Color*)(((DWORD*)imgPanel) + 95) : nullptr;
+}
+
+int* HUDHacking::GetProgressDirection(vgui::ProgressBar* progressBar)
+{
+	return progressBar ? (int*)(((DWORD*)progressBar) + 88) : nullptr;
+}
+
+void HUDHacking::ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings)
+{
+	const char* dirStr = pSettings->GetString("direction", "east");
+	int& dirVar = *GetProgressDirection(pThis);
+
+	if (!stricmp(dirStr, "north"))
+		dirVar = vgui::ProgressBar::PROGRESS_NORTH;
+	else if (!stricmp(dirStr, "south"))
+		dirVar = vgui::ProgressBar::PROGRESS_SOUTH;
+	else if (!stricmp(dirStr, "west"))
+		dirVar = vgui::ProgressBar::PROGRESS_WEST;
+	else	// east is default
+		dirVar = vgui::ProgressBar::PROGRESS_EAST;
+
+	// Always execute the real function after we run this hook
+	GetHooks()->SetState<vgui_ProgressBar_ApplySettings>(Hooking::HookAction::IGNORE);
 }

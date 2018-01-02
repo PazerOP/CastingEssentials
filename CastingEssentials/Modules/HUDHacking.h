@@ -1,4 +1,5 @@
 #pragma once
+#include "PluginBase/Modules.h"
 
 class Player;
 
@@ -8,13 +9,19 @@ namespace vgui
 	class Panel;
 	class EditablePanel;
 	class ImagePanel;
+	class ProgressBar;
 }
 
-class HUDHacking
+class HUDHacking : public Module
 {
 public:
-	HUDHacking() = delete;
-	~HUDHacking() = delete;
+	HUDHacking();
+	~HUDHacking();
+
+	static HUDHacking* GetModule() { return Modules().GetModule<HUDHacking>(); }
+	static const char* GetModuleName() { return Modules().GetModuleName<HUDHacking>().c_str(); }
+
+	static bool CheckDependencies();
 
 	static vgui::VPANEL GetSpecGUI();
 	static Player* GetPlayerFromPanel(vgui::EditablePanel* playerPanel);
@@ -24,4 +31,10 @@ public:
 
 	static Color* GetFillColor(vgui::ImagePanel* imgPanel);
 	static Color* GetDrawColor(vgui::ImagePanel* imgPanel);
+
+	static int* GetProgressDirection(vgui::ProgressBar* progressBar);
+
+private:
+	int m_ProgressBarApplySettingsHook;
+	static void ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings);
 };
