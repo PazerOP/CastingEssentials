@@ -45,8 +45,16 @@ private:
 	void UpdateEmbeddedPanels();
 	void UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel);
 
-	ConVar *enabled;
-	ConCommand *reload_settings;
+	ConVar* ce_mediguninfo_separate_enabled;
+	ConCommand* ce_mediguninfo_separate_reload;
+
+	ConVar* ce_mediguninfo_embedded_enabled;
+	ConVar* ce_mediguninfo_embedded_medigun_text;
+	ConVar* ce_mediguninfo_embedded_kritzkrieg_text;
+	ConVar* ce_mediguninfo_embedded_quickfix_text;
+	ConVar* ce_mediguninfo_embedded_vaccinator_text;
+	ConVar* ce_mediguninfo_embedded_dead_text;
+
 	void ReloadSettings();
 
 	static constexpr const char* EMBEDDED_ICON_RED = "MedigunIconRed";

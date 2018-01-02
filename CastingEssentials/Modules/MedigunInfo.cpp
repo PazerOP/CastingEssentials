@@ -21,6 +21,7 @@
 #include "vgui/IScheme.h"
 #include "vgui/ISurface.h"
 #include "vgui/IVGui.h"
+#include <vgui/ILocalize.h>
 #include "vgui_controls/EditablePanel.h"
 #include "vgui_controls/ImagePanel.h"
 #include <client/iclientmode.h>
@@ -82,8 +83,15 @@ private:
 
 MedigunInfo::MedigunInfo()
 {
-	enabled = new ConVar("ce_mediguninfo_enabled", "0", FCVAR_NONE, "enable medigun info");
-	reload_settings = new ConCommand("ce_mediguninfo_reload_settings", []() { GetModule()->ReloadSettings(); }, "reload settings for the medigun info HUD from the resource file", FCVAR_NONE);
+	ce_mediguninfo_separate_enabled = new ConVar("ce_mediguninfo_enabled", "0", FCVAR_NONE, "Enable separated medigun panels.");
+	ce_mediguninfo_separate_reload = new ConCommand("ce_mediguninfo_separate_reload", []() { GetModule()->ReloadSettings(); }, "Reload settings for the separated medigun panels from the .res file.", FCVAR_NONE);
+
+	ce_mediguninfo_embedded_enabled = new ConVar("ce_mediguninfo_embedded_enabled", "0", FCVAR_NONE, "Enable medigun panels embedded in specgui player panels.");
+	ce_mediguninfo_embedded_medigun_text = new ConVar("ce_mediguninfo_embedded_medigun_text", "#TF_Weapon_Medigun", FCVAR_NONE, "Text to use for the Medi-Gun for the %medigun% dialog variable on playerpanels.");
+	ce_mediguninfo_embedded_kritzkrieg_text = new ConVar("ce_mediguninfo_embedded_kritzkrieg_text", "#TF_Unique_Achievement_Medigun1", FCVAR_NONE, "Text to use for the Kritzkrieg for the %medigun% dialog variable on playerpanels.");
+	ce_mediguninfo_embedded_quickfix_text = new ConVar("ce_mediguninfo_embedded_quickfix_text", "#TF_Unique_MediGun_QuickFix", FCVAR_NONE, "Text to use for the Quick-Fix for the %medigun% dialog variable on playerpanels.");
+	ce_mediguninfo_embedded_vaccinator_text = new ConVar("ce_mediguninfo_embedded_vaccinator_text", "#TF_Unique_MediGun_Resist", FCVAR_NONE, "Text to use for the Vaccinator for the %medigun% dialog variable on playerpanels.");
+	ce_mediguninfo_embedded_dead_text = new ConVar("ce_mediguninfo_embedded_dead_text", "", FCVAR_NONE, "Text to use for the %medigun% dialog variable on playerpanels when the player is dead.");
 }
 
 bool MedigunInfo::CheckDependencies()
@@ -185,37 +193,46 @@ void MedigunInfo::CollectMedigunData()
 void MedigunInfo::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (inGame && enabled->GetBool())
-	{
-		if (!m_MainPanel)
-		{
-			try
-			{
-				vgui::Panel *viewport = Interfaces::GetClientMode()->GetViewport();
 
-				if (viewport)
-					m_MainPanel.reset(new MainPanel(viewport, "MedigunInfo"));
-				else
+	const bool separateEnabled = ce_mediguninfo_separate_enabled->GetBool();
+	const bool embeddedEnabled = ce_mediguninfo_embedded_enabled->GetBool();
+
+	if (inGame && (separateEnabled || embeddedEnabled))
+	{
+		CollectMedigunData();
+
+		if (separateEnabled)
+		{
+			if (!m_MainPanel)
+			{
+				try
 				{
-					PluginWarning("[%s] Could not get IClientMode viewport to attach main MedigunInfo panel!\n");
+					vgui::Panel *viewport = Interfaces::GetClientMode()->GetViewport();
+
+					if (viewport)
+						m_MainPanel.reset(new MainPanel(viewport, "MedigunInfo"));
+					else
+					{
+						PluginWarning("[%s] Could not get IClientMode viewport to attach main MedigunInfo panel!\n");
+						m_MainPanel.reset();
+					}
+				}
+				catch (bad_pointer)
+				{
+					PluginWarning("Could not initialize main MedigunInfo panel: unable to get IClientMode!\n");
 					m_MainPanel.reset();
 				}
 			}
-			catch (bad_pointer)
+
+			if (m_MainPanel)
 			{
-				PluginWarning("Could not initialize main MedigunInfo panel: unable to get IClientMode!\n");
-				m_MainPanel.reset();
+				if (!m_MainPanel->IsEnabled())
+					m_MainPanel->SetEnabled(true);
 			}
 		}
 
-		if (m_MainPanel)
-		{
-			if (!m_MainPanel->IsEnabled())
-				m_MainPanel->SetEnabled(true);
-		}
-
-		CollectMedigunData();
-		UpdateEmbeddedPanels();
+		if (embeddedEnabled)
+			UpdateEmbeddedPanels();
 	}
 	else if (m_MainPanel)
 		m_MainPanel.reset();
@@ -248,6 +265,32 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 	if (!player)
 		return;
 
+	const auto& foundData = m_MedigunPanelData.find(player->entindex() - 1);
+	const Data* data = foundData != m_MedigunPanelData.end() ? &foundData->second : nullptr;
+	if (data)
+	{
+		const char* medigunString = "UNKNOWN_MEDIGUN";
+		if (data->m_Alive)
+		{
+			switch (data->m_Type)
+			{
+				case TFMedigun::MediGun:    medigunString = ce_mediguninfo_embedded_medigun_text->GetString(); break;
+				case TFMedigun::Kritzkrieg: medigunString = ce_mediguninfo_embedded_kritzkrieg_text->GetString(); break;
+				case TFMedigun::QuickFix:   medigunString = ce_mediguninfo_embedded_quickfix_text->GetString(); break;
+				case TFMedigun::Vaccinator: medigunString = ce_mediguninfo_embedded_vaccinator_text->GetString(); break;
+			}
+		}
+		else
+			medigunString = ce_mediguninfo_embedded_dead_text->GetString();
+
+		auto localized = g_pVGuiLocalize->FindAsUTF8(medigunString);
+		playerPanel->SetDialogVariable("medigun", localized ? localized : medigunString);
+
+		Assert(true);
+	}
+	else
+		playerPanel->SetDialogVariable("medigun", "");
+
 	const auto playerVPanel = playerPanel->GetVPanel();
 	for (int childIndex = 0; childIndex < g_pVGuiPanel->GetChildCount(playerVPanel); childIndex++)
 	{
@@ -265,8 +308,7 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 
 		const auto childPanel = g_pVGuiPanel->GetPanel(childVPanel, "ClientDLL");
 
-		const auto& foundData = m_MedigunPanelData.find(player->entindex() - 1);
-		if (foundData == m_MedigunPanelData.end())
+		if (!data)
 		{
 			childPanel->SetVisible(false);
 			continue;
@@ -278,13 +320,11 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 		if (!isBlueIcon && !isRedIcon)
 			continue;
 
-		const Data& data = foundData->second;
-
 		char materialBuf[128];
-		sprintf_s(materialBuf, "hud/mediguninfo/%s_%s", data.m_Alive ? TF_MEDIGUN_NAMES[(int)data.m_Type] : "dead", TF_TEAM_NAMES[(int)data.m_Team]);
+		sprintf_s(materialBuf, "hud/mediguninfo/%s_%s", data->m_Alive ? TF_MEDIGUN_NAMES[(int)data->m_Type] : "dead", TF_TEAM_NAMES[(int)data->m_Team]);
 
-		if (data.m_Type == TFMedigun::Vaccinator)
-			strcat_s(materialBuf, TF_RESIST_TYPE_NAMES[(int)data.m_ResistType]);
+		if (data->m_Type == TFMedigun::Vaccinator)
+			strcat_s(materialBuf, TF_RESIST_TYPE_NAMES[(int)data->m_ResistType]);
 
 		vgui::ImagePanel* imgPanel = dynamic_cast<vgui::ImagePanel*>(g_pVGuiPanel->GetPanel(childVPanel, "ClientDLL"));
 		Assert(imgPanel);
@@ -297,13 +337,18 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 
 void MedigunInfo::ReloadSettings()
 {
-	if (!enabled->GetBool())
+	if (!ce_mediguninfo_separate_enabled->GetBool())
 	{
-		Warning("%s must be enabled with %s 1 before using %s.\n", GetModuleName(), enabled->GetName(), reload_settings->GetName());
+		Warning("%s must be enabled with %s 1 before using %s.\n", GetModuleName(), ce_mediguninfo_separate_enabled->GetName(), ce_mediguninfo_separate_reload->GetName());
 		return;
 	}
 
-	m_MainPanel->LoadControlSettings("Resource/UI/MedigunInfo.res");
+	if (m_MainPanel)
+		m_MainPanel->LoadControlSettings("Resource/UI/MedigunInfo.res");
+	else
+	{
+		PluginWarning("Failed to LoadControlSettings for separated medigun panel! m_MainPanel was null\n");
+	}
 }
 
 MedigunInfo::MainPanel::MainPanel(vgui::Panel *parent, const char *panelName) : vgui::EditablePanel(parent, panelName)
