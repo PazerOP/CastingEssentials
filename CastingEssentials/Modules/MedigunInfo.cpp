@@ -83,7 +83,7 @@ private:
 
 MedigunInfo::MedigunInfo()
 {
-	ce_mediguninfo_separate_enabled = new ConVar("ce_mediguninfo_enabled", "0", FCVAR_NONE, "Enable separated medigun panels.");
+	ce_mediguninfo_separate_enabled = new ConVar("ce_mediguninfo_separate_enabled", "0", FCVAR_NONE, "Enable separated medigun panels.");
 	ce_mediguninfo_separate_reload = new ConCommand("ce_mediguninfo_separate_reload", []() { GetModule()->ReloadSettings(); }, "Reload settings for the separated medigun panels from the .res file.", FCVAR_NONE);
 
 	ce_mediguninfo_embedded_enabled = new ConVar("ce_mediguninfo_embedded_enabled", "0", FCVAR_NONE, "Enable medigun panels embedded in specgui player panels.");
