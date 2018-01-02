@@ -1,0 +1,8 @@
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/replay/thumbnails/uber"
+	"$translucent" 1
+	"$ignorez" 1
+
+	$color "{188 66 66}"
+}

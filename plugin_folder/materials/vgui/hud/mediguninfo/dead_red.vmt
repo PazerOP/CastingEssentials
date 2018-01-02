@@ -1,0 +1,9 @@
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/replay/thumbnails/deadshield"
+	"$translucent" 1
+	"$ignorez" 1
+
+	$color "{130 130 130}"
+	$alpha 0.88	// 225
+}
