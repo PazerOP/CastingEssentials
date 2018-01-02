@@ -38,20 +38,15 @@ bool Entities::CheckTableBaseclass(RecvTable* sTable, const char* baseclass)
 	if (tName && tName[0] && tName[1] && tName[2] && !strcmp(tName + 3, baseclass))
 		return true;
 
-	// Micro-optimization smh
+	for (int i = 0; i < sTable->GetNumProps(); i++)
 	{
-		RecvProp* sProp;
-		RecvTable* sChildTable;
-		for (int i = 0; i < sTable->GetNumProps(); i++)
-		{
-			sProp = sTable->GetProp(i);
+		const RecvProp& sProp = sTable->m_pProps[i];
 
-			sChildTable = sProp->GetDataTable();
-			if (!sChildTable || strcmp(sProp->GetName(), "baseclass"))
-				continue;
+		RecvTable* sChildTable = sProp.GetDataTable();
+		if (!sChildTable || strcmp(sProp.GetName(), "baseclass"))
+			continue;
 
-			return CheckTableBaseclass(sChildTable, baseclass);
-		}
+		return CheckTableBaseclass(sChildTable, baseclass);
 	}
 
 	return false;

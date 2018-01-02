@@ -9,15 +9,12 @@ class IConVar;
 
 #include <memory>
 
-class Killstreaks : public Module
+class Killstreaks : public Module<Killstreaks>
 {
 public:
 	Killstreaks();
 
 	static bool CheckDependencies();
-
-	static Killstreaks* GetModule() { return Modules().GetModule<Killstreaks>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<Killstreaks>().c_str(); }
 
 private:
 	class Panel;

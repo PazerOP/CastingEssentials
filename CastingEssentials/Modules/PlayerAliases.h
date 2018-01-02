@@ -7,15 +7,13 @@ class IConVar;
 class ConCommand;
 class CCommand;
 
-class PlayerAliases final : public Module
+class PlayerAliases final : public Module<PlayerAliases>
 {
 public:
 	PlayerAliases();
 	virtual ~PlayerAliases() = default;
 
 	static bool CheckDependencies();
-	static PlayerAliases* GetModule() { return Modules().GetModule<PlayerAliases>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<PlayerAliases>().c_str(); }
 
 private:
 	bool GetPlayerInfoOverride(int ent_num, player_info_s* pInfo);

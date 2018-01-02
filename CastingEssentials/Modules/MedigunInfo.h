@@ -15,15 +15,13 @@ namespace vgui
 	class EditablePanel;
 }
 
-class MedigunInfo : public Module
+class MedigunInfo : public Module<MedigunInfo>
 {
 public:
 	MedigunInfo();
 
-	static MedigunInfo* GetModule() { return Modules().GetModule<MedigunInfo>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<MedigunInfo>().c_str(); }
-
 	static bool CheckDependencies();
+
 private:
 	struct Data
 	{

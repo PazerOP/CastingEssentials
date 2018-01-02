@@ -5,13 +5,10 @@ class ConVar;
 class ConCommand;
 class IConVar;
 
-class TeamNames final : public Module
+class TeamNames final : public Module<TeamNames>
 {
 public:
 	TeamNames();
-
-	static TeamNames* GetModule() { return Modules().GetModule<TeamNames>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<TeamNames>().c_str(); }
 
 private:
 

@@ -57,7 +57,7 @@ void ProjectileOutlines::OnTick(bool inGame)
 		{
 			ColorChanged(ce_projectileoutlines_color_blu, "", 0);
 			ColorChanged(ce_projectileoutlines_color_red, "", 0);
-			m_BaseEntityInitHook = GetHooks()->AddHook<C_BaseEntity_Init>(std::bind(&InitDetour, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+			m_BaseEntityInitHook = GetHooks()->AddHook<C_BaseEntity_Init>(std::bind(&ProjectileOutlines::InitDetour, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 			m_Init = true;
 		}
 
@@ -65,10 +65,10 @@ void ProjectileOutlines::OnTick(bool inGame)
 
 		// Remove glows for dead entities
 		{
-			std::vector<EHANDLE> toEraseList;
+			std::vector<int> toEraseList;
 			for (const auto& glow : m_GlowEntities)
 			{
-				if (glow.first.Get())
+				if (EHANDLE::FromIndex(glow.first).Get())
 					continue;
 
 				{
@@ -84,24 +84,25 @@ void ProjectileOutlines::OnTick(bool inGame)
 				m_GlowEntities.erase(toErase);
 		}
 
-		// Add new glows
-		for (int i = Interfaces::GetEngineTool()->GetMaxClients(); i <= clientEntityList->GetHighestEntityIndex(); i++)
+		// Check for new glows
+		for (const auto& newEntIndex : m_NewEntities)
 		{
-			IClientEntity* entity = clientEntityList->GetClientEntity(i);
+			IClientEntity* entity = clientEntityList->GetClientEntity(newEntIndex);
 			if (!entity)
 				continue;
 
-			if (m_GlowEntities.find(CHandle<C_BaseEntity>(entity->GetBaseEntity())) != m_GlowEntities.end())
+			if (m_GlowEntities.find(entity->GetRefEHandle().ToInt()) != m_GlowEntities.end())
 				continue;
 
 			SoldierGlows(entity);
 			DemoGlows(entity);
 		}
+		m_NewEntities.clear();
 
 		// Update glows for existing entities
 		for (const auto& glow : m_GlowEntities)
 		{
-			IClientEntity* baseEntity = glow.first.Get();
+			IClientEntity* baseEntity = EHANDLE::FromIndex(glow.first).Get();
 			if (!baseEntity)
 				continue;
 
@@ -165,11 +166,11 @@ void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!m_RocketsEnabled->GetBool())
 		return;
-	
+
 	if (!Entities::CheckEntityBaseclass(entity, "TFProjectile_Rocket"))
 		return;
 
-	m_GlowEntities.insert(std::make_pair<EHANDLE, EHANDLE>(entity->GetBaseEntity(), CreateGlowForEntity(entity)));
+	m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
 }
 
 void ProjectileOutlines::DemoGlows(IClientEntity* entity)
@@ -186,9 +187,9 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 	const TFGrenadePipebombType type = *Entities::GetEntityProp<TFGrenadePipebombType*>(entity, "m_iType");
 
 	if (pills && type == TFGrenadePipebombType::Pill)
-		m_GlowEntities.insert(std::make_pair<EHANDLE, EHANDLE>(entity->GetBaseEntity(), CreateGlowForEntity(entity)));
+		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
 	else if (stickies && type == TFGrenadePipebombType::Sticky)
-		m_GlowEntities.insert(std::make_pair<EHANDLE, EHANDLE>(entity->GetBaseEntity(), CreateGlowForEntity(entity)));
+		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
 }
 
 bool ProjectileOutlines::InitDetour(C_BaseEntity* pThis, int entnum, int iSerialNum)
@@ -199,6 +200,9 @@ bool ProjectileOutlines::InitDetour(C_BaseEntity* pThis, int entnum, int iSerial
 		return pThis->InitializeAsClientEntity(nullptr, RENDER_GROUP_OTHER);
 	}
 
+	// Potential new entities for glow next OnTick()
+	m_NewEntities.push_back(entnum);
+
 	GetHooks()->SetState<C_BaseEntity_Init>(Hooking::HookAction::IGNORE);
 	return true;
 }
@@ -208,7 +212,7 @@ void ProjectileOutlines::ColorChanged(IConVar* var, const char* oldValue, float 
 	Assert(var);
 	if (!var)
 		return;
-	
+
 	ConVar* convar = dynamic_cast<ConVar*>(var);
 	Assert(cvar);
 	if (!cvar)

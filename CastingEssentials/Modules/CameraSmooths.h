@@ -12,13 +12,10 @@ class ConVar;
 class IConVar;
 class C_BaseEntity;
 
-class CameraSmooths : public Module, public ICameraOverride
+class CameraSmooths : public Module<CameraSmooths>, public ICameraOverride
 {
 public:
 	CameraSmooths();
-
-	static CameraSmooths* GetModule() { return Modules().GetModule<CameraSmooths>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<CameraSmooths>().c_str(); }
 
 	static bool CheckDependencies();
 

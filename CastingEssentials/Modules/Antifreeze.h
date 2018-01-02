@@ -5,15 +5,12 @@ class ConCommand;
 class ConVar;
 class IConVar;
 
-class AntiFreeze : public Module
+class AntiFreeze : public Module<AntiFreeze>
 {
 public:
 	AntiFreeze();
 
 	static bool CheckDependencies();
-
-	static AntiFreeze* GetModule() { return Modules().GetModule<AntiFreeze>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<AntiFreeze>().c_str(); }
 
 private:
 	class Panel;

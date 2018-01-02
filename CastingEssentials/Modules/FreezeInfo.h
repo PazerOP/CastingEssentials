@@ -6,16 +6,13 @@ class ConCommand;
 class ConVar;
 class IConVar;
 
-class FreezeInfo final : public Module
+class FreezeInfo final : public Module<FreezeInfo>
 {
 public:
 	FreezeInfo();
 	~FreezeInfo();
 
 	static bool CheckDependencies();
-
-	static FreezeInfo* GetModule() { return Modules().GetModule<FreezeInfo>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<FreezeInfo>().c_str(); }
 
 private:
 	void OnTick(bool inGame) override;

@@ -327,6 +327,7 @@ public:
 	template<> C_BaseAnimating_InternalDrawModel* GetHook<C_BaseAnimating_InternalDrawModel>() { return &m_Hook_C_BaseAnimating_InternalDrawModel; }
 	template<> C_TFPlayer_DrawModel* GetHook<C_TFPlayer_DrawModel>() { return &m_Hook_C_TFPlayer_DrawModel; }
 	template<> C_BaseEntity_Init* GetHook<C_BaseEntity_Init>() { return &m_Hook_C_BaseEntity_Init; }
+	template<> Global_CreateEntityByName* GetHook<Global_CreateEntityByName>() { return &m_Hook_Global_CreateEntityByName; }
 	template<> Global_GetLocalPlayerIndex* GetHook<Global_GetLocalPlayerIndex>() { return &m_Hook_Global_GetLocalPlayerIndex; }
 	template<> Global_UTILComputeEntityFade* GetHook<Global_UTILComputeEntityFade>() { return &m_Hook_Global_UTILComputeEntityFade; }
 	template<> Global_DrawOpaqueRenderable* GetHook<Global_DrawOpaqueRenderable>() { return &m_Hook_Global_DrawOpaqueRenderable; }
@@ -397,6 +398,7 @@ private:
 
 	C_BaseEntity_Init m_Hook_C_BaseEntity_Init;
 
+	Global_CreateEntityByName m_Hook_Global_CreateEntityByName;
 	Global_GetLocalPlayerIndex m_Hook_Global_GetLocalPlayerIndex;
 	Global_UTILComputeEntityFade m_Hook_Global_UTILComputeEntityFade;
 	Global_DrawOpaqueRenderable m_Hook_Global_DrawOpaqueRenderable;

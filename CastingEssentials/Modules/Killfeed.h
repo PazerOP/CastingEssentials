@@ -5,14 +5,11 @@
 
 class ConVarRef;
 
-class Killfeed final : public Module
+class Killfeed final : public Module<Killfeed>
 {
 public:
 	Killfeed();
 	virtual ~Killfeed() { }
-
-	static Killfeed* GetModule() { return Modules().GetModule<Killfeed>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<Killfeed>().c_str(); }
 
 private:
 	ConVar* ce_killfeed_continuous_update;

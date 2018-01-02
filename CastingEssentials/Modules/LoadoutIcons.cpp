@@ -14,6 +14,8 @@
 #include "vgui_controls/ImagePanel.h"
 #include <vprof.h>
 
+
+
 LoadoutIcons::LoadoutIcons()
 {
 	ce_loadout_enabled = new ConVar("ce_loadout_enabled", "0", FCVAR_NONE, "Enable weapon icons inside player panels in the specgui.");
@@ -141,19 +143,19 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 			return;
 	}
 
+	const int teamIndex = (int)team - (int)TFTeam::Red;
+
 	// Force get the panel even though we're in a different module
 	const auto playerVPANEL = playerPanel->GetVPanel();
 	for (int i = 0; i < g_pVGuiPanel->GetChildCount(playerVPANEL); i++)
 	{
 		auto childVPANEL = g_pVGuiPanel->GetChild(playerVPANEL, i);
 		auto childPanelName = g_pVGuiPanel->GetName(childVPANEL);
+		
 
-		for (uint_fast8_t iconIndex = 0; iconIndex < arraysize(LOADOUT_ICONS); iconIndex++)
+		for (uint_fast8_t iconIndex = 0; iconIndex < ITEM_COUNT; iconIndex++)
 		{
-			char buffer[32];
-			sprintf_s(buffer, "%s%s", LOADOUT_ICONS[iconIndex], TF_TEAM_NAMES[(int)team]);
-
-			if (stricmp(childPanelName, buffer))
+			if (strcmp(childPanelName, LOADOUT_ICONS[iconIndex][teamIndex]))
 				continue;
 
 			auto iconPanel = g_pVGuiPanel->GetPanel(childVPANEL, "ClientDLL");

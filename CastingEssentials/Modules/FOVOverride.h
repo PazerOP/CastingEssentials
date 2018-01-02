@@ -7,15 +7,12 @@
 class ConVar;
 class IConVar;
 
-class FOVOverride : public Module
+class FOVOverride : public Module<FOVOverride>
 {
 public:
 	FOVOverride();
 
 	static bool CheckDependencies();
-
-	static FOVOverride* GetModule() { return Modules().GetModule<FOVOverride>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<FOVOverride>().c_str(); }
 
 private:
 	int inToolModeHook;

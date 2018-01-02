@@ -10,13 +10,10 @@ class ConCommand;
 class KeyValues;
 class C_BaseEntity;
 
-class MapFlythroughs final : public Module
+class MapFlythroughs final : public Module<MapFlythroughs>
 {
 public:
 	MapFlythroughs();
-
-	static MapFlythroughs* GetModule() { return Modules().GetModule<MapFlythroughs>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<MapFlythroughs>().c_str(); }
 
 	void OnTick(bool ingame) override;
 
@@ -88,7 +85,7 @@ private:
 	std::vector<std::shared_ptr<Trigger>> m_Triggers;
 	std::vector<std::string> m_MalformedTriggers;
 	std::shared_ptr<Trigger> FindTrigger(const char* triggerName);
-	
+
 	struct Camera
 	{
 		std::string m_Name;

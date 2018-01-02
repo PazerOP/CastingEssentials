@@ -8,14 +8,13 @@ class IConVar;
 
 #include <memory>
 
-class LocalPlayer : public Module
+class LocalPlayer : public Module<LocalPlayer>
 {
 public:
 	LocalPlayer();
 
 	static bool CheckDependencies();
-	static LocalPlayer* GetModule() { return Modules().GetModule<LocalPlayer>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<LocalPlayer>().c_str(); }
+
 private:
 	int GetLocalPlayerIndexOverride();
 

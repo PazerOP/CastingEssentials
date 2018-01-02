@@ -7,15 +7,13 @@ class ConCommand;
 class ConVar;
 class IConVar;
 
-class ConsoleTools final : public Module
+class ConsoleTools final : public Module<ConsoleTools>
 {
 public:
 	ConsoleTools();
 	virtual ~ConsoleTools();
 
 	static bool CheckDependencies();
-	static ConsoleTools* GetModule() { return Modules().GetModule<ConsoleTools>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<ConsoleTools>().c_str(); }
 
 private:
 	void ConsoleColorPrintfHook(const Color& color, const char* msg);

@@ -290,5 +290,8 @@
     <ClInclude Include="Modules\HUDHacking.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Misc\CRefPtrFix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

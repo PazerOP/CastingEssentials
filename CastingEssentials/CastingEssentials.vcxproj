@@ -52,6 +52,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>_CRT_NO_VA_START_VALIDATION;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(TF_GAME_DIR)\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
@@ -140,6 +141,7 @@
     <ClInclude Include="Hooking\IGroupHook.h" />
     <ClInclude Include="Hooking\TemplateTypedefs.h" />
     <ClInclude Include="Hooking\VariablePusher.h" />
+    <ClInclude Include="Misc\CRefPtrFix.h" />
     <ClInclude Include="Misc\DebugOverlay.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
     <ClInclude Include="Modules\HUDHacking.h" />

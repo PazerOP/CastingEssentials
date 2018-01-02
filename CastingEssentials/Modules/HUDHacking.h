@@ -12,14 +12,11 @@ namespace vgui
 	class ProgressBar;
 }
 
-class HUDHacking : public Module
+class HUDHacking : public Module<HUDHacking>
 {
 public:
 	HUDHacking();
 	~HUDHacking();
-
-	static HUDHacking* GetModule() { return Modules().GetModule<HUDHacking>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<HUDHacking>().c_str(); }
 
 	static bool CheckDependencies();
 

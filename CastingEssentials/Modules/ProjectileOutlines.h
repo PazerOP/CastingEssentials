@@ -4,16 +4,13 @@
 #include <ehandle.h>
 #include <client/c_baseentity.h>
 
-#include <map>
+#include <unordered_map>
 
-class ProjectileOutlines final : public Module
+class ProjectileOutlines final : public Module<ProjectileOutlines>
 {
 public:
 	ProjectileOutlines();
 	~ProjectileOutlines();
-
-	static ProjectileOutlines* GetModule() { return Modules().GetModule<ProjectileOutlines>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<ProjectileOutlines>().c_str(); }
 
 private:
 	ConVar* m_RocketsEnabled;
@@ -34,14 +31,18 @@ private:
 	void DemoGlows(IClientEntity* entity);
 
 	CHandle<C_BaseEntity> CreateGlowForEntity(IClientEntity* ent);
-	std::map<EHANDLE, EHANDLE> m_GlowEntities;
+	std::unordered_map<int, EHANDLE> m_GlowEntities;
 
 	// Some random numbers I generated
 	static constexpr int MAGIC_ENTNUM = 0x141BCF9B;
 	static constexpr int MAGIC_SERIALNUM = 0x0FCAD8B9;
 
 	int m_BaseEntityInitHook;
-	static bool InitDetour(C_BaseEntity* pThis, int entnum, int iSerialNum);
+	bool InitDetour(C_BaseEntity* pThis, int entnum, int iSerialNum);
+
+	// List of entities that had C_BaseEntity::Init() called on them since our last
+	// pass through OnTick()
+	std::vector<int> m_NewEntities;
 
 	bool m_Init;
 	static void ColorChanged(IConVar* var, const char* oldValue, float flOldValue);

@@ -2,7 +2,7 @@
 
 #include "PluginBase/Modules.h"
 
-class MapConfigs final : public Module
+class MapConfigs final : public Module<MapConfigs>
 {
 public:
 	MapConfigs();

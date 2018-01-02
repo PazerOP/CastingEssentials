@@ -26,8 +26,9 @@ void ModuleManager::UnloadAllModules()
 {
 	for (auto iterator = modules.rbegin(); iterator != modules.rend(); iterator++)
 	{
-		iterator->second.reset();
-		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", moduleNames[iterator->first].c_str());
+		iterator->second.m_Module.reset();		// Delete the module
+		*iterator->second.m_Pointer = nullptr;	// Zero out the static pointer to self
+		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", iterator->second.m_Name.c_str());
 	}
 
 	modules.clear();
@@ -37,6 +38,8 @@ void ModuleManager::UnloadAllModules()
 void ModuleManager::Panel::OnTick()
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+
+	static const std::type_index test = typeid(*this);
 
 	const bool inGame = Interfaces::GetEngineClient()->IsInGame();
 	Modules().TickAllModules(inGame);
@@ -48,7 +51,7 @@ void ModuleManager::Panel::OnTick()
 		{
 			m_LastLevelName = levelName;
 			for (const auto& pair : Modules().modules)
-				pair.second->LevelInitPreEntity();
+				pair.second.m_Module->LevelInitPreEntity();
 		}
 	}
 	else
@@ -60,5 +63,5 @@ void ModuleManager::Panel::OnTick()
 void ModuleManager::TickAllModules(bool inGame)
 {
 	for (const auto& pair : modules)
-		pair.second->OnTick(inGame);
+		pair.second.m_Module->OnTick(inGame);
 }

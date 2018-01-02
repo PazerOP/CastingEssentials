@@ -1,5 +1,6 @@
 #include "Graphics.h"
 #include "Controls/StubPanel.h"
+#include "Misc/CRefPtrFix.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Entities.h"
@@ -17,6 +18,7 @@
 #include <model_types.h>
 #include <shaderapi/ishaderapi.h>
 #include <vprof.h>
+#include <materialsystem/ishader.h>
 
 #include <algorithm>
 #include <random>
@@ -37,6 +39,9 @@ Graphics::Graphics()
 	ce_graphics_glow_intensity = new ConVar("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity");
 	ce_graphics_improved_glows = new ConVar("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?");
 	ce_graphics_fix_invisible_players = new ConVar("ce_graphics_fix_invisible_players", "1", FCVAR_NONE, "Fix a case where players are invisible if you're firstperson speccing them when the round starts.");
+	ce_graphics_glow_l4d = new ConVar("ce_graphics_glow_l4d", "0", FCVAR_NONE, "L4D-style outlines");
+
+	ce_graphics_dump_shader_params = new ConCommand("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete);
 
 	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
@@ -61,6 +66,124 @@ Graphics::~Graphics()
 		m_ForcedMaterialOverrideHook = 0;
 
 	Assert(!m_ForcedMaterialOverrideHook);
+}
+
+void Graphics::DumpShaderParams(const CCommand& cmd)
+{
+	const auto shaderCount = materials->ShaderCount();
+	IShader** shaderList = (IShader**)alloca(shaderCount * sizeof(*shaderList));
+	materials->GetShaders(0, shaderCount, shaderList);
+
+	if (cmd.ArgC() < 2)
+	{
+		// Sort shaders alphabetically
+		std::qsort(shaderList, shaderCount, sizeof(*shaderList),
+			[](void const* p1, void const* p2) { return stricmp((*(IShader**)p1)->GetName(), (*(IShader**)p2)->GetName()); });
+
+		Warning("Usage: %s <shader name>\nAvailable shaders:\n", cmd.Arg(0));
+		for (int i = 0; i < shaderCount; i++)
+			Warning("\t%s\n", shaderList[i]->GetName());
+
+		return;
+	}
+
+	// Find the shader
+	for (int i = 0; i < shaderCount; i++)
+	{
+		auto current = shaderList[i];
+		if (stricmp(current->GetName(), cmd.Arg(1)))
+			continue;
+
+		const auto paramCount = current->GetNumParams();
+
+		// Sort parameters alphabetically
+		int* paramOrder;
+		{
+			paramOrder = (int*)alloca(paramCount * sizeof(*paramOrder));
+			for (int p = 0; p < paramCount; p++)
+				paramOrder[p] = p;
+
+			// Shitty thread safety, whatever, this'll never be re-entrant
+			static thread_local IShader* s_Shader = nullptr;
+			s_Shader = current;
+			std::qsort(paramOrder, paramCount, sizeof(*paramOrder),
+				[](void const* p1, void const* p2) { return stricmp(s_Shader->GetParamName(*(int*)p1), s_Shader->GetParamName(*(int*)p2)); });
+		}
+
+		for (int p2 = 0; p2 < paramCount; p2++)
+		{
+			const auto p = paramOrder[p2];
+
+			const char* type;
+			switch (current->GetParamType(p))
+			{
+				case SHADER_PARAM_TYPE_TEXTURE:		type = "Texture";	break;
+				case SHADER_PARAM_TYPE_INTEGER:		type = "Int";		break;
+				case SHADER_PARAM_TYPE_COLOR:		type = "Color";		break;
+				case SHADER_PARAM_TYPE_VEC2:		type = "Vec2";		break;
+				case SHADER_PARAM_TYPE_VEC3:		type = "Vec3";		break;
+				case SHADER_PARAM_TYPE_VEC4:		type = "Vec4";		break;
+				case SHADER_PARAM_TYPE_ENVMAP:		type = "Envmap";	break;
+				case SHADER_PARAM_TYPE_FLOAT:		type = "Float";		break;
+				case SHADER_PARAM_TYPE_BOOL:		type = "Bool";		break;
+				case SHADER_PARAM_TYPE_FOURCC:		type = "FourCC";	break;
+				case SHADER_PARAM_TYPE_MATRIX:		type = "Matrix";	break;
+				case SHADER_PARAM_TYPE_MATRIX4X2:	type = "Matrix4x2";	break;
+				case SHADER_PARAM_TYPE_MATERIAL:	type = "Material";	break;
+				case SHADER_PARAM_TYPE_STRING:		type = "String";	break;
+				default:							type = "UNKNOWN";	break;
+			}
+
+			Msg("\t%s (%s): %s - default \"%s\"\n", current->GetParamName(p), current->GetParamHelp(p), type, current->GetParamDefault(p));
+		}
+
+		return;
+	}
+
+	Warning("No shader found with the name %s\n", cmd.Arg(1));
+}
+
+int Graphics::DumpShaderParamsAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
+{
+	const auto shaderCount = materials->ShaderCount();
+	IShader** shaderList = (IShader**)alloca(shaderCount * sizeof(*shaderList));
+	const auto actualShaderCount = materials->GetShaders(0, shaderCount, shaderList);
+
+	Assert(shaderCount == actualShaderCount);
+
+	const char* const cmdName = partial;
+
+	// Go forward until the second word
+	while (*partial && !isspace(*partial))
+		partial++;
+
+	// Record command length
+	const size_t cmdLength = partial - cmdName;
+
+	while (*partial && isspace(*partial))
+		partial++;
+
+	const auto partialLength = strlen(partial);
+
+	// Sort shaders alphabetically
+	std::qsort(shaderList, shaderCount, sizeof(*shaderList),
+		[](void const* p1, void const* p2) { return stricmp((*(IShader**)p1)->GetName(), (*(IShader**)p2)->GetName()); });
+
+	int outputCount = 0;
+	for (int i = 0; i < shaderCount; i++)
+	{
+		const char* shaderName = shaderList[i]->GetName();
+
+		if (strnicmp(partial, shaderName, partialLength))
+			continue;
+
+		snprintf(commands[outputCount++], COMMAND_COMPLETION_ITEM_LENGTH, "%.*s %s", cmdLength, cmdName, shaderName);
+
+		if (outputCount >= COMMAND_COMPLETION_MAXITEMS)
+			break;
+	}
+
+	return outputCount;
 }
 
 unsigned char Graphics::ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale)
@@ -384,6 +507,8 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 
 	ITexture* const pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
 	ITexture* const pRtFullFrameFB1 = materials->FindTexture("_rt_FullFrameFB1", TEXTURE_GROUP_RENDER_TARGET);
+	ITexture* const pRtSmallFB0 = materials->FindTexture("_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET);
+	ITexture* const pRtSmallFB1 = materials->FindTexture("_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET);
 
 	pRenderContext->PushRenderTargetAndViewport();
 
@@ -409,7 +534,8 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 		const float flOrigBlend = render->GetBlend();
 
 		// Set override material for glow color
-		g_pStudioRender->ForcedMaterialOverride(materials->FindMaterial("dev/glow_color", TEXTURE_GROUP_OTHER, true), OVERRIDE_BUILD_SHADOWS);
+		CRefPtrFix<IMaterial> pGlowColorMaterial(materials->FindMaterial("dev/glow_color", TEXTURE_GROUP_OTHER, true));
+		g_pStudioRender->ForcedMaterialOverride(pGlowColorMaterial);
 		// HACK: Disable IStudioRender::ForcedMaterialOverride so ubers don't change it away from dev/glow_color
 		s_DisableForcedMaterialOverride = true;
 
@@ -454,8 +580,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 #else
 		pRenderContext->SetStencilEnable(false);
 
-		IMaterial* const pFullFrameFB1 = materials->FindMaterial("debug/debugfbtexture1", TEXTURE_GROUP_RENDER_TARGET);
-		pFullFrameFB1->AddRef();
+		CRefPtrFix<IMaterial> pFullFrameFB1(materials->FindMaterial("debug/debugfbtexture1", TEXTURE_GROUP_RENDER_TARGET));
 		pRenderContext->Bind(pFullFrameFB1);
 
 		const int nSrcWidth = pSetup->width;
@@ -471,8 +596,6 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 				pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
 		}
 		pRenderContext->OverrideDepthEnable(false, false);
-
-		pFullFrameFB1->Release();
 #endif
 	}
 
@@ -482,8 +605,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 
 		if (ce_graphics_glow_silhouettes.GetBool())
 		{
-			IMaterial* const fbTexture0Transluscent = materials->FindMaterial("debug/debugfbtexture0_transluscent", TEXTURE_GROUP_RENDER_TARGET);
-			fbTexture0Transluscent->AddRef();
+			CRefPtrFix<IMaterial> fbTexture0Transluscent(materials->FindMaterial("debug/debugfbtexture0_transluscent", TEXTURE_GROUP_RENDER_TARGET));
 			pRenderContext->Bind(fbTexture0Transluscent);
 
 			const int nSrcWidth = pSetup->width;
@@ -499,8 +621,6 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 					pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
 			}
 			pRenderContext->OverrideDepthEnable(false, false);
-
-			fbTexture0Transluscent->Release();
 		}
 		else
 		{
@@ -516,23 +636,105 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 			stencilState.m_ZFailOp = STENCILOPERATION_KEEP;
 			stencilState.SetStencilState(pRenderContext);
 
+			static ConVarRef ce_graphics_glow_l4d("ce_graphics_glow_l4d");
+
 			ITexture* const pRtQuarterSize1 = materials->FindTexture("_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET);
-			IMaterial* const pMatHaloAddToScreen = materials->FindMaterial("dev/halo_add_to_screen", TEXTURE_GROUP_OTHER, true);
-
-			// Write to alpha
-			pRenderContext->OverrideAlphaWriteEnable(true, true);
-
 			const int nSrcWidth = pSetup->width;
 			const int nSrcHeight = pSetup->height;
+
 			int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
 			pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
 
-			// Draw quad
-			pRenderContext->DrawScreenSpaceRectangle(pMatHaloAddToScreen,
-				0, 0, nViewportWidth, nViewportHeight,
-				0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
-				pRtQuarterSize1->GetActualWidth(),
-				pRtQuarterSize1->GetActualHeight());
+			if (ce_graphics_glow_l4d.GetBool())
+			{
+				CRefPtrFix<IMaterial> pMatDownsample(materials->FindMaterial("dev/glow_downsample", TEXTURE_GROUP_OTHER, true));
+				CRefPtrFix<IMaterial> pMatBlurX(materials->FindMaterial("dev/glow_blur_x", TEXTURE_GROUP_OTHER, true));
+				CRefPtrFix<IMaterial> pMatBlurY(materials->FindMaterial("dev/glow_blur_y", TEXTURE_GROUP_OTHER, true));
+
+				ITexture* const pRtQuarterSize0 = materials->FindTexture("_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET);
+
+				//============================================
+				// Downsample _rt_FullFrameFB to _rt_SmallFB0
+				//============================================
+
+				pRenderContext->SetRenderTarget(pRtQuarterSize0);
+
+				// First clear the full target to black if we're not going to touch every pixel
+				if ((pRtQuarterSize0->GetActualWidth() != (pSetup->width / 4)) || (pRtQuarterSize0->GetActualHeight() != (pSetup->height / 4)))
+				{
+					pRenderContext->Viewport(0, 0, pRtQuarterSize0->GetActualWidth(), pRtQuarterSize0->GetActualHeight());
+					pRenderContext->ClearColor3ub(0, 0, 0);
+					pRenderContext->ClearBuffers(true, false, false);
+				}
+
+				// Set the viewport
+				pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
+
+				// Downsample to _rt_SmallFB0
+				pRenderContext->DrawScreenSpaceRectangle(pMatDownsample, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
+					0, 0, nSrcWidth - 4, nSrcHeight - 4,
+					pRtFullFrameFB0->GetActualWidth(), pRtFullFrameFB0->GetActualHeight());
+
+				//============================//
+				// Guassian blur x rt0 to rt1 //
+				//============================//
+				pRenderContext->SetRenderTarget(pRtQuarterSize1);
+
+				// First clear the full target to black if we're not going to touch every pixel
+				if ((pRtQuarterSize1->GetActualWidth() != (pSetup->width / 4)) || (pRtQuarterSize1->GetActualHeight() != (pSetup->height / 4)))
+				{
+					pRenderContext->Viewport(0, 0, pRtQuarterSize1->GetActualWidth(), pRtQuarterSize1->GetActualHeight());
+					pRenderContext->ClearColor3ub(0, 0, 0);
+					pRenderContext->ClearBuffers(true, false, false);
+				}
+
+				// Set the viewport
+				pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
+
+				// Blur X to _rt_SmallFB1
+				pRenderContext->DrawScreenSpaceRectangle(pMatBlurX, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
+					0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
+					pRtQuarterSize0->GetActualWidth(), pRtQuarterSize0->GetActualHeight());
+
+				//============================//
+				// Gaussian blur y rt1 to rt0 //
+				//============================//
+				pRenderContext->SetRenderTarget(pRtQuarterSize0);
+				pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
+				IMaterialVar *pBloomAmountVar = pMatBlurY->FindVar("$bloomamount", NULL);
+				if (pBloomAmountVar)
+					pBloomAmountVar->SetFloatValue(flBloomScale);
+
+				// Blur Y to _rt_SmallFB0
+				pRenderContext->DrawScreenSpaceRectangle(pMatBlurY, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
+					0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
+					pRtQuarterSize1->GetActualWidth(), pRtQuarterSize1->GetActualHeight());
+
+				CRefPtrFix<IMaterial> pSmallFBTexture0Translucent(materials->FindMaterial("debug/debugsmallfbtexture0_translucent", TEXTURE_GROUP_RENDER_TARGET));
+
+				// Draw quad
+				pRenderContext->SetRenderTarget(nullptr);
+				pRenderContext->Viewport(0, 0, pSetup->width, pSetup->height);
+				pRenderContext->DrawScreenSpaceRectangle(pSmallFBTexture0Translucent,
+					0, 0, nViewportWidth, nViewportHeight,
+					0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
+					pRtQuarterSize0->GetActualWidth(),
+					pRtQuarterSize0->GetActualHeight());
+			}
+			else
+			{
+				CRefPtrFix<IMaterial> pMatHaloAddToScreen(materials->FindMaterial("dev/halo_add_to_screen", TEXTURE_GROUP_OTHER, true));
+
+				// Write to alpha
+				pRenderContext->OverrideAlphaWriteEnable(true, true);
+
+				// Draw quad
+				pRenderContext->DrawScreenSpaceRectangle(pMatHaloAddToScreen,
+					0, 0, nViewportWidth, nViewportHeight,
+					0, 0, nSrcWidth - 1, nSrcHeight - 1,
+					pRtFullFrameFB0->GetActualWidth(),
+					pRtFullFrameFB0->GetActualHeight());
+			}
 		}
 	}
 

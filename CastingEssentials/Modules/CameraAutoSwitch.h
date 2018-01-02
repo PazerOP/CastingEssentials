@@ -10,7 +10,7 @@ class ConCommand;
 class ConVar;
 class IConVar;
 
-class CameraAutoSwitch final : public Module, IGameEventListener2
+class CameraAutoSwitch final : public Module<CameraAutoSwitch>, IGameEventListener2
 {
 public:
 	CameraAutoSwitch();

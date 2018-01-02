@@ -281,7 +281,7 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 		const Data& data = foundData->second;
 
 		char materialBuf[128];
-		sprintf_s(materialBuf, "hud/mediguninfo/%s_%s", TF_MEDIGUN_NAMES[(int)data.m_Type], TF_TEAM_NAMES[(int)data.m_Team]);
+		sprintf_s(materialBuf, "hud/mediguninfo/%s_%s", data.m_Alive ? TF_MEDIGUN_NAMES[(int)data.m_Type] : "dead", TF_TEAM_NAMES[(int)data.m_Team]);
 
 		if (data.m_Type == TFMedigun::Vaccinator)
 			strcat_s(materialBuf, TF_RESIST_TYPE_NAMES[(int)data.m_ResistType]);

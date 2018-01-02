@@ -15,14 +15,12 @@ namespace vgui
 	typedef unsigned int VPANEL;
 }
 
-class LoadoutIcons : public Module
+class LoadoutIcons : public Module<LoadoutIcons>
 {
 public:
 	LoadoutIcons();
 
 	static bool CheckDependencies();
-	static LoadoutIcons* GetModule() { return Modules().GetModule<LoadoutIcons>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<LoadoutIcons>().c_str(); }
 
 protected:
 	void OnTick(bool ingame) override;
@@ -50,18 +48,21 @@ private:
 		IDX_4,
 		IDX_5,
 
-		IDX_ACTIVE
+		IDX_ACTIVE,
+
+		ITEM_COUNT,
 	};
 
-	static constexpr const char* LOADOUT_ICONS[] = {
-		"LoadoutIconsItem1",
-		"LoadoutIconsItem2",
-		"LoadoutIconsItem3",
-		"LoadoutIconsItem4",
-		"LoadoutIconsItem5",
-		"LoadoutIconsActiveItem",
+	static constexpr const char* LOADOUT_ICONS[ITEM_COUNT][2] =
+	{
+		{ "LoadoutIconsItem1Red", "LoadoutIconsItem1Blue" },
+		{ "LoadoutIconsItem2Red", "LoadoutIconsItem2Blue" },
+		{ "LoadoutIconsItem3Red", "LoadoutIconsItem3Blue" },
+		{ "LoadoutIconsItem4Red", "LoadoutIconsItem4Blue" },
+		{ "LoadoutIconsItem5Red", "LoadoutIconsItem5Blue" },
+		{ "LoadoutIconsActiveItemRed", "LoadoutIconsActiveItemBlue" },
 	};
 
 	byte m_ActiveWeaponIndices[MAX_PLAYERS];	// Index into m_Weapons
-	int m_Weapons[MAX_PLAYERS][arraysize(LOADOUT_ICONS)];
+	int m_Weapons[MAX_PLAYERS][ITEM_COUNT];
 };

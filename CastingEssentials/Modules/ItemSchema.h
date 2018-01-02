@@ -9,13 +9,10 @@ class ConVar;
 class IConVar;
 class KeyValues;
 
-class ItemSchema : public Module
+class ItemSchema : public Module<ItemSchema>
 {
 public:
 	ItemSchema();
-
-	static ItemSchema* GetModule() { return Modules().GetModule<ItemSchema>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<ItemSchema>().c_str(); }
 
 	static bool CheckDependencies();
 

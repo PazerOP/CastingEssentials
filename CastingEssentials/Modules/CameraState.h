@@ -13,14 +13,11 @@ private:
 	friend class CameraTools;
 };
 
-class CameraState final : public Module, public ICameraState
+class CameraState final : public Module<CameraState>, public ICameraState
 {
 public:
 	CameraState();
-
-	static CameraState* GetModule() { return Modules().GetModule<CameraState>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<CameraState>().c_str(); }
-
+	
 	const Vector& GetLastFramePluginViewOrigin() const { return m_LastFramePluginView.m_Origin; }
 	const QAngle& GetLastFramePluginViewAngles() const { return m_LastFramePluginView.m_Angles; }
 

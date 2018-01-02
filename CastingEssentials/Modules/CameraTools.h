@@ -16,15 +16,13 @@ class C_HLTVCamera;
 class C_BaseEntity;
 class Player;
 
-class CameraTools final : public Module, public ICameraOverride
+class CameraTools final : public Module<CameraTools>, public ICameraOverride
 {
 public:
 	CameraTools();
 	virtual ~CameraTools() = default;
 
 	static bool CheckDependencies();
-	static CameraTools* GetModule() { return Modules().GetModule<CameraTools>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<CameraTools>().c_str(); }
 
 	void SpecPosition(const Vector& pos, const QAngle& angle);
 

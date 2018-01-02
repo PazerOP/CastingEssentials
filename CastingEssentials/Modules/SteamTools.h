@@ -7,15 +7,13 @@
 class ConVar;
 class IConVar;
 
-class SteamTools : public Module
+class SteamTools : public Module<SteamTools>
 {
 public:
 	SteamTools();
 
 	static bool CheckDependencies();
 
-	static SteamTools* GetModule() { return Modules().GetModule<SteamTools>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<SteamTools>().c_str(); }
 private:
 	ConVar *rich_presence_status;
 	void ChangeRichPresenceStatus(IConVar *var, const char *pOldValue, float flOldValue);

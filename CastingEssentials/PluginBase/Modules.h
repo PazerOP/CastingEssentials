@@ -8,10 +8,10 @@
 #include "common.h"
 #include "exceptions.h"
 
-class Module
+class IBaseModule
 {
 public:
-	virtual ~Module() = default;
+	virtual ~IBaseModule() = default;
 
 	static bool CheckDependencies() { return true; }
 
@@ -21,6 +21,21 @@ private:
 	virtual void OnTick(bool inGame) { }
 	virtual void LevelInitPreEntity() { }
 };
+
+template<class T>
+class Module : IBaseModule
+{
+public:
+	static __forceinline T * GetModule() { return s_Module; }
+	static __forceinline const char* GetModuleName() { return Modules().GetModuleName<T>().c_str(); }
+
+private:
+	friend class ModuleManager;
+
+	static T* s_Module;
+};
+
+template<class T> T* Module<T>::s_Module = nullptr;	// Static module pointer variable definition
 
 class ModuleManager final
 {
@@ -38,24 +53,34 @@ private:
 
 	void TickAllModules(bool inGame);
 
-	std::map<std::type_index, std::unique_ptr<Module>> modules;
-	std::map<std::type_index, std::string> moduleNames;
+	struct ModuleData
+	{
+		std::unique_ptr<IBaseModule> m_Module;
+		std::string m_Name;
+		void** m_Pointer;
+	};
+
+	std::map<std::type_index, ModuleData> modules;
 };
 
 template <typename ModuleType> inline ModuleType *ModuleManager::GetModule() const
 {
-	auto found = modules.find(typeid(ModuleType));
+	static const std::type_index s_ThisModuleType = typeid(ModuleType);
+
+	auto found = modules.find(s_ThisModuleType);
 	if (found != modules.end())
-		return static_cast<ModuleType *>(found->second.get());
+		return static_cast<ModuleType *>(found->second.m_Module.get());
 	else
 		throw module_not_loaded(GetModuleName<ModuleType>().c_str());
 }
 
 template <typename ModuleType> inline const std::string& ModuleManager::GetModuleName() const
 {
-	auto found = moduleNames.find(typeid(ModuleType));
-	if (found != moduleNames.end())
-		return found->second;
+	static const std::type_index s_ThisModuleType = typeid(ModuleType);
+
+	auto found = modules.find(s_ThisModuleType);
+	if (found != modules.end())
+		return found->second.m_Name;
 	else
 	{
 		static std::string s_UnknownString = "[Unknown]";
@@ -65,11 +90,15 @@ template <typename ModuleType> inline const std::string& ModuleManager::GetModul
 
 template <typename ModuleType> inline bool ModuleManager::RegisterAndLoadModule(const std::string& moduleName)
 {
-	moduleNames[typeid(ModuleType)] = moduleName;
-
 	if (ModuleType::CheckDependencies())
 	{
-		modules[typeid(ModuleType)].reset(new ModuleType());
+		{
+			ModuleData& data = modules[typeid(ModuleType)];
+			Assert(!data.m_Module);
+			data.m_Module.reset(ModuleType::s_Module = new ModuleType());
+			data.m_Name = moduleName;
+			data.m_Pointer = reinterpret_cast<void**>(&ModuleType::s_Module);
+		}
 
 		PluginColorMsg(Color(0, 255, 0, 255), "Module %s loaded successfully!\n", moduleName.c_str());
 		return true;

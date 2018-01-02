@@ -546,6 +546,7 @@ HookManager::HookManager()
 
 	m_Hook_CGlowObjectManager_ApplyEntityGlowEffects.AttachHook(std::make_shared<CGlowObjectManager_ApplyEntityGlowEffects::Inner>(GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects()));
 
+	m_Hook_Global_CreateEntityByName.AttachHook(std::make_shared<Global_CreateEntityByName::Inner>(GetRawFunc_Global_CreateEntityByName()));
 	m_Hook_Global_GetLocalPlayerIndex.AttachHook(std::make_shared<Global_GetLocalPlayerIndex::Inner>(GetRawFunc_Global_GetLocalPlayerIndex()));
 	m_Hook_Global_UTILComputeEntityFade.AttachHook(std::make_shared<Global_UTILComputeEntityFade::Inner>(GetRawFunc_Global_UTILComputeEntityFade()));
 	m_Hook_Global_DrawOpaqueRenderable.AttachHook(std::make_shared<Global_DrawOpaqueRenderable::Inner>(GetRawFunc_Global_DrawOpaqueRenderable()));

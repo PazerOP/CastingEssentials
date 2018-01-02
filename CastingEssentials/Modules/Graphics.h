@@ -7,15 +7,15 @@ class CGlowObjectManager;
 class CViewSetup;
 class CMatRenderContextPtr;
 class IMaterial;
+class ConCommand;
+class CCommand;
 enum OverrideType_t;
 
-class Graphics final : public Module
+class Graphics final : public Module<Graphics>
 {
 public:
 	Graphics();
 	~Graphics();
-
-	static Graphics* GetModule() { return Modules().GetModule<Graphics>(); }
 
 	ConVar* GetDebugGlowConVar() const { return ce_graphics_debug_glow; }
 
@@ -29,6 +29,12 @@ private:
 	ConVar* ce_graphics_glow_intensity;
 	ConVar* ce_graphics_improved_glows;
 	ConVar* ce_graphics_fix_invisible_players;
+	ConVar* ce_graphics_glow_l4d;
+
+	ConCommand* ce_graphics_dump_shader_params;
+
+	static void DumpShaderParams(const CCommand& cmd);
+	static int DumpShaderParamsAutocomplete(const char *partial, char commands[64][64]);
 
 	int m_ComputeEntityFadeHook;
 	unsigned char ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale);
