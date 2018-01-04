@@ -55,7 +55,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "$(TF_GAME_DIR)\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)plugin_folder\addons\$(TargetFileName)"</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalOptions>/EDITANDCONTINUE %(AdditionalOptions)</AdditionalOptions>
@@ -81,7 +81,7 @@
       <AssemblyDebug>false</AssemblyDebug>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "$(TF_GAME_DIR)\custom\CastingEssentials\addons\$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)plugin_folder\addons\$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
