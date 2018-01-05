@@ -213,7 +213,7 @@ void MedigunInfo::OnTick(bool inGame)
 						m_MainPanel.reset(new MainPanel(viewport, "MedigunInfo"));
 					else
 					{
-						PluginWarning("[%s] Could not get IClientMode viewport to attach main MedigunInfo panel!\n");
+						PluginWarning("Could not get IClientMode viewport to attach main MedigunInfo panel!\n");
 						m_MainPanel.reset();
 					}
 				}
@@ -351,7 +351,7 @@ void MedigunInfo::ReloadSettings()
 	}
 }
 
-MedigunInfo::MainPanel::MainPanel(vgui::Panel *parent, const char *panelName) : vgui::EditablePanel(parent, panelName)
+MedigunInfo::MainPanel::MainPanel(vgui::Panel *parent, const char *panelName) : BaseClass(parent, panelName)
 {
 	LoadControlSettings("Resource/UI/MedigunInfo.res");
 	g_pVGui->AddTickSignal(GetVPanel());
