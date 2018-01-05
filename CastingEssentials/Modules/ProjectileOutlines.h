@@ -2,9 +2,12 @@
 #include "PluginBase/Modules.h"
 
 #include <ehandle.h>
-#include <client/c_baseentity.h>
 
 #include <unordered_map>
+
+class C_BaseEntity;
+class IClientEntity;
+class IConVar;
 
 class ProjectileOutlines final : public Module<ProjectileOutlines>
 {
@@ -31,7 +34,7 @@ private:
 	void DemoGlows(IClientEntity* entity);
 
 	CHandle<C_BaseEntity> CreateGlowForEntity(IClientEntity* ent);
-	std::unordered_map<int, EHANDLE> m_GlowEntities;
+	std::unordered_map<int, CHandle<C_BaseEntity>> m_GlowEntities;
 
 	// Some random numbers I generated
 	static constexpr int MAGIC_ENTNUM = 0x141BCF9B;

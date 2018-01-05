@@ -3,7 +3,7 @@
 #include <ehandle.h>
 #include <vector>
 
-#include "shareddefs.h"
+#include <ehandle.h>
 
 class C_BaseEntity;
 class Player;

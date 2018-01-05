@@ -5,7 +5,6 @@
 #include <string>
 #include <typeindex>
 
-#include "common.h"
 #include "exceptions.h"
 
 class IBaseModule

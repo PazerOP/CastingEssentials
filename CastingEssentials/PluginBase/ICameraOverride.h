@@ -1,5 +1,8 @@
 #pragma once
 
+class Vector;
+class QAngle;
+
 class ICameraOverride
 {
 public:

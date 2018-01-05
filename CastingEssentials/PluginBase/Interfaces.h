@@ -1,7 +1,6 @@
 #pragma once
 
 #include "interface.h"
-#include <memory>
 
 class C_HLTVCamera;
 class HLTVCameraOverride;

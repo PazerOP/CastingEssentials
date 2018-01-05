@@ -1,11 +1,11 @@
 #pragma once
 #include "PluginBase/Modules.h"
 
+#include <convar.h>	// COMMAND_COMPLETION_MAXITEMS/COMMAND_COMPLETION_ITEM_LENGTH
 #include <mathlib/vector.h>
-#include <convar.h>
-
 #include <vector>
 
+class ConVar;
 class ConCommand;
 class KeyValues;
 class C_BaseEntity;

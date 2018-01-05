@@ -4,16 +4,7 @@
 
 #include <mathlib/vector.h>
 
-class ICameraState
-{
-private:
-
-
-	friend class CameraSmooths;
-	friend class CameraTools;
-};
-
-class CameraState final : public Module<CameraState>, public ICameraState
+class CameraState final : public Module<CameraState>
 {
 public:
 	CameraState();

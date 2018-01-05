@@ -4,8 +4,8 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/TFDefinitions.h"
 
-#include <PolyHook.hpp>
-
+#include <client/c_baseentity.h>
+#include <convar.h>
 #include <toolframework/ienginetool.h>
 #include <vprof.h>
 

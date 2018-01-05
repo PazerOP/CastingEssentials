@@ -10,13 +10,6 @@
 
 #pragma once
 
-#include <array>
-#include <map>
-#include <string>
-#include <vector>
-
-#include <mathlib/vector.h>
-
 // taken from SourceMod
 
 enum class TFClassType
@@ -312,12 +305,3 @@ enum class TFGrenadePipebombType
 
 constexpr auto MAX_COSMETIC_SLOTS = 3;
 constexpr auto MAX_TAUNT_SLOTS = 8;
-
-class TFDefinitions
-{
-public:
-	static const std::map<TFClassType, std::string> classNames;
-	static const std::array<std::string, 9> itemSlots;
-	static const std::map<TFClassType, int> normalClassOrdinal;
-	static const std::map<int, std::vector<std::string>> slotKillIcons;
-};

@@ -1,17 +1,17 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/HookManager.h"
 
+#include <bone_setup.h>
 #include <client/c_baseentity.h>
 #include <client/c_baseplayer.h>
-#include <util_shared.h>
-#include <model_types.h>
-
+#include <client/hltvcamera.h>
 #include <engine/IEngineTrace.h>
 #include <engine/ivdebugoverlay.h>
 #include <engine/ivmodelinfo.h>
+#include <model_types.h>
 #include <networkvar.h>
-#include <bone_setup.h>
-#include <client/hltvcamera.h>
+#include <steam/steamclientpublic.h>
+#include <util_shared.h>
 
 ConVar r_visualizetraces("r_visualizetraces", "0", FCVAR_CHEAT);
 

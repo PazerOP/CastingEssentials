@@ -3,8 +3,6 @@
 #include <igameevents.h>
 #include "PluginBase/Modules.h"
 
-#include <memory>
-
 class CCommand;
 class ConCommand;
 class ConVar;

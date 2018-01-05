@@ -6,14 +6,11 @@
 #include "Hooking/GroupGlobalVirtualHook.h"
 #include "PluginBase/Modules.h"
 
-#include <basehandle.h>
-#include <istudiorender.h>
-#include <ivrenderview.h>
-
 #include <memory>
-#include <vector>
 
 class C_HLTVCamera;
+enum ERenderDepthMode : int;
+enum OverrideType_t : int;
 class QAngle;
 class ICvar;
 class C_BaseEntity;

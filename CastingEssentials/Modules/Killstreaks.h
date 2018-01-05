@@ -1,10 +1,8 @@
 #pragma once
 
-class C_BaseEntity;
 class ConVar;
 class IConVar;
 
-#include <ehandle.h>
 #include "PluginBase/Modules.h"
 
 #include <memory>

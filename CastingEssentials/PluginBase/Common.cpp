@@ -5,6 +5,7 @@
 #include <characterset.h>
 #include <cdll_int.h>
 #include <KeyValues.h>
+#include <steam/steamclientpublic.h>
 #include <toolframework/ienginetool.h>
 #include <view_shared.h>
 

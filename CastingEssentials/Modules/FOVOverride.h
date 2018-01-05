@@ -1,11 +1,11 @@
 #pragma once
 
-#include <mathlib/vector.h>
-
 #include "PluginBase/Modules.h"
 
 class ConVar;
 class IConVar;
+class QAngle;
+class Vector;
 
 class FOVOverride : public Module<FOVOverride>
 {

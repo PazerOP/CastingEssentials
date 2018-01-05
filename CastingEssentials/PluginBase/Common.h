@@ -2,7 +2,6 @@
 #include <Color.h>
 #include <dbg.h>
 #include <string>
-#include <steam/steamclientpublic.h>
 #include <mathlib/mathlib.h>
 
 #pragma warning(disable : 4592)		// 'x': symbol will be dynamically initialized (implementation limitation)
@@ -45,9 +44,10 @@ static constexpr const char* s_ShortObserverModes[] =
 
 class CCommand;
 class ConVar;
-class Vector;
-class QAngle;
+class CSteamID;
 class KeyValues;
+class QAngle;
+class Vector;
 
 template<class... Parameters> __forceinline void PluginMsg(const char* fmt, Parameters... param)
 {

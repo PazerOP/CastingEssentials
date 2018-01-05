@@ -2,8 +2,6 @@
 
 #include "PluginBase/Modules.h"
 
-#include "steam/steamclientpublic.h"
-
 class ConVar;
 class IConVar;
 

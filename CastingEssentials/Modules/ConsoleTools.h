@@ -1,6 +1,6 @@
 #pragma once
 #include "PluginBase/Modules.h"
-#include <set>
+#include <unordered_set>
 
 class CCommand;
 class ConCommand;
@@ -25,7 +25,7 @@ private:
 	int m_ConsoleColorPrintfHook;
 	int m_ConsoleDPrintfHook;
 	int m_ConsolePrintfHook;
-	std::set<std::string> m_Filters;
+	std::unordered_set<std::string> m_Filters;
 
 	ConVar* m_FilterEnabled;
 	ConCommand* m_FilterAdd;

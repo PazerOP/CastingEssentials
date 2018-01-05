@@ -4,6 +4,8 @@
 #include <filesystem.h>
 #include <KeyValues.h>
 
+#include <vector>
+
 ItemSchema::ItemSchema()
 {
 	LoadItemSchema();
