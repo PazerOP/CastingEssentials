@@ -68,6 +68,24 @@ Graphics::~Graphics()
 	Assert(!m_ForcedMaterialOverrideHook);
 }
 
+bool Graphics::IsDefaultParam(const char* paramName)
+{
+	return
+		!stricmp(paramName, "$alpha") ||
+		!stricmp(paramName, "$basetexturetransform") ||
+		!stricmp(paramName, "$basetexture") ||
+		!stricmp(paramName, "$color") ||
+		!stricmp(paramName, "$color2") ||
+		!stricmp(paramName, "$flags") ||
+		!stricmp(paramName, "$flags_defined") ||
+		!stricmp(paramName, "$flags2") ||
+		!stricmp(paramName, "$flags_defined2") ||
+		!stricmp(paramName, "$flashlighttexture") ||
+		!stricmp(paramName, "$flashlighttextureframe") ||
+		!stricmp(paramName, "$srgbtint") ||
+		!stricmp(paramName, "$frame");
+}
+
 void Graphics::DumpShaderParams(const CCommand& cmd)
 {
 	const auto shaderCount = materials->ShaderCount();
@@ -134,7 +152,9 @@ void Graphics::DumpShaderParams(const CCommand& cmd)
 				default:							type = "UNKNOWN";	break;
 			}
 
-			Msg("\t%s (%s): %s - default \"%s\"\n", current->GetParamName(p), current->GetParamHelp(p), type, current->GetParamDefault(p));
+			const char* name = current->GetParamName(p);
+			Color clr = IsDefaultParam(name) ? Color(128, 128, 128, 255) : Color(128, 255, 128, 255);
+			ConColorMsg(clr, "\t%s (%s): %s - default \"%s\"\n", name, current->GetParamHelp(p), type, current->GetParamDefault(p));
 		}
 
 		return;
@@ -287,10 +307,8 @@ static void BuildMoveChildMap()
 	}
 }
 
-bool g_RenderingGlowModel;
 void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 {
-	g_RenderingGlowModel = true;
 	C_BaseEntity* const ent = m_hEntity.Get();
 	if (ent)
 	{
@@ -316,7 +334,6 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 			pAttachment = pAttachment->NextMovePeer();
 		}
 	}
-	g_RenderingGlowModel = false;
 }
 
 static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
@@ -479,11 +496,6 @@ static void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_
 	}
 }
 
-static ConVar rectsrc_x("rectsrc_x", "0");
-static ConVar rectsrc_y("rectsrc_y", "0");
-static ConVar rectdst_x("rectdst_x", "0");
-static ConVar rectdst_y("rectdst_y", "0");
-
 void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int nSplitScreenSlot, CMatRenderContextPtr & pRenderContext, float flBloomScale, int x, int y, int w, int h)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
@@ -516,6 +528,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 	ITexture* const pRtSmallFB1 = materials->FindTexture("_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET);
 
 	pRenderContext->PushRenderTargetAndViewport();
+	pRenderContext->SetToneMappingScaleLinear(Vector(1, 1, 1));
 
 	// Set backbuffer + hardware depth as MRT 0. We CANNOT CHANGE RENDER TARGETS after this point!!!
 	// In CShaderAPIDx8::CreateDepthTexture all depth+stencil buffers are created with the "discard"

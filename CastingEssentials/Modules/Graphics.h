@@ -33,6 +33,7 @@ private:
 
 	ConCommand* ce_graphics_dump_shader_params;
 
+	static bool IsDefaultParam(const char* paramName);
 	static void DumpShaderParams(const CCommand& cmd);
 	static int DumpShaderParamsAutocomplete(const char *partial, char commands[64][64]);
 
