@@ -479,6 +479,11 @@ static void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_
 	}
 }
 
+static ConVar rectsrc_x("rectsrc_x", "0");
+static ConVar rectsrc_y("rectsrc_y", "0");
+static ConVar rectdst_x("rectdst_x", "0");
+static ConVar rectdst_y("rectdst_y", "0");
+
 void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int nSplitScreenSlot, CMatRenderContextPtr & pRenderContext, float flBloomScale, int x, int y, int w, int h)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
@@ -573,24 +578,31 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 	// Copy MSAA'd glow models to _rt_FullFrameFB0
 	pRenderContext->CopyRenderTargetToTexture(pRtFullFrameFB0);
 
+	const int nSrcWidth = pSetup->width;
+	const int nSrcHeight = pSetup->height;
+	int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
+	pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
+
 	// Move original contents of the backbuffer from _rt_FullFrameFB1 to the backbuffer
 	{
 #if FIXED_COPY_TEXTURE_TO_RENDER_TARGET	// Coordinates don't seem to be mapped 1:1 properly, screen becomes slightly blurry
-		pRenderContext->CopyTextureToRenderTargetEx(0, pRtFullFrameFB1, nullptr);
+		Rect_t srcRect, dstRect;
+		srcRect.width = dstRect.width = nSrcWidth;
+		srcRect.height = dstRect.height = nSrcHeight;
+		srcRect.x = rectsrc_x.GetFloat();
+		srcRect.y = rectsrc_y.GetFloat();
+		dstRect.x = rectdst_x.GetFloat();
+		dstRect.y = rectdst_y.GetFloat();
+		pRenderContext->CopyTextureToRenderTargetEx(0, pRtFullFrameFB1, &srcRect, &dstRect);
 #else
 		pRenderContext->SetStencilEnable(false);
 
-		CRefPtrFix<IMaterial> pFullFrameFB1(materials->FindMaterial("debug/debugfbtexture1", TEXTURE_GROUP_RENDER_TARGET));
-		pRenderContext->Bind(pFullFrameFB1);
-
-		const int nSrcWidth = pSetup->width;
-		const int nSrcHeight = pSetup->height;
-		int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
-		pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
+		CRefPtrFix<IMaterial> backbufferReloadMaterial(materials->FindMaterial("castingessentials/outlines/backbuffer_reload_from_fb1", TEXTURE_GROUP_RENDER_TARGET));
+		pRenderContext->Bind(backbufferReloadMaterial);
 
 		pRenderContext->OverrideDepthEnable(true, false);
 		{
-			pRenderContext->DrawScreenSpaceRectangle(pFullFrameFB1,
+			pRenderContext->DrawScreenSpaceRectangle(backbufferReloadMaterial,
 				0, 0, nViewportWidth, nViewportHeight,
 				0, 0, nSrcWidth - 1, nSrcHeight - 1,
 				pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
@@ -605,17 +617,12 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 
 		if (ce_graphics_glow_silhouettes.GetBool())
 		{
-			CRefPtrFix<IMaterial> fbTexture0Transluscent(materials->FindMaterial("debug/debugfbtexture0_transluscent", TEXTURE_GROUP_RENDER_TARGET));
-			pRenderContext->Bind(fbTexture0Transluscent);
-
-			const int nSrcWidth = pSetup->width;
-			const int nSrcHeight = pSetup->height;
-			int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
-			pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
+			CRefPtrFix<IMaterial> finalBlendMaterial(materials->FindMaterial("castingessentials/outlines/final_blend", TEXTURE_GROUP_RENDER_TARGET));
+			pRenderContext->Bind(finalBlendMaterial);
 
 			pRenderContext->OverrideDepthEnable(true, false);
 			{
-				pRenderContext->DrawScreenSpaceRectangle(fbTexture0Transluscent,
+				pRenderContext->DrawScreenSpaceRectangle(finalBlendMaterial,
 					0, 0, nViewportWidth, nViewportHeight,
 					0, 0, nSrcWidth - 1, nSrcHeight - 1,
 					pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
@@ -639,11 +646,6 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 			static ConVarRef ce_graphics_glow_l4d("ce_graphics_glow_l4d");
 
 			ITexture* const pRtQuarterSize1 = materials->FindTexture("_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET);
-			const int nSrcWidth = pSetup->width;
-			const int nSrcHeight = pSetup->height;
-
-			int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
-			pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
 
 			if (ce_graphics_glow_l4d.GetBool())
 			{
@@ -710,12 +712,12 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 					0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
 					pRtQuarterSize1->GetActualWidth(), pRtQuarterSize1->GetActualHeight());
 
-				CRefPtrFix<IMaterial> pSmallFBTexture0Translucent(materials->FindMaterial("debug/debugsmallfbtexture0_translucent", TEXTURE_GROUP_RENDER_TARGET));
+				CRefPtrFix<IMaterial> finalBlendL4D(materials->FindMaterial("castingessentials/outlines/final_blend_l4d", TEXTURE_GROUP_RENDER_TARGET));
 
 				// Draw quad
 				pRenderContext->SetRenderTarget(nullptr);
 				pRenderContext->Viewport(0, 0, pSetup->width, pSetup->height);
-				pRenderContext->DrawScreenSpaceRectangle(pSmallFBTexture0Translucent,
+				pRenderContext->DrawScreenSpaceRectangle(finalBlendL4D,
 					0, 0, nViewportWidth, nViewportHeight,
 					0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
 					pRtQuarterSize0->GetActualWidth(),
