@@ -116,6 +116,7 @@
     <ClCompile Include="Modules\FreezeInfo.cpp" />
     <ClCompile Include="Modules\SteamTools.cpp" />
     <ClCompile Include="Modules\TeamNames.cpp" />
+    <ClCompile Include="Modules\IngameTeamScores.cpp" />
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
     <ClCompile Include="PluginBase\Common.cpp" />
     <ClCompile Include="PluginBase\Entities.cpp" />
@@ -125,6 +126,7 @@
     <ClCompile Include="PluginBase\Player.cpp" />
     <ClCompile Include="Controls\StubPanel.cpp" />
     <ClCompile Include="PluginBase\TFPlayerResource.cpp" />
+    <ClCompile Include="PluginBase\TFTeamResource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Controls\ImageProgressBar.h" />
@@ -166,6 +168,7 @@
     <ClInclude Include="Modules\ProjectileOutlines.h" />
     <ClInclude Include="Modules\SteamTools.h" />
     <ClInclude Include="Modules\TeamNames.h" />
+    <ClInclude Include="Modules\IngameTeamScores.h" />
     <ClInclude Include="PluginBase\Common.h" />
     <ClInclude Include="PluginBase\Entities.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />
@@ -178,6 +181,7 @@
     <ClInclude Include="PluginBase\Modules.h" />
     <ClInclude Include="PluginBase\Plugin.h" />
     <ClInclude Include="PluginBase\TFPlayerResource.h" />
+    <ClInclude Include="PluginBase\TFTeamResource.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

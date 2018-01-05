@@ -8,12 +8,15 @@ inline void FindAndReplaceInString(std::string &str, const std::string &find, co
 	if (find.empty())
 		return;
 
-	size_t start_pos = 0;
+	const char* findstr = find.c_str();
+	const char* found = nullptr;
+	const char* base = str.c_str();
 
-	while ((start_pos = str.find(find, start_pos)) != std::string::npos)
+	while ((found = stristr(base, findstr)) != nullptr)
 	{
-		str.replace(start_pos, find.length(), replace);
-		start_pos += replace.length();
+		const auto offset = found - base;
+		str.replace(offset, find.length(), replace);
+		base = str.c_str() + offset + find.length();	// In case we get reallocated
 	}
 }
 
