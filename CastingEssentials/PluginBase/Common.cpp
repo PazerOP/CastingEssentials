@@ -40,15 +40,35 @@ void SwapConVars(ConVar& var1, ConVar& var2)
 	var2.SetValue(value1.c_str());
 }
 
-Color ConVarGetColor(const ConVar& var)
+Color ColorFromConVar(const ConVar& var, bool* success)
 {
-	byte r, g, b, a;
-	int parsed = sscanf_s(var.GetString(), "%hhu %hhu %hhu %hhu", &r, &g, &b, &a);
+	return ColorFromString(var.GetString(), success);
+}
+
+Color ColorFromString(const char* str, bool* success)
+{
+	uint8_t r, g, b, a = 255;
+	const auto parsed = sscanf_s(str, "%hhu %hhu %hhu %hhu", &r, &g, &b, &a);
 
 	if (parsed == 3 || parsed == 4)
+	{
+		if (success)
+			*success = true;
+
 		return Color(r, g, b, a);
+	}
 	else
+	{
+		if (success)
+			*success = false;
+
 		return Color(255, 255, 255, 255);
+	}
+}
+
+Vector ColorToVector(const Color& color)
+{
+	return Vector(color.r() / 255.0f, color.g() / 255.0f, color.b() / 255.0f);
 }
 
 bool ParseFloat3(const char* str, float& f1, float& f2, float& f3)

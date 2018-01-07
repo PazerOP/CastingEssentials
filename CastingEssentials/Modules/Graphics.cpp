@@ -5,12 +5,11 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Entities.h"
 #include "PluginBase/Player.h"
+#include "PluginBase/TFDefinitions.h"
 
 #include <convar.h>
 #include <debugoverlay_shared.h>
 
-#define GLOWS_ENABLE
-#include <client/glow_outline_effect.h>
 #include <view_shared.h>
 #include <materialsystem/itexture.h>
 #include <materialsystem/imaterial.h>
@@ -26,6 +25,8 @@
 #undef min
 #undef max
 
+static constexpr auto STENCIL_INDEX_MASK = 0xFC;
+
 static CGlowObjectManager* s_LocalGlowObjectManager;
 
 // Should we use a hook to disable IStudioRender::ForcedMaterialOverride?
@@ -40,6 +41,11 @@ Graphics::Graphics()
 	ce_graphics_improved_glows = new ConVar("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?");
 	ce_graphics_fix_invisible_players = new ConVar("ce_graphics_fix_invisible_players", "1", FCVAR_NONE, "Fix a case where players are invisible if you're firstperson speccing them when the round starts.");
 	ce_graphics_glow_l4d = new ConVar("ce_graphics_glow_l4d", "0", FCVAR_NONE, "L4D-style outlines");
+
+	ce_outlines_debug_stencil_out = new ConVar("ce_outlines_debug_stencil_out", "1", FCVAR_NONE, "Should we stencil out the players during the final blend to screen?");
+	ce_outlines_players_override_red = new ConVar("ce_outlines_players_override_red", "", FCVAR_NONE, "Override color for red players. [0, 255], format is \"<red> <green> <blue>\".");
+	ce_outlines_players_override_blue = new ConVar("ce_outlines_players_override_blue", "", FCVAR_NONE, "Override color for blue players. [0, 255], format is \"<red> <green> <blue>\".");
+	ce_outlines_additive = new ConVar("ce_outlines_additive", "1", FCVAR_NONE, "If set to 1, outlines will add to underlying colors rather than replace them.");
 
 	ce_graphics_dump_shader_params = new ConCommand("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete);
 
@@ -190,6 +196,9 @@ int Graphics::DumpShaderParamsAutocomplete(const char *partial, char commands[CO
 		[](void const* p1, void const* p2) { return stricmp((*(IShader**)p1)->GetName(), (*(IShader**)p2)->GetName()); });
 
 	int outputCount = 0;
+	int outputIndices[COMMAND_COMPLETION_MAXITEMS];
+
+	// Search starting from the beginning of the string
 	for (int i = 0; i < shaderCount; i++)
 	{
 		const char* shaderName = shaderList[i]->GetName();
@@ -197,10 +206,31 @@ int Graphics::DumpShaderParamsAutocomplete(const char *partial, char commands[CO
 		if (strnicmp(partial, shaderName, partialLength))
 			continue;
 
-		snprintf(commands[outputCount++], COMMAND_COMPLETION_ITEM_LENGTH, "%.*s %s", cmdLength, cmdName, shaderName);
+		snprintf(commands[outputCount], COMMAND_COMPLETION_ITEM_LENGTH, "%.*s %s", cmdLength, cmdName, shaderName);
+		outputIndices[outputCount] = i;
+		outputCount++;
 
 		if (outputCount >= COMMAND_COMPLETION_MAXITEMS)
 			break;
+	}
+
+	const auto firstLoopOutputsEnd = std::begin(outputIndices) + outputCount;
+
+	// Now search anywhere in the string
+	for (int i = 0; i < shaderCount; i++)
+	{
+		if (outputCount >= COMMAND_COMPLETION_MAXITEMS)
+			break;
+
+		if (std::find(std::begin(outputIndices), firstLoopOutputsEnd, i) != firstLoopOutputsEnd)
+			continue;
+
+		const char* shaderName = shaderList[i]->GetName();
+		if (!stristr(shaderName, partial))
+			continue;
+
+		snprintf(commands[outputCount], COMMAND_COMPLETION_ITEM_LENGTH, "%.*s %s", cmdLength, cmdName, shaderName);
+		outputCount++;
 	}
 
 	return outputCount;
@@ -242,6 +272,43 @@ void Graphics::ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_
 	else
 	{
 		GetHooks()->SetState<IStudioRender_ForcedMaterialOverride>(Hooking::HookAction::IGNORE);
+	}
+}
+
+void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
+{
+	m_ExtraGlowData.clear();
+
+	bool hasRedOverride, hasBlueOverride;
+	Vector redOverride = ColorToVector(ColorFromConVar(*ce_outlines_players_override_red, &hasRedOverride)) * ce_graphics_glow_intensity->GetFloat();
+	Vector blueOverride = ColorToVector(ColorFromConVar(*ce_outlines_players_override_blue, &hasBlueOverride)) * ce_graphics_glow_intensity->GetFloat();
+
+	for (int i = 0; i < glowMgr->m_GlowObjectDefinitions.Count(); i++)
+	{
+		const auto& current = glowMgr->m_GlowObjectDefinitions[i];
+
+		m_ExtraGlowData.emplace_back();
+		auto& currentExtra = m_ExtraGlowData.back();
+
+		if ((hasRedOverride || hasBlueOverride) && Player::IsValidIndex(current.m_hEntity.GetEntryIndex()))
+		{
+			auto player = Player::GetPlayer(current.m_hEntity.GetEntryIndex(), __FUNCTION__);
+			if (player)
+			{
+				auto team = player->GetTeam();
+
+				if (hasRedOverride && team == TFTeam::Red)
+				{
+					currentExtra.m_GlowColorOverride = redOverride;
+					currentExtra.m_ShouldOverrideGlowColor = true;
+				}
+				else if (hasBlueOverride && team == TFTeam::Blue)
+				{
+					currentExtra.m_GlowColorOverride = blueOverride;
+					currentExtra.m_ShouldOverrideGlowColor = true;
+				}
+			}
+		}
 	}
 }
 
@@ -336,8 +403,8 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 	}
 }
 
-static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
-	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext)
+void Graphics::DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
+	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	ShaderStencilState_t stencilState;
@@ -357,9 +424,15 @@ static void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || !current.m_bRenderWhenUnoccluded)
 			continue;
 
-		static ConVarRef ce_graphics_glow_intensity("ce_graphics_glow_intensity");
-		const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
-		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
+		const auto& extra = m_ExtraGlowData[i];
+
+		if (extra.m_ShouldOverrideGlowColor)
+			render->SetColorModulation(extra.m_GlowColorOverride.Base());
+		else
+		{
+			const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
+			render->SetColorModulation(vGlowColor.Base());
+		}
 
 		current.DrawModel();
 	}
@@ -370,8 +443,8 @@ static ConVar glow_outline_effect_stencil_mode("glow_outline_effect_stencil_mode
 	"\n\t1: Draws partially occluded glows in a more 2d-esque way, which can make them more visible.",
 	true, 0, true, 1);
 
-static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
-	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext)
+void Graphics::DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
+	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 #if ADDED_OVERRIDE_DEPTH_FUNC	// Enable this when the TF2 team has added IMatRenderContext::OverrideDepthFunc or similar.
@@ -457,17 +530,23 @@ static void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || current.m_bRenderWhenUnoccluded)
 			continue;
 
-		static ConVarRef ce_graphics_glow_intensity("ce_graphics_glow_intensity");
-		const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
-		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
+		const auto& extra = m_ExtraGlowData[i];
+
+		if (extra.m_ShouldOverrideGlowColor)
+			render->SetColorModulation(extra.m_GlowColorOverride.Base());
+		else
+		{
+			const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
+			render->SetColorModulation(vGlowColor.Base());
+		}
 
 		current.DrawModel();
 	}
 #endif
 }
 
-static void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
-	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext)
+void Graphics::DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
+	int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	ShaderStencilState_t stencilState;
@@ -488,9 +567,15 @@ static void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_
 		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || current.m_bRenderWhenOccluded || !current.m_bRenderWhenUnoccluded)
 			continue;
 
-		static ConVarRef ce_graphics_glow_intensity("ce_graphics_glow_intensity");
-		const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
-		render->SetColorModulation(vGlowColor.Base()); // This only sets rgb, not alpha
+		const auto& extra = m_ExtraGlowData[i];
+
+		if (extra.m_ShouldOverrideGlowColor)
+			render->SetColorModulation(extra.m_GlowColorOverride.Base());
+		else
+		{
+			const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
+			render->SetColorModulation(vGlowColor.Base());
+		}
 
 		current.DrawModel();
 	}
@@ -515,12 +600,16 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 			anyGlowAlways = anyGlowAlways || current.m_bRenderWhenOccluded && current.m_bRenderWhenUnoccluded;
 			anyGlowOccluded = anyGlowOccluded || current.m_bRenderWhenOccluded && !current.m_bRenderWhenUnoccluded;
 			anyGlowVisible = anyGlowVisible || !current.m_bRenderWhenOccluded && current.m_bRenderWhenUnoccluded;
-			break;
+
+			if (anyGlowAlways && anyGlowOccluded && anyGlowVisible)
+				break;
 		}
 
 		if (!anyGlowAlways && !anyGlowOccluded && !anyGlowVisible)
 			return;	// Early out
 	}
+
+	auto const graphicsModule = Graphics::GetModule();
 
 	ITexture* const pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
 	ITexture* const pRtFullFrameFB1 = materials->FindTexture("_rt_FullFrameFB1", TEXTURE_GROUP_RENDER_TARGET);
@@ -552,7 +641,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 		const float flOrigBlend = render->GetBlend();
 
 		// Set override material for glow color
-		CRefPtrFix<IMaterial> pGlowColorMaterial(materials->FindMaterial("dev/glow_color", TEXTURE_GROUP_OTHER, true));
+		CRefPtrFix<IMaterial> pGlowColorMaterial(materials->FindMaterial("castingessentials/outlines/color_override_material", TEXTURE_GROUP_OTHER, true));
 		g_pStudioRender->ForcedMaterialOverride(pGlowColorMaterial);
 		// HACK: Disable IStudioRender::ForcedMaterialOverride so ubers don't change it away from dev/glow_color
 		s_DisableForcedMaterialOverride = true;
@@ -563,17 +652,20 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 		// Build ourselves a map of move children
 		BuildMoveChildMap();
 
+		// Collect extra glow data we'll use in multiple upcoming loops
+		graphicsModule->BuildExtraGlowData(this);
+
 		// Draw "glow when visible" objects
 		if (anyGlowVisible)
-			DrawGlowVisible(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
+			graphicsModule->DrawGlowVisible(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
 
 		// Draw "glow when occluded" objects
 		if (anyGlowOccluded)
-			DrawGlowOccluded(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
+			graphicsModule->DrawGlowOccluded(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
 
 		// Draw "glow always" objects
 		if (anyGlowAlways)
-			DrawGlowAlways(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
+			graphicsModule->DrawGlowAlways(m_GlowObjectDefinitions, nSplitScreenSlot, pRenderContext);
 
 		// Re-enable IStudioRender::ForcedMaterialOverride
 		s_DisableForcedMaterialOverride = false;
@@ -599,14 +691,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 	// Move original contents of the backbuffer from _rt_FullFrameFB1 to the backbuffer
 	{
 #if FIXED_COPY_TEXTURE_TO_RENDER_TARGET	// Coordinates don't seem to be mapped 1:1 properly, screen becomes slightly blurry
-		Rect_t srcRect, dstRect;
-		srcRect.width = dstRect.width = nSrcWidth;
-		srcRect.height = dstRect.height = nSrcHeight;
-		srcRect.x = rectsrc_x.GetFloat();
-		srcRect.y = rectsrc_y.GetFloat();
-		dstRect.x = rectdst_x.GetFloat();
-		dstRect.y = rectdst_y.GetFloat();
-		pRenderContext->CopyTextureToRenderTargetEx(0, pRtFullFrameFB1, &srcRect, &dstRect);
+		pRenderContext->CopyTextureToRenderTargetEx(0, pRtFullFrameFB1, nullptr);
 #else
 		pRenderContext->SetStencilEnable(false);
 
@@ -626,9 +711,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 
 	// Bloom glow models from _rt_FullFrameFB0 to backbuffer while stenciling out inside of models
 	{
-		static ConVarRef ce_graphics_glow_silhouettes("ce_graphics_glow_silhouettes");
-
-		if (ce_graphics_glow_silhouettes.GetBool())
+		if (graphicsModule->ce_graphics_glow_silhouettes->GetBool())
 		{
 			CRefPtrFix<IMaterial> finalBlendMaterial(materials->FindMaterial("castingessentials/outlines/final_blend", TEXTURE_GROUP_RENDER_TARGET));
 			pRenderContext->Bind(finalBlendMaterial);
@@ -646,7 +729,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 		{
 			// Set stencil state
 			ShaderStencilState_t stencilState;
-			stencilState.m_bEnable = true;
+			stencilState.m_bEnable = graphicsModule->ce_outlines_debug_stencil_out->GetBool();
 			stencilState.m_nWriteMask = 0; // We're not changing stencil
 			stencilState.m_nReferenceValue = 1;
 			stencilState.m_nTestMask = 1;
@@ -656,85 +739,111 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup * pSetup, int n
 			stencilState.m_ZFailOp = STENCILOPERATION_KEEP;
 			stencilState.SetStencilState(pRenderContext);
 
-			static ConVarRef ce_graphics_glow_l4d("ce_graphics_glow_l4d");
-
 			ITexture* const pRtQuarterSize1 = materials->FindTexture("_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET);
 
-			if (ce_graphics_glow_l4d.GetBool())
+			if (graphicsModule->ce_graphics_glow_l4d->GetBool())
 			{
-				CRefPtrFix<IMaterial> pMatDownsample(materials->FindMaterial("dev/glow_downsample", TEXTURE_GROUP_OTHER, true));
-				CRefPtrFix<IMaterial> pMatBlurX(materials->FindMaterial("dev/glow_blur_x", TEXTURE_GROUP_OTHER, true));
-				CRefPtrFix<IMaterial> pMatBlurY(materials->FindMaterial("dev/glow_blur_y", TEXTURE_GROUP_OTHER, true));
-
 				ITexture* const pRtQuarterSize0 = materials->FindTexture("_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET);
 
 				//============================================
 				// Downsample _rt_FullFrameFB to _rt_SmallFB0
 				//============================================
-
-				pRenderContext->SetRenderTarget(pRtQuarterSize0);
-
-				// First clear the full target to black if we're not going to touch every pixel
-				if ((pRtQuarterSize0->GetActualWidth() != (pSetup->width / 4)) || (pRtQuarterSize0->GetActualHeight() != (pSetup->height / 4)))
 				{
-					pRenderContext->Viewport(0, 0, pRtQuarterSize0->GetActualWidth(), pRtQuarterSize0->GetActualHeight());
-					pRenderContext->ClearColor3ub(0, 0, 0);
-					pRenderContext->ClearBuffers(true, false, false);
+					CRefPtrFix<IMaterial> pMatDownsample(materials->FindMaterial("castingessentials/outlines/l4d_downsample", TEXTURE_GROUP_OTHER, true));
+					pRenderContext->SetRenderTarget(pRtQuarterSize0);
+
+					// First clear the full target to black if we're not going to touch every pixel
+					if ((pRtQuarterSize0->GetActualWidth() != (pSetup->width / 4)) || (pRtQuarterSize0->GetActualHeight() != (pSetup->height / 4)))
+					{
+						pRenderContext->Viewport(0, 0, pRtQuarterSize0->GetActualWidth(), pRtQuarterSize0->GetActualHeight());
+						pRenderContext->ClearColor3ub(0, 0, 0);
+						pRenderContext->ClearBuffers(true, false, false);
+					}
+
+					// Set the viewport
+					pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
+
+					// Downsample to _rt_SmallFB0
+					pRenderContext->DrawScreenSpaceRectangle(pMatDownsample, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
+						0, 0, nSrcWidth - 4, nSrcHeight - 4,
+						pRtFullFrameFB0->GetActualWidth(), pRtFullFrameFB0->GetActualHeight());
 				}
-
-				// Set the viewport
-				pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
-
-				// Downsample to _rt_SmallFB0
-				pRenderContext->DrawScreenSpaceRectangle(pMatDownsample, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
-					0, 0, nSrcWidth - 4, nSrcHeight - 4,
-					pRtFullFrameFB0->GetActualWidth(), pRtFullFrameFB0->GetActualHeight());
 
 				//============================//
 				// Guassian blur x rt0 to rt1 //
 				//============================//
-				pRenderContext->SetRenderTarget(pRtQuarterSize1);
-
-				// First clear the full target to black if we're not going to touch every pixel
-				if ((pRtQuarterSize1->GetActualWidth() != (pSetup->width / 4)) || (pRtQuarterSize1->GetActualHeight() != (pSetup->height / 4)))
 				{
-					pRenderContext->Viewport(0, 0, pRtQuarterSize1->GetActualWidth(), pRtQuarterSize1->GetActualHeight());
-					pRenderContext->ClearColor3ub(0, 0, 0);
-					pRenderContext->ClearBuffers(true, false, false);
+					CRefPtrFix<IMaterial> pMatBlurX(materials->FindMaterial("castingessentials/outlines/l4d_blur_x", TEXTURE_GROUP_OTHER, true));
+					pRenderContext->SetRenderTarget(pRtQuarterSize1);
+
+					// First clear the full target to black if we're not going to touch every pixel
+					if ((pRtQuarterSize1->GetActualWidth() != (pSetup->width / 4)) || (pRtQuarterSize1->GetActualHeight() != (pSetup->height / 4)))
+					{
+						pRenderContext->Viewport(0, 0, pRtQuarterSize1->GetActualWidth(), pRtQuarterSize1->GetActualHeight());
+						pRenderContext->ClearColor3ub(0, 0, 0);
+						pRenderContext->ClearBuffers(true, false, false);
+					}
+
+					// Set the viewport
+					pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
+
+					// Blur X to _rt_SmallFB1
+					pRenderContext->DrawScreenSpaceRectangle(pMatBlurX, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
+						0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
+						pRtQuarterSize0->GetActualWidth(), pRtQuarterSize0->GetActualHeight());
 				}
-
-				// Set the viewport
-				pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
-
-				// Blur X to _rt_SmallFB1
-				pRenderContext->DrawScreenSpaceRectangle(pMatBlurX, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
-					0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
-					pRtQuarterSize0->GetActualWidth(), pRtQuarterSize0->GetActualHeight());
 
 				//============================//
 				// Gaussian blur y rt1 to rt0 //
 				//============================//
-				pRenderContext->SetRenderTarget(pRtQuarterSize0);
-				pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
-				IMaterialVar *pBloomAmountVar = pMatBlurY->FindVar("$bloomamount", NULL);
-				if (pBloomAmountVar)
-					pBloomAmountVar->SetFloatValue(flBloomScale);
+				{
+					CRefPtrFix<IMaterial> pMatBlurY(materials->FindMaterial("castingessentials/outlines/l4d_blur_y", TEXTURE_GROUP_OTHER, true));
 
-				// Blur Y to _rt_SmallFB0
-				pRenderContext->DrawScreenSpaceRectangle(pMatBlurY, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
-					0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
-					pRtQuarterSize1->GetActualWidth(), pRtQuarterSize1->GetActualHeight());
+					pRenderContext->SetRenderTarget(pRtQuarterSize0);
+					pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
+					IMaterialVar *pBloomAmountVar = pMatBlurY->FindVar("$bloomamount", NULL);
+					if (pBloomAmountVar)
+						pBloomAmountVar->SetFloatValue(flBloomScale);
 
-				CRefPtrFix<IMaterial> finalBlendL4D(materials->FindMaterial("castingessentials/outlines/final_blend_l4d", TEXTURE_GROUP_RENDER_TARGET));
+					// Blur Y to _rt_SmallFB0
+					pRenderContext->DrawScreenSpaceRectangle(pMatBlurY, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
+						0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
+						pRtQuarterSize1->GetActualWidth(), pRtQuarterSize1->GetActualHeight());
+				}
 
-				// Draw quad
-				pRenderContext->SetRenderTarget(nullptr);
-				pRenderContext->Viewport(0, 0, pSetup->width, pSetup->height);
-				pRenderContext->DrawScreenSpaceRectangle(finalBlendL4D,
-					0, 0, nViewportWidth, nViewportHeight,
-					0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
-					pRtQuarterSize0->GetActualWidth(),
-					pRtQuarterSize0->GetActualHeight());
+				// Multiply alpha into _rt_SmallFB1
+				if (!graphicsModule->ce_outlines_additive->GetBool())
+				{
+					CRefPtrFix<IMaterial> pMatAlphaMul(materials->FindMaterial("castingessentials/outlines/l4d_ce_translucent_pass", TEXTURE_GROUP_OTHER, true));
+					pRenderContext->SetRenderTarget(pRtQuarterSize1);
+					pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
+					pRenderContext->ClearBuffers(true, false, false);
+					pRenderContext->DrawScreenSpaceRectangle(pMatAlphaMul, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
+						0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
+						pRtQuarterSize1->GetActualWidth(), pRtQuarterSize1->GetActualHeight());
+				}
+
+				// Final upscale and blend onto backbuffer
+				{
+					CRefPtrFix<IMaterial> finalBlendL4D(materials->FindMaterial("castingessentials/outlines/l4d_final_blend", TEXTURE_GROUP_RENDER_TARGET));
+					{
+						auto baseTextureVar = finalBlendL4D->FindVar("$basetexture", nullptr);
+						if (baseTextureVar)
+							baseTextureVar->SetTextureValue(graphicsModule->ce_outlines_additive->GetBool() ? pRtQuarterSize0 : pRtQuarterSize1);
+
+						finalBlendL4D->SetMaterialVarFlag(MaterialVarFlags_t::MATERIAL_VAR_TRANSLUCENT, !graphicsModule->ce_outlines_additive->GetBool());
+						finalBlendL4D->SetMaterialVarFlag(MaterialVarFlags_t::MATERIAL_VAR_ADDITIVE, graphicsModule->ce_outlines_additive->GetBool());
+					}
+
+					// Draw quad
+					pRenderContext->SetRenderTarget(nullptr);
+					pRenderContext->Viewport(0, 0, pSetup->width, pSetup->height);
+					pRenderContext->DrawScreenSpaceRectangle(finalBlendL4D,
+						0, 0, nViewportWidth, nViewportHeight,
+						0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
+						pRtQuarterSize0->GetActualWidth(),
+						pRtQuarterSize0->GetActualHeight());
+				}
 			}
 			else
 			{
@@ -789,4 +898,10 @@ void Graphics::OnTick(bool inGame)
 			}
 		}
 	}
+}
+
+Graphics::ExtraGlowData::ExtraGlowData()
+{
+	m_ShouldOverrideGlowColor = false;
+	m_InfillEnabled = false;
 }

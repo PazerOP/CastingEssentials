@@ -1,7 +1,0 @@
-UnlitGeneric
-{
-	$basetexture "_rt_SmallFB0"
-	//$translucent 1
-	$additive 1
-	"%noToolTexture" 1
-}

@@ -45,9 +45,9 @@ CameraTools::CameraTools()
 	m_TPLockYaw = new ConVar("ce_tplock_force_yaw", "", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles.");
 	m_TPLockRoll = new ConVar("ce_tplock_force_roll", "0", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles.");
 
-	m_TPLockXDPS = new ConVar("ce_tplock_dps_pitch", "360", FCVAR_NONE, "Max degrees per second for pitch.");
-	m_TPLockYDPS = new ConVar("ce_tplock_dps_yaw", "360", FCVAR_NONE, "Max degrees per second for yaw.");
-	m_TPLockZDPS = new ConVar("ce_tplock_dps_roll", "360", FCVAR_NONE, "Max degrees per second for roll.");
+	m_TPLockXDPS = new ConVar("ce_tplock_dps_pitch", "-1", FCVAR_NONE, "Max degrees per second for pitch. Set < 0 to uncap.");
+	m_TPLockYDPS = new ConVar("ce_tplock_dps_yaw", "-1", FCVAR_NONE, "Max degrees per second for yaw. Set < 0 to uncap.");
+	m_TPLockZDPS = new ConVar("ce_tplock_dps_roll", "-1", FCVAR_NONE, "Max degrees per second for roll. Set < 0 to uncap.");
 
 	m_TPLockBone = new ConVar("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings.");
 
@@ -476,9 +476,13 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 	if (m_LastTargetPlayer == targetPlayer)
 	{
 		const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
-		idealAngles.x = ApproachAngle(idealAngles.x, m_LastFrameAngle.x, m_TPLockXDPS->GetFloat() * frametime);
-		idealAngles.y = ApproachAngle(idealAngles.y, m_LastFrameAngle.y, m_TPLockYDPS->GetFloat() * frametime);
-		idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, m_TPLockZDPS->GetFloat() * frametime);
+
+		if (m_TPLockXDPS->GetFloat() >= 0)
+			idealAngles.x = ApproachAngle(idealAngles.x, m_LastFrameAngle.x, m_TPLockXDPS->GetFloat() * frametime);
+		if (m_TPLockYDPS->GetFloat() >= 0)
+			idealAngles.y = ApproachAngle(idealAngles.y, m_LastFrameAngle.y, m_TPLockYDPS->GetFloat() * frametime);
+		if (m_TPLockZDPS->GetFloat() >= 0)
+			idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, m_TPLockZDPS->GetFloat() * frametime);
 	}
 
 	const Vector idealPos = CalcPosForAngle(targetPos, idealAngles);

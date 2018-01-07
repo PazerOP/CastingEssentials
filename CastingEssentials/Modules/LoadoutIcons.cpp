@@ -181,11 +181,11 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 
 				if (iconIndex == IDX_ACTIVE || m_ActiveWeaponIndices[playerIndex] == iconIndex)
 				{
-					*m_DrawColor = ConVarGetColor(team == TFTeam::Red ? *ce_loadout_filter_active_red : *ce_loadout_filter_active_blu);
+					*m_DrawColor = ColorFromConVar(team == TFTeam::Red ? *ce_loadout_filter_active_red : *ce_loadout_filter_active_blu);
 				}
 				else
 				{
-					*m_DrawColor = ConVarGetColor(team == TFTeam::Red ? *ce_loadout_filter_inactive_red : *ce_loadout_filter_inactive_blu);
+					*m_DrawColor = ColorFromConVar(team == TFTeam::Red ? *ce_loadout_filter_inactive_red : *ce_loadout_filter_inactive_blu);
 				}
 
 				iconPanel->SetVisible(true);

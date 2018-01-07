@@ -190,7 +190,9 @@ extern bool ReparseForSteamIDs(const CCommand& in, CCommand& out);
 
 extern void SwapConVars(ConVar& var1, ConVar& var2);
 
-extern Color ConVarGetColor(const ConVar& var);
+extern Color ColorFromConVar(const ConVar& var, bool* success = nullptr);
+extern Color ColorFromString(const char* str, bool* success = nullptr);
+extern Vector ColorToVector(const Color& color);
 
 extern bool ParseFloat3(const char* str, float& f1, float& f2, float& f3);
 extern bool ParseVector(Vector& v, const char* str);

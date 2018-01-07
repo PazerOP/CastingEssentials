@@ -2,6 +2,11 @@
 
 #include "PluginBase/Modules.h"
 
+#define GLOWS_ENABLE
+#include <client/glow_outline_effect.h>
+
+#include <vector>
+
 class C_BaseEntity;
 class CGlowObjectManager;
 class CViewSetup;
@@ -31,6 +36,11 @@ private:
 	ConVar* ce_graphics_fix_invisible_players;
 	ConVar* ce_graphics_glow_l4d;
 
+	ConVar* ce_outlines_players_override_red;
+	ConVar* ce_outlines_players_override_blue;
+	ConVar* ce_outlines_debug_stencil_out;
+	ConVar* ce_outlines_additive;
+
 	ConCommand* ce_graphics_dump_shader_params;
 
 	static bool IsDefaultParam(const char* paramName);
@@ -45,4 +55,26 @@ private:
 
 	int m_ForcedMaterialOverrideHook;
 	void ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_t overrideType);
+
+	void DrawGlowAlways(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
+		int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;
+	void DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
+		int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;
+	void DrawGlowVisible(CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>& glowObjectDefinitions,
+		int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;
+
+	friend class CGlowObjectManager;
+	struct ExtraGlowData
+	{
+		ExtraGlowData();
+
+		bool m_ShouldOverrideGlowColor;
+		Vector m_GlowColorOverride;
+
+		bool m_InfillEnabled;
+		uint8_t m_StencilIndex;
+	};
+	std::vector<ExtraGlowData> m_ExtraGlowData;
+
+	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
 };
