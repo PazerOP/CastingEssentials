@@ -462,7 +462,7 @@ void Graphics::DrawGlowOccluded(CUtlVector<CGlowObjectManager::GlowObjectDefinit
 	// Not implemented, we need this feature to be able to do this in 1 pass. Otherwise,
 	// we'd have to do 2 passes, 1st to mark on the stencil where the depth test failed,
 	// 2nd to actually utilize that information and draw color there.
-	pRenderContext->OverrideDepthFunc(true, SHADER_DEPTHFUNC_NEARER);
+	pRenderContext->OverrideDepthFunc(true, SHADER_DEPTHFUNC_FARTHER);
 
 	for (int i = 0; i < glowObjectDefinitions.Count(); i++)
 	{
