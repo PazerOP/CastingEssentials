@@ -92,6 +92,7 @@
     <ClCompile Include="Hooking\IBaseHook.cpp" />
     <ClCompile Include="Hooking\IGroupHook.cpp" />
     <ClCompile Include="Misc\DebugOverlay.cpp" />
+    <ClCompile Include="Misc\OffsetChecking.cpp" />
     <ClCompile Include="Modules\HUDHacking.cpp" />
     <ClCompile Include="Misc\MissingDefinitions.cpp" />
     <ClCompile Include="Misc\Polyhook.cpp" />

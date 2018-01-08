@@ -287,6 +287,24 @@ int Player::GetHealth() const
 	return 0;
 }
 
+int Player::GetMaxHealth() const
+{
+	if (IsValid())
+	{
+		auto playerResource = TFPlayerResource::GetPlayerResource();
+		if (playerResource)
+			return playerResource->GetMaxHealth(entindex());
+
+		Assert(!"Attempted to GetMaxHealth on a player, but unable to GetPlayerResource!");
+	}
+	else
+	{
+		Assert(!"Called " __FUNCTION__ "() on an invalid player!");
+	}
+
+	return 1;	// So we avoid dividing by zero somewhere
+}
+
 bool Player::IsValid() const
 {
 	const auto framecount = Interfaces::GetEngineTool()->HostFrameCount();
@@ -332,6 +350,7 @@ bool Player::CheckCache() const
 		m_CachedTeam = nullptr;
 		m_CachedClass = nullptr;
 		m_CachedHealth = nullptr;
+		m_CachedMaxHealth = nullptr;
 		m_CachedObserverMode = nullptr;
 		m_CachedObserverTarget = nullptr;
 		m_CachedActiveWeapon = nullptr;
@@ -485,7 +504,14 @@ bool Player::IsAlive() const
 	if (IsValid())
 	{
 		auto playerResource = TFPlayerResource::GetPlayerResource();
-		return playerResource->IsAlive(m_PlayerEntity.GetEntryIndex());
+		if (playerResource)
+			return playerResource->IsAlive(m_PlayerEntity.GetEntryIndex());
+
+		Assert(!"Attempted to call IsAlive on a player, but unable to GetPlayerResource!");
+	}
+	else
+	{
+		Assert(!"Called " __FUNCTION__ "() on an invalid player!");
 	}
 
 	return false;

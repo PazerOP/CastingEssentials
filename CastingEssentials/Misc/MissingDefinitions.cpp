@@ -40,10 +40,10 @@ bool StandardFilterRules(IHandleEntity *pHandleEntity, int fContentsMask)
 		return false;
 
 #ifdef CE_DISABLED
-	// FIXME: this is to skip BSP models that are entities that can be 
-	// potentially moved/deleted, similar to a monster but doors don't seem to 
+	// FIXME: this is to skip BSP models that are entities that can be
+	// potentially moved/deleted, similar to a monster but doors don't seem to
 	// be flagged as monsters
-	// FIXME: the FL_WORLDBRUSH looked promising, but it needs to be set on 
+	// FIXME: the FL_WORLDBRUSH looked promising, but it needs to be set on
 	// everything that's actually a worldbrush and it currently isn't
 	if (!(fContentsMask & CONTENTS_MOVEABLE) && (pCollide->GetMoveType() == MOVETYPE_PUSH))// !(touch->flags & FL_WORLDBRUSH) )
 		return false;
@@ -300,6 +300,10 @@ void C_BaseAnimating::LockStudioHdr()
 {
 	return GetHooks()->GetFunc<C_BaseAnimating_LockStudioHdr>()(this);
 }
+bool C_BaseAnimating::ComputeHitboxSurroundingBox(Vector *pVecWorldMins, Vector *pVecWorldMaxs)
+{
+	return HookManager::GetRawFunc_C_BaseAnimating_ComputeHitboxSurroundingBox()(this, pVecWorldMins, pVecWorldMaxs);
+}
 
 CBasePlayer *UTIL_PlayerByIndex(int entindex)
 {
@@ -372,4 +376,22 @@ void CSteamID::SetFromString(const char* pchSteamID, EUniverse eDefaultUniverse)
 CSteamID::CSteamID(const char* steamID, EUniverse eDefaultUniverse) : CSteamID()
 {
 	SetFromString(steamID, eDefaultUniverse);
+}
+void CBoneCache::ReadCachedBonePointers(matrix3x4_t **bones, int numbones)
+{
+	memset(bones, 0, sizeof(matrix3x4_t *) * numbones);
+	matrix3x4_t *pBones = BoneArray();
+	const short *pCachedToStudio = CachedToStudio();
+	for (int i = 0; i < m_cachedBoneCount; i++)
+	{
+		bones[pCachedToStudio[i]] = pBones + i;
+	}
+}
+matrix3x4_t *CBoneCache::BoneArray()
+{
+	return (matrix3x4_t *)((char *)(this + 1) + m_matrixOffset);
+}
+short *CBoneCache::CachedToStudio()
+{
+	return (short *)((char *)(this + 1) + m_cachedToStudioOffset);
 }

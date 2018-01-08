@@ -216,16 +216,16 @@ constexpr float Deg2Rad(float degrees)
 	return degrees * float(3.14159265358979323846 / 180);
 }
 
-template<class T, T value>
+template<class T>
 class VariablePusher final
 {
 public:
 	VariablePusher() = delete;
-	VariablePusher(const VariablePusher<T, value>& other) = delete;
-	VariablePusher(T& variable) : m_Variable(&variable)
+	VariablePusher(const VariablePusher<T>& other) = delete;
+	VariablePusher(T& variable, const T& newValue) : m_Variable(&variable)
 	{
 		m_OldValue = std::move(*m_Variable);
-		*m_Variable = value;
+		*m_Variable = newValue;
 	}
 	~VariablePusher()
 	{

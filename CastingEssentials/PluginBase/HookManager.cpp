@@ -501,6 +501,22 @@ HookManager::Raw_ImagePanel_SetImage HookManager::GetRawFunc_ImagePanel_SetImage
 	return fn;
 }
 
+HookManager::Raw_C_BaseAnimating_ComputeHitboxSurroundingBox HookManager::GetRawFunc_C_BaseAnimating_ComputeHitboxSurroundingBox()
+{
+	static Raw_C_BaseAnimating_ComputeHitboxSurroundingBox fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x81\xEC????\x56\x8B\xF1\x57\x80\xBE?????\x0F\x85????\x83\xBE?????\x75\x05\xE8????\x8B\xBE????\x85\xFF\x0F\x84????\x8B\x86????\x8B\x17\x53";
+		constexpr const char* MASK = "xxxxx????xxxxxx?????xx????xx?????xxx????xx????xxxx????xx????xxx";
+
+		fn = (Raw_C_BaseAnimating_ComputeHitboxSurroundingBox)SignatureScan("client", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("C_BaseAnimating::ComputeHitboxSurroundingBox");
+	}
+
+	return fn;
+}
+
 void HookManager::IngameStateChanged(bool inGame)
 {
 	if (inGame)

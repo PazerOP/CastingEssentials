@@ -224,6 +224,7 @@ class HookManager final
 	typedef KeyValues*(__thiscall *Raw_EditablePanel_GetDialogVariables)(vgui::EditablePanel* pThis);
 	typedef void(__thiscall *Raw_ImagePanel_SetImage)(vgui::ImagePanel* pThis, const char* imageName);
 	typedef void(__thiscall *Raw_ProgressBar_ApplySettings)(vgui::ProgressBar* pThis, KeyValues* pSettings);
+	typedef bool(__thiscall *Raw_C_BaseAnimating_ComputeHitboxSurroundingBox)(C_BaseAnimating* pThis, Vector* pVecWorldMins, Vector* pVecWorldMaxs);
 
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
@@ -252,6 +253,7 @@ public:
 	static RawShouldDrawLocalPlayerFn GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer();
 	static Raw_EditablePanel_GetDialogVariables GetRawFunc_EditablePanel_GetDialogVariables();
 	static Raw_ImagePanel_SetImage GetRawFunc_ImagePanel_SetImage();
+	static Raw_C_BaseAnimating_ComputeHitboxSurroundingBox GetRawFunc_C_BaseAnimating_ComputeHitboxSurroundingBox();
 
 	static bool Load();
 	static bool Unload();
