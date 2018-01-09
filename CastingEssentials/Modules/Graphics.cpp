@@ -45,6 +45,7 @@ Graphics::Graphics()
 	ce_graphics_fix_invisible_players = new ConVar("ce_graphics_fix_invisible_players", "1", FCVAR_NONE, "Fix a case where players are invisible if you're firstperson speccing them when the round starts.");
 	ce_graphics_glow_l4d = new ConVar("ce_graphics_glow_l4d", "0", FCVAR_NONE, "L4D-style outlines");
 
+	ce_outlines_infill_w2s_mode = new ConVar("ce_outlines_infill_w2s_mode", "0");
 	ce_outlines_debug_stencil_out = new ConVar("ce_outlines_debug_stencil_out", "1", FCVAR_NONE, "Should we stencil out the players during the final blend to screen?");
 	ce_outlines_players_override_red = new ConVar("ce_outlines_players_override_red", "", FCVAR_NONE, "Override color for red players. [0, 255], format is \"<red> <green> <blue>\".");
 	ce_outlines_players_override_blue = new ConVar("ce_outlines_players_override_blue", "", FCVAR_NONE, "Override color for blue players. [0, 255], format is \"<red> <green> <blue>\".");
@@ -396,22 +397,107 @@ bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAni
 	return atLeastOne;
 }
 
+static float UnscaleFOVByWidthRatio()
+{
+	constexpr float h = 0.5 * M_PI / 180;
+	constexpr float p = 180 / M_PI;
+
+	//return atan(tan())
+}
+
 bool Graphics::WorldToScreen(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen)
 {
-	float w = worldToScreen[3][0] * world[0] + worldToScreen[3][1] * world[1] + worldToScreen[3][2] * world[2] + worldToScreen[3][3];
-	if (w < 0.001f)
-		return false;
+	if (ce_outlines_infill_w2s_mode->GetInt() == 0)
+	{
+		float w = worldToScreen[3][0] * world[0] + worldToScreen[3][1] * world[1] + worldToScreen[3][2] * world[2] + worldToScreen[3][3];
+		if (w < 0.001f)
+			return false;
 
-	float invW = 1 / w;
+		float invW = 1 / w;
 
-	screen.Init(
-		(worldToScreen[0][0] * world[0] + worldToScreen[0][1] * world[1] + worldToScreen[0][2] * world[2] + worldToScreen[0][3]) * invW,
-		(worldToScreen[1][0] * world[0] + worldToScreen[1][1] * world[1] + worldToScreen[1][2] * world[2] + worldToScreen[1][3]) * invW);
+		screen.Init(
+			(worldToScreen[0][0] * world[0] + worldToScreen[0][1] * world[1] + worldToScreen[0][2] * world[2] + worldToScreen[0][3]) * invW,
+			(worldToScreen[1][0] * world[0] + worldToScreen[1][1] * world[1] + worldToScreen[1][2] * world[2] + worldToScreen[1][3]) * invW);
 
-	// Transform [-1, 1] coordinates to actual screen pixel coordinates
-	screen.x = 0.5f * (screen.x + 1) * m_View->width + m_View->x;
-	screen.y = (1 - (0.5f * (screen.y + 1))) * m_View->height + m_View->y;	// (vg)ui coordinates
-	return true;
+		// Transform [-1, 1] coordinates to actual screen pixel coordinates
+		screen.x = 0.5f * (screen.x + 1) * m_View->width + m_View->x;
+		screen.y = (1 - (0.5f * (screen.y + 1))) * m_View->height + m_View->y;	// (vg)ui coordinates
+
+		return true;
+	}
+	else
+	{
+		// We want to get a vector from our camera origin to the "top" and "bottom" (in screen space... sorta)
+		// of each hitbox. In order to do that, we need to take the vector from camera origin to a corner of a
+		// hitbox, then project that vector onto a vertical plane (normal = camera right vector) so we end up
+		// with only the "vertical" component of the vector.
+
+		// Get the forward, right, and up vectors.
+		Vector forward, right, up;
+		AngleVectors(m_View->angles, &forward, &right, &up);
+
+		Vector projected;
+		{
+			const auto n = right;
+			const auto p = world;
+			const auto o = m_View->origin;
+			const auto d = -n.Dot(o);
+			const auto pp = p - (n.Dot(p) + d) * n;
+
+			projected = pp;
+		}
+
+		const auto projectedVec = projected - m_View->origin;
+		const auto projectedVecNorm = projectedVec.Normalized();
+
+		const auto dot = forward.Dot(projectedVecNorm);
+		const auto ang = acosf(dot) * (projectedVecNorm.z < forward.z ? -1 : 1);
+
+		const auto horizontalFOVRad = Deg2Rad(m_View->fov);
+		const auto verticalFOVRad = 2 * atan(tan(horizontalFOVRad / 2) * (1 / m_View->m_flAspectRatio));
+
+		const auto halfFOV = verticalFOVRad / 2;
+		const auto halfHeight = m_View->height / 2;
+
+		screen.x = 960;
+		screen.y = RemapVal(ang, -halfFOV, halfFOV, m_View->height, 0);	// (vg)ui coordinates
+
+		static int frame = 0;
+		const auto thisFrame = Interfaces::GetEngineTool()->HostFrameCount();
+		//if (frame != thisFrame)
+		{
+			NDebugOverlay::Cross3D(world, 4, 128, 128, 255, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+			NDebugOverlay::Cross3D(projected, 16, 255, 128, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+			const auto dist = m_View->origin.DistTo(projected);
+
+			NDebugOverlay::Cross3D(m_View->origin + forward * dist, 16, 128, 255, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+			int _i = 1;
+			engine->Con_NPrintf(_i++, "Angle: %1.2f", Rad2Deg(ang));
+			engine->Con_NPrintf(_i++, "Y: %1.2f", screen.y);
+			engine->Con_NPrintf(_i++, "FOV: %1.0f (%1.0f?)", m_View->fov, m_View->fov / m_View->m_flAspectRatio);
+
+			static ConVarRef s_FOVOverrideFOV("ce_fovoverride_fov");
+			engine->Con_NPrintf(_i++, "Actual FOV: %1.0f", s_FOVOverrideFOV.GetFloat());
+
+			frame = thisFrame;
+		}
+
+		float x = right.x;
+		float y = right.y;
+		float z = right.z;
+
+		float m2[3][3] =
+		{
+			{ 1 - (x * x), -x * y, -x * z },
+		{ -x * y, 1 - (y * y), -y * z },
+		{ -x * z, -y * z, 1 - (z * z) },
+		};
+
+		return true;
+	}
 }
 
 #include <client/view_scene.h>
@@ -470,8 +556,9 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 							currentExtra.m_InfillEnabled = true;
 							currentExtra.m_StencilIndex = ++stencilIndex;
 
-							engine->Con_NPrintf(nidx++, "Player %s: screen bounds %1.2f %1.2f %1.2f %1.2f",
-								player->GetName(), screenMins.x, screenMins.y, screenMaxs.x, screenMaxs.y);
+							engine->Con_NPrintf(nidx++, "Player %s: screen bounds %1.2f %1.2f %1.2f %1.2f (%1.2f %1.2f)",
+								player->GetName(), screenMins.x, screenMins.y, screenMaxs.x, screenMaxs.y,
+								screenMaxs.x - screenMins.x, screenMaxs.y - screenMins.y);
 
 							const auto& playerHealth = player->GetHealth();
 							const auto& playerMaxHealth = player->GetMaxHealth();

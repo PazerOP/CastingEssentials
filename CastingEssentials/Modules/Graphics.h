@@ -48,6 +48,7 @@ private:
 	ConVar* ce_outlines_infill_buffed_red;
 	ConVar* ce_outlines_infill_buffed_blue;
 	ConVar* ce_outlines_infill_buffed_direction;
+	ConVar* ce_outlines_infill_w2s_mode;
 
 	ConCommand* ce_graphics_dump_shader_params;
 
