@@ -98,15 +98,17 @@ private:
 	CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>* m_GlowObjectDefinitions;
 	const CViewSetup* m_View;
 
-	bool WorldToScreen(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
+	bool WorldToScreen(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen, bool angleMethod = true);
 
 	void BuildMoveChildLists();
 	ExtraGlowData* FindExtraGlowData(int entindex);
 
 	// Returns true if the world to screen transformation resulted in a valid rectangle
 	// NOTE: This returns vgui coordinates (y = 0 at top of screen)
-	bool ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, const Vector& maxs, Vector2D& screenMins, Vector2D& screenMaxs);
-	bool BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAnimating* animating, Vector2D& screenMins, Vector2D& screenMaxs);
+	bool ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, const Vector& maxs, float& screenMins, float& screenMaxs, Vector& screenWorldMins, Vector& screenWorldMaxs);
+	bool BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAnimating* animating, float& screenMins, float& screenMaxs, Vector& worldMins, Vector& worldMaxs);
+
+	void ProjectToPlane(const Vector& in, const Vector& planeNormal, const Vector& planePoint, Vector& out);
 
 	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);

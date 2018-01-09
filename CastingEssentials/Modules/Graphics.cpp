@@ -299,11 +299,11 @@ Graphics::ExtraGlowData* Graphics::FindExtraGlowData(int entindex)
 	return nullptr;
 }
 
-bool Graphics::ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, const Vector& maxs, Vector2D& screenMins, Vector2D& screenMaxs)
+bool Graphics::ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, const Vector& maxs, float& screenMins, float& screenMaxs, Vector& screenWorldMins, Vector& screenWorldMaxs)
 {
 	constexpr auto vecMax = std::numeric_limits<vec_t>::max();
-	screenMins.Init(vecMax, vecMax);
-	screenMaxs.Init(-vecMax, -vecMax);
+	screenMins = std::numeric_limits<float>::max();
+	screenMaxs = std::numeric_limits<float>::min();
 
 	/*Vector testPoints[] =
 	{
@@ -327,7 +327,7 @@ bool Graphics::ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, co
 	const Vector centerUpper(center.x, center.y, maxs.z);
 	const Vector centerLower(center.x, center.y, mins.z);
 
-	return WorldToScreen(worldToScreen, centerLower, screenMaxs) && WorldToScreen(worldToScreen, centerUpper, screenMins);
+	//return WorldToScreen(worldToScreen, centerLower, screenMaxs) && WorldToScreen(worldToScreen, centerUpper, screenMins);
 
 	uint_fast8_t validCount = 0;
 	for (uint_fast8_t v = 0; v < 8; v++)
@@ -344,19 +344,24 @@ bool Graphics::ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, co
 		if (!WorldToScreen(worldToScreen, variation, screenPos))
 			continue;
 
-		screenMins.x = std::min(screenMins.x, screenPos.x);
-		screenMins.y = std::min(screenMins.y, screenPos.y);
-
-		screenMaxs.x = std::max(screenMaxs.x, screenPos.x);
-		screenMaxs.y = std::max(screenMaxs.y, screenPos.y);
+		if (screenPos.y < screenMins)
+		{
+			screenWorldMins = variation;
+			screenMins = screenPos.y;
+		}
+		if (screenPos.y > screenMaxs)
+		{
+			screenWorldMaxs = variation;
+			screenMaxs = screenPos.y;
+		}
 
 		validCount++;
 	}
 
-	return validCount >= 2 && screenMins.x != screenMaxs.x && screenMins.y != screenMaxs.y;
+	return validCount >= 2 && screenMins != screenMaxs;
 }
 
-bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAnimating* animating, Vector2D& screenMins, Vector2D& screenMaxs)
+bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAnimating* animating, float& screenMins, float& screenMaxs, Vector& worldMins, Vector& worldMaxs)
 {
 	CStudioHdr *pStudioHdr = animating->GetModelPtr();
 	if (!pStudioHdr)
@@ -370,8 +375,10 @@ bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAni
 	matrix3x4_t *hitboxbones[MAXSTUDIOBONES];
 	pCache->ReadCachedBonePointers(hitboxbones, pStudioHdr->numbones());
 
-	screenMins.Init(std::numeric_limits<vec_t>::max(), std::numeric_limits<vec_t>::max());
-	screenMaxs.Init(-std::numeric_limits<vec_t>::max(), -std::numeric_limits<vec_t>::max());
+	screenMins = std::numeric_limits<float>::max();
+	screenMaxs = -std::numeric_limits<float>::max();
+	worldMins.Init(std::numeric_limits<vec_t>::max(), std::numeric_limits<vec_t>::max());
+	worldMaxs.Init(-std::numeric_limits<vec_t>::max(), -std::numeric_limits<vec_t>::max());
 
 	// Make sure at least one of the hitboxes was on our screen
 	bool atLeastOne = false;
@@ -379,17 +386,23 @@ bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAni
 	{
 		mstudiobbox_t *pbox = set->pHitbox(i);
 
-		Vector localWorldMins, localWorldMaxs;
-		TransformAABB(*hitboxbones[pbox->bone], pbox->bbmin, pbox->bbmax, localWorldMins, localWorldMaxs);
+		Vector bboxMins, bboxMaxs, localWorldMins, localWorldMaxs;
+		TransformAABB(*hitboxbones[pbox->bone], pbox->bbmin, pbox->bbmax, bboxMins, bboxMaxs);
 
-		Vector2D localScreenMins, localScreenMaxs;
-		if (!ScreenBounds(worldToScreen, localWorldMins, localWorldMaxs, localScreenMins, localScreenMaxs))
+		float localScreenMins, localScreenMaxs;
+		if (!ScreenBounds(worldToScreen, bboxMins, bboxMaxs, localScreenMins, localScreenMaxs, localWorldMins, localWorldMaxs))
 			continue;
 
-		screenMins.x = std::min(screenMins.x, localScreenMins.x);
-		screenMins.y = std::min(screenMins.y, localScreenMins.y);
-		screenMaxs.x = std::max(screenMaxs.x, localScreenMaxs.x);
-		screenMaxs.y = std::max(screenMaxs.y, localScreenMaxs.y);
+		if (localScreenMins < screenMins)
+		{
+			worldMins = localWorldMins;
+			screenMins = localScreenMins;
+		}
+		if (localScreenMaxs > screenMaxs)
+		{
+			worldMaxs = localWorldMaxs;
+			screenMaxs = localScreenMaxs;
+		}
 
 		atLeastOne = true;
 	}
@@ -397,17 +410,14 @@ bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAni
 	return atLeastOne;
 }
 
-static float UnscaleFOVByWidthRatio()
+void Graphics::ProjectToPlane(const Vector& in, const Vector& planeNormal, const Vector& planePoint, Vector& out)
 {
-	constexpr float h = 0.5 * M_PI / 180;
-	constexpr float p = 180 / M_PI;
-
-	//return atan(tan())
+	out = in - (planeNormal.Dot(in) + -planeNormal.Dot(planePoint)) * planeNormal;
 }
 
-bool Graphics::WorldToScreen(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen)
+bool Graphics::WorldToScreen(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen, bool angleMethod)
 {
-	if (ce_outlines_infill_w2s_mode->GetInt() == 0)
+	if (!angleMethod)
 	{
 		float w = worldToScreen[3][0] * world[0] + worldToScreen[3][1] * world[1] + worldToScreen[3][2] * world[2] + worldToScreen[3][3];
 		if (w < 0.001f)
@@ -466,13 +476,13 @@ bool Graphics::WorldToScreen(const VMatrix& worldToScreen, const Vector& world, 
 		const auto thisFrame = Interfaces::GetEngineTool()->HostFrameCount();
 		//if (frame != thisFrame)
 		{
-			NDebugOverlay::Cross3D(world, 4, 128, 128, 255, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+			//NDebugOverlay::Cross3D(world, 4, 128, 128, 255, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
-			NDebugOverlay::Cross3D(projected, 16, 255, 128, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+			//NDebugOverlay::Cross3D(projected, 16, 255, 128, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
 			const auto dist = m_View->origin.DistTo(projected);
 
-			NDebugOverlay::Cross3D(m_View->origin + forward * dist, 16, 128, 255, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+			//NDebugOverlay::Cross3D(m_View->origin + forward * dist, 16, 128, 255, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
 			int _i = 1;
 			engine->Con_NPrintf(_i++, "Angle: %1.2f", Rad2Deg(ang));
@@ -540,25 +550,28 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 				{
 					if (infillsEnable)
 					{
-						Vector mins, maxs;
-						Vector2D screenMins, screenMaxs;
+						Vector worldMins, worldMaxs;
+						float screenMins, screenMaxs;
 						//player->GetBaseEntity()->GetRenderBounds(mins, maxs);
 
 						auto animating = player->GetBaseAnimating();
-						animating->ComputeHitboxSurroundingBox(&mins, &maxs);
+						//animating->ComputeHitboxSurroundingBox(&mins, &maxs);
 
 						//const auto& transform = player->GetBaseAnimating()->RenderableToWorldTransform();
 						//VectorTransform(mins, transform, mins);
 						//VectorTransform(maxs, transform, maxs);
 
-						if (BaseAnimatingScreenBounds(worldToScreen, animating, screenMins, screenMaxs))
+						if (BaseAnimatingScreenBounds(worldToScreen, animating, screenMins, screenMaxs, worldMins, worldMaxs))
 						{
+							NDebugOverlay::Cross3D(worldMins, 8, 255, 64, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+							NDebugOverlay::Cross3D(worldMaxs, 8, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+							NDebugOverlay::Line(worldMins, worldMaxs, 255, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
 							currentExtra.m_InfillEnabled = true;
 							currentExtra.m_StencilIndex = ++stencilIndex;
 
-							engine->Con_NPrintf(nidx++, "Player %s: screen bounds %1.2f %1.2f %1.2f %1.2f (%1.2f %1.2f)",
-								player->GetName(), screenMins.x, screenMins.y, screenMaxs.x, screenMaxs.y,
-								screenMaxs.x - screenMins.x, screenMaxs.y - screenMins.y);
+							engine->Con_NPrintf(nidx++, "Player %s: screen bounds %1.2f %1.2f (%1.2f)",
+								player->GetName(), screenMins, screenMaxs, screenMaxs - screenMins);
 
 							const auto& playerHealth = player->GetHealth();
 							const auto& playerMaxHealth = player->GetMaxHealth();
@@ -569,13 +582,23 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 							{
 								if (healthPercentage != 1)
 								{
-									// Only normal
-									currentExtra.m_HurtInfillRectMin.x = 0;
-									currentExtra.m_HurtInfillRectMin.y = Lerp(1 - healthPercentage, screenMaxs.y, screenMins.y);
-									currentExtra.m_HurtInfillRectMax.x = m_View->width;
-									currentExtra.m_HurtInfillRectMax.y = m_View->height;
+									// Do the lerp in worldspace
+									const Vector splitPos = VectorLerp(worldMins, worldMaxs, 1 - healthPercentage);
 
-									currentExtra.m_HurtInfillActive = true;
+									NDebugOverlay::Cross3D(splitPos, 8, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+									// Now convert the worldspace position to screenspace
+									Vector2D screenSplitPos;
+									if (WorldToScreen(worldToScreen, splitPos, screenSplitPos, false))
+									{
+										// Only normal
+										currentExtra.m_HurtInfillRectMin.x = 0;
+										currentExtra.m_HurtInfillRectMin.y = screenSplitPos.y;
+										currentExtra.m_HurtInfillRectMax.x = m_View->width;
+										currentExtra.m_HurtInfillRectMax.y = m_View->height;
+
+										currentExtra.m_HurtInfillActive = true;
+									}
 								}
 								else
 									currentExtra.m_HurtInfillActive = false;
@@ -589,7 +612,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 
 								// Buffed
 								currentExtra.m_BuffedInfillRectMin.x = 0;
-								currentExtra.m_BuffedInfillRectMin.y = overhealPercentage >= 1 ? 0 : Lerp(overhealPercentage, screenMaxs.y, screenMins.y);
+								currentExtra.m_BuffedInfillRectMin.y = overhealPercentage >= 1 ? 0 : Lerp(overhealPercentage, screenMaxs, screenMins);
 								currentExtra.m_BuffedInfillRectMax.x = m_View->width;
 								currentExtra.m_BuffedInfillRectMax.y = m_View->height;
 
