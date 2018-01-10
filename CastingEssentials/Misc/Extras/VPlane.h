@@ -26,7 +26,7 @@ inline VPlane VPlaneInit(const Vector& p0, const Vector& p1, const Vector& p2)
 }
 
 // Returns true if the plane intersected with the line.
-inline bool VPlaneIntersectLine(const VPlane& plane, const Vector& p0, const Vector& p1, Vector* intersection = nullptr)
+inline bool VPlaneIntersectLine(const VPlane& plane, const Vector& p0, const Vector& p1, Vector* intersection = nullptr, bool lineSegment = true)
 {
 	//if (plane.GetPointSideExact(p0) == plane.GetPointSideExact(p1))
 	//	return false;	// Both points of the line are on the same side of the plane, no intersection
@@ -49,7 +49,7 @@ inline bool VPlaneIntersectLine(const VPlane& plane, const Vector& p0, const Vec
 	const float lower = lineDirNorm.Dot(plane.m_Normal);
 	const float d = upper / lower;
 
-	if (d >= 0 && d <= lineLength)
+	if (!lineSegment || d >= 0 && d <= lineLength)
 	{
 		if (intersection)
 			*intersection = d * lineDirNorm + p0;
