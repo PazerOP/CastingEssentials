@@ -422,6 +422,18 @@ void Graphics::ProjectToPlane(const Vector& in, const Vector& planeNormal, const
 	out = in - (planeNormal.Dot(in) + -planeNormal.Dot(planePoint)) * planeNormal;
 }
 
+void Graphics::ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut)
+{
+	// https://gamedev.stackexchange.com/a/72529
+	const auto& A = line0;
+	const auto& B = line1;
+	const auto& P = pointIn;
+	const auto& AP = P - A;
+	const auto& AB = B - A;
+
+	pointOut = A + AP.Dot(AB) / AB.Dot(AB) * AB;
+}
+
 float Graphics::WorldToScreenAng(const Vector& world)
 {
 	// We want to get a vector from our camera origin to the "top" and "bottom" (in screen space... sorta)
@@ -450,9 +462,9 @@ float Graphics::WorldToScreenAng(const Vector& world)
 	const auto dot = forward.Dot(projectedVecNorm);
 	const auto ang = acosf(dot) * (projectedVecNorm.z < forward.z ? -1 : 1);
 
-	char buffer[64];
-	sprintf_s(buffer, "Ang: %1.2f", Rad2Deg(ang));
-	NDebugOverlay::Text(world, buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+	//char buffer[64];
+	//sprintf_s(buffer, "Ang: %1.2f", Rad2Deg(ang));
+	//NDebugOverlay::Text(world, buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
 #if 0
 	const auto horizontalFOVRad = Deg2Rad(m_View->fov);
@@ -595,6 +607,7 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& w
 	worldMaxs.Init(-std::numeric_limits<vec_t>::max(), -std::numeric_limits<vec_t>::max(), -std::numeric_limits<vec_t>::max());
 
 	VPlane rootBBoxPlane;
+	Vector rootLineP0, rootLineP1;
 	{
 		Vector bboxMins, bboxMaxs, bboxCenter;
 		animating->ComputeHitboxSurroundingBox(&bboxMins, &bboxMaxs);
@@ -602,6 +615,12 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& w
 
 		Vector forward, right, up;
 		AngleVectors(m_View->angles, &forward, &right, &up);
+
+		//const Vector bboxCenterToCamera = m_View->origin - bboxCenter;
+		rootLineP0 = bboxCenter;
+		rootLineP1 = bboxCenter + up * 100;
+
+		//NDebugOverlay::Line(rootLineP0, rootLineP1, 64, 64, 255, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
 		VPlaneInit(rootBBoxPlane, bboxCenter, m_View->origin, m_View->origin + up);
 	}
@@ -619,8 +638,10 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& w
 			Vector corner;
 			GetAABBCorner(bboxMins, bboxMaxs, c, corner);
 
-			const Vector snapped = rootBBoxPlane.SnapPointToPlane(corner);
-			NDebugOverlay::Cross3D(snapped, 4, 255, 128, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+			Vector snapped;
+			//snapped = rootBBoxPlane.SnapPointToPlane(corner);
+			ProjectToLine(rootLineP0, rootLineP1, corner, snapped);
+			//NDebugOverlay::Cross3D(snapped, 2, 255, 128, 128, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
 			const float ang = WorldToScreenAng(snapped);
 
@@ -634,6 +655,9 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& w
 				screenMaxAng = ang;
 				worldMaxs = snapped;
 			}
+
+			Assert(worldMins.IsValid());
+			Assert(worldMaxs.IsValid());
 		}
 
 #if 0
