@@ -422,7 +422,7 @@ void Graphics::ProjectToPlane(const Vector& in, const Vector& planeNormal, const
 	out = in - (planeNormal.Dot(in) + -planeNormal.Dot(planePoint)) * planeNormal;
 }
 
-void Graphics::ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut)
+void Graphics::ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut, float* t)
 {
 	// https://gamedev.stackexchange.com/a/72529
 	const auto& A = line0;
@@ -431,7 +431,11 @@ void Graphics::ProjectToLine(const Vector& line0, const Vector& line1, const Vec
 	const auto& AP = P - A;
 	const auto& AB = B - A;
 
-	pointOut = A + AP.Dot(AB) / AB.Dot(AB) * AB;
+	const auto& T = AP.Dot(AB) / AB.Dot(AB);
+
+	pointOut = A + T * AB;
+	if (t)
+		*t = T;
 }
 
 float Graphics::WorldToScreenAng(const Vector& world)
@@ -459,12 +463,16 @@ float Graphics::WorldToScreenAng(const Vector& world)
 	const auto projectedVec = projected - m_View->origin;
 	const auto projectedVecNorm = projectedVec.Normalized();
 
+	Vector dummy;
+	float t;
+	ProjectToLine(m_View->origin, m_View->origin + up, world, dummy, &t);
+
 	const auto dot = forward.Dot(projectedVecNorm);
-	const auto ang = acosf(dot) * (projectedVecNorm.z < forward.z ? -1 : 1);
+	const auto ang = copysign(acosf(clamp(dot, -1, 1)), t);
 
 	char buffer[64];
 	sprintf_s(buffer, "Ang: %1.2f", Rad2Deg(ang));
-	NDebugOverlay::Text(world, buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+	//NDebugOverlay::Text(world, buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
 #if 0
 	const auto horizontalFOVRad = Deg2Rad(m_View->fov);
@@ -474,6 +482,7 @@ float Graphics::WorldToScreenAng(const Vector& world)
 	screen.y = RemapVal(ang, -verticalFOVRad / 2, verticalFOVRad / 2, m_View->height, 0);	// (vg)ui coordinates
 #endif
 
+	Assert(isfinite(ang));
 	return ang;
 }
 

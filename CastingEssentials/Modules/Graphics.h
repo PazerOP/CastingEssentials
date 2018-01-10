@@ -111,7 +111,7 @@ private:
 
 	static void PlaneThroughPoints(const Vector& p1, const Vector& p2, const Vector& p3, Vector& planeNormal);
 	void ProjectToPlane(const Vector& in, const Vector& planeNormal, const Vector& planePoint, Vector& out);
-	void ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut);
+	void ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut, float* t = nullptr);
 
 	float WorldToScreenAng(const Vector& world);
 	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
