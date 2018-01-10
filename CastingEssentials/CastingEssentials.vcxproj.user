@@ -2,13 +2,13 @@
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LocalDebuggerCommand>$(TF_GAME_DIR)\..\hl2.exe</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>-insecure -game tf -windowed -w 1920 -h 1080 -novid +exec launch_settings +exec CastingEssentials +playdemo stv_test_demo_2 -high</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-insecure -game tf -windowed -w 1920 -h 1080 -novid +exec launch_settings +exec CastingEssentials -playdemo stv_test_demo_2 +map itemtest -high</LocalDebuggerCommandArguments>
     <LocalDebuggerWorkingDirectory>$(TF_GAME_DIR)\..\</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LocalDebuggerCommand>$(TF_GAME_DIR)\..\hl2.exe</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>-insecure -game tf -windowed -w 1920 -h 1080 -novid +exec launch_settings +exec CastingEssentials +playdemo stv_test_demo_2 -high</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-insecure -game tf -windowed -w 1920 -h 1080 -novid +exec launch_settings +exec CastingEssentials -playdemo stv_test_demo_2 +map itemtest -high</LocalDebuggerCommandArguments>
     <LocalDebuggerWorkingDirectory>$(TF_GAME_DIR)\..\</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>

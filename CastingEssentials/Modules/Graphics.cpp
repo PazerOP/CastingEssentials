@@ -1,6 +1,7 @@
 #include "Graphics.h"
 #include "Controls/StubPanel.h"
 #include "Misc/CRefPtrFix.h"
+#include "Misc/Extras/VPlane.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Entities.h"
@@ -299,7 +300,17 @@ Graphics::ExtraGlowData* Graphics::FindExtraGlowData(int entindex)
 	return nullptr;
 }
 
-bool Graphics::ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, const Vector& maxs, float& screenMins, float& screenMaxs, Vector& screenWorldMins, Vector& screenWorldMaxs)
+void Graphics::GetAABBCorner(const Vector& mins, const Vector& maxs, uint_fast8_t cornerIndex, Vector& corner)
+{
+	Assert(cornerIndex >= 0 && cornerIndex < 8);
+
+	corner.Init(
+		cornerIndex & (1 << 2) ? maxs.x : mins.x,
+		cornerIndex & (1 << 1) ? maxs.y : mins.y,
+		cornerIndex & (1 << 0) ? maxs.z : mins.z);
+}
+
+bool Graphics::ScreenBounds(const Vector& mins, const Vector& maxs, float& screenMins, float& screenMaxs, Vector& screenWorldMins, Vector& screenWorldMaxs)
 {
 	constexpr auto vecMax = std::numeric_limits<vec_t>::max();
 	screenMins = std::numeric_limits<float>::max();
@@ -321,13 +332,6 @@ bool Graphics::ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, co
 
 	// See above array, we're just iterating through all possible corners
 	// of the rectangular prism produced by the bounds
-	Vector delta = maxs - mins;
-
-	const Vector center = mins + (maxs - mins) / 2;
-	const Vector centerUpper(center.x, center.y, maxs.z);
-	const Vector centerLower(center.x, center.y, mins.z);
-
-	//return WorldToScreen(worldToScreen, centerLower, screenMaxs) && WorldToScreen(worldToScreen, centerUpper, screenMins);
 
 	uint_fast8_t validCount = 0;
 	for (uint_fast8_t v = 0; v < 8; v++)
@@ -340,19 +344,17 @@ bool Graphics::ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, co
 		//NDebugOverlay::Cross3D(variation, 16, 128, 255, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 		//NDebugOverlay::Box(vec3_origin, mins, maxs, 128, 255, 128, 64, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
-		Vector2D screenPos;
-		if (!WorldToScreen(worldToScreen, variation, screenPos))
-			continue;
+		const float screenY = WorldToScreenAng(variation);
 
-		if (screenPos.y < screenMins)
+		if (screenY < screenMins)
 		{
 			screenWorldMins = variation;
-			screenMins = screenPos.y;
+			screenMins = screenY;
 		}
-		if (screenPos.y > screenMaxs)
+		if (screenY > screenMaxs)
 		{
 			screenWorldMaxs = variation;
-			screenMaxs = screenPos.y;
+			screenMaxs = screenY;
 		}
 
 		validCount++;
@@ -361,7 +363,7 @@ bool Graphics::ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, co
 	return validCount >= 2 && screenMins != screenMaxs;
 }
 
-bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAnimating* animating, float& screenMins, float& screenMaxs, Vector& worldMins, Vector& worldMaxs)
+bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs)
 {
 	CStudioHdr *pStudioHdr = animating->GetModelPtr();
 	if (!pStudioHdr)
@@ -375,10 +377,151 @@ bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAni
 	matrix3x4_t *hitboxbones[MAXSTUDIOBONES];
 	pCache->ReadCachedBonePointers(hitboxbones, pStudioHdr->numbones());
 
-	screenMins = std::numeric_limits<float>::max();
-	screenMaxs = -std::numeric_limits<float>::max();
+	float screenMinAng = std::numeric_limits<float>::max();
+	float screenMaxAng = -std::numeric_limits<float>::min();
 	worldMins.Init(std::numeric_limits<vec_t>::max(), std::numeric_limits<vec_t>::max());
 	worldMaxs.Init(-std::numeric_limits<vec_t>::max(), -std::numeric_limits<vec_t>::max());
+
+	// Make sure at least one of the hitboxes was on our screen
+	bool atLeastOne = false;
+	for (int i = 0; i < set->numhitboxes; i++)
+	{
+		mstudiobbox_t *pbox = set->pHitbox(i);
+
+		Vector bboxMins, bboxMaxs, localWorldMins, localWorldMaxs;
+		TransformAABB(*hitboxbones[pbox->bone], pbox->bbmin, pbox->bbmax, bboxMins, bboxMaxs);
+
+		float localScreenMins, localScreenMaxs;
+		if (!ScreenBounds(bboxMins, bboxMaxs, localScreenMins, localScreenMaxs, localWorldMins, localWorldMaxs))
+			continue;
+
+		if (localScreenMins < screenMinAng)
+		{
+			worldMins = localWorldMins;
+			screenMinAng = localScreenMins;
+		}
+		if (localScreenMaxs > screenMaxAng)
+		{
+			worldMaxs = localWorldMaxs;
+			screenMaxAng = localScreenMaxs;
+		}
+
+		atLeastOne = true;
+	}
+
+	return atLeastOne;
+}
+
+void Graphics::PlaneThroughPoints(const Vector& p1, const Vector& p2, const Vector& p3, Vector& planeNormal)
+{
+	planeNormal = (p2 - p1).Cross(p3 - p1);
+}
+
+void Graphics::ProjectToPlane(const Vector& in, const Vector& planeNormal, const Vector& planePoint, Vector& out)
+{
+	out = in - (planeNormal.Dot(in) + -planeNormal.Dot(planePoint)) * planeNormal;
+}
+
+float Graphics::WorldToScreenAng(const Vector& world)
+{
+	// We want to get a vector from our camera origin to the "top" and "bottom" (in screen space... sorta)
+	// of each hitbox. In order to do that, we need to take the vector from camera origin to a corner of a
+	// hitbox, then project that vector onto a vertical plane (normal = camera right vector) so we end up
+	// with only the "vertical" component of the vector.
+
+	// Get the forward, right, and up vectors.
+	Vector forward, right, up;
+	AngleVectors(m_View->angles, &forward, &right, &up);
+
+	Vector projected;
+	{
+		const auto n = right;
+		const auto p = world;
+		const auto o = m_View->origin;
+		const auto d = -n.Dot(o);
+		const auto pp = p - (n.Dot(p) + d) * n;
+
+		projected = pp;
+	}
+
+	const auto projectedVec = projected - m_View->origin;
+	const auto projectedVecNorm = projectedVec.Normalized();
+
+	const auto dot = forward.Dot(projectedVecNorm);
+	const auto ang = acosf(dot) * (projectedVecNorm.z < forward.z ? -1 : 1);
+
+	char buffer[64];
+	sprintf_s(buffer, "Ang: %1.2f", Rad2Deg(ang));
+	NDebugOverlay::Text(world, buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+#if 0
+	const auto horizontalFOVRad = Deg2Rad(m_View->fov);
+	const auto verticalFOVRad = 2 * atan(tan(horizontalFOVRad / 2) * (1 / m_View->m_flAspectRatio));
+
+	screen.x = RemapVal(ang, -horizontalFOVRad / 2, horizontalFOVRad / 2, 0, m_View->width);
+	screen.y = RemapVal(ang, -verticalFOVRad / 2, verticalFOVRad / 2, m_View->height, 0);	// (vg)ui coordinates
+#endif
+
+	return ang;
+}
+
+int Graphics::PlaneAABBIntersection(const VPlane& plane, const Vector& mins, const Vector& maxs, Vector intersections[6])
+{
+	Vector lineSegments[12][2] =
+	{
+		// Horizontals 1
+		{ Vector(mins.x, mins.y, mins.z), Vector(maxs.x, mins.y, mins.z) },
+		{ Vector(mins.x, maxs.y, mins.z), Vector(maxs.x, maxs.y, mins.z) },
+		{ Vector(mins.x, mins.y, maxs.z), Vector(maxs.x, mins.y, maxs.z) },
+		{ Vector(mins.x, maxs.y, maxs.z), Vector(maxs.x, maxs.y, maxs.z) },
+
+		// Horizontals 2
+		{ Vector(mins.x, mins.y, mins.z), Vector(mins.x, maxs.y, mins.z) },
+		{ Vector(maxs.x, mins.y, mins.z), Vector(maxs.x, maxs.y, mins.z) },
+		{ Vector(mins.x, mins.y, maxs.z), Vector(mins.x, maxs.y, maxs.z) },
+		{ Vector(maxs.x, mins.y, maxs.z), Vector(maxs.x, maxs.y, maxs.z) },
+
+		// Verticals
+		{ Vector(mins.x, mins.y, mins.z), Vector(mins.x, mins.y, maxs.z) },
+		{ Vector(maxs.x, mins.y, mins.z), Vector(maxs.x, mins.y, maxs.z) },
+		{ Vector(mins.x, maxs.y, mins.z), Vector(mins.x, maxs.y, maxs.z) },
+		{ Vector(maxs.x, maxs.y, mins.z), Vector(maxs.x, maxs.y, maxs.z) },
+	};
+
+	int intersectionCount = 0;
+	for (uint_fast8_t i = 0; i < 12; i++)
+	{
+		//NDebugOverlay::Line(lineSegments[i][0], lineSegments[i][1], 255, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+		Vector intersection;
+		if (!VPlaneIntersectLine(plane, lineSegments[i][0], lineSegments[i][1], &intersection))
+			continue;
+
+		//NDebugOverlay::Cross3D(intersection, 6, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+		intersections[intersectionCount++] = intersection;
+		Assert(intersectionCount <= 6);
+	}
+
+	return intersectionCount;
+}
+
+#if 0
+std::map<float, Vector> Graphics::GetBaseAnimatingPoints(C_BaseAnimating* animating)
+{
+	std::map<float, Vector> retVal;
+
+	CStudioHdr *pStudioHdr = animating->GetModelPtr();
+	if (!pStudioHdr)
+		return retVal;
+
+	mstudiohitboxset_t *set = pStudioHdr->pHitboxSet(animating->m_nHitboxSet);
+	if (!set || !set->numhitboxes)
+		return retVal;
+
+	CBoneCache *pCache = animating->GetBoneCache(pStudioHdr);
+	matrix3x4_t *hitboxbones[MAXSTUDIOBONES];
+	pCache->ReadCachedBonePointers(hitboxbones, pStudioHdr->numbones());
 
 	// Make sure at least one of the hitboxes was on our screen
 	bool atLeastOne = false;
@@ -408,106 +551,121 @@ bool Graphics::BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAni
 	}
 
 	return atLeastOne;
+
+	PlaneThroughPoints()
+}
+#endif
+
+bool Graphics::WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen)
+{
+	float w = worldToScreen[3][0] * world[0] + worldToScreen[3][1] * world[1] + worldToScreen[3][2] * world[2] + worldToScreen[3][3];
+	if (w < 0.001f)
+		return false;
+
+	float invW = 1 / w;
+
+	screen.Init(
+		(worldToScreen[0][0] * world[0] + worldToScreen[0][1] * world[1] + worldToScreen[0][2] * world[2] + worldToScreen[0][3]) * invW,
+		(worldToScreen[1][0] * world[0] + worldToScreen[1][1] * world[1] + worldToScreen[1][2] * world[2] + worldToScreen[1][3]) * invW);
+
+	// Transform [-1, 1] coordinates to actual screen pixel coordinates
+	screen.x = 0.5f * (screen.x + 1) * m_View->width + m_View->x;
+	screen.y = (1 - (0.5f * (screen.y + 1))) * m_View->height + m_View->y;	// (vg)ui coordinates
+
+	return true;
 }
 
-void Graphics::ProjectToPlane(const Vector& in, const Vector& planeNormal, const Vector& planePoint, Vector& out)
+bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs)
 {
-	out = in - (planeNormal.Dot(in) + -planeNormal.Dot(planePoint)) * planeNormal;
-}
+	CStudioHdr *pStudioHdr = animating->GetModelPtr();
+	if (!pStudioHdr)
+		return false;
 
-bool Graphics::WorldToScreen(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen, bool angleMethod)
-{
-	if (!angleMethod)
+	mstudiohitboxset_t *set = pStudioHdr->pHitboxSet(animating->m_nHitboxSet);
+	if (!set || !set->numhitboxes)
+		return false;
+
+	CBoneCache *pCache = animating->GetBoneCache(pStudioHdr);
+	matrix3x4_t *hitboxbones[MAXSTUDIOBONES];
+	pCache->ReadCachedBonePointers(hitboxbones, pStudioHdr->numbones());
+
+	float screenMinAng = std::numeric_limits<float>::max();
+	float screenMaxAng = -std::numeric_limits<float>::min();
+	worldMins.Init(std::numeric_limits<vec_t>::max(), std::numeric_limits<vec_t>::max(), std::numeric_limits<vec_t>::max());
+	worldMaxs.Init(-std::numeric_limits<vec_t>::max(), -std::numeric_limits<vec_t>::max(), -std::numeric_limits<vec_t>::max());
+
+	VPlane rootBBoxPlane;
 	{
-		float w = worldToScreen[3][0] * world[0] + worldToScreen[3][1] * world[1] + worldToScreen[3][2] * world[2] + worldToScreen[3][3];
-		if (w < 0.001f)
-			return false;
+		Vector bboxMins, bboxMaxs, bboxCenter;
+		animating->ComputeHitboxSurroundingBox(&bboxMins, &bboxMaxs);
+		VectorLerp(bboxMins, bboxMaxs, 0.5f, bboxCenter);
 
-		float invW = 1 / w;
-
-		screen.Init(
-			(worldToScreen[0][0] * world[0] + worldToScreen[0][1] * world[1] + worldToScreen[0][2] * world[2] + worldToScreen[0][3]) * invW,
-			(worldToScreen[1][0] * world[0] + worldToScreen[1][1] * world[1] + worldToScreen[1][2] * world[2] + worldToScreen[1][3]) * invW);
-
-		// Transform [-1, 1] coordinates to actual screen pixel coordinates
-		screen.x = 0.5f * (screen.x + 1) * m_View->width + m_View->x;
-		screen.y = (1 - (0.5f * (screen.y + 1))) * m_View->height + m_View->y;	// (vg)ui coordinates
-
-		return true;
-	}
-	else
-	{
-		// We want to get a vector from our camera origin to the "top" and "bottom" (in screen space... sorta)
-		// of each hitbox. In order to do that, we need to take the vector from camera origin to a corner of a
-		// hitbox, then project that vector onto a vertical plane (normal = camera right vector) so we end up
-		// with only the "vertical" component of the vector.
-
-		// Get the forward, right, and up vectors.
 		Vector forward, right, up;
 		AngleVectors(m_View->angles, &forward, &right, &up);
 
-		Vector projected;
-		{
-			const auto n = right;
-			const auto p = world;
-			const auto o = m_View->origin;
-			const auto d = -n.Dot(o);
-			const auto pp = p - (n.Dot(p) + d) * n;
-
-			projected = pp;
-		}
-
-		const auto projectedVec = projected - m_View->origin;
-		const auto projectedVecNorm = projectedVec.Normalized();
-
-		const auto dot = forward.Dot(projectedVecNorm);
-		const auto ang = acosf(dot) * (projectedVecNorm.z < forward.z ? -1 : 1);
-
-		const auto horizontalFOVRad = Deg2Rad(m_View->fov);
-		const auto verticalFOVRad = 2 * atan(tan(horizontalFOVRad / 2) * (1 / m_View->m_flAspectRatio));
-
-		const auto halfFOV = verticalFOVRad / 2;
-		const auto halfHeight = m_View->height / 2;
-
-		screen.x = 960;
-		screen.y = RemapVal(ang, -halfFOV, halfFOV, m_View->height, 0);	// (vg)ui coordinates
-
-		static int frame = 0;
-		const auto thisFrame = Interfaces::GetEngineTool()->HostFrameCount();
-		//if (frame != thisFrame)
-		{
-			//NDebugOverlay::Cross3D(world, 4, 128, 128, 255, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
-
-			//NDebugOverlay::Cross3D(projected, 16, 255, 128, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
-
-			const auto dist = m_View->origin.DistTo(projected);
-
-			//NDebugOverlay::Cross3D(m_View->origin + forward * dist, 16, 128, 255, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
-
-			int _i = 1;
-			engine->Con_NPrintf(_i++, "Angle: %1.2f", Rad2Deg(ang));
-			engine->Con_NPrintf(_i++, "Y: %1.2f", screen.y);
-			engine->Con_NPrintf(_i++, "FOV: %1.0f (%1.0f?)", m_View->fov, m_View->fov / m_View->m_flAspectRatio);
-
-			static ConVarRef s_FOVOverrideFOV("ce_fovoverride_fov");
-			engine->Con_NPrintf(_i++, "Actual FOV: %1.0f", s_FOVOverrideFOV.GetFloat());
-
-			frame = thisFrame;
-		}
-
-		float x = right.x;
-		float y = right.y;
-		float z = right.z;
-
-		float m2[3][3] =
-		{
-			{ 1 - (x * x), -x * y, -x * z },
-		{ -x * y, 1 - (y * y), -y * z },
-		{ -x * z, -y * z, 1 - (z * z) },
-		};
-
-		return true;
+		VPlaneInit(rootBBoxPlane, bboxCenter, m_View->origin, m_View->origin + up);
 	}
+
+	//bool anyIntersections = false;
+	for (int i = 0; i < set->numhitboxes; i++)
+	{
+		mstudiobbox_t *pbox = set->pHitbox(i);
+
+		Vector bboxMins, bboxMaxs;
+		TransformAABB(*hitboxbones[pbox->bone], pbox->bbmin, pbox->bbmax, bboxMins, bboxMaxs);
+
+		for (uint_fast8_t c = 0; c < 8; c++)
+		{
+			Vector corner;
+			GetAABBCorner(bboxMins, bboxMaxs, c, corner);
+
+			const Vector snapped = rootBBoxPlane.SnapPointToPlane(corner);
+			NDebugOverlay::Cross3D(snapped, 4, 255, 128, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+
+			const float ang = WorldToScreenAng(snapped);
+
+			if (ang < screenMinAng)
+			{
+				screenMinAng = ang;
+				worldMins = snapped;
+			}
+			if (ang > screenMaxAng)
+			{
+				screenMaxAng = ang;
+				worldMaxs = snapped;
+			}
+		}
+
+#if 0
+		// Test plane-aabb intersection
+		{
+			Vector intersections[6];
+			const int intersectionCount = PlaneAABBIntersection(plane, bboxMins, bboxMaxs, intersections);
+
+			for (int inter = 0; inter < intersectionCount; inter++)
+			{
+				const float ang = WorldToScreenAng(intersections[inter]);
+
+				if (ang < screenMinAng)
+				{
+					screenMinAng = ang;
+					worldMins = intersections[inter];
+				}
+				if (ang > screenMaxAng)
+				{
+					screenMaxAng = ang;
+					worldMaxs = intersections[inter];
+				}
+			}
+
+			if (!anyIntersections)
+				anyIntersections = intersectionCount > 0;
+		}
+#endif
+	}
+
+	return true;
+	//return anyIntersections;
 }
 
 #include <client/view_scene.h>
@@ -532,7 +690,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 	if (infillsEnable)
 		Interfaces::GetEngineTool()->GetWorldToScreenMatrixForView(*m_View, &worldToScreen);
 
-	int nidx = 0;
+	//int nidx = 0;
 	for (int i = 0; i < glowMgr->m_GlowObjectDefinitions.Count(); i++)
 	{
 		const auto& current = glowMgr->m_GlowObjectDefinitions[i];
@@ -548,20 +706,27 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 				auto team = player->GetTeam();
 				if (team == TFTeam::Red || team == TFTeam::Blue)
 				{
+#if 1
 					if (infillsEnable)
 					{
+						//Vector bboxMins, bboxMaxs;
 						Vector worldMins, worldMaxs;
-						float screenMins, screenMaxs;
+						//float screenMins, screenMaxs;
 						//player->GetBaseEntity()->GetRenderBounds(mins, maxs);
 
-						auto animating = player->GetBaseAnimating();
-						//animating->ComputeHitboxSurroundingBox(&mins, &maxs);
+						//float dummy1, dummy2;
+
+						//auto animating = player->GetBaseAnimating();
+						//animating->ComputeHitboxSurroundingBox(&bboxMins, &bboxMaxs);
+
+						//ScreenBounds(bboxMins, bboxMaxs, dummy1, dummy2, worldMins, worldMaxs);
 
 						//const auto& transform = player->GetBaseAnimating()->RenderableToWorldTransform();
 						//VectorTransform(mins, transform, mins);
 						//VectorTransform(maxs, transform, maxs);
 
-						if (BaseAnimatingScreenBounds(worldToScreen, animating, screenMins, screenMaxs, worldMins, worldMaxs))
+						//if (BaseAnimatingScreenBounds(worldToScreen, animating, screenMins, screenMaxs, worldMins, worldMaxs))
+						if (Test_PlaneHitboxesIntersect(player->GetBaseAnimating(), worldMins, worldMaxs))
 						{
 							NDebugOverlay::Cross3D(worldMins, 8, 255, 64, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 							NDebugOverlay::Cross3D(worldMaxs, 8, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
@@ -570,13 +735,12 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 							currentExtra.m_InfillEnabled = true;
 							currentExtra.m_StencilIndex = ++stencilIndex;
 
-							engine->Con_NPrintf(nidx++, "Player %s: screen bounds %1.2f %1.2f (%1.2f)",
-								player->GetName(), screenMins, screenMaxs, screenMaxs - screenMins);
-
 							const auto& playerHealth = player->GetHealth();
 							const auto& playerMaxHealth = player->GetMaxHealth();
 							auto healthPercentage = playerHealth / (float)playerMaxHealth;
 							auto overhealPercentage = RemapValClamped(playerHealth, playerMaxHealth, int(playerMaxHealth * 1.5 / 5) * 5, 0, 1);
+
+
 
 							if (overhealPercentage <= 0)
 							{
@@ -589,7 +753,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 
 									// Now convert the worldspace position to screenspace
 									Vector2D screenSplitPos;
-									if (WorldToScreen(worldToScreen, splitPos, screenSplitPos, false))
+									if (WorldToScreenMat(worldToScreen, splitPos, screenSplitPos))
 									{
 										// Only normal
 										currentExtra.m_HurtInfillRectMin.x = 0;
@@ -605,6 +769,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 
 								currentExtra.m_BuffedInfillActive = false;
 							}
+#if 0
 							else
 							{
 								currentExtra.m_HurtInfillActive = false;
@@ -619,8 +784,10 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 								currentExtra.m_HurtInfillRectMin.Init();
 								currentExtra.m_HurtInfillRectMax.Init();
 							}
+#endif
 						}
 					}
+#endif
 
 					if (team == TFTeam::Red)
 					{

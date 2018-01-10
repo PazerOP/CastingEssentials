@@ -308,5 +308,8 @@
     <ClInclude Include="PluginBase\TFTeamResource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Misc\Extras\VPlane.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

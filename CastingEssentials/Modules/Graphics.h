@@ -98,17 +98,31 @@ private:
 	CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>* m_GlowObjectDefinitions;
 	const CViewSetup* m_View;
 
-	bool WorldToScreen(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen, bool angleMethod = true);
 
 	void BuildMoveChildLists();
 	ExtraGlowData* FindExtraGlowData(int entindex);
 
 	// Returns true if the world to screen transformation resulted in a valid rectangle
 	// NOTE: This returns vgui coordinates (y = 0 at top of screen)
-	bool ScreenBounds(const VMatrix& worldToScreen, const Vector& mins, const Vector& maxs, float& screenMins, float& screenMaxs, Vector& screenWorldMins, Vector& screenWorldMaxs);
-	bool BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAnimating* animating, float& screenMins, float& screenMaxs, Vector& worldMins, Vector& worldMaxs);
+	bool ScreenBounds(const Vector& mins, const Vector& maxs, float& screenMins, float& screenMaxs, Vector& screenWorldMins, Vector& screenWorldMaxs);
+	bool BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs);
 
+	//std::map<float, Vector> GetBaseAnimatingPoints
+
+	static void PlaneThroughPoints(const Vector& p1, const Vector& p2, const Vector& p3, Vector& planeNormal);
 	void ProjectToPlane(const Vector& in, const Vector& planeNormal, const Vector& planePoint, Vector& out);
+
+	float WorldToScreenAng(const Vector& world);
+	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
+
+	// Returns the number of intersecting points between a plane and an AABB.
+	static int PlaneAABBIntersection(const VPlane& plane, const Vector& mins, const Vector& maxs, Vector intersections[6]);
+
+	static void GetAABBCorner(const Vector& mins, const Vector& maxs, uint_fast8_t cornerIndex, Vector& corner);
+
+	std::map<float, Vector> GetBaseAnimatingPoints(C_BaseAnimating* animating);
+
+	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs);
 
 	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);
