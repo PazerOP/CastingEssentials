@@ -13,6 +13,14 @@ static constexpr const char* PLUGIN_NAME = "CastingEssentials";
 extern const char* const PLUGIN_VERSION_ID;
 extern const char* const PLUGIN_FULL_VERSION;
 
+//#define NDEBUG_PER_FRAME_SUPPORT 1
+#ifdef NDEBUG_PER_FRAME_SUPPORT
+// Oddly specific
+static constexpr float NDEBUG_PERSIST_TILL_NEXT_FRAME = -1.738f;
+#else
+static constexpr auto NDEBUG_PERSIST_TILL_NEXT_FRAME = 0; // NDEBUG_PERSIST_TILL_NEXT_SERVER
+#endif
+
 #define VPROF_BUDGETGROUP_CE _T("CastingEssentials")
 
 // For passing into strspn or whatever

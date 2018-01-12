@@ -310,6 +310,22 @@ void Graphics::GetAABBCorner(const Vector& mins, const Vector& maxs, uint_fast8_
 		cornerIndex & (1 << 0) ? maxs.z : mins.z);
 }
 
+void Graphics::GetRotatedBBCorners(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Vector corners[8])
+{
+	// Build a rotation matrix from angles
+	matrix3x4_t fRotateMatrix;
+	AngleMatrix(angles, fRotateMatrix);
+
+	for (uint_fast8_t i = 0; i < 8; ++i)
+	{
+		Vector unrotated;
+		GetAABBCorner(mins, maxs, i, unrotated);
+
+		VectorRotate(unrotated, fRotateMatrix, corners[i]);
+		corners[i] += origin;
+	}
+}
+
 bool Graphics::ScreenBounds(const Vector& mins, const Vector& maxs, float& screenMins, float& screenMaxs, Vector& screenWorldMins, Vector& screenWorldMaxs)
 {
 	constexpr auto vecMax = std::numeric_limits<vec_t>::max();
@@ -341,20 +357,21 @@ bool Graphics::ScreenBounds(const Vector& mins, const Vector& maxs, float& scree
 			v & (1 << 1) ? maxs.y : mins.y,
 			v & (1 << 0) ? maxs.z : mins.z);
 
-		//NDebugOverlay::Cross3D(variation, 16, 128, 255, 128, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
-		//NDebugOverlay::Box(vec3_origin, mins, maxs, 128, 255, 128, 64, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+		//NDebugOverlay::Cross3D(variation, 16, 128, 255, 128, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+		//NDebugOverlay::Box(vec3_origin, mins, maxs, 128, 255, 128, 64, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 
-		const float screenY = WorldToScreenAng(variation);
+		QAngle screenAng;
+		WorldToScreenAng(variation, screenAng);
 
-		if (screenY < screenMins)
+		if (screenAng.y < screenMins)
 		{
 			screenWorldMins = variation;
-			screenMins = screenY;
+			screenMins = screenAng.y;
 		}
-		if (screenY > screenMaxs)
+		if (screenAng.y > screenMaxs)
 		{
 			screenWorldMaxs = variation;
-			screenMaxs = screenY;
+			screenMaxs = screenAng.y;
 		}
 
 		validCount++;
@@ -417,10 +434,12 @@ void Graphics::PlaneThroughPoints(const Vector& p1, const Vector& p2, const Vect
 	planeNormal = (p2 - p1).Cross(p3 - p1);
 }
 
+#if 0
 void Graphics::ProjectToPlane(const Vector& in, const Vector& planeNormal, const Vector& planePoint, Vector& out)
 {
 	out = in - (planeNormal.Dot(in) + -planeNormal.Dot(planePoint)) * planeNormal;
 }
+#endif
 
 void Graphics::ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut, float* t)
 {
@@ -438,7 +457,7 @@ void Graphics::ProjectToLine(const Vector& line0, const Vector& line1, const Vec
 		*t = T;
 }
 
-float Graphics::WorldToScreenAng(const Vector& world)
+void Graphics::WorldToScreenAng(const Vector& world, QAngle& screenAng)
 {
 	// We want to get a vector from our camera origin to the "top" and "bottom" (in screen space... sorta)
 	// of each hitbox. In order to do that, we need to take the vector from camera origin to a corner of a
@@ -449,30 +468,31 @@ float Graphics::WorldToScreenAng(const Vector& world)
 	Vector forward, right, up;
 	AngleVectors(m_View->angles, &forward, &right, &up);
 
-	Vector projected;
-	{
-		const auto n = right;
-		const auto p = world;
-		const auto o = m_View->origin;
-		const auto d = -n.Dot(o);
-		const auto pp = p - (n.Dot(p) + d) * n;
+	// We assume there's no roll
+	screenAng.z = 0;
 
-		projected = pp;
+	for (uint_fast8_t i = 0; i < 2; i++)
+	{
+		const VPlane plane = VPlaneInit(i == 0 ? right : up, m_View->origin);
+
+		const Vector projected = plane.SnapPointToPlane(world);
+
+		const auto projectedVec = projected - m_View->origin;
+		const auto projectedVecNorm = projectedVec.Normalized();
+
+		Vector dummy;
+		float t;
+		ProjectToLine(m_View->origin, m_View->origin + (i == 0 ? up : right), world, dummy, &t);
+
+		const auto dot = forward.Dot(projectedVecNorm);
+		screenAng[i] = Rad2Deg(copysign(acosf(clamp(dot, -1, 1)), t));
+
+		Assert(isfinite(screenAng[i]));
 	}
 
-	const auto projectedVec = projected - m_View->origin;
-	const auto projectedVecNorm = projectedVec.Normalized();
-
-	Vector dummy;
-	float t;
-	ProjectToLine(m_View->origin, m_View->origin + up, world, dummy, &t);
-
-	const auto dot = forward.Dot(projectedVecNorm);
-	const auto ang = copysign(acosf(clamp(dot, -1, 1)), t);
-
-	char buffer[64];
-	sprintf_s(buffer, "Ang: %1.2f", Rad2Deg(ang));
-	//NDebugOverlay::Text(world, buffer, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+	//char buffer[64];
+	//sprintf_s(buffer, "Ang: %1.2f", Rad2Deg(ang));
+	//NDebugOverlay::Text(world, buffer, false, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 
 #if 0
 	const auto horizontalFOVRad = Deg2Rad(m_View->fov);
@@ -481,9 +501,6 @@ float Graphics::WorldToScreenAng(const Vector& world)
 	screen.x = RemapVal(ang, -horizontalFOVRad / 2, horizontalFOVRad / 2, 0, m_View->width);
 	screen.y = RemapVal(ang, -verticalFOVRad / 2, verticalFOVRad / 2, m_View->height, 0);	// (vg)ui coordinates
 #endif
-
-	Assert(isfinite(ang));
-	return ang;
 }
 
 int Graphics::PlaneAABBIntersection(const VPlane& plane, const Vector& mins, const Vector& maxs, Vector intersections[6])
@@ -512,13 +529,13 @@ int Graphics::PlaneAABBIntersection(const VPlane& plane, const Vector& mins, con
 	int intersectionCount = 0;
 	for (uint_fast8_t i = 0; i < 12; i++)
 	{
-		//NDebugOverlay::Line(lineSegments[i][0], lineSegments[i][1], 255, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+		//NDebugOverlay::Line(lineSegments[i][0], lineSegments[i][1], 255, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 
 		Vector intersection;
 		if (!VPlaneIntersectLine(plane, lineSegments[i][0], lineSegments[i][1], &intersection))
 			continue;
 
-		//NDebugOverlay::Cross3D(intersection, 6, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+		//NDebugOverlay::Cross3D(intersection, 6, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 
 		intersections[intersectionCount++] = intersection;
 		Assert(intersectionCount <= 6);
@@ -596,6 +613,56 @@ bool Graphics::WorldToScreenMat(const VMatrix& worldToScreen, const Vector& worl
 	return true;
 }
 
+static void RotateVectorAroundVector(const Vector& toRotate, const Vector& rotationAxis, float degrees, Vector& out)
+{
+	const float rads = Deg2Rad(degrees);
+
+	out = cosf(rads) * toRotate + sinf(rads) * rotationAxis.Cross(toRotate) + (1 - cosf(rads)) * rotationAxis.Dot(toRotate) * rotationAxis;
+}
+
+void Graphics::Test_DrawTriangleLines(const Vector& camToBBox, const Vector& camForward, const Vector& camUp, const Vector& camRight)
+{
+	//NDebugOverlay::Cross3D(m_View->origin + camToBBox, 32, 255, 255, 255, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+
+	const Vector unitVectorForward = camToBBox.Normalized();
+	const Vector bbox = m_View->origin + camToBBox;
+
+	QAngle lookAtAng, lookUpAng, lookRightAng;
+	VectorAngles(unitVectorForward, lookAtAng);
+	lookUpAng = lookAtAng - QAngle(90, 0, 0);
+	lookRightAng = lookAtAng - QAngle(0, 90, 0);
+
+	VPlane perpendicularPlane;
+	VPlaneInit(perpendicularPlane, -unitVectorForward, bbox);
+
+	const Vector rotationAxis = unitVectorForward.Cross(camUp).Normalized();
+	Vector unitVectorUp;
+
+	QAngle screenAng;
+	WorldToScreenAng(bbox, screenAng);
+
+	Vector rotatedRight, rotatedUp;
+	//RotateVectorAroundVector(camRight, camUp, screenAng.y, rotatedRight);
+	//RotateVectorAroundVector(camUp, camRight, screenAng.x, rotatedUp);
+	VMatrix rotationMatrix;
+	MatrixBuildRotation(rotationMatrix, camForward, unitVectorForward);
+
+	rotatedRight = rotationMatrix * camRight;
+	rotatedUp = rotationMatrix * camUp;
+	const Vector rotatedForward = rotationMatrix * camForward;
+
+	NDebugOverlay::Line(bbox, bbox + rotatedUp * 25, 0, 255, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+	NDebugOverlay::Line(bbox, bbox + rotatedRight * 25, 255, 255, 255, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+	NDebugOverlay::Line(bbox, bbox + rotatedForward * 25, 255, 0, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+
+	//NDebugOverlay::Line(bbox, bbox + camForward * 25, 128, 0, 255, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+
+	//NDebugOverlay::BoxDirection(
+	//	bbox + projUp * 25, Vector(-5, -5, -5), Vector(5, 5, 10), projUp, 0, 255, 0, 128, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+
+	//VectorRotate()
+}
+
 bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs)
 {
 	CStudioHdr *pStudioHdr = animating->GetModelPtr();
@@ -626,37 +693,52 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& w
 		Vector forward, up;
 		AngleVectors(m_View->angles, &forward, &right, &up);
 
-		//const Vector bboxCenterToCamera = m_View->origin - bboxCenter;
-		const Vector rootLineDir = (m_View->origin - bboxCenter).Normalized().Cross(right).Normalized();
+		Vector bboxCenterToCamera = bboxCenter - m_View->origin;
+
+		Vector rootLineDir = bboxCenterToCamera.Normalized().Cross(right.Normalized()).Normalized();
+
+		engine->Con_NPrintf(0, "rootLineDir: %1.2f %1.2f %1.2f", rootLineDir.x, rootLineDir.y, rootLineDir.z);
 		rootLineP0 = bboxCenter;
 		rootLineP1 = bboxCenter + rootLineDir * 100;
 
-		//NDebugOverlay::Line(rootLineP0, rootLineP1, 64, 64, 255, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+		NDebugOverlay::Line(rootLineP0, rootLineP1, 64, 64, 255, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 
 		VPlaneInit(rootBBoxPlane, bboxCenter, m_View->origin, m_View->origin + up);
 
+		Test_DrawTriangleLines(bboxCenterToCamera, forward, up, right);
+
 		// Debugging
-		NDebugOverlay::Line(bboxCenter, bboxCenter + rootLineDir * 25, 255, 0, 0, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
-		NDebugOverlay::Line(bboxCenter, bboxCenter + right * 25, 0, 255, 0, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+		//NDebugOverlay::Line(bboxCenter, bboxCenter + rootLineDir * 25, 255, 0, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+		//NDebugOverlay::Line(bboxCenter, bboxCenter + right * 25, 0, 255, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 	}
+
+	Vector minsBB0, minsBB1, minsOrigin, minsCorner, maxsBB0, maxsBB1, maxsOrigin, maxsCorner;
+	QAngle minsAngles, maxsAngles;
 
 	//bool anyIntersections = false;
 	for (int i = 0; i < set->numhitboxes; i++)
 	{
 		mstudiobbox_t *pbox = set->pHitbox(i);
 
-		Vector bboxMins, bboxMaxs;
-		TransformAABB(*hitboxbones[pbox->bone], pbox->bbmin, pbox->bbmax, bboxMins, bboxMaxs);
+		const Vector bboxMins = pbox->bbmin * animating->GetModelScale();
+		const Vector bboxMaxs = pbox->bbmax * animating->GetModelScale();
+		//Vector bboxMins, bboxMaxs;
+		//TransformAABB(*hitboxbones[pbox->bone], pbox->bbmin, pbox->bbmax, bboxMins, bboxMaxs);
+
+		Vector bonePos;
+		QAngle boneAngles;
+		MatrixAngles(*hitboxbones[pbox->bone], boneAngles, bonePos);
+
+		Vector bbCorners[8];
+		GetRotatedBBCorners(bonePos, boneAngles, bboxMins, bboxMaxs, bbCorners);
 
 		for (uint_fast8_t c = 0; c < 8; c++)
 		{
-			Vector corner;
-			GetAABBCorner(bboxMins, bboxMaxs, c, corner);
+			const auto& corner = bbCorners[c];
 
 			//Vector snapped;
 			//snapped = rootBBoxPlane.SnapPointToPlane(corner);
 			//ProjectToLine(rootLineP0, rootLineP1, corner, snapped);
-			//NDebugOverlay::Cross3D(snapped, 2, 255, 128, 128, false, NDEBUG_PERSIST_TILL_NEXT_SERVER);
 
 			VPlane localPointPlane;	// Horizontal plane going through our view and the point
 			VPlaneInit(localPointPlane, corner, m_View->origin, m_View->origin + right);
@@ -664,17 +746,30 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& w
 			Vector intersection;
 			VPlaneIntersectLine(localPointPlane, rootLineP0, rootLineP1, &intersection, false);
 
-			const float ang = WorldToScreenAng(intersection);
+			//NDebugOverlay::Cross3D(intersection, 1, 255, 128, 128, false, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 
-			if (ang < screenMinAng)
+			QAngle screenAng;
+			WorldToScreenAng(intersection, screenAng);
+
+			if (screenAng.y < screenMinAng)
 			{
-				screenMinAng = ang;
+				screenMinAng = screenAng.y;
 				worldMins = intersection;
+				minsBB0 = bboxMins;
+				minsBB1 = bboxMaxs;
+				minsOrigin = bonePos;
+				minsAngles = boneAngles;
+				minsCorner = corner;
 			}
-			if (ang > screenMaxAng)
+			if (screenAng.y > screenMaxAng)
 			{
-				screenMaxAng = ang;
+				screenMaxAng = screenAng.y;
 				worldMaxs = intersection;
+				maxsBB0 = bboxMins;
+				maxsBB1 = bboxMaxs;
+				maxsOrigin = bonePos;
+				maxsAngles = boneAngles;
+				maxsCorner = corner;
 			}
 
 			Assert(worldMins.IsValid());
@@ -708,6 +803,11 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& w
 		}
 #endif
 	}
+
+	//NDebugOverlay::BoxAngles(minsOrigin, minsBB0, minsBB1, minsAngles, 255, 255, 64, 64, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+	//NDebugOverlay::BoxAngles(maxsOrigin, maxsBB0, maxsBB1, maxsAngles, 255, 255, 64, 64, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+	//NDebugOverlay::Line(minsCorner, worldMins, 255, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+	//NDebugOverlay::Line(maxsCorner, worldMaxs, 255, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 
 	return true;
 	//return anyIntersections;
@@ -773,9 +873,9 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 						//if (BaseAnimatingScreenBounds(worldToScreen, animating, screenMins, screenMaxs, worldMins, worldMaxs))
 						if (Test_PlaneHitboxesIntersect(player->GetBaseAnimating(), worldMins, worldMaxs))
 						{
-							NDebugOverlay::Cross3D(worldMins, 8, 255, 64, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
-							NDebugOverlay::Cross3D(worldMaxs, 8, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
-							NDebugOverlay::Line(worldMins, worldMaxs, 255, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+							//NDebugOverlay::Cross3D(worldMins, 8, 255, 64, 64, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+							//NDebugOverlay::Cross3D(worldMaxs, 8, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+							//NDebugOverlay::Line(worldMins, worldMaxs, 255, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 
 							currentExtra.m_InfillEnabled = true;
 							currentExtra.m_StencilIndex = ++stencilIndex;
@@ -794,7 +894,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 									// Do the lerp in worldspace
 									const Vector splitPos = VectorLerp(worldMins, worldMaxs, 1 - healthPercentage);
 
-									NDebugOverlay::Cross3D(splitPos, 8, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_SERVER);
+									NDebugOverlay::Cross3D(splitPos, 8, 64, 255, 64, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 
 									// Now convert the worldspace position to screenspace
 									Vector2D screenSplitPos;

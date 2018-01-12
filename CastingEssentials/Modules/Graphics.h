@@ -110,20 +110,23 @@ private:
 	//std::map<float, Vector> GetBaseAnimatingPoints
 
 	static void PlaneThroughPoints(const Vector& p1, const Vector& p2, const Vector& p3, Vector& planeNormal);
-	void ProjectToPlane(const Vector& in, const Vector& planeNormal, const Vector& planePoint, Vector& out);
-	void ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut, float* t = nullptr);
+	static void ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut, float* t = nullptr);
 
-	float WorldToScreenAng(const Vector& world);
+	void WorldToScreenAng(const Vector& world, QAngle& screenAng);
 	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
 
 	// Returns the number of intersecting points between a plane and an AABB.
 	static int PlaneAABBIntersection(const VPlane& plane, const Vector& mins, const Vector& maxs, Vector intersections[6]);
 
 	static void GetAABBCorner(const Vector& mins, const Vector& maxs, uint_fast8_t cornerIndex, Vector& corner);
+	static void GetRotatedBBCorners(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Vector corners[8]);
 
 	std::map<float, Vector> GetBaseAnimatingPoints(C_BaseAnimating* animating);
 
 	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs);
+	void Test_DrawTriangleLines(const Vector& camToBBox, const Vector& camForward, const Vector& camUp, const Vector& camRight);
+
+	//void CalcRootLineDir
 
 	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);
