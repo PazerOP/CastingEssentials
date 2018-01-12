@@ -620,47 +620,21 @@ static void RotateVectorAroundVector(const Vector& toRotate, const Vector& rotat
 	out = cosf(rads) * toRotate + sinf(rads) * rotationAxis.Cross(toRotate) + (1 - cosf(rads)) * rotationAxis.Dot(toRotate) * rotationAxis;
 }
 
-void Graphics::Test_DrawTriangleLines(const Vector& camToBBox, const Vector& camForward, const Vector& camUp, const Vector& camRight)
+void Graphics::CalcRootLineDir(const Vector& camToBBox, const Vector& camForward, const Vector& camUp, const Vector& camRight, Vector& rootLineDir)
 {
-	//NDebugOverlay::Cross3D(m_View->origin + camToBBox, 32, 255, 255, 255, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
-
 	const Vector unitVectorForward = camToBBox.Normalized();
 	const Vector bbox = m_View->origin + camToBBox;
 
-	QAngle lookAtAng, lookUpAng, lookRightAng;
-	VectorAngles(unitVectorForward, lookAtAng);
-	lookUpAng = lookAtAng - QAngle(90, 0, 0);
-	lookRightAng = lookAtAng - QAngle(0, 90, 0);
-
-	VPlane perpendicularPlane;
-	VPlaneInit(perpendicularPlane, -unitVectorForward, bbox);
-
-	const Vector rotationAxis = unitVectorForward.Cross(camUp).Normalized();
-	Vector unitVectorUp;
-
-	QAngle screenAng;
-	WorldToScreenAng(bbox, screenAng);
-
-	Vector rotatedRight, rotatedUp;
-	//RotateVectorAroundVector(camRight, camUp, screenAng.y, rotatedRight);
-	//RotateVectorAroundVector(camUp, camRight, screenAng.x, rotatedUp);
 	VMatrix rotationMatrix;
 	MatrixBuildRotation(rotationMatrix, camForward, unitVectorForward);
 
-	rotatedRight = rotationMatrix * camRight;
-	rotatedUp = rotationMatrix * camUp;
+	const Vector rotatedRight = rotationMatrix * camRight;
+	rootLineDir = rotationMatrix * camUp;
 	const Vector rotatedForward = rotationMatrix * camForward;
 
-	NDebugOverlay::Line(bbox, bbox + rotatedUp * 25, 0, 255, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
-	NDebugOverlay::Line(bbox, bbox + rotatedRight * 25, 255, 255, 255, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
-	NDebugOverlay::Line(bbox, bbox + rotatedForward * 25, 255, 0, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
-
-	//NDebugOverlay::Line(bbox, bbox + camForward * 25, 128, 0, 255, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
-
-	//NDebugOverlay::BoxDirection(
-	//	bbox + projUp * 25, Vector(-5, -5, -5), Vector(5, 5, 10), projUp, 0, 255, 0, 128, NDEBUG_PERSIST_TILL_NEXT_FRAME);
-
-	//VectorRotate()
+	//NDebugOverlay::Line(bbox, bbox + rootLineDir * 25, 0, 255, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+	//NDebugOverlay::Line(bbox, bbox + rotatedRight * 25, 255, 255, 255, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+	//NDebugOverlay::Line(bbox, bbox + rotatedForward * 25, 255, 0, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 }
 
 bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs)
@@ -696,6 +670,8 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& w
 		Vector bboxCenterToCamera = bboxCenter - m_View->origin;
 
 		Vector rootLineDir = bboxCenterToCamera.Normalized().Cross(right.Normalized()).Normalized();
+		//Vector rootLineDir;
+		//CalcRootLineDir(bboxCenterToCamera, forward, up, right, rootLineDir);
 
 		engine->Con_NPrintf(0, "rootLineDir: %1.2f %1.2f %1.2f", rootLineDir.x, rootLineDir.y, rootLineDir.z);
 		rootLineP0 = bboxCenter;
@@ -705,11 +681,9 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& w
 
 		VPlaneInit(rootBBoxPlane, bboxCenter, m_View->origin, m_View->origin + up);
 
-		Test_DrawTriangleLines(bboxCenterToCamera, forward, up, right);
-
 		// Debugging
-		//NDebugOverlay::Line(bboxCenter, bboxCenter + rootLineDir * 25, 255, 0, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
-		//NDebugOverlay::Line(bboxCenter, bboxCenter + right * 25, 0, 255, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+		NDebugOverlay::Line(bboxCenter, bboxCenter + rootLineDir * 25, 255, 0, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+		NDebugOverlay::Line(bboxCenter, bboxCenter + right * 25, 0, 255, 0, true, NDEBUG_PERSIST_TILL_NEXT_FRAME);
 	}
 
 	Vector minsBB0, minsBB1, minsOrigin, minsCorner, maxsBB0, maxsBB1, maxsOrigin, maxsCorner;
@@ -1396,6 +1370,11 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 	VariablePusher<decltype(&m_GlowObjectDefinitions)> _saveGODefinitions(graphicsModule->m_GlowObjectDefinitions, &m_GlowObjectDefinitions);
 	VariablePusher<const CViewSetup*> _saveViewSetup(graphicsModule->m_View, pSetup);
 
+	// Collect extra glow data we'll use in multiple upcoming loops -- This used to be right
+	// before it would get used, but with NDEBUG_PER_FRAME_SUPPORT it needs to be before we
+	// change a bunch of rendering settings.
+	graphicsModule->BuildExtraGlowData(this);
+
 	ITexture* const pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
 	ITexture* const pRtFullFrameFB1 = materials->FindTexture("_rt_FullFrameFB1", TEXTURE_GROUP_RENDER_TARGET);
 	ITexture* const pRtSmallFB0 = materials->FindTexture("_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET);
@@ -1433,9 +1412,6 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 
 		pRenderContext->OverrideColorWriteEnable(true, true);
 		pRenderContext->OverrideAlphaWriteEnable(true, true);
-
-		// Collect extra glow data we'll use in multiple upcoming loops
-		graphicsModule->BuildExtraGlowData(this);
 
 		// Draw "glow when visible" objects
 		if (anyGlowVisible)

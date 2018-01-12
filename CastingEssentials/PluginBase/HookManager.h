@@ -226,6 +226,13 @@ class HookManager final
 	typedef void(__thiscall *Raw_ProgressBar_ApplySettings)(vgui::ProgressBar* pThis, KeyValues* pSettings);
 	typedef bool(__thiscall *Raw_C_BaseAnimating_ComputeHitboxSurroundingBox)(C_BaseAnimating* pThis, Vector* pVecWorldMins, Vector* pVecWorldMaxs);
 
+	typedef bool(__cdecl *Raw_RenderBox)(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Color c, bool zBuffer, bool insideOut);
+	typedef bool(__cdecl *Raw_RenderBox_1)(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Color c, IMaterial* material, bool insideOut);
+	typedef bool(__cdecl *Raw_RenderWireframeBox)(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Color c, bool zBuffer);
+	typedef bool(__cdecl *Raw_RenderLine)(const Vector& p0, const Vector& p1, Color c, bool zBuffer);
+	typedef bool(__cdecl *Raw_RenderTriangle)(const Vector& p0, const Vector& p1, const Vector& p2, Color c, bool zBuffer);
+
+
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
 	static RawSetPrimaryTargetFn GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
@@ -254,6 +261,12 @@ public:
 	static Raw_EditablePanel_GetDialogVariables GetRawFunc_EditablePanel_GetDialogVariables();
 	static Raw_ImagePanel_SetImage GetRawFunc_ImagePanel_SetImage();
 	static Raw_C_BaseAnimating_ComputeHitboxSurroundingBox GetRawFunc_C_BaseAnimating_ComputeHitboxSurroundingBox();
+
+	static Raw_RenderBox GetRawFunc_RenderBox();
+	static Raw_RenderBox_1 GetRawFunc_RenderBox_1();
+	static Raw_RenderWireframeBox GetRawFunc_RenderWireframeBox();
+	static Raw_RenderLine GetRawFunc_RenderLine();
+	static Raw_RenderTriangle GetRawFunc_RenderTriangle();
 
 	static bool Load();
 	static bool Unload();

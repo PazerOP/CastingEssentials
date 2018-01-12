@@ -517,6 +517,86 @@ HookManager::Raw_C_BaseAnimating_ComputeHitboxSurroundingBox HookManager::GetRaw
 	return fn;
 }
 
+HookManager::Raw_RenderBox HookManager::GetRawFunc_RenderBox()
+{
+	static Raw_RenderBox fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x51\x8B\x45\x18\x8B\xC8";
+		constexpr const char* MASK = "xxxxxxxxx";
+
+		fn = (Raw_RenderBox)SignatureScan("engine", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("RenderBox");
+	}
+
+	return fn;
+}
+
+HookManager::Raw_RenderBox_1 HookManager::GetRawFunc_RenderBox_1()
+{
+	static Raw_RenderBox_1 fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x81\xEC????\x56\xE8????\x8B\x0D????\x8B\x01\xFF\x90????\x8B\xF0\x89\x75\xDC";
+		constexpr const char* MASK = "xxxxx????xx????xx????xxxx????xxxxx";
+
+		fn = (Raw_RenderBox_1)SignatureScan("engine", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("RenderBox_Impl");
+	}
+
+	return fn;
+}
+
+HookManager::Raw_RenderWireframeBox HookManager::GetRawFunc_RenderWireframeBox()
+{
+	static Raw_RenderWireframeBox fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x81\xEC????\x56\xE8????\x8B\x0D????\x8B\x01\xFF\x90????\x8B\xF0\x89\x75\xF8";
+		constexpr const char* MASK = "xxxxx????xx????xx????xxxx????xxxxx";
+
+		fn = (Raw_RenderWireframeBox)SignatureScan("engine", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("RenderWireframeBox");
+	}
+
+	return fn;
+}
+
+HookManager::Raw_RenderLine HookManager::GetRawFunc_RenderLine()
+{
+	static Raw_RenderLine fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x81\xEC????\x56\xE8????\x8B\x0D????\x8B\x01\xFF\x90????\x8B\xF0\x85\xF6";
+		constexpr const char* MASK = "xxxxx????xx????xx????xxxx????xxxx";
+
+		fn = (Raw_RenderLine)SignatureScan("engine", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("RenderLine");
+	}
+
+	return fn;
+}
+
+HookManager::Raw_RenderTriangle HookManager::GetRawFunc_RenderTriangle()
+{
+	static Raw_RenderTriangle fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x51\x8B\x45\x14\x8B\xC8";
+		constexpr const char* MASK = "xxxxxxxxx";
+
+		fn = (Raw_RenderTriangle)SignatureScan("engine", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("RenderTriangle");
+	}
+
+	return fn;
+}
+
 void HookManager::IngameStateChanged(bool inGame)
 {
 	if (inGame)

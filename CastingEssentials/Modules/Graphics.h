@@ -124,9 +124,7 @@ private:
 	std::map<float, Vector> GetBaseAnimatingPoints(C_BaseAnimating* animating);
 
 	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs);
-	void Test_DrawTriangleLines(const Vector& camToBBox, const Vector& camForward, const Vector& camUp, const Vector& camRight);
-
-	//void CalcRootLineDir
+	void CalcRootLineDir(const Vector& camToBBox, const Vector& camForward, const Vector& camUp, const Vector& camRight, Vector& rootLineDir);
 
 	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);

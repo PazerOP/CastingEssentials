@@ -1,4 +1,7 @@
+#include "PluginBase/HookManager.h"
+
 #include <debugoverlay_shared.h>
+#include <tier2/renderutils.h>
 
 void NDebugOverlay::Cross3D(const Vector &position, float size, int r, int g, int b, bool noDepthTest, float flDuration)
 {
@@ -9,7 +12,16 @@ void NDebugOverlay::Cross3D(const Vector &position, float size, int r, int g, in
 
 void NDebugOverlay::Line(const Vector &origin, const Vector &target, int r, int g, int b, bool noDepthTest, float duration)
 {
-	debugoverlay->AddLineOverlay(origin, target, r, g, b, noDepthTest, duration);
+#ifdef NDEBUG_PER_FRAME_SUPPORT
+	if (duration == NDEBUG_PERSIST_TILL_NEXT_FRAME)
+	{
+		HookManager::GetRawFunc_RenderLine()(origin, target, Color(r, g, b), !noDepthTest);
+	}
+	else
+#endif
+	{
+		debugoverlay->AddLineOverlay(origin, target, r, g, b, noDepthTest, duration);
+	}
 }
 
 void NDebugOverlay::Box(const Vector &origin, const Vector &mins, const Vector &maxs, int r, int g, int b, int a, float flDuration)
@@ -19,7 +31,19 @@ void NDebugOverlay::Box(const Vector &origin, const Vector &mins, const Vector &
 
 void NDebugOverlay::BoxAngles(const Vector &origin, const Vector &mins, const Vector &maxs, const QAngle &angles, int r, int g, int b, int a, float duration)
 {
-	debugoverlay->AddBoxOverlay(origin, mins, maxs, angles, r, g, b, a, duration);
+#ifdef NDEBUG_PER_FRAME_SUPPORT
+	if (duration == NDEBUG_PERSIST_TILL_NEXT_FRAME)
+	{
+		if (a > 0)
+			HookManager::GetRawFunc_RenderBox()(origin, angles, mins, maxs, Color(r, g, b, a), false, false);
+
+		HookManager::GetRawFunc_RenderWireframeBox()(origin, angles, mins, maxs, Color(r, g, b, 255), true);
+	}
+	else
+#endif
+	{
+		debugoverlay->AddBoxOverlay(origin, mins, maxs, angles, r, g, b, a, duration);
+	}
 }
 
 void NDebugOverlay::Text(const Vector& origin, const char* text, bool bViewCheck, float duration)
@@ -29,7 +53,16 @@ void NDebugOverlay::Text(const Vector& origin, const char* text, bool bViewCheck
 
 void NDebugOverlay::Triangle(const Vector& p1, const Vector& p2, const Vector& p3, int r, int g, int b, int a, bool noDepthTest, float duration)
 {
-	debugoverlay->AddTriangleOverlay(p1, p2, p3, r, g, b, a, noDepthTest, duration);
+#ifdef NDEBUG_PER_FRAME_SUPPORT
+	if (duration == NDEBUG_PERSIST_TILL_NEXT_FRAME)
+	{
+		HookManager::GetRawFunc_RenderTriangle()(p1, p2, p3, Color(r, g, b, a), !noDepthTest);
+	}
+	else
+#endif
+	{
+		debugoverlay->AddTriangleOverlay(p1, p2, p3, r, g, b, a, noDepthTest, duration);
+	}
 }
 
 void NDebugOverlay::Cross3DOriented(const Vector& position, const QAngle& angles, float size, int r, int g, int b, bool noDepthTest, float flDuration)
