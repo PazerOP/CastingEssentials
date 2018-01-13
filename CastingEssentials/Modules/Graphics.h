@@ -34,21 +34,21 @@ private:
 	ConVar* ce_graphics_glow_intensity;
 	ConVar* ce_graphics_improved_glows;
 	ConVar* ce_graphics_fix_invisible_players;
-	ConVar* ce_graphics_glow_l4d;
 
+	ConVar* ce_outlines_mode;
 	ConVar* ce_outlines_players_override_red;
 	ConVar* ce_outlines_players_override_blue;
 	ConVar* ce_outlines_debug_stencil_out;
 	ConVar* ce_outlines_additive;
-	ConVar* ce_outlines_infill_enable;
-	ConVar* ce_outlines_infill_debug;
-	ConVar* ce_outlines_infill_hurt_red;
-	ConVar* ce_outlines_infill_hurt_blue;
-	ConVar* ce_outlines_infill_normal_direction;
-	ConVar* ce_outlines_infill_buffed_red;
-	ConVar* ce_outlines_infill_buffed_blue;
-	ConVar* ce_outlines_infill_buffed_direction;
-	ConVar* ce_outlines_infill_w2s_mode;
+
+	ConVar* ce_infills_enable;
+	ConVar* ce_infills_debug;
+	ConVar* ce_infills_hurt_red;
+	ConVar* ce_infills_hurt_blue;
+	//ConVar* ce_infills_normal_direction;
+	ConVar* ce_infills_buffed_red;
+	ConVar* ce_infills_buffed_blue;
+	//ConVar* ce_infills_buffed_direction;
 
 	ConCommand* ce_graphics_dump_shader_params;
 
@@ -98,22 +98,9 @@ private:
 	CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>* m_GlowObjectDefinitions;
 	const CViewSetup* m_View;
 
-
 	void BuildMoveChildLists();
 	ExtraGlowData* FindExtraGlowData(int entindex);
 
-	// Returns true if the world to screen transformation resulted in a valid rectangle
-	// NOTE: This returns vgui coordinates (y = 0 at top of screen)
-	bool ScreenBounds(const Vector& mins, const Vector& maxs, float& screenMins, float& screenMaxs, Vector& screenWorldMins, Vector& screenWorldMaxs);
-	bool BaseAnimatingScreenBounds(const VMatrix& worldToScreen, C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs);
-
-	//std::map<float, Vector> GetBaseAnimatingPoints
-
-	static void PlaneThroughPoints(const Vector& p1, const Vector& p2, const Vector& p3, Vector& planeNormal);
-	static void ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut, float* t = nullptr);
-
-	void WorldToScreenAng(const Vector& world, QAngle& screenAng);
-	void ScreenAngToPixel(const QAngle& screenAng, Vector2D& pixel);
 	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
 
 	// Returns the number of intersecting points between a plane and an AABB.
@@ -122,10 +109,7 @@ private:
 	static void GetAABBCorner(const Vector& mins, const Vector& maxs, uint_fast8_t cornerIndex, Vector& corner);
 	static void GetRotatedBBCorners(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Vector corners[8]);
 
-	std::map<float, Vector> GetBaseAnimatingPoints(C_BaseAnimating* animating);
-
-	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs, Vector2D& screenMins, Vector2D& screenMaxs);
-	void CalcRootLineDir(const Vector& camToBBox, const Vector& camForward, const Vector& camUp, const Vector& camRight, Vector& rootLineDir);
+	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector2D& screenMins, Vector2D& screenMaxs);
 
 	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);

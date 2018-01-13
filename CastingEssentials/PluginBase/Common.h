@@ -142,11 +142,11 @@ inline const char* stristr(const char* const searchThis, const char* const forTh
 	// smh
 	std::string lowerSearchThis(searchThis);
 	for (auto& c : lowerSearchThis)
-		c = tolower(c);
+		c = (char)tolower(c);
 
 	std::string lowerForThis(forThis);
 	for (auto& c : lowerForThis)
-		c = tolower(c);
+		c = (char)tolower(c);
 
 	auto const ptr = strstr(lowerSearchThis.c_str(), lowerForThis.c_str());
 	if (!ptr)

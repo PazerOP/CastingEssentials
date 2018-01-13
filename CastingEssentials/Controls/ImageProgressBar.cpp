@@ -69,19 +69,19 @@ namespace vgui
 		SetBottomTexture(bottomTextureName);
 
 		const char *directionName = inResourceData->GetString("direction", "");
-		if (stricmp(directionName, "east") == 0)
+		if (_stricmp(directionName, "east") == 0)
 		{
 			SetProgressDirection(PROGRESS_EAST);
 		}
-		else if (stricmp(directionName, "west") == 0)
+		else if (_stricmp(directionName, "west") == 0)
 		{
 			SetProgressDirection(PROGRESS_WEST);
 		}
-		else if (stricmp(directionName, "north") == 0)
+		else if (_stricmp(directionName, "north") == 0)
 		{
 			SetProgressDirection(PROGRESS_NORTH);
 		}
-		else if (stricmp(directionName, "south") == 0)
+		else if (_stricmp(directionName, "south") == 0)
 		{
 			SetProgressDirection(PROGRESS_SOUTH);
 		}
