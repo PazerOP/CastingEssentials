@@ -51,7 +51,7 @@ Graphics::Graphics()
 	ce_outlines_players_override_blue = new ConVar("ce_outlines_players_override_blue", "", FCVAR_NONE, "Override color for blue players. [0, 255], format is \"<red> <green> <blue>\".");
 	ce_outlines_additive = new ConVar("ce_outlines_additive", "1", FCVAR_NONE, "If set to 1, outlines will add to underlying colors rather than replace them.");
 
-	ce_infills_enable = new ConVar("ce_infills_enable", "1", FCVAR_NONE, "Enables player infills.");
+	ce_infills_enable = new ConVar("ce_infills_enable", "0", FCVAR_NONE, "Enables player infills.");
 	ce_infills_hurt_red = new ConVar("ce_infills_hurt_red", "255 0 0 64", FCVAR_NONE, "Infill for red players that are not overhealed.");
 	ce_infills_hurt_blue = new ConVar("ce_infills_hurt_blue", "0 0 255 64", FCVAR_NONE, "Infill for blue players that are not overhealed.");
 	ce_infills_buffed_red = new ConVar("ce_infills_buffed_red", "255 128 128 64", FCVAR_NONE, "Infill for red players that are overhealed.");
@@ -699,11 +699,13 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 #define DRAW_INFILL_VGUI 1
 
 #if DRAW_INFILL_VGUI
+	constexpr float pixelOffset = 0.5;
+
 	pRenderContext->MatrixMode(MATERIAL_PROJECTION);
 	pRenderContext->PushMatrix();
 	pRenderContext->LoadIdentity();
 	pRenderContext->Scale(1, -1, 1);
-	pRenderContext->Ortho(0, 0, m_View->width, m_View->height, -1.0f, 1.0f);
+	pRenderContext->Ortho(pixelOffset, pixelOffset, m_View->width + pixelOffset, m_View->height + pixelOffset, -1.0f, 1.0f);
 
 	// make sure there is no translation and rotation laying around
 	pRenderContext->MatrixMode(MATERIAL_MODEL);
