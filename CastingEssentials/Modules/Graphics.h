@@ -113,6 +113,7 @@ private:
 	static void ProjectToLine(const Vector& line0, const Vector& line1, const Vector& pointIn, Vector& pointOut, float* t = nullptr);
 
 	void WorldToScreenAng(const Vector& world, QAngle& screenAng);
+	void ScreenAngToPixel(const QAngle& screenAng, Vector2D& pixel);
 	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
 
 	// Returns the number of intersecting points between a plane and an AABB.
@@ -123,7 +124,7 @@ private:
 
 	std::map<float, Vector> GetBaseAnimatingPoints(C_BaseAnimating* animating);
 
-	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs);
+	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector& worldMins, Vector& worldMaxs, Vector2D& screenMins, Vector2D& screenMaxs);
 	void CalcRootLineDir(const Vector& camToBBox, const Vector& camForward, const Vector& camUp, const Vector& camRight, Vector& rootLineDir);
 
 	void BuildExtraGlowData(CGlowObjectManager* glowMgr);

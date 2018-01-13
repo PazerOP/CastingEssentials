@@ -24,6 +24,16 @@ inline VPlane VPlaneInit(const Vector& p0, const Vector& p1, const Vector& p2)
 	VPlaneInit(p0, p1, p2);
 	return retVal;
 }
+inline void VPlaneInit(VPlane& plane, const cplane_t& inPlane)
+{
+	plane.Init(inPlane.normal, inPlane.dist);
+}
+inline VPlane VPlaneInit(const cplane_t& plane)
+{
+	VPlane retVal;
+	VPlaneInit(retVal, plane);
+	return retVal;
+}
 
 // Returns true if the plane intersected with the line.
 inline bool VPlaneIntersectLine(const VPlane& plane, const Vector& p0, const Vector& p1, Vector* intersection = nullptr, bool lineSegment = true)
