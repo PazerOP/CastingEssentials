@@ -65,8 +65,6 @@ Graphics::Graphics()
 	m_ApplyEntityGlowEffectsHook = GetHooks()->AddHook<CGlowObjectManager_ApplyEntityGlowEffects>(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9));
 
 	m_ForcedMaterialOverrideHook = GetHooks()->AddHook<IStudioRender_ForcedMaterialOverride>(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2));
-
-	m_GlowObjectDefinitions = nullptr;
 }
 
 Graphics::~Graphics()
@@ -290,10 +288,10 @@ void Graphics::ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_
 
 Graphics::ExtraGlowData* Graphics::FindExtraGlowData(int entindex)
 {
-	for (int i = 0; i < m_GlowObjectDefinitions->Count(); i++)
+	for (auto& extraGlowData : m_ExtraGlowData)
 	{
-		if (m_GlowObjectDefinitions->Element(i).m_hEntity.GetEntryIndex() == entindex)
-			return &m_ExtraGlowData[i];
+		if (extraGlowData.m_Base->m_hEntity.GetEntryIndex() == entindex)
+			return &extraGlowData;
 	}
 
 	return nullptr;
@@ -526,6 +524,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 	uint8_t stencilIndex = 0;
 
 	const bool infillsEnable = ce_infills_enable->GetBool();
+	const bool bInfillDebug = ce_infills_debug->GetBool();
 
 	const Color redInfillNormal = ColorFromConVar(*ce_infills_hurt_red);
 	const Color blueInfillNormal = ColorFromConVar(*ce_infills_hurt_blue);
@@ -536,14 +535,13 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 	if (infillsEnable)
 		Interfaces::GetEngineTool()->GetWorldToScreenMatrixForView(*m_View, &worldToScreen);
 
-	const bool bInfillDebug = ce_infills_debug->GetBool();
 
 	//int nidx = 0;
 	for (int i = 0; i < glowMgr->m_GlowObjectDefinitions.Count(); i++)
 	{
-		const auto& current = glowMgr->m_GlowObjectDefinitions[i];
+		auto& current = glowMgr->m_GlowObjectDefinitions[i];
 
-		m_ExtraGlowData.emplace_back();
+		m_ExtraGlowData.emplace_back(&current);
 		auto& currentExtra = m_ExtraGlowData.back();
 
 		if (Player::IsValidIndex(current.m_hEntity.GetEntryIndex()))
@@ -642,6 +640,22 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 		}
 	}
 
+	// If we're doing infills, sort the vector so we render back to front
+	if (infillsEnable)
+	{
+		std::sort(m_ExtraGlowData.begin(), m_ExtraGlowData.end(), [](const ExtraGlowData& lhs, const ExtraGlowData& rhs) -> bool
+		{
+			const auto& origin = Graphics::GetModule()->m_View->origin;
+			const auto& ent1 = lhs.m_Base->m_hEntity.Get();
+			const auto& ent2 = rhs.m_Base->m_hEntity.Get();
+
+			const float dist1 = ent1 ? ent1->GetAbsOrigin().DistToSqr(origin) : 0;
+			const float dist2 = ent2 ? ent2->GetAbsOrigin().DistToSqr(origin) : 0;
+
+			return dist2 < dist1;
+		});
+	}
+
 	// Build ourselves a map of move children (we need extra glow data before we can do this)
 	BuildMoveChildLists();
 }
@@ -717,9 +731,8 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 	pRenderContext->LoadIdentity();
 #endif
 
-	for (int i = 0; i < m_GlowObjectDefinitions->Count(); i++)
+	for (const auto& currentExtra : m_ExtraGlowData)
 	{
-		const auto& currentExtra = m_ExtraGlowData[i];
 		if (!currentExtra.m_InfillEnabled)
 			continue;
 
@@ -864,31 +877,28 @@ void Graphics::DrawGlowAlways(int nSplitScreenSlot, CMatRenderContextPtr& pRende
 
 	pRenderContext->OverrideDepthEnable(false, false);
 	render->SetBlend(1);
-	for (int i = 0; i < m_GlowObjectDefinitions->Count(); i++)
+	for (const auto& current : m_ExtraGlowData)
 	{
-		auto& current = m_GlowObjectDefinitions->Element(i);
-		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || !current.m_bRenderWhenUnoccluded)
+		if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || !current.m_Base->m_bRenderWhenOccluded || !current.m_Base->m_bRenderWhenUnoccluded)
 			continue;
 
-		const auto& extra = m_ExtraGlowData[i];
-
-		if (extra.m_ShouldOverrideGlowColor)
-			render->SetColorModulation(extra.m_GlowColorOverride.Base());
+		if (current.m_ShouldOverrideGlowColor)
+			render->SetColorModulation(current.m_GlowColorOverride.Base());
 		else
 		{
-			const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
+			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
 			render->SetColorModulation(vGlowColor.Base());
 		}
 
-		if (extra.m_InfillEnabled)
+		if (current.m_InfillEnabled)
 		{
 			pRenderContext->SetStencilWriteMask(0xFFFFFFFF);
-			pRenderContext->SetStencilReferenceValue((extra.m_StencilIndex << 2) | 1);
+			pRenderContext->SetStencilReferenceValue((current.m_StencilIndex << 2) | 1);
 		}
 		else
 			pRenderContext->SetStencilWriteMask(1);
 
-		current.DrawModel();
+		current.m_Base->DrawModel();
 	}
 }
 
@@ -949,13 +959,12 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 		pRenderContext->OverrideAlphaWriteEnable(true, false);
 		pRenderContext->OverrideColorWriteEnable(true, false);
 
-		for (int i = 0; i < m_GlowObjectDefinitions->Count(); i++)
+		for (const auto& current : m_ExtraGlowData)
 		{
-			auto& current = m_GlowObjectDefinitions->Element(i);
-			if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || current.m_bRenderWhenUnoccluded)
+			if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || !current.m_Base->m_bRenderWhenOccluded || current.m_Base->m_bRenderWhenUnoccluded)
 				continue;
 
-			current.DrawModel();
+			current.m_Base->DrawModel();
 		}
 	}
 
@@ -967,7 +976,7 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 	stencilState.m_bEnable = true;
 	stencilState.m_nReferenceValue = 3;
 	stencilState.m_nTestMask = 2;
-	stencilState.m_nWriteMask = 0xFFFFFFFF;
+	stencilState.m_nWriteMask = 1;
 	stencilState.m_CompareFunc = STENCILCOMPARISONFUNCTION_NOTEQUAL;
 	stencilState.m_PassOp = STENCILOPERATION_REPLACE;
 	stencilState.m_ZFailOp = STENCILOPERATION_REPLACE;
@@ -976,31 +985,28 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 
 	// Draw color+alpha, stenciling out pixels from the first pass
 	render->SetBlend(1);
-	for (int i = 0; i < m_GlowObjectDefinitions->Count(); i++)
+	for (const auto& current : m_ExtraGlowData)
 	{
-		auto& current = m_GlowObjectDefinitions->Element(i);
-		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || !current.m_bRenderWhenOccluded || current.m_bRenderWhenUnoccluded)
+		if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || !current.m_Base->m_bRenderWhenOccluded || current.m_Base->m_bRenderWhenUnoccluded)
 			continue;
 
-		const auto& extra = m_ExtraGlowData[i];
-
-		if (extra.m_ShouldOverrideGlowColor)
-			render->SetColorModulation(extra.m_GlowColorOverride.Base());
+		if (current.m_ShouldOverrideGlowColor)
+			render->SetColorModulation(current.m_GlowColorOverride.Base());
 		else
 		{
-			const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
+			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
 			render->SetColorModulation(vGlowColor.Base());
 		}
 
-		if (extra.m_InfillEnabled)
+		if (current.m_InfillEnabled)
 		{
 			pRenderContext->SetStencilWriteMask(0xFFFFFFFF);
-			pRenderContext->SetStencilReferenceValue((extra.m_StencilIndex << 2) | 3);
+			pRenderContext->SetStencilReferenceValue((current.m_StencilIndex << 2) | 3);
 		}
 		else
 			pRenderContext->SetStencilWriteMask(1);
 
-		current.DrawModel();
+		current.m_Base->DrawModel();
 	}
 #endif
 }
@@ -1019,31 +1025,28 @@ void Graphics::DrawGlowVisible(int nSplitScreenSlot, CMatRenderContextPtr& pRend
 
 	pRenderContext->OverrideDepthEnable(true, false);
 	render->SetBlend(1);
-	for (int i = 0; i < m_GlowObjectDefinitions->Count(); i++)
+	for (const auto& current : m_ExtraGlowData)
 	{
-		auto& current = m_GlowObjectDefinitions->Element(i);
-		if (current.IsUnused() || !current.ShouldDraw(nSplitScreenSlot) || current.m_bRenderWhenOccluded || !current.m_bRenderWhenUnoccluded)
+		if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || current.m_Base->m_bRenderWhenOccluded || !current.m_Base->m_bRenderWhenUnoccluded)
 			continue;
 
-		const auto& extra = m_ExtraGlowData[i];
-
-		if (extra.m_ShouldOverrideGlowColor)
-			render->SetColorModulation(extra.m_GlowColorOverride.Base());
+		if (current.m_ShouldOverrideGlowColor)
+			render->SetColorModulation(current.m_GlowColorOverride.Base());
 		else
 		{
-			const Vector vGlowColor = current.m_vGlowColor * (current.m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
+			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
 			render->SetColorModulation(vGlowColor.Base());
 		}
 
-		if (extra.m_InfillEnabled)
+		if (current.m_InfillEnabled)
 		{
 			pRenderContext->SetStencilWriteMask(0xFFFFFFFF);
-			pRenderContext->SetStencilReferenceValue((extra.m_StencilIndex << 2) | 1);
+			pRenderContext->SetStencilReferenceValue((current.m_StencilIndex << 2) | 1);
 		}
 		else
 			pRenderContext->SetStencilWriteMask(1);
 
-		current.DrawModel();
+		current.m_Base->DrawModel();
 	}
 }
 
@@ -1076,7 +1079,6 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 	}
 
 	auto const graphicsModule = Graphics::GetModule();
-	VariablePusher<decltype(&m_GlowObjectDefinitions)> _saveGODefinitions(graphicsModule->m_GlowObjectDefinitions, &m_GlowObjectDefinitions);
 	VariablePusher<const CViewSetup*> _saveViewSetup(graphicsModule->m_View, pSetup);
 
 	// Collect extra glow data we'll use in multiple upcoming loops -- This used to be right
@@ -1371,7 +1373,7 @@ void Graphics::OnTick(bool inGame)
 	}
 }
 
-Graphics::ExtraGlowData::ExtraGlowData()
+Graphics::ExtraGlowData::ExtraGlowData(CGlowObjectManager::GlowObjectDefinition_t* base) : m_Base(base)
 {
 	m_ShouldOverrideGlowColor = false;
 	m_InfillEnabled = false;

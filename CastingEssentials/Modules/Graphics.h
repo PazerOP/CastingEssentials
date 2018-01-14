@@ -72,7 +72,9 @@ private:
 	friend class CGlowObjectManager;
 	struct ExtraGlowData
 	{
-		ExtraGlowData();
+		ExtraGlowData(CGlowObjectManager::GlowObjectDefinition_t* base);
+
+		CGlowObjectManager::GlowObjectDefinition_t* m_Base;
 
 		bool m_ShouldOverrideGlowColor;
 		Vector m_GlowColorOverride;
@@ -95,7 +97,6 @@ private:
 		std::vector<C_BaseEntity*> m_MoveChildren;
 	};
 	std::vector<ExtraGlowData> m_ExtraGlowData;
-	CUtlVector<CGlowObjectManager::GlowObjectDefinition_t>* m_GlowObjectDefinitions;
 	const CViewSetup* m_View;
 
 	void BuildMoveChildLists();
