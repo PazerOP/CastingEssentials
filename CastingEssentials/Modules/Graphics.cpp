@@ -40,7 +40,7 @@ Graphics::Graphics()
 {
 	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading.");
 	ce_graphics_debug_glow = new ConVar("ce_graphics_debug_glow", "0", FCVAR_UNREGISTERED);
-	ce_graphics_glow_silhouettes = new ConVar("ce_graphics_glow_silhouettes", "1", FCVAR_NONE, "Turns outlines into silhouettes.");
+	ce_graphics_glow_silhouettes = new ConVar("ce_graphics_glow_silhouettes", "0", FCVAR_NONE, "Turns outlines into silhouettes.");
 	ce_graphics_glow_intensity = new ConVar("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity");
 	ce_graphics_improved_glows = new ConVar("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?");
 	ce_graphics_fix_invisible_players = new ConVar("ce_graphics_fix_invisible_players", "1", FCVAR_NONE, "Fix a case where players are invisible if you're firstperson speccing them when the round starts.");
