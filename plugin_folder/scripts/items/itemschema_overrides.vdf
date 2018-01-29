@@ -23,6 +23,9 @@ itemschema_overrides
 	c_ubersaw_xmas              c_ubersaw.mdl
 	c_frontierjustice_xmas      c_frontierjustice.mdl
 	c_fireaxe_pyro_xmas         c_axtinguisher_pyro.mdl
+	c_revolver_xmas             c_revolver.mdl
+	c_xms_energy_drink          c_energy_drink.mdl
+	c_targe_xmas                c_targe.mdl
 
 	35                          35                      // Separate Kritzkrieg from mediguns
 	163                         163                     // Separate Crit-a-Cola from Bonk
@@ -33,6 +36,7 @@ itemschema_overrides
 
 	239                         239                     // Separate GRU from KGB
 	c_boxing_gloves_xmas        239                     // Festive GRU -> GRU
+	1184                        239                     // GRU MvM -> GRU
 
 	195                         5                       // UPGRADABLE Fists -> Fists (Fists don't have a model)
 }
