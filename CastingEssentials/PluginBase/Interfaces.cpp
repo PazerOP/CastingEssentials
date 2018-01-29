@@ -50,12 +50,12 @@ C_HLTVCamera* HLTVCamera() { return Interfaces::GetHLTVCamera(); }
 
 CClientEntityList* cl_entitylist;
 CBaseEntityList *g_pEntityList;
+IGameEventManager2* gameeventmanager;
 IVDebugOverlay* debugoverlay;
 IEngineTrace* enginetrace;
 IVEngineClient* engine;
 IVRenderView* render;
 IClientLeafSystem* g_pClientLeafSystem;
-//IMaterialSystem* materials;
 
 void Interfaces::Load(CreateInterfaceFn factory)
 {
@@ -99,6 +99,7 @@ void Interfaces::Load(CreateInterfaceFn factory)
 		render = Interfaces::GetRenderView();
 		materials = Interfaces::GetMaterialSystem();
 		g_pClientLeafSystem = Interfaces::GetClientLeafSystem();
+		gameeventmanager = Interfaces::GetGameEventManager();
 	}
 }
 
@@ -134,6 +135,7 @@ void Interfaces::Unload()
 	materials = nullptr;
 	g_pStudioRender = nullptr;
 	g_pClientLeafSystem = nullptr;
+	gameeventmanager = nullptr;
 
 	DisconnectTier3Libraries();
 	DisconnectTier2Libraries();

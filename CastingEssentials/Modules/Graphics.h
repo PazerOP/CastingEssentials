@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Misc/CRefPtrFix.h"
 #include "PluginBase/Modules.h"
 
 #define GLOWS_ENABLE

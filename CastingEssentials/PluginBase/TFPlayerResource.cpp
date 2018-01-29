@@ -61,6 +61,17 @@ int* TFPlayerResource::GetKillstreak(int playerEntIndex)
 	return Entities::GetEntityProp<int*>(dynamic_cast<C_BaseEntity *>(m_PlayerResourceEntity.Get()), buffer);
 }
 
+int TFPlayerResource::GetDamage(int playerEntIndex)
+{
+	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
+		return false;
+
+	char buffer[32];
+	Entities::PropIndex(buffer, "m_iDamage", playerEntIndex);
+
+	return *Entities::GetEntityProp<int*>(m_PlayerResourceEntity.Get(), buffer);
+}
+
 int TFPlayerResource::GetMaxHealth(int playerEntIndex)
 {
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))

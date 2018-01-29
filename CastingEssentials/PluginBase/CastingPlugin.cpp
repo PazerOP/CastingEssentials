@@ -14,6 +14,7 @@
 #include "Modules/FOVOverride.h"
 #include "Modules/FreezeInfo.h"
 #include "Modules/Graphics.h"
+#include "Modules/HitEvents.h"
 #include "Modules/HUDHacking.h"
 #include "Modules/IngameTeamScores.h"
 #include "Modules/ItemSchema.h"
@@ -73,6 +74,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<FOVOverride>("FOV Override");
 	Modules().RegisterAndLoadModule<FreezeInfo>("Freeze Info");
 	Modules().RegisterAndLoadModule<Graphics>("Graphics Enhancements");
+	Modules().RegisterAndLoadModule<HitEvents>("Player Hit Events");
 	Modules().RegisterAndLoadModule<IngameTeamScores>("Ingame Team Scores");
 	Modules().RegisterAndLoadModule<ItemSchema>("Item Schema");
 	Modules().RegisterAndLoadModule<Killfeed>("Killfeed Fixes");

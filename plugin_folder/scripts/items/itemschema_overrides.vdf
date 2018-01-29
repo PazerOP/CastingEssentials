@@ -1,0 +1,38 @@
+itemschema_overrides
+{
+	// The remap section allows you to manually map children to specific parents.
+	// If any item models contain the text on the left, they are matched to an
+	// item with a model name containing the text on the right.
+
+	// Festive weapons (with lights as part of the model)
+	c_bonesaw_xmas              c_bonesaw.mdl
+	c_blackbox_xmas             c_blackbox.mdl
+	c_holymackerel_xmas         c_holymackerel.mdl
+	c_crusaders_crossbow_xmas   c_crusaders_crossbow.mdl
+	c_wrangler_xmas             c_wrangler.mdl
+	c_bow_xmas                  c_bow.mdl               // Huntsman
+	c_grenadelauncher_xmas      c_grenadelauncher.mdl
+	c_ambassador_xmas           c_ambassador.mdl
+	c_sandwich_xmas.mdl         c_sandwich.mdl
+	c_backburner_xmas           c_backburner.mdl
+	c_claymore_xmas             c_claymore.mdl          // Eyelander
+	c_xms_urinejar              "/urinejar.mdl"
+	c_xms_flaregun              c_flaregun_pyro.mdl
+	c_sapper_xmas               c_sapper.mdl
+	c_xms_double_barrel         c_double_barrel.mdl     // Force-a-nature
+	c_ubersaw_xmas              c_ubersaw.mdl
+	c_frontierjustice_xmas      c_frontierjustice.mdl
+	c_fireaxe_pyro_xmas         c_axtinguisher_pyro.mdl
+
+	35                          35                      // Separate Kritzkrieg from mediguns
+	163                         163                     // Separate Crit-a-Cola from Bonk
+
+	142                         142                     // Gunslinger doesn't have a model declared the normal way
+
+	c_toolbox                   c_builder               // Toolbox -> Build PDA
+
+	239                         239                     // Separate GRU from KGB
+	c_boxing_gloves_xmas        239                     // Festive GRU -> GRU
+
+	195                         5                       // UPGRADABLE Fists -> Fists (Fists don't have a model)
+}

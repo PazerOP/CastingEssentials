@@ -28,7 +28,7 @@ static constexpr const char* WHITESPACE_CHARS = "\t\n\v\f\r ";
 
 static constexpr const char* s_ObserverModes[] =
 {
-	"None",
+	"Unspecified",
 	"Deathcam",
 	"Freezecam",
 	"Fixed",
@@ -40,7 +40,7 @@ static constexpr const char* s_ObserverModes[] =
 
 static constexpr const char* s_ShortObserverModes[] =
 {
-	"None",
+	"Unspecified",
 	"Deathcam",
 	"Freezecam",
 	"Fixed",
