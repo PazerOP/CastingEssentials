@@ -443,9 +443,12 @@ ItemSchema::ItemEquipSlot ItemSchema::ItemProperties::GetEquipSlot() const
 
 bool ItemSchema::ItemRemap::FromMatch(const ItemEntry& entry) const
 {
+	const bool idMatch = m_FromModel.empty() && m_FromID == entry.m_ID;
+
 	const auto& playerModel = entry.GetPlayerModel();
-	return m_FromModel.empty() && m_FromID == entry.m_ID ||
-		!m_FromModel.empty() && !playerModel.empty() && stristr(playerModel.c_str(), m_FromModel.c_str());
+	const bool modelMatch = !m_FromModel.empty() && !playerModel.empty() && stristr(playerModel.c_str(), m_FromModel.c_str());
+
+	return idMatch || modelMatch;
 }
 
 void ItemSchema::LoadUniqueItems(std::forward_list<ItemEntry>& items)
@@ -506,14 +509,14 @@ void ItemSchema::LoadUniqueItems(std::forward_list<ItemEntry>& items)
 		// Try to see if we already have a unique item matching this remap's
 		for (auto& uniqueItem : m_UniqueItems)
 		{
-			if (uniqueItem.m_IsForceUnmapped)
-				continue;
-
 			bool match = false;
 
 			// Check if we direct match the master entry
-			if (!model.empty() && !stricmp(uniqueItem.m_MasterEntry->GetPlayerModel().c_str(), model.c_str()))
+			if (!uniqueItem.m_IsForceUnmapped && !model.empty() &&
+				!stricmp(uniqueItem.m_MasterEntry->GetPlayerModel().c_str(), model.c_str()))
+			{
 				match = true;
+			}
 			else
 			{
 				// Check if we partial match any of the remaps
