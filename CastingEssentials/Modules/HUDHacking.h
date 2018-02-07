@@ -24,7 +24,7 @@ public:
 	static Player* GetPlayerFromPanel(vgui::EditablePanel* playerPanel);
 
 	// Like normal FindChildByName, but doesn't care about the fact we're in a different module.
-	static vgui::Panel* FindChildByName(const char* name, bool recursive = false);
+	static vgui::Panel* FindChildByName(vgui::VPANEL rootPanel, const char* name, bool recursive = false);
 
 	static Color* GetFillColor(vgui::ImagePanel* imgPanel);
 	static Color* GetDrawColor(vgui::ImagePanel* imgPanel);
@@ -32,6 +32,9 @@ public:
 	static int* GetProgressDirection(vgui::ProgressBar* progressBar);
 
 private:
+	void OnTick(bool inGame) override;
+	void ForwardPlayerPanelBorders();
+
 	int m_ProgressBarApplySettingsHook;
 	static void ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings);
 };

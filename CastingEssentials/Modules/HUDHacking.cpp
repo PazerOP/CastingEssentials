@@ -5,6 +5,7 @@
 
 #include <client/iclientmode.h>
 #include <KeyValues.h>
+#include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/Panel.h>
 #include <vgui_controls/ProgressBar.h>
 
@@ -64,6 +65,23 @@ Player* HUDHacking::GetPlayerFromPanel(vgui::EditablePanel* playerPanel)
 	return foundPlayer;
 }
 
+vgui::Panel* HUDHacking::FindChildByName(vgui::VPANEL rootPanel, const char* name, bool recursive)
+{
+	const auto childCount = g_pVGuiPanel->GetChildCount(rootPanel);
+	for (int i = 0; i < childCount; i++)
+	{
+		auto child = g_pVGuiPanel->GetChild(rootPanel, i);
+		auto childName = g_pVGuiPanel->GetName(child);
+		if (!strcmp(childName, name))
+			return g_pVGuiPanel->GetPanel(child, "ClientDLL");
+
+		if (recursive)
+			FindChildByName(child, name, recursive);
+	}
+
+	return nullptr;
+}
+
 Color* HUDHacking::GetFillColor(vgui::ImagePanel* imgPanel)
 {
 	return imgPanel ? (Color*)(((DWORD*)imgPanel) + 94) : nullptr;
@@ -77,6 +95,41 @@ Color* HUDHacking::GetDrawColor(vgui::ImagePanel* imgPanel)
 int* HUDHacking::GetProgressDirection(vgui::ProgressBar* progressBar)
 {
 	return progressBar ? (int*)(((DWORD*)progressBar) + 88) : nullptr;
+}
+
+void HUDHacking::OnTick(bool inGame)
+{
+	if (!inGame)
+		return;
+
+	ForwardPlayerPanelBorders();
+}
+
+void HUDHacking::ForwardPlayerPanelBorders()
+{
+	auto specguivpanel = GetSpecGUI();
+	if (!specguivpanel)
+		return;
+
+	const auto specguiChildCount = g_pVGuiPanel->GetChildCount(specguivpanel);
+	for (int playerPanelIndex = 0; playerPanelIndex < specguiChildCount; playerPanelIndex++)
+	{
+		vgui::VPANEL playerPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
+		const char* playerPanelName = g_pVGuiPanel->GetName(playerPanel);
+		if (strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
+			continue;
+
+		vgui::EditablePanel* player = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerPanel, "ClientDLL"));
+		auto border = player->GetBorder();
+		if (!border)
+			continue;
+
+		auto colorBGPanel = FindChildByName(player->GetVPanel(), "PanelColorBG");
+		if (!colorBGPanel)
+			continue;
+
+		colorBGPanel->SetBorder(border);
+	}
 }
 
 void HUDHacking::ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings)
