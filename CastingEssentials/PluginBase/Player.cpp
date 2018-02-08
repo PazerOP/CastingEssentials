@@ -305,6 +305,11 @@ int Player::GetMaxHealth() const
 	return 1;	// So we avoid dividing by zero somewhere
 }
 
+int Player::GetMaxOverheal() const
+{
+	return (int(GetMaxHealth() * 1.5f) / 5) * 5;
+}
+
 bool Player::IsValid() const
 {
 	const auto framecount = Interfaces::GetEngineTool()->HostFrameCount();

@@ -9,9 +9,18 @@
 #include <vgui_controls/Panel.h>
 #include <vgui_controls/ProgressBar.h>
 
+#include <algorithm>
+
+// Dumb macro names
+#undef min
+#undef max
+
 HUDHacking::HUDHacking()
 {
 	m_ProgressBarApplySettingsHook = GetHooks()->AddHook<vgui_ProgressBar_ApplySettings>(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2));
+
+	ce_hud_forward_playerpanel_border.reset(new ConVar("ce_hud_forward_playerpanel_border", "1", FCVAR_NONE, "Sets the border of [playerpanel]->PanelColorBG to the same value as [playerpanel]."));
+	ce_hud_player_health_progressbars.reset(new ConVar("ce_hud_player_health_progressbars", "1", FCVAR_NONE, "Enables [playerpanel]->PlayerHealth[Overheal](Red/Blue) ProgressBars."));
 }
 
 HUDHacking::~HUDHacking()
@@ -102,7 +111,11 @@ void HUDHacking::OnTick(bool inGame)
 	if (!inGame)
 		return;
 
-	ForwardPlayerPanelBorders();
+	if (ce_hud_forward_playerpanel_border->GetBool())
+		ForwardPlayerPanelBorders();
+
+	if (ce_hud_player_health_progressbars->GetBool())
+		UpdatePlayerHealths();
 }
 
 void HUDHacking::ForwardPlayerPanelBorders()
@@ -129,6 +142,58 @@ void HUDHacking::ForwardPlayerPanelBorders()
 			continue;
 
 		colorBGPanel->SetBorder(border);
+	}
+}
+
+void HUDHacking::UpdatePlayerHealths()
+{
+	auto specguivpanel = GetSpecGUI();
+	if (!specguivpanel)
+		return;
+
+	const auto specguiChildCount = g_pVGuiPanel->GetChildCount(specguivpanel);
+	for (int playerPanelIndex = 0; playerPanelIndex < specguiChildCount; playerPanelIndex++)
+	{
+		vgui::VPANEL playerVPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
+		const char* playerPanelName = g_pVGuiPanel->GetName(playerVPanel);
+		if (strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
+			continue;
+
+		vgui::EditablePanel* playerPanel = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerVPanel, "ClientDLL"));
+
+		auto player = GetPlayerFromPanel(playerPanel);
+		if (!player)
+		{
+			PluginWarning("Unable to find player for panel {0}", playerPanelName);
+			continue;
+		}
+
+		const auto health = player->IsAlive() ? player->GetHealth() : 0;
+		const auto maxHealth = player->GetMaxHealth();
+		const auto healthProgress = std::min<float>(1, health / (float)maxHealth);
+		const auto overhealProgress = RemapValClamped(health, maxHealth, player->GetMaxOverheal(), 0, 1);
+
+		static constexpr const char* s_ProgressBarNames[] =
+		{
+			"PlayerHealthRed",
+			"PlayerHealthBlue",
+			"PlayerHealthOverhealRed",
+			"PlayerHealthOverhealBlue"
+		};
+
+		// Show/hide progress bars
+		for (size_t i = 0; i < std::size(s_ProgressBarNames); i++)
+		{
+			auto progressBar = dynamic_cast<vgui::ProgressBar*>(FindChildByName(playerVPanel, s_ProgressBarNames[i]));
+			if (!progressBar)
+				continue;
+
+			progressBar->SetVisible(health > 0);
+
+			auto messageKV = new KeyValues("SetProgress");
+			messageKV->SetFloat("progress", i >= 2 ? overhealProgress : healthProgress);
+			progressBar->PostMessage(progressBar, messageKV);
+		}
 	}
 }
 

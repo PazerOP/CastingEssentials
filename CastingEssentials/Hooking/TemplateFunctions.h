@@ -189,7 +189,7 @@ namespace Hooking{ namespace Internal
 
 		LocalDetourFnPtr<Type, RetVal, Args...> fn = [](Type* pThis, void*, Args... args)
 		{
-			Assert(assert_cast<GroupHookType::BaseGroupClassHookType*>(s_Hook)->GetInstance() == pThis);
+			//Assert(assert_cast<GroupHookType::BaseGroupClassHookType*>(s_Hook)->GetInstance() == pThis);
 			return HookFunctionsInvoker<GroupHookType::BaseGroupHookType, RetVal, Args...>::Invoke(s_Hook, args...);
 		};
 		return fn;
