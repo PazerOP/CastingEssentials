@@ -42,6 +42,7 @@ public:
 	TFClassType GetClass() const;
 	int GetHealth() const;
 	int GetMaxHealth() const;
+	int GetMaxOverheal() const;
 	const char* GetName() const;
 	static const char* GetName(int entIndex);
 	int GetObserverMode() const;

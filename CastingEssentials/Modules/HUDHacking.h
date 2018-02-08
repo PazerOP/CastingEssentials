@@ -32,8 +32,12 @@ public:
 	static int* GetProgressDirection(vgui::ProgressBar* progressBar);
 
 private:
+	std::unique_ptr<ConVar> ce_hud_forward_playerpanel_border;
+	std::unique_ptr<ConVar> ce_hud_player_health_progressbars;
+
 	void OnTick(bool inGame) override;
 	void ForwardPlayerPanelBorders();
+	void UpdatePlayerHealths();
 
 	int m_ProgressBarApplySettingsHook;
 	static void ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings);
