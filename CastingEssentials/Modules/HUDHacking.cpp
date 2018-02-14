@@ -61,7 +61,10 @@ vgui::VPANEL HUDHacking::GetSpecGUI()
 Player* HUDHacking::GetPlayerFromPanel(vgui::EditablePanel* playerPanel)
 {
 	if (!playerPanel)
+	{
+		PluginWarning("NULL playerPanel in " __FUNCTION__ "()\n");
 		return nullptr;
+	}
 
 	auto dv = HookManager::GetRawFunc_EditablePanel_GetDialogVariables()(playerPanel);
 
@@ -71,6 +74,10 @@ Player* HUDHacking::GetPlayerFromPanel(vgui::EditablePanel* playerPanel)
 		return nullptr;
 
 	Player* foundPlayer = Player::GetPlayerFromName(playername);
+
+	if (!foundPlayer)
+		PluginWarning("Unable to find player %s for panel %s\n", playername, playerPanel->GetName());
+
 	return foundPlayer;
 }
 
@@ -127,12 +134,12 @@ void HUDHacking::ForwardPlayerPanelBorders()
 	const auto specguiChildCount = g_pVGuiPanel->GetChildCount(specguivpanel);
 	for (int playerPanelIndex = 0; playerPanelIndex < specguiChildCount; playerPanelIndex++)
 	{
-		vgui::VPANEL playerPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
-		const char* playerPanelName = g_pVGuiPanel->GetName(playerPanel);
-		if (strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
+		vgui::VPANEL playerVPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
+		const char* playerPanelName = g_pVGuiPanel->GetName(playerVPanel);
+		if (!g_pVGuiPanel->IsVisible(playerVPanel) || strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
 			continue;
 
-		vgui::EditablePanel* player = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerPanel, "ClientDLL"));
+		vgui::EditablePanel* player = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerVPanel, "ClientDLL"));
 		auto border = player->GetBorder();
 		if (!border)
 			continue;
@@ -156,17 +163,16 @@ void HUDHacking::UpdatePlayerHealths()
 	{
 		vgui::VPANEL playerVPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
 		const char* playerPanelName = g_pVGuiPanel->GetName(playerVPanel);
-		if (strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
+		if (!g_pVGuiPanel->IsVisible(playerVPanel) || strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
 			continue;
 
 		vgui::EditablePanel* playerPanel = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerVPanel, "ClientDLL"));
 
+		Assert(playerPanel->IsVisible() == g_pVGuiPanel->IsVisible(playerVPanel));
+
 		auto player = GetPlayerFromPanel(playerPanel);
 		if (!player)
-		{
-			PluginWarning("Unable to find player for panel {0}", playerPanelName);
 			continue;
-		}
 
 		const auto health = player->IsAlive() ? player->GetHealth() : 0;
 		const auto maxHealth = player->GetMaxHealth();

@@ -248,12 +248,12 @@ void MedigunInfo::UpdateEmbeddedPanels()
 	const auto specguiChildCount = g_pVGuiPanel->GetChildCount(specguivpanel);
 	for (int playerPanelIndex = 0; playerPanelIndex < specguiChildCount; playerPanelIndex++)
 	{
-		vgui::VPANEL playerPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
-		const char* playerPanelName = g_pVGuiPanel->GetName(playerPanel);
-		if (strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
+		vgui::VPANEL playerVPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
+		const char* playerPanelName = g_pVGuiPanel->GetName(playerVPanel);
+		if (!g_pVGuiPanel->IsVisible(playerVPanel) || strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
 			continue;
 
-		vgui::EditablePanel* player = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerPanel, "ClientDLL"));
+		vgui::EditablePanel* player = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerVPanel, "ClientDLL"));
 
 		UpdateEmbeddedPanel(player);
 	}
