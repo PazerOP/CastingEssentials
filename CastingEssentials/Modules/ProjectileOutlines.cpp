@@ -134,14 +134,14 @@ void ProjectileOutlines::OnTick(bool inGame)
 
 CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* projectileEntity)
 {
-	EHANDLE handle;
+	C_BaseEntity* ent;
 	{
 		IClientNetworkable* networkable = GetHooks()->GetRawFunc_Global_CreateTFGlowObject()(MAGIC_ENTNUM, MAGIC_SERIALNUM);
-		handle = networkable->GetIClientUnknown()->GetBaseEntity();
+		ent = networkable->GetIClientUnknown()->GetBaseEntity();
 	}
 
 	{
-		IClientEntity* glowEntity = handle.Get();
+		IClientEntity* glowEntity = ent;
 		*Entities::GetEntityProp<bool*>(glowEntity, "m_bDisabled") = false;
 		*Entities::GetEntityProp<int*>(glowEntity, "m_iMode") = ce_projectileoutlines_mode->GetInt();
 		Entities::GetEntityProp<EHANDLE*>(glowEntity, "m_hTarget")->Set(projectileEntity->GetBaseEntity());
@@ -156,9 +156,9 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 			color->SetColor(0, 255, 0, 255);
 	}
 
-	handle->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_CREATED);
-	handle->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_DATATABLE_CHANGED);
-	return handle;
+	ent->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_CREATED);
+	ent->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_DATATABLE_CHANGED);
+	return ent;
 }
 
 void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
@@ -188,7 +188,7 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 
 	if (pills && type == TFGrenadePipebombType::Pill)
 		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
-	else if (stickies && type == TFGrenadePipebombType::Sticky)
+	else if (stickies && (type == TFGrenadePipebombType::Sticky || type == TFGrenadePipebombType::StickyJumper))
 		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
 }
 

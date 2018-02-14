@@ -301,6 +301,7 @@ enum class TFGrenadePipebombType
 {
 	Pill,
 	Sticky,
+	StickyJumper,	// These are separate for some reason
 };
 
 constexpr auto MAX_COSMETIC_SLOTS = 3;

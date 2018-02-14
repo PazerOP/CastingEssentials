@@ -41,6 +41,7 @@ private:
 	ConVar* ce_outlines_players_override_blue;
 	ConVar* ce_outlines_debug_stencil_out;
 	ConVar* ce_outlines_additive;
+	ConVar* ce_outlines_debug;
 
 	ConVar* ce_infills_enable;
 	ConVar* ce_infills_debug;
@@ -102,6 +103,7 @@ private:
 
 	void BuildMoveChildLists();
 	ExtraGlowData* FindExtraGlowData(int entindex);
+	void CleanupGlowObjectDefinitions(CGlowObjectManager* glowMgr);
 
 	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
 
