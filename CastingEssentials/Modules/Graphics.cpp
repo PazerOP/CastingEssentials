@@ -59,6 +59,13 @@ Graphics::Graphics()
 	ce_infills_buffed_blue = new ConVar("ce_infills_buffed_blue", "128 128 255 64", FCVAR_NONE, "Infill for blue players that are overhealed.");
 	ce_infills_debug = new ConVar("ce_infills_debug", "0", FCVAR_NONE);
 
+	ce_infills_flicker_hertz = new ConVar("ce_infills_flicker_hertz", "10", FCVAR_NONE, "Infill on-hurt flicker frequency.", true, 0, false, 1);
+	ce_infills_flicker_intensity = new ConVar("ce_infills_flicker_intensity", "0.5", FCVAR_NONE, "Infill on-hurt flicker intensity", true, 0, true, 1);
+	ce_infills_flicker_after_hurt_time = new ConVar("ce_infills_flicker_after_hurt_time", "1.0", FCVAR_NONE, "How long to fade from flickers into normal fades. -1 to disable.");
+	ce_infills_flicker_after_hurt_bias = new ConVar("ce_infills_flicker_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for flicker fade outs.", true, 0, true, 1);
+	ce_infills_fade_after_hurt_time = new ConVar("ce_infills_fade_after_hurt_time", "1.0", FCVAR_NONE, "How long to fade out infills after taking damage. -1 to disable.");
+	ce_infills_fade_after_hurt_bias = new ConVar("ce_infills_fade_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for infill fade outs.", true, 0, true, 1);
+
 	ce_graphics_dump_shader_params = new ConCommand("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete);
 
 	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
@@ -513,6 +520,25 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector2D&
 	return validCount > 0;
 }
 
+float Graphics::ApplyInfillTimeEffects(float lastHurtTime)
+{
+	// Fade the whole thing out
+	const auto fadeProgress = ce_infills_fade_after_hurt_time->GetFloat() > 0 ?
+		RemapValClamped(lastHurtTime, 0, ce_infills_fade_after_hurt_time->GetFloat(), 0, 1) : 0;
+
+	const float fade = 1 - Bias(fadeProgress, ce_infills_fade_after_hurt_bias->GetFloat());
+
+	const auto flickerProgress = ce_infills_flicker_after_hurt_time->GetFloat() > 0 ?
+		RemapValClamped(lastHurtTime, 0, ce_infills_flicker_after_hurt_time->GetFloat(), 0, 1) : 0;
+
+	const float flicker = Lerp(ce_infills_flicker_intensity->GetFloat(), fade,
+		std::cos(2 * lastHurtTime * M_PI_F * ce_infills_flicker_hertz->GetFloat()) * 0.5f + 0.5f);
+
+	const float combined = Lerp(Bias(flickerProgress, ce_infills_flicker_after_hurt_bias->GetFloat()), flicker, fade);
+
+	return combined;
+}
+
 #include <client/view_scene.h>
 void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 {
@@ -551,9 +577,10 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 				auto team = player->GetTeam();
 				if (team == TFTeam::Red || team == TFTeam::Blue)
 				{
+					float infillOpacityScale = 1;
+
 					if (infillsEnable)
 					{
-						//Vector bboxMins, bboxMaxs;
 						Vector worldMins, worldMaxs;
 						Vector2D screenMins, screenMaxs;
 
@@ -572,6 +599,9 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 
 							if (overhealPercentage <= 0)
 							{
+								// Infill fading
+								infillOpacityScale = ApplyInfillTimeEffects(player->GetTimeSinceLastHurt());
+
 								if (healthPercentage != 1)
 								{
 									if (bInfillDebug)
@@ -637,6 +667,14 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 						currentExtra.m_HurtInfillColor = blueInfillNormal;
 						currentExtra.m_BuffedInfillColor = blueInfillBuffed;
 					}
+					else
+					{
+						currentExtra.m_HurtInfillColor = currentExtra.m_BuffedInfillColor = Color(0, 0, 0, 0);
+					}
+
+					// Apply infill time-based opacity effects
+					currentExtra.m_HurtInfillColor.a() *= infillOpacityScale;
+					currentExtra.m_BuffedInfillColor.a() *= infillOpacityScale;
 				}
 			}
 		}
@@ -1405,9 +1443,9 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 	pRenderContext->OverrideAlphaWriteEnable(false, false);
 	pRenderContext->OverrideDepthEnable(false, false);
 
-	static ConVarRef mat_hdr_enabled("mat_hdr_enabled");
+	static ConVarRef mat_hdr_level("mat_hdr_level");
 	static ConVarRef mat_disable_bloom("mat_disable_bloom");
-	if (mat_hdr_enabled.GetInt() < 1 || mat_disable_bloom.GetBool())
+	if (mat_hdr_level.GetInt() < 1 || mat_disable_bloom.GetBool())
 	{
 		// Wipe these textures to prevent spooky apparitions
 		pRenderContext->ClearColor4ub(0, 0, 0, 0);

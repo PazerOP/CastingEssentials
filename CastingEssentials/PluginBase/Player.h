@@ -40,6 +40,7 @@ public:
 
 	bool CheckCondition(TFCond condition) const;
 	TFClassType GetClass() const;
+	float GetTimeSinceLastHurt() const;
 	int GetHealth() const;
 	int GetMaxHealth() const;
 	int GetMaxOverheal() const;
@@ -115,6 +116,9 @@ private:
 	mutable player_info_t m_CachedPlayerInfo;
 
 	mutable int m_LastValidatedFrame;
+
+	mutable int m_LastHurtTime;
+	mutable int m_PreviousHealth;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
 

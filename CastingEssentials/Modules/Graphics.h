@@ -52,6 +52,13 @@ private:
 	ConVar* ce_infills_buffed_blue;
 	//ConVar* ce_infills_buffed_direction;
 
+	ConVar* ce_infills_flicker_hertz;
+	ConVar* ce_infills_flicker_intensity;
+	ConVar* ce_infills_flicker_after_hurt_time;
+	ConVar* ce_infills_flicker_after_hurt_bias;
+	ConVar* ce_infills_fade_after_hurt_time;
+	ConVar* ce_infills_fade_after_hurt_bias;
+
 	ConCommand* ce_graphics_dump_shader_params;
 
 	static bool IsDefaultParam(const char* paramName);
@@ -116,5 +123,6 @@ private:
 	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector2D& screenMins, Vector2D& screenMaxs);
 
 	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
+	float ApplyInfillTimeEffects(float lastHurtTime);
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);
 };
