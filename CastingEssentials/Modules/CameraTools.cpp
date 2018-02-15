@@ -188,7 +188,7 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverM
 	}
 	else
 	{
-		std::string buffer = strprintf("spec_mode %i\n", mode);
+		std::string buffer = strprintf("spec_mode %i\n", OBS_MODE_ROAMING);	// Fixed cameras do not work outside of hltv
 		Interfaces::GetEngineClient()->ServerCmd(buffer.c_str());
 
 		buffer = strprintf("spec_goto %f %f %f %f %f\n", pos.x, pos.y, pos.z, angle.x, angle.y);
