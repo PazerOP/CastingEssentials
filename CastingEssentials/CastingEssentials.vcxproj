@@ -151,7 +151,7 @@
     <ClInclude Include="Misc\DebugOverlay.h" />
     <ClInclude Include="Misc\Extras\VPlane.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
-    <ClInclude Include="Modules\clienttools.h" />
+    <ClInclude Include="Modules\ClientTools.h" />
     <ClInclude Include="Modules\HitEvents.h" />
     <ClInclude Include="Modules\HUDHacking.h" />
     <ClInclude Include="Modules\Antifreeze.h" />

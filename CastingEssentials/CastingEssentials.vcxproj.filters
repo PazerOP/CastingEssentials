@@ -320,7 +320,7 @@
     <ClInclude Include="Modules\HitEvents.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Modules\clienttools.h">
+    <ClInclude Include="Modules\ClientTools.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
