@@ -3,6 +3,7 @@
 #include "PluginBase/Modules.h"
 
 #include <mathlib/vector.h>
+#include <shareddefs.h>
 
 enum class TFTeam;
 enum class TFClassType;
@@ -24,7 +25,7 @@ public:
 
 	static bool CheckDependencies();
 
-	void SpecPosition(const Vector& pos, const QAngle& angle);
+	void SpecPosition(const Vector& pos, const QAngle& angle, ObserverMode mode = OBS_MODE_FIXED);
 
 private:
 	int m_SetModeHook;
@@ -40,6 +41,7 @@ private:
 	ConVar* m_ForceValidTarget;
 	ConVar* m_SpecPlayerAlive;
 	ConCommand* m_SpecPosition;
+	ConCommand* m_SpecPositionDelta;
 
 	ConVar* m_TPXShift;
 	ConVar* m_TPYShift;
@@ -65,8 +67,12 @@ private:
 
 	void ChangeForceMode(IConVar *var, const char *pOldValue, float flOldValue);
 	void ChangeForceTarget(IConVar *var, const char *pOldValue, float flOldValue);
-	void SpecPosition(const CCommand &command);
 	void ToggleForceValidTarget(IConVar *var, const char *pOldValue, float flOldValue);
+
+	bool ParseSpecPosCommand(const CCommand& command, Vector& pos, QAngle& angle, ObserverMode& mode,
+							 const Vector& defaultPos, const QAngle& defaultAng, ObserverMode defaultMode) const;
+	void SpecPosition(const CCommand &command);
+	void SpecPositionDelta(const CCommand& command);
 
 	void SpecClass(const CCommand& command);
 	void SpecClass(TFTeam team, TFClassType playerClass, int classIndex);

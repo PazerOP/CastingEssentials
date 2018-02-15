@@ -20,6 +20,8 @@
 #include <client/c_baseanimating.h>
 #include <vprof.h>
 
+#include <optional>
+
 CameraTools::CameraTools()
 {
 	m_SetModeHook = 0;
@@ -51,7 +53,8 @@ CameraTools::CameraTools()
 
 	m_TPLockBone = new ConVar("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings.");
 
-	m_SpecPosition = new ConCommand("ce_cameratools_spec_pos", [](const CCommand& args) { GetModule()->SpecPosition(args); }, "Moves the camera to a given position.");
+	m_SpecPosition = new ConCommand("ce_cameratools_spec_pos", [](const CCommand& args) { GetModule()->SpecPosition(args); }, "Moves the camera to a given position and angle.");
+	m_SpecPositionDelta = new ConCommand("ce_cameratools_spec_pos_delta", [](const CCommand& args) { GetModule()->SpecPositionDelta(args); }, "Offsets the camera by the given values.");
 
 	m_SpecClass = new ConCommand("ce_cameratools_spec_class", [](const CCommand& args) { GetModule()->SpecClass(args); }, "Spectates a specific class: ce_cameratools_spec_class <team> <class> [index]");
 	m_SpecSteamID = new ConCommand("ce_cameratools_spec_steamid", [](const CCommand& args) { GetModule()->SpecSteamID(args); }, "Spectates a player with the given steamid: ce_cameratools_spec_steamid <steamID>");
@@ -150,7 +153,7 @@ bool CameraTools::CheckDependencies()
 	return ready;
 }
 
-void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle)
+void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverMode mode)
 {
 	if (Interfaces::GetEngineClient()->IsHLTV())
 	{
@@ -158,13 +161,20 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle)
 		{
 			HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 
-			hltvcamera->m_nCameraMode = OBS_MODE_FIXED;
+			hltvcamera->m_nCameraMode = mode;
 			hltvcamera->m_iCameraMan = 0;
 			hltvcamera->m_vCamOrigin = pos;
 			hltvcamera->m_aCamAngle = angle;
 			hltvcamera->m_iTraget1 = 0;
 			hltvcamera->m_iTraget2 = 0;
 			hltvcamera->m_flLastAngleUpdateTime = -1;
+
+			// We may have to set angles directly
+			if (mode == OBS_MODE_ROAMING)
+			{
+				QAngle wtf(angle);	// Why does this take a non-const reference
+				Interfaces::GetEngineClient()->SetViewAngles(wtf);
+			}
 
 			static ConVarRef fov_desired("fov_desired");
 			hltvcamera->m_flFOV = fov_desired.GetFloat();
@@ -178,7 +188,7 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle)
 	}
 	else
 	{
-		std::string buffer = strprintf("spec_mode %i\n", OBS_MODE_ROAMING);
+		std::string buffer = strprintf("spec_mode %i\n", mode);
 		Interfaces::GetEngineClient()->ServerCmd(buffer.c_str());
 
 		buffer = strprintf("spec_goto %f %f %f %f %f\n", pos.x, pos.y, pos.z, angle.x, angle.y);
@@ -633,18 +643,93 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 	}
 }
 
+bool CameraTools::ParseSpecPosCommand(const CCommand& command, Vector& pos, QAngle& ang, ObserverMode& mode,
+	const Vector& defaultPos, const QAngle& defaultAng, ObserverMode defaultMode) const
+{
+	if (command.ArgC() < 2 || command.ArgC() > 8)
+		goto PrintUsage;
+
+	for (int i = 1; i < 7; i++)
+	{
+		const auto arg = i < command.ArgC() ? command.Arg(i) : nullptr;
+
+		float& param = i < 4 ? pos[i - 1] : ang[i - 4];
+
+		if (!arg || (arg[0] == '?' && arg[1] == '\0'))
+		{
+			param = i < 4 ? defaultPos[i - 1] : defaultAng[i - 4];
+		}
+		else if (IsFloat(arg))
+		{
+			param = atof(command.Arg(i));
+		}
+		else
+		{
+			PluginWarning("Invalid parameter \"%s\" (arg %i) for %s command\n", command.Arg(i), i - 1, command.Arg(0));
+			goto PrintUsage;
+		}
+	}
+
+	mode = defaultMode;
+	if (command.ArgC() > 7)
+	{
+		const auto modeArg = command.Arg(7);
+
+		if (!stricmp(modeArg, "fixed"))
+			mode = OBS_MODE_FIXED;
+		else if (!stricmp(modeArg, "free"))
+			mode = OBS_MODE_ROAMING;
+		else if (modeArg[0] != '?' || modeArg[1] != '\0')
+		{
+			PluginWarning("Invalid parameter \"%s\" for mode (expected \"fixed\" or \"free\")\n");
+			goto PrintUsage;
+		}
+	}
+
+	return true;
+
+PrintUsage:
+	PluginMsg(
+		"Usage: %s x [y] [z] [pitch] [yaw] [roll] [mode]\n"
+		"\tIf any of the parameters are '?' or omitted, they are left untouched.\n"
+		"\tMode can be either \"fixed\" or \"free\"\n",
+		command.Arg(0));
+	return false;
+}
+
 void CameraTools::SpecPosition(const CCommand &command)
 {
-	if (command.ArgC() >= 6 && IsFloat(command.Arg(1)) && IsFloat(command.Arg(2)) && IsFloat(command.Arg(3)) && IsFloat(command.Arg(4)) && IsFloat(command.Arg(5)))
+	Vector pos;
+	QAngle ang;
+	ObserverMode mode;
+
+	Vector pluginPos;
+	QAngle pluginAng;
+	CameraState::GetModule()->GetLastFramePluginView(pluginPos, pluginAng);
+
+	// Legacy support, we used to always force OBS_MODE_FIXED
+	if (ParseSpecPosCommand(command, pos, ang, mode, pluginPos, pluginAng, OBS_MODE_FIXED))
+		SpecPosition(pos, ang, mode);
+}
+
+void CameraTools::SpecPositionDelta(const CCommand& command)
+{
+	Vector pos;
+	QAngle ang;
+	ObserverMode mode;
+
+	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->m_nCameraMode;
+
+	if (ParseSpecPosCommand(command, pos, ang, mode, vec3_origin, vec3_angle, defaultMode))
 	{
-		SpecPosition(
-			Vector(atof(command.Arg(1)), atof(command.Arg(2)), atof(command.Arg(3))),
-			QAngle(atof(command.Arg(4)), atof(command.Arg(5)), 0));
-	}
-	else
-	{
-		PluginWarning("Usage: statusspec_cameratools_spec_pos <x> <y> <z> <yaw> <pitch>\n");
-		return;
+		Vector pluginPos;
+		QAngle pluginAng;
+		CameraState::GetModule()->GetLastFramePluginView(pluginPos, pluginAng);
+
+		pos += pluginPos;
+		ang += pluginAng;
+
+		SpecPosition(pos, ang, mode);
 	}
 }
 
