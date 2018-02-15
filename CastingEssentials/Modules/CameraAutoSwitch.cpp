@@ -98,6 +98,11 @@ void CameraAutoSwitch::OnPlayerDeath(IGameEvent* event)
 
 	Assert(!strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH));
 
+	// Ignore feign death
+	const auto deathFlags = event->GetInt("death_flags");
+	if (deathFlags & 0x32)
+		return;
+
 	const auto targetUserID = Interfaces::GetEngineClient()->GetPlayerForUserID(event->GetInt("userid"));
 	if (!Player::IsValidIndex(targetUserID))
 		return;
