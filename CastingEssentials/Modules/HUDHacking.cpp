@@ -179,25 +179,46 @@ void HUDHacking::UpdatePlayerHealths()
 		const auto healthProgress = std::min<float>(1, health / (float)maxHealth);
 		const auto overhealProgress = RemapValClamped(health, maxHealth, player->GetMaxOverheal(), 0, 1);
 
-		static constexpr const char* s_ProgressBarNames[] =
+		struct ProgressBarName
 		{
-			"PlayerHealthRed",
-			"PlayerHealthBlue",
-			"PlayerHealthOverhealRed",
-			"PlayerHealthOverhealBlue"
+			constexpr ProgressBarName(const char* name, bool overheal, bool inverse) :
+				m_Name(name), m_Overheal(overheal), m_Inverse(inverse)
+			{
+			}
+
+			const char* m_Name;
+			bool m_Overheal;
+			bool m_Inverse;
+		};
+
+		static constexpr ProgressBarName s_ProgressBars[] =
+		{
+			ProgressBarName("PlayerHealthRed", false, false),
+			ProgressBarName("PlayerHealthInverseRed", false, true),
+			ProgressBarName("PlayerHealthBlue", false, false),
+			ProgressBarName("PlayerHealthInverseBlue", false, true),
+
+			ProgressBarName("PlayerHealthOverhealRed", true, false),
+			ProgressBarName("PlayerHealthInverseOverhealRed", true, true),
+			ProgressBarName("PlayerHealthOverhealBlue", true, false),
+			ProgressBarName("PlayerHealthInverseOverhealBlue", true, true)
 		};
 
 		// Show/hide progress bars
-		for (size_t i = 0; i < std::size(s_ProgressBarNames); i++)
+		for (const auto& bar : s_ProgressBars)
 		{
-			auto progressBar = dynamic_cast<vgui::ProgressBar*>(FindChildByName(playerVPanel, s_ProgressBarNames[i]));
+			auto progressBar = dynamic_cast<vgui::ProgressBar*>(FindChildByName(playerVPanel, bar.m_Name));
 			if (!progressBar)
 				continue;
+
+			float progress = bar.m_Overheal ? overhealProgress : healthProgress;
+			if (bar.m_Inverse)
+				progress = 1 - progress;
 
 			progressBar->SetVisible(health > 0);
 
 			auto messageKV = new KeyValues("SetProgress");
-			messageKV->SetFloat("progress", i >= 2 ? overhealProgress : healthProgress);
+			messageKV->SetFloat("progress", progress);
 			progressBar->PostMessage(progressBar, messageKV);
 		}
 	}
