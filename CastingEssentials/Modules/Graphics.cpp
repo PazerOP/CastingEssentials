@@ -31,8 +31,6 @@
 
 static constexpr auto STENCIL_INDEX_MASK = 0xFC;
 
-static CGlowObjectManager* s_LocalGlowObjectManager;
-
 // Should we use a hook to disable IStudioRender::ForcedMaterialOverride?
 static bool s_DisableForcedMaterialOverride = false;
 
@@ -565,6 +563,8 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 	for (int i = 0; i < glowMgr->m_GlowObjectDefinitions.Count(); i++)
 	{
 		auto& current = glowMgr->m_GlowObjectDefinitions[i];
+		if (current.IsUnused())
+			continue;
 
 		m_ExtraGlowData.emplace_back(&current);
 		auto& currentExtra = m_ExtraGlowData.back();
@@ -696,6 +696,43 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 		});
 	}
 
+	if (ce_outlines_debug->GetBool())
+	{
+		int conIndex = 0;
+		engine->Con_NPrintf(conIndex++, "Glow object count: %zi/%i", m_ExtraGlowData.size(), glowMgr->m_GlowObjectDefinitions.Count());
+		for (int i = 0; i < glowMgr->m_GlowObjectDefinitions.Count(); i++)
+		{
+			auto& current = glowMgr->m_GlowObjectDefinitions[i];
+
+			int extraIndex = -1;
+			for (size_t k = 0; k < m_ExtraGlowData.size(); k++)
+			{
+				if (m_ExtraGlowData[k].m_Base == &current)
+					extraIndex = (int)k;
+			}
+
+			const char* prefix = i == glowMgr->m_nFirstFreeSlot ? "FIRST FREE --> " : "";
+			if (current.IsUnused())
+			{
+				//glowMgr->m_GlowObjectDefinitions.Remove(i--);
+				engine->Con_NPrintf(conIndex++, "%sUnused: next free %i [%i]", prefix, current.m_nNextFreeSlot, i);
+			}
+			else
+			{
+				auto ent = current.m_hEntity.Get();
+				Assert(ent);
+
+				char buffer[128];
+				sprintf_s(buffer, "Glow object %i (extra %i)", i, extraIndex);
+				NDebugOverlay::Text(ent->GetAbsOrigin(), buffer, false, NDEBUG_PERSIST_TILL_NEXT_FRAME);
+				engine->Con_NPrintf(conIndex++, "%sGlow object: %s [i %i, extra %i, entindex %i]", prefix, ent->GetClientClass()->GetName(), i, extraIndex, ent->entindex());
+			}
+		}
+
+		if (glowMgr->m_nFirstFreeSlot == CGlowObjectManager::GlowObjectDefinition_t::END_OF_FREE_LIST)
+			engine->Con_NPrintf(conIndex++, "=== NEW ELEMENT REQUIRED ===");
+	}
+
 	// Build ourselves a map of move children (we need extra glow data before we can do this)
 	BuildMoveChildLists();
 }
@@ -775,8 +812,6 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 	{
 		if (!currentExtra.m_InfillEnabled)
 			continue;
-
-		//const auto& current = m_GlowObjectDefinitions->Element(i);
 
 		ShaderStencilState_t stencilState;
 		stencilState.m_bEnable = !ce_infills_debug->GetBool();
@@ -895,10 +930,9 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 		C_BaseEntity *pAttachment = ent->FirstMoveChild();
 		while (pAttachment != NULL)
 		{
-			if (!s_LocalGlowObjectManager->HasGlowEffect(pAttachment) && pAttachment->ShouldDraw())
-			{
+			if (pAttachment->ShouldDraw())
 				pAttachment->DrawModel(STUDIO_RENDER);
-			}
+
 			pAttachment = pAttachment->NextMovePeer();
 		}
 	}
@@ -987,7 +1021,6 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 
 	pRenderContext->OverrideDepthFunc(false, SHADER_DEPTHFUNC_NEAREROREQUAL)
 #else	// 2-pass as a proof of concept so I can take a nice screenshot.
-	pRenderContext->OverrideDepthEnable(true, false);
 
 	ShaderStencilState_t stencilState;
 	stencilState.m_bEnable = true;
@@ -1009,6 +1042,7 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 			if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || !current.m_Base->m_bRenderWhenOccluded || current.m_Base->m_bRenderWhenUnoccluded)
 				continue;
 
+			pRenderContext->OverrideDepthEnable(true, false);
 			current.m_Base->DrawModel();
 		}
 	}
@@ -1118,38 +1152,19 @@ void Graphics::CleanupGlowObjectDefinitions(CGlowObjectManager* glowMgr)
 		{
 			auto& current = glowMgr->m_GlowObjectDefinitions[i];
 
+			if (!current.IsUnused() && !current.m_hEntity.Get())
+			{
+				PluginWarning("Found NULL entity in glow object list @ %i. Removing.\n", i);
+				glowMgr->UnregisterGlowObject(i);
+			}
+
 			if (current.IsUnused())
 			{
 				glowMgr->m_nFirstFreeSlot = i;
 				current.m_nNextFreeSlot = next;
 				next = i;
-				//glowMgr->m_GlowObjectDefinitions.Remove(i);
 			}
 		}
-	}
-
-	if (ce_outlines_debug->GetBool())
-	{
-		int conIndex = 0;
-		engine->Con_NPrintf(conIndex++, "Glow object count: %i", glowMgr->m_GlowObjectDefinitions.Count());
-		for (int i = 0; i < glowMgr->m_GlowObjectDefinitions.Count(); i++)
-		{
-			auto& current = glowMgr->m_GlowObjectDefinitions[i];
-
-			const char* prefix = i == glowMgr->m_nFirstFreeSlot ? "FIRST FREE --> " : "";
-			if (current.IsUnused())
-			{
-				//glowMgr->m_GlowObjectDefinitions.Remove(i--);
-				engine->Con_NPrintf(conIndex++, "%sUnused: next free %i [%i]", prefix, current.m_nNextFreeSlot, i);
-			}
-			else
-			{
-				engine->Con_NPrintf(conIndex++, "%sGlow object: [%i]", prefix, i);
-			}
-		}
-
-		if (glowMgr->m_nFirstFreeSlot == END_OF_FREE_LIST)
-			engine->Con_NPrintf(conIndex++, "=== NEW ELEMENT REQUIRED ===");
 	}
 }
 
