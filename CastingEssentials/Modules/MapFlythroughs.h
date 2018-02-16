@@ -55,6 +55,7 @@ private:
 	void CycleCamera(const CCommand& args);
 
 	ConCommand* ce_autocamera_goto_camera;
+	ConVar* ce_autocamera_goto_mode;
 	void GotoCamera(const std::shared_ptr<Camera>& camera);
 	void GotoCamera(const CCommand& args);
 	static int GotoCameraCompletion(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);

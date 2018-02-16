@@ -33,7 +33,8 @@ MapFlythroughs::MapFlythroughs()
 	ce_autocamera_mark_camera = new ConCommand("ce_autocamera_create", [](const CCommand& args) { GetModule()->MarkCamera(args); });
 	ce_autocamera_goto_camera = new ConCommand("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &MapFlythroughs::GotoCameraCompletion);
 
-	ce_autocamera_cycle = new ConCommand("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); },		
+	ce_autocamera_goto_mode = new ConVar("ce_autocamera_goto_mode", "3", FCVAR_NONE, "spec_mode to use for ce_autocamera_goto and ce_autocamera_cycle.", true, 0, true, NUM_OBSERVER_MODES - 1);
+	ce_autocamera_cycle = new ConCommand("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); },
 		"\nUsage: ce_autocamera_cycle <next/prev>. Cycles forwards or backwards logically through the available autocameras. The behavior is as follows:\n"
 		"\tIf already spectating from the position of an autocamera, progress forwards/backwards through the autocameras based on file order.\n"
 		"\tIf our current position doesn't match any autocamera definintions, try to find the nearest/furthest autocamera that has line of sight (LOS) to our current position.\n"
@@ -44,7 +45,7 @@ MapFlythroughs::MapFlythroughs()
 		"Reloads the autocamera definitions file (located in /tf/addons/castingessentials/autocameras/<mapname>.vdf)");
 
 	ce_autocamera_show_triggers = new ConVar("ce_autocamera_show_triggers", "0", FCVAR_UNREGISTERED, "Shows all triggers on the map.");
-	ce_autocamera_show_cameras = new ConVar("ce_autocamera_show_cameras", "0", FCVAR_NONE, 
+	ce_autocamera_show_cameras = new ConVar("ce_autocamera_show_cameras", "0", FCVAR_NONE,
 		"\n\t1 = Shows all cameras on the map.\n"
 		"\t2 = Shows view frustums as well.");
 
@@ -361,7 +362,7 @@ bool MapFlythroughs::LoadStoryboard(KeyValues* const storyboard, const char* con
 				return false;
 			}
 		}
-		
+
 		if (!lastElement)
 		{
 			newStoryboard->m_FirstElement = newElement;
@@ -740,7 +741,7 @@ void MapFlythroughs::CycleCamera(const CCommand& args)
 			constexpr float test = 100000;
 			Frustum_t frustum;
 			GeneratePerspectiveFrustum(camera->m_Pos, camera->m_DefaultAngle, 1, 100000, 90, (16.0 / 9.0), frustum);
-			
+
 			if (!R_CullBox(boxMins, boxMaxs, frustum))
 				continue;	// Not in frustum
 
@@ -798,7 +799,7 @@ void MapFlythroughs::GotoCamera(const std::shared_ptr<Camera>& camera)
 		return;
 	}
 
-	ctools->SpecPosition(camera->m_Pos, camera->m_DefaultAngle);
+	ctools->SpecPosition(camera->m_Pos, camera->m_DefaultAngle, (ObserverMode)ce_autocamera_goto_mode->GetInt());
 }
 
 void MapFlythroughs::GotoCamera(const CCommand& args)
@@ -832,7 +833,7 @@ int MapFlythroughs::GotoCameraCompletion(const char* const partial, char command
 	// Interesting... this only works if you pass a const char* to std::regex's constructor, and not if you pass an std::string.
 	if (!std::regex_search(partial, match, std::regex(regexString.c_str(), std::regex_constants::icase)))
 		return 0;
-	
+
 	MapFlythroughs* const mod = GetModule();
 
 	auto cameras = mod->GetAlphabeticalCameras();
@@ -902,7 +903,7 @@ void MapFlythroughs::DrawCameras()
 
 			// Compute the center points of the near and far planes
 			const Vector farCenter = camera->m_Pos + forward * farDistance;
-			
+
 			// Compute the widths and heights of the near and far planes:
 			const float farHeight = 2 * (std::tanf(halfFOV) * farDistance);
 			const float farWidth = farHeight * viewRatio;
