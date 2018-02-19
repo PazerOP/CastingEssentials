@@ -51,11 +51,13 @@ Graphics::Graphics()
 	ce_outlines_debug = new ConVar("ce_outlines_debug", "0", FCVAR_NONE);
 
 	ce_infills_enable = new ConVar("ce_infills_enable", "0", FCVAR_NONE, "Enables player infills.");
+	ce_infills_additive = new ConVar("ce_infills_additive", "0", FCVAR_NONE, "Enables additive rendering of player infills.");
 	ce_infills_hurt_red = new ConVar("ce_infills_hurt_red", "255 0 0 64", FCVAR_NONE, "Infill for red players that are not overhealed.");
 	ce_infills_hurt_blue = new ConVar("ce_infills_hurt_blue", "0 0 255 64", FCVAR_NONE, "Infill for blue players that are not overhealed.");
 	ce_infills_buffed_red = new ConVar("ce_infills_buffed_red", "255 128 128 64", FCVAR_NONE, "Infill for red players that are overhealed.");
 	ce_infills_buffed_blue = new ConVar("ce_infills_buffed_blue", "128 128 255 64", FCVAR_NONE, "Infill for blue players that are overhealed.");
 	ce_infills_debug = new ConVar("ce_infills_debug", "0", FCVAR_NONE);
+	ce_infills_test = new ConCommand("ce_infills_test", []() { GetModule()->ResetPlayerHurtTimes(); }, "Replay the hurt flicker/fades for all players for testing.");
 
 	ce_infills_flicker_hertz = new ConVar("ce_infills_flicker_hertz", "10", FCVAR_NONE, "Infill on-hurt flicker frequency.", true, 0, false, 1);
 	ce_infills_flicker_intensity = new ConVar("ce_infills_flicker_intensity", "0.5", FCVAR_NONE, "Infill on-hurt flicker intensity", true, 0, true, 1);
@@ -560,6 +562,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 	if (infillsEnable)
 		Interfaces::GetEngineTool()->GetWorldToScreenMatrixForView(*m_View, &worldToScreen);
 
+
 	for (int i = 0; i < glowMgr->m_GlowObjectDefinitions.Count(); i++)
 	{
 		auto& current = glowMgr->m_GlowObjectDefinitions[i];
@@ -577,16 +580,18 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 				auto team = player->GetTeam();
 				if (team == TFTeam::Red || team == TFTeam::Blue)
 				{
-					float infillOpacityScale = 1;
-
 					if (infillsEnable)
 					{
+						player->UpdateLastHurtTime();
+
 						Vector worldMins, worldMaxs;
 						Vector2D screenMins, screenMaxs;
 
 						if (Test_PlaneHitboxesIntersect(player->GetBaseAnimating(), screenMins, screenMaxs))
 						{
-							currentExtra.m_InfillEnabled = true;
+							auto& hurtInfill = currentExtra.m_Infills[(size_t)InfillType::Hurt];
+							auto& buffedInfill = currentExtra.m_Infills[(size_t)InfillType::Buffed];
+
 							currentExtra.m_StencilIndex = ++stencilIndex;
 
 							if (currentExtra.m_StencilIndex >= (1 << 6))
@@ -594,87 +599,64 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 
 							const auto& playerHealth = player->GetHealth();
 							const auto& playerMaxHealth = player->GetMaxHealth();
-							auto healthPercentage = playerHealth / (float)playerMaxHealth;
-							auto overhealPercentage = RemapValClamped(playerHealth, playerMaxHealth, int(playerMaxHealth * 1.5 / 5) * 5, 0, 1);
+							const auto healthPercentage = playerHealth / (float)playerMaxHealth;
+							const auto overhealPercentage = RemapValClamped(playerHealth, playerMaxHealth, int(playerMaxHealth * 1.5 / 5) * 5, 0, 1);
 
 							if (overhealPercentage <= 0)
 							{
-								// Infill fading
-								infillOpacityScale = ApplyInfillTimeEffects(player->GetTimeSinceLastHurt());
-
 								if (healthPercentage != 1)
 								{
 									if (bInfillDebug)
-										currentExtra.m_HurtInfillRectMin = screenMins;
+										hurtInfill.m_RectMin = screenMins;
 									else
-										currentExtra.m_HurtInfillRectMin.Init();
+										hurtInfill.m_RectMin.Init();
 
-									currentExtra.m_HurtInfillRectMax.Init(
+									hurtInfill.m_Color = team == TFTeam::Red ? redInfillNormal : blueInfillNormal;
+									hurtInfill.m_Color.a() *= ApplyInfillTimeEffects(player->GetLastHurtTime());	// Infill fading/flickering
+
+									hurtInfill.m_RectMax.Init(
 										bInfillDebug ? screenMaxs.x : m_View->width,
 										Lerp(healthPercentage, screenMaxs.y, screenMins.y));
 
-									currentExtra.m_HurtInfillActive = true;
+									hurtInfill.m_Active = true;
 								}
-								else
-									currentExtra.m_HurtInfillActive = false;
-
-								currentExtra.m_BuffedInfillActive = false;
 							}
 							else
 							{
-								currentExtra.m_HurtInfillActive = false;
-								currentExtra.m_BuffedInfillActive = true;
+								buffedInfill.m_Active = true;
 
-								currentExtra.m_BuffedInfillRectMax.Init(
+								buffedInfill.m_RectMax.Init(
 									bInfillDebug ? screenMaxs.x : m_View->width,
 									Lerp(overhealPercentage, screenMins.y, screenMaxs.y));
 
+								hurtInfill.m_Color = team == TFTeam::Red ? redInfillBuffed : blueInfillBuffed;
+
 								if (bInfillDebug)
-									currentExtra.m_BuffedInfillRectMin = screenMins;
+									buffedInfill.m_RectMin = screenMins;
 								else
 								{
-									currentExtra.m_BuffedInfillRectMin.Init();
+									buffedInfill.m_RectMin.Init();
 
 									if (overhealPercentage >= 1)
-										currentExtra.m_BuffedInfillRectMax.y = m_View->height;
+										buffedInfill.m_RectMax.y = m_View->height;
 								}
 
-								currentExtra.m_HurtInfillRectMin.Init();
-								currentExtra.m_HurtInfillRectMax.Init();
+								hurtInfill.m_RectMin.Init();
+								hurtInfill.m_RectMax.Init();
 							}
 						}
 					}
 
-					if (team == TFTeam::Red)
+					if (team == TFTeam::Red && hasRedOverride)
 					{
-						if (hasRedOverride)
-						{
-							currentExtra.m_GlowColorOverride = redOverride;
-							currentExtra.m_ShouldOverrideGlowColor = true;
-						}
-
-						currentExtra.m_HurtInfillColor = redInfillNormal;
-						currentExtra.m_BuffedInfillColor = redInfillBuffed;
+						currentExtra.m_GlowColorOverride = redOverride;
+						currentExtra.m_ShouldOverrideGlowColor = true;
 					}
-					else if (team == TFTeam::Blue)
+					else if (team == TFTeam::Blue && hasBlueOverride)
 					{
-						if (hasBlueOverride)
-						{
-							currentExtra.m_GlowColorOverride = blueOverride;
-							currentExtra.m_ShouldOverrideGlowColor = true;
-						}
-
-						currentExtra.m_HurtInfillColor = blueInfillNormal;
-						currentExtra.m_BuffedInfillColor = blueInfillBuffed;
+						currentExtra.m_GlowColorOverride = blueOverride;
+						currentExtra.m_ShouldOverrideGlowColor = true;
 					}
-					else
-					{
-						currentExtra.m_HurtInfillColor = currentExtra.m_BuffedInfillColor = Color(0, 0, 0, 0);
-					}
-
-					// Apply infill time-based opacity effects
-					currentExtra.m_HurtInfillColor.a() *= infillOpacityScale;
-					currentExtra.m_BuffedInfillColor.a() *= infillOpacityScale;
 				}
 			}
 		}
@@ -783,13 +765,14 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
-	CRefPtrFix<IMaterial> pGlowColorMaterial(materials->FindMaterial("vgui/white", TEXTURE_GROUP_OTHER, true));
+	CRefPtrFix<IMaterial> infillMaterial(materials->FindMaterial(
+		ce_infills_additive->GetBool() ? "vgui/white_additive" : "vgui/white",
+		TEXTURE_GROUP_OTHER, true));
 
 	CMeshBuilder meshBuilder;
 
-#define DRAW_INFILL_VGUI 1
+#define DRAW_INFILL_VGUI 0
 
-#if DRAW_INFILL_VGUI
 	constexpr float pixelOffset = 0.5;
 
 	pRenderContext->MatrixMode(MATERIAL_PROJECTION);
@@ -806,11 +789,10 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 	pRenderContext->MatrixMode(MATERIAL_VIEW);
 	pRenderContext->PushMatrix();
 	pRenderContext->LoadIdentity();
-#endif
 
 	for (const auto& currentExtra : m_ExtraGlowData)
 	{
-		if (!currentExtra.m_InfillEnabled)
+		if (!currentExtra.AnyInfillsActive())
 			continue;
 
 		ShaderStencilState_t stencilState;
@@ -841,48 +823,47 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 				currentExtra.m_BuffedInfillRectMin.x, m_View->height - currentExtra.m_BuffedInfillRectMin.y,
 				currentExtra.m_BuffedInfillRectMax.x, m_View->height - currentExtra.m_BuffedInfillRectMax.y);
 		}
-#endif
-
-#if 0
-		auto random = RandomVector(0, 1);
-		const unsigned char randomColor[4] =
-		{
-			RandomInt(0, 255),
-			RandomInt(0, 255),
-			RandomInt(0, 255),
-			255,
-		};
-
-		auto mesh = pRenderContext->GetDynamicMesh(true, nullptr, nullptr, pGlowColorMaterial);
+#else
+		auto mesh = pRenderContext->GetDynamicMesh(true, nullptr, nullptr, infillMaterial);
 
 		meshBuilder.Begin(mesh, MATERIAL_QUADS, 1);
 
-		meshBuilder.Position3f(0, 0, 0);
-		meshBuilder.Color4ubv(randomColor);
-		meshBuilder.TexCoord2f(0, ul.m_TexCoord.x, ul.m_TexCoord.y);
-		meshBuilder.AdvanceVertex();
+		for (size_t i = 0; i < currentExtra.m_Infills.size(); i++)
+		{
+			const auto& infill = currentExtra.m_Infills[i];
+			if (!infill.m_Active)
+				continue;
 
-		meshBuilder.Position3f(1920, 0, 0);
-		meshBuilder.Color4ubv(randomColor);
-		meshBuilder.TexCoord2f(0, lr.m_TexCoord.x, ul.m_TexCoord.y);
-		meshBuilder.AdvanceVertex();
+			// Upper left
+			meshBuilder.Position3f(infill.m_RectMin.x, m_View->height - infill.m_RectMin.y, 0);
+			meshBuilder.Color4ubv(infill.m_Color.GetRawColorPtr());
+			meshBuilder.TexCoord2f(0, 0, 0);
+			meshBuilder.AdvanceVertex();
 
-		meshBuilder.Position3f(1920, 1080, 0);
-		meshBuilder.Color4ubv(randomColor);
-		meshBuilder.TexCoord2f(0, lr.m_TexCoord.x, lr.m_TexCoord.y);
-		meshBuilder.AdvanceVertex();
+			// Lower left
+			meshBuilder.Position3f(infill.m_RectMin.x, m_View->height - infill.m_RectMax.y, 0);
+			meshBuilder.Color4ubv(infill.m_Color.GetRawColorPtr());
+			meshBuilder.TexCoord2f(0, 0, 1);
+			meshBuilder.AdvanceVertex();
 
-		meshBuilder.Position3f(ul.m_Position.x, lr.m_Position.y, 0);
-		meshBuilder.Color4ubv(randomColor);
-		meshBuilder.TexCoord2f(0, ul.m_TexCoord.x, lr.m_TexCoord.y);
-		meshBuilder.AdvanceVertex();
+			// Lower right
+			meshBuilder.Position3f(infill.m_RectMax.x, m_View->height - infill.m_RectMax.y, 0);
+			meshBuilder.Color4ubv(infill.m_Color.GetRawColorPtr());
+			meshBuilder.TexCoord2f(0, 1, 1);
+			meshBuilder.AdvanceVertex();
+
+			// Upper right
+			meshBuilder.Position3f(infill.m_RectMax.x, m_View->height - infill.m_RectMin.y, 0);
+			meshBuilder.Color4ubv(infill.m_Color.GetRawColorPtr());
+			meshBuilder.TexCoord2f(0, 1, 0);
+			meshBuilder.AdvanceVertex();
+		}
 
 		meshBuilder.End();
 		mesh->Draw();
 #endif
 	}
 
-#if DRAW_INFILL_VGUI
 	pRenderContext->MatrixMode(MATERIAL_PROJECTION);
 	pRenderContext->PopMatrix();
 
@@ -891,7 +872,12 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 
 	pRenderContext->MatrixMode(MATERIAL_VIEW);
 	pRenderContext->PopMatrix();
-#endif
+}
+
+void Graphics::ResetPlayerHurtTimes()
+{
+	for (Player* player : Player::Iterable())
+		player->ResetLastHurtTime();
 }
 
 void Graphics::BuildMoveChildLists()
@@ -969,7 +955,7 @@ void Graphics::DrawGlowAlways(int nSplitScreenSlot, CMatRenderContextPtr& pRende
 			render->SetColorModulation(vGlowColor.Base());
 		}
 
-		if (current.m_InfillEnabled)
+		if (current.AnyInfillsActive())
 		{
 			pRenderContext->SetStencilWriteMask(0xFFFFFFFF);
 			pRenderContext->SetStencilReferenceValue((current.m_StencilIndex << 2) | 1);
@@ -1080,7 +1066,7 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 			render->SetColorModulation(vGlowColor.Base());
 		}
 
-		if (current.m_InfillEnabled)
+		if (current.AnyInfillsActive())
 		{
 			pRenderContext->SetStencilWriteMask(0xFFFFFFFF);
 			pRenderContext->SetStencilReferenceValue((current.m_StencilIndex << 2) | 3);
@@ -1123,7 +1109,7 @@ void Graphics::DrawGlowVisible(int nSplitScreenSlot, CMatRenderContextPtr& pRend
 			render->SetColorModulation(vGlowColor.Base());
 		}
 
-		if (current.m_InfillEnabled)
+		if (current.AnyInfillsActive())
 		{
 			pRenderContext->SetStencilWriteMask(0xFFFFFFFF);
 			pRenderContext->SetStencilReferenceValue((current.m_StencilIndex << 2) | 1);
@@ -1135,47 +1121,12 @@ void Graphics::DrawGlowVisible(int nSplitScreenSlot, CMatRenderContextPtr& pRend
 	}
 }
 
-void Graphics::CleanupGlowObjectDefinitions(CGlowObjectManager* glowMgr)
-{
-	// This function is a workaround for an overcomplicated, broken
-	// linked-list-inside-a-vector hack that is intended to improve performance.
-
-	static constexpr auto END_OF_FREE_LIST = CGlowObjectManager::GlowObjectDefinition_t::END_OF_FREE_LIST;
-
-	// Always add a new entry to the vector in CGlowObjectManager::RegisterGlowObject
-	//glowMgr->m_nFirstFreeSlot = CGlowObjectManager::GlowObjectDefinition_t::END_OF_FREE_LIST;
-
-	// Remove entries marked as "unused" (UnregisterGlowObject was called on them) from the end
-	{
-		int next = END_OF_FREE_LIST;
-		for (int i = glowMgr->m_GlowObjectDefinitions.Count() - 1; i >= 0; i--)
-		{
-			auto& current = glowMgr->m_GlowObjectDefinitions[i];
-
-			if (!current.IsUnused() && !current.m_hEntity.Get())
-			{
-				PluginWarning("Found NULL entity in glow object list @ %i. Removing.\n", i);
-				glowMgr->UnregisterGlowObject(i);
-			}
-
-			if (current.IsUnused())
-			{
-				glowMgr->m_nFirstFreeSlot = i;
-				current.m_nNextFreeSlot = next;
-				next = i;
-			}
-		}
-	}
-}
-
 void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext, float flBloomScale, int x, int y, int w, int h)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	const PIXEvent pixEvent(pRenderContext, "ApplyEntityGlowEffects");
 
 	auto const graphicsModule = Graphics::GetModule();
-
-	graphicsModule->CleanupGlowObjectDefinitions(this);
 
 	// Optimization: only do all the framebuffer shuffling if there's at least one glow to be drawn
 	bool anyGlowAlways = false;
@@ -1507,12 +1458,18 @@ void Graphics::OnTick(bool inGame)
 Graphics::ExtraGlowData::ExtraGlowData(CGlowObjectManager::GlowObjectDefinition_t* base) : m_Base(base)
 {
 	m_ShouldOverrideGlowColor = false;
-	m_InfillEnabled = false;
 
 	// Dumb assert in copy constructor gets triggered when resizing std::vector
 	m_GlowColorOverride.Init(-1, -1, -1);
-	m_HurtInfillRectMin.Init(-1, -1);
-	m_HurtInfillRectMax.Init(-1, -1);
-	m_BuffedInfillRectMin.Init(-1, -1);
-	m_BuffedInfillRectMax.Init(-1, -1);
+}
+
+bool Graphics::ExtraGlowData::AnyInfillsActive() const
+{
+	for (const auto& infill : m_Infills)
+	{
+		if (infill.m_Active)
+			return true;
+	}
+
+	return false;
 }

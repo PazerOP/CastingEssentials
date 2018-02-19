@@ -40,7 +40,6 @@ public:
 
 	bool CheckCondition(TFCond condition) const;
 	TFClassType GetClass() const;
-	float GetTimeSinceLastHurt() const;
 	int GetHealth() const;
 	int GetMaxHealth() const;
 	int GetMaxOverheal() const;
@@ -65,6 +64,10 @@ public:
 	QAngle GetEyeAngles() const;
 
 	bool IsValid() const;
+
+	void UpdateLastHurtTime();
+	void ResetLastHurtTime();
+	float GetLastHurtTime() const;
 
 private:
 	class Iterator
@@ -117,8 +120,9 @@ private:
 
 	mutable int m_LastValidatedFrame;
 
-	mutable int m_LastHurtTime;
-	mutable int m_PreviousHealth;
+	int m_LastHurtUpdateTick = -1;
+	float m_LastHurtTime;
+	int m_LastHurtHealth;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
 

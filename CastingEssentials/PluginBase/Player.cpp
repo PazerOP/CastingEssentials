@@ -13,6 +13,8 @@
 #include <client/hltvcamera.h>
 #include <client/c_basecombatweapon.h>
 
+#undef min
+
 bool Player::s_ClassRetrievalAvailable = false;
 bool Player::s_ComparisonAvailable = false;
 bool Player::s_ConditionsRetrievalAvailable = false;
@@ -271,12 +273,30 @@ TFClassType Player::GetClass() const
 	return TFClassType::Unknown;
 }
 
-float Player::GetTimeSinceLastHurt() const
+float Player::GetLastHurtTime() const
 {
-	const auto maxHealth = GetMaxHealth();
-	const auto health = GetHealth();
-
 	return Interfaces::GetEngineTool()->ClientTime() - m_LastHurtTime;
+}
+
+void Player::ResetLastHurtTime()
+{
+	m_LastHurtTime = Interfaces::GetEngineTool()->ClientTime();
+}
+
+void Player::UpdateLastHurtTime()
+{
+	const auto tick = Interfaces::GetEngineTool()->ClientTick();
+	if (tick == m_LastHurtUpdateTick)
+		return;
+
+	auto health = GetHealth();
+
+	// Update last hurt time
+	if (health < m_LastHurtHealth)
+		m_LastHurtTime = Interfaces::GetEngineTool()->ClientTime();
+
+	m_LastHurtHealth = health;
+	m_LastHurtUpdateTick = tick;
 }
 
 int Player::GetHealth() const
@@ -288,15 +308,7 @@ int Player::GetHealth() const
 
 		Assert(m_CachedHealth);
 		if (m_CachedHealth)
-		{
-			// Update last hurt tick
-			if (*m_CachedHealth < m_PreviousHealth)
-				m_LastHurtTime = Interfaces::GetEngineTool()->ClientTime();
-
-			m_PreviousHealth = *m_CachedHealth;
-
 			return *m_CachedHealth;
-		}
 	}
 
 	Assert(!"Called " __FUNCTION__ "() on an invalid player!");
@@ -377,9 +389,6 @@ bool Player::CheckCache() const
 		m_CachedActiveWeapon = nullptr;
 
 		m_CachedPlayerInfoLastUpdateFrame = 0;
-
-		m_LastHurtTime = -100;
-		m_PreviousHealth = 125;
 
 		for (auto& wpn : m_CachedWeapons)
 			wpn = nullptr;

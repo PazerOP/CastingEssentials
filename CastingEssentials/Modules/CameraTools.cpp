@@ -707,8 +707,10 @@ void CameraTools::SpecPosition(const CCommand &command)
 	QAngle pluginAng;
 	CameraState::GetModule()->GetLastFramePluginView(pluginPos, pluginAng);
 
+	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->m_nCameraMode;
+
 	// Legacy support, we used to always force OBS_MODE_FIXED
-	if (ParseSpecPosCommand(command, pos, ang, mode, pluginPos, pluginAng, OBS_MODE_FIXED))
+	if (ParseSpecPosCommand(command, pos, ang, mode, pluginPos, pluginAng, defaultMode))
 		SpecPosition(pos, ang, mode);
 }
 

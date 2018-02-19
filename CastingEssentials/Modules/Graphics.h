@@ -6,6 +6,7 @@
 #define GLOWS_ENABLE
 #include <client/glow_outline_effect.h>
 
+#include <array>
 #include <vector>
 
 class C_BaseEntity;
@@ -43,7 +44,9 @@ private:
 	ConVar* ce_outlines_additive;
 	ConVar* ce_outlines_debug;
 
+	ConCommand* ce_infills_test;
 	ConVar* ce_infills_enable;
+	ConVar* ce_infills_additive;
 	ConVar* ce_infills_debug;
 	ConVar* ce_infills_hurt_red;
 	ConVar* ce_infills_hurt_blue;
@@ -78,6 +81,22 @@ private:
 	void DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;
 	void DrawGlowVisible(int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;
 
+	enum class InfillType
+	{
+		Hurt,
+		Buffed,
+
+		Count
+	};
+
+	struct Infill
+	{
+		bool m_Active = false;
+		Color m_Color;
+		Vector2D m_RectMin = Vector2D(-1, -1);
+		Vector2D m_RectMax = Vector2D(-1, -1);
+	};
+
 	friend class CGlowObjectManager;
 	struct ExtraGlowData
 	{
@@ -88,18 +107,11 @@ private:
 		bool m_ShouldOverrideGlowColor;
 		Vector m_GlowColorOverride;
 
-		bool m_InfillEnabled;
 		uint8_t m_StencilIndex;
 
-		bool m_HurtInfillActive;
-		Color m_HurtInfillColor;
-		Vector2D m_HurtInfillRectMin;
-		Vector2D m_HurtInfillRectMax;
+		bool AnyInfillsActive() const;
 
-		bool m_BuffedInfillActive;
-		Color m_BuffedInfillColor;
-		Vector2D m_BuffedInfillRectMin;
-		Vector2D m_BuffedInfillRectMax;
+		std::array<Infill, (size_t)InfillType::Count> m_Infills;
 
 		// This list is refreshed every frame and only used within a single "entry"
 		// into our glow system, so it's ok to use pointers here rather than EHANDLES
@@ -108,9 +120,10 @@ private:
 	std::vector<ExtraGlowData> m_ExtraGlowData;
 	const CViewSetup* m_View;
 
+	void ResetPlayerHurtTimes();
+
 	void BuildMoveChildLists();
 	ExtraGlowData* FindExtraGlowData(int entindex);
-	void CleanupGlowObjectDefinitions(CGlowObjectManager* glowMgr);
 
 	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
 
