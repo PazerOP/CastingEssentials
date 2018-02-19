@@ -30,7 +30,7 @@
 #include "Modules/SteamTools.h"
 #include "Modules/TeamNames.h"
 
-const char* const PLUGIN_VERSION_ID = "r17 beta11";
+const char* const PLUGIN_VERSION_ID = "r17 final";
 const char* const PLUGIN_FULL_VERSION = strdup(strprintf("%s %s", PLUGIN_NAME, PLUGIN_VERSION_ID).c_str());
 
 class CastingPlugin final : public Plugin
