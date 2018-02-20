@@ -61,6 +61,7 @@ private:
 	ConVar* m_NextPlayerMode;
 	ConCommand* m_SpecClass;
 	ConCommand* m_SpecSteamID;
+	ConCommand* m_SpecIndex;
 
 	ConCommand* m_ShowUsers;
 	void ShowUsers(const CCommand& command);
@@ -77,6 +78,7 @@ private:
 	void SpecClass(const CCommand& command);
 	void SpecClass(TFTeam team, TFClassType playerClass, int classIndex);
 	void SpecSteamID(const CCommand& command);
+	void SpecIndex(const CCommand& command);
 
 	void SpecPlayer(int playerIndex);
 

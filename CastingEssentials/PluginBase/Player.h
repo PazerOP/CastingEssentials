@@ -70,16 +70,16 @@ public:
 	float GetLastHurtTime() const;
 
 private:
-	class Iterator
+	class Iterator : public std::iterator<std::forward_iterator_tag, Player*>
 	{
 		friend class Player;
 
 	public:
-		Iterator(const Iterator& old) { m_Index = old.m_Index; }
+		Iterator(const Iterator& old) = default;
 
 		Iterator& operator++();
 		Player* operator*() const { return GetPlayer(m_Index, __FUNCSIG__); }
-		//bool operator==(const Iterator& other) const;
+		bool operator==(const Iterator& other) const { return m_Index == other.m_Index; }
 		bool operator!=(const Iterator& other) const { return m_Index != other.m_Index; }
 
 		Iterator();
@@ -117,8 +117,6 @@ private:
 
 	mutable int m_CachedPlayerInfoLastUpdateFrame;
 	mutable player_info_t m_CachedPlayerInfo;
-
-	mutable int m_LastValidatedFrame;
 
 	int m_LastHurtUpdateTick = -1;
 	float m_LastHurtTime;

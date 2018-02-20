@@ -27,7 +27,6 @@ std::unique_ptr<Player> Player::s_Players[ABSOLUTE_PLAYER_LIMIT];
 Player::Player(CHandle<IClientEntity> handle, int userID) : m_PlayerEntity(handle), m_UserID(userID)
 {
 	m_CachedPlayerEntity = nullptr;
-	m_LastValidatedFrame = 0;
 }
 
 void Player::Unload()
@@ -216,7 +215,11 @@ TFTeam Player::GetTeam() const
 	{
 		if (CheckCache() || !m_CachedTeam)
 		{
-			C_BaseEntity* entity = GetEntity()->GetBaseEntity();
+			IClientEntity* clientEnt = GetEntity();
+			if (!clientEnt)
+				return TFTeam::Unassigned;
+
+			C_BaseEntity* entity = clientEnt->GetBaseEntity();
 			if (!entity)
 				return TFTeam::Unassigned;
 
@@ -340,14 +343,7 @@ int Player::GetMaxOverheal() const
 
 bool Player::IsValid() const
 {
-	const auto framecount = Interfaces::GetEngineTool()->HostFrameCount();
-	if (m_LastValidatedFrame == framecount)
-		return true;
-
-	if (!m_PlayerEntity.IsValid())
-		return false;
-
-	if (!m_PlayerEntity.Get())
+	if (!GetEntity())
 		return false;
 
 	if (entindex() < 1 || entindex() > Interfaces::GetEngineTool()->GetMaxClients())
@@ -362,12 +358,6 @@ bool Player::IsValid() const
 			return false;
 	}
 
-	// pazer: this is slow, and theoretically it should be impossible to create
-	// Player objects with incorrect entity types
-	//if (!Entities::CheckEntityBaseclass(playerEntity, "TFPlayer"))
-	//	return false;
-
-	m_LastValidatedFrame = framecount;
 	return true;
 }
 
@@ -409,16 +399,16 @@ Player::Iterator::Iterator()
 	// Find the first valid player
 	for (int i = 1; i <= Interfaces::GetEngineTool()->GetMaxClients(); i++)
 	{
-		Player* p = GetPlayer(i);
-		if (!p || !p->IsValid())
+		auto player = GetPlayer(i);
+		if (!player || !player->IsValid())
 			continue;
 
 		m_Index = i;
+		Assert((*(*this))->GetEntity());
 		return;
 	}
 
 	m_Index = Interfaces::GetEngineTool()->GetMaxClients() + 1;
-	return;
 }
 
 Player::Iterator& Player::Iterator::operator++()
@@ -426,10 +416,13 @@ Player::Iterator& Player::Iterator::operator++()
 	// Find the next valid player
 	for (int i = m_Index + 1; i <= Interfaces::GetEngineTool()->GetMaxClients(); i++)
 	{
-		if (!GetPlayer(i) || !GetPlayer(i)->IsValid())
+		auto player = GetPlayer(i);
+		if (!player || !player->IsValid())
 			continue;
 
 		m_Index = i;
+
+		Assert((*(*this))->GetEntity());
 		return *this;
 	}
 

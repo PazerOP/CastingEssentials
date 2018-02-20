@@ -20,6 +20,7 @@
 #include <client/c_baseanimating.h>
 #include <vprof.h>
 
+#include <algorithm>
 #include <optional>
 
 CameraTools::CameraTools()
@@ -58,6 +59,7 @@ CameraTools::CameraTools()
 
 	m_SpecClass = new ConCommand("ce_cameratools_spec_class", [](const CCommand& args) { GetModule()->SpecClass(args); }, "Spectates a specific class: ce_cameratools_spec_class <team> <class> [index]");
 	m_SpecSteamID = new ConCommand("ce_cameratools_spec_steamid", [](const CCommand& args) { GetModule()->SpecSteamID(args); }, "Spectates a player with the given steamid: ce_cameratools_spec_steamid <steamID>");
+	m_SpecIndex = new ConCommand("ce_cameratools_spec_index", [](const CCommand& args) { GetModule()->SpecIndex(args); }, "Spectate a player based on their index in the tournament spectator hud.");
 
 	m_ShowUsers = new ConCommand("ce_cameratools_show_users", [](const CCommand& args) { GetModule()->ShowUsers(args); }, "Lists all currently connected players on the server.");
 }
@@ -370,7 +372,7 @@ void CameraTools::SpecPlayer(int playerIndex)
 		else
 		{
 			char buffer[32];
-			sprintf_s(buffer, "spec_player %i\n", playerIndex);
+			sprintf_s(buffer, "spec_player %i\n", player->GetUserID());
 			Interfaces::GetEngineClient()->ServerCmd(buffer);
 		}
 	}
@@ -547,6 +549,82 @@ void CameraTools::SpecSteamID(const CCommand& command)
 
 Usage:
 	PluginWarning("Usage: %s\n", m_SpecSteamID->GetHelpText());
+}
+
+void CameraTools::SpecIndex(const CCommand& command)
+{
+	if (command.ArgC() != 3)
+		goto Usage;
+
+	TFTeam team;
+	if (tolower(command.Arg(1)[0]) == 'r')
+		team = TFTeam::Red;
+	else if (tolower(command.Arg(1)[0]) == 'b')
+		team = TFTeam::Blue;
+	else
+		goto Usage;
+
+	// Create an array of all our players on the specified team
+	Player* allPlayers[ABSOLUTE_PLAYER_LIMIT];
+	const auto endIter = std::copy_if(Player::Iterable().begin(), Player::Iterable().end(), allPlayers,
+		[team](const Player* player) { return player->GetTeam() == team; });
+
+	const auto playerCount = std::distance(std::begin(allPlayers), endIter);
+
+	char* endPtr;
+	const auto index = std::strtol(command.Arg(2), &endPtr, 0);
+	if (endPtr == command.Arg(2))
+		goto Usage;	// Couldn't parse index
+
+	if (index < 0 || index >= playerCount)
+	{
+		if (playerCount < 1)
+			PluginWarning("%s: No players on team %s\n", command.Arg(0), command.Arg(1));
+		else
+			PluginWarning("Specified index \"%s\" for %s, but valid indices for team %s were [0, %i]\n",
+				command.Arg(2), command.Arg(0), command.Arg(1), playerCount - 1);
+
+		return;
+	}
+
+	// Sort by class, then by userid
+	std::sort(std::begin(allPlayers), endIter, [](const Player* p1, const Player* p2)
+	{
+		// Convert internal classes to actual game class order
+		static const auto GameClassNum = [](TFClassType codeClass)
+		{
+			switch (codeClass)
+			{
+				case TFClassType::Scout:    return 1;
+				case TFClassType::Soldier:  return 2;
+				case TFClassType::Pyro:     return 3;
+				case TFClassType::DemoMan:  return 4;
+				case TFClassType::Heavy:    return 5;
+				case TFClassType::Engineer: return 6;
+				case TFClassType::Medic:    return 7;
+				case TFClassType::Sniper:   return 8;
+				case TFClassType::Spy:      return 9;
+
+				default:                    return 0;
+			}
+		};
+
+		const auto class1 = GameClassNum(p1->GetClass());
+		const auto class2 = GameClassNum(p2->GetClass());
+
+		if (class1 < class2)
+			return true;
+		else if (class1 > class2)
+			return false;
+		else
+			return p1->entindex() < p2->entindex();	// Classes identical, sort by entindex
+	});
+
+	SpecPlayer(allPlayers[index]->entindex());
+	return;
+
+Usage:
+	PluginWarning("Usage: %s <red/blue> <index>\n", command.Arg(0));
 }
 
 void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flOldValue)
