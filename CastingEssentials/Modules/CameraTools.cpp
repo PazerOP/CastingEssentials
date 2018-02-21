@@ -54,7 +54,7 @@ CameraTools::CameraTools()
 
 	m_TPLockBone = new ConVar("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings.");
 
-	m_SpecIndex = new ConCommand("ce_cameratools_spec_index", [](const CCommand& args) { GetModule()->SpecIndex(args); }, "Spectates a specific player index");
+	m_SpecEntIndex = new ConCommand("ce_cameratools_spec_entindex", [](const CCommand& args) { GetModule()->SpecEntIndex(args); }, "Spectates a player by entindex");
 	m_SpecPosition = new ConCommand("ce_cameratools_spec_pos", [](const CCommand& args) { GetModule()->SpecPosition(args); }, "Moves the camera to a given position and angle.");
 	m_SpecPositionDelta = new ConCommand("ce_cameratools_spec_pos_delta", [](const CCommand& args) { GetModule()->SpecPositionDelta(args); }, "Offsets the camera by the given values.");
 
@@ -344,24 +344,26 @@ void CameraTools::SpecClass(TFTeam team, TFClassType playerClass, int classIndex
 	SpecPlayer(validPlayers[classIndex]->GetEntity()->entindex());
 }
 
-void CameraTools::SpecIndex(const CCommand& command)
+void CameraTools::SpecEntIndex(const CCommand& command)
 {
 	if (command.ArgC() != 2)
 	{
-		PluginWarning("%s: Expected 1 argument\n", m_SpecIndex->GetName());
-		PluginWarning("Usage: %s\n", m_SpecClass->GetHelpText());
-		return;
+		PluginWarning("%s: Expected 1 argument\n", command.Arg(0));
+		goto Usage;
 	}
 
 	if (!IsInteger(command.Arg(1)))
 	{
-		PluginWarning("%s: player index \"%s\" is not an integer\n", m_SpecClass->GetName(), command.Arg(1));
-		PluginWarning("Usage: %s\n", m_SpecClass->GetHelpText());
-		return;
+		PluginWarning("%s: entindex \"%s\" is not an integer\n", command.Arg(0), command.Arg(1));
+		goto Usage;
 	}
 
 	auto idx = atoi(command.Arg(1));
 	SpecPlayer(idx);
+	return;
+
+Usage:
+	PluginWarning("Usage: %s <entindex>\n", command.Arg(0));
 }
 
 void CameraTools::SpecPlayer(int playerIndex)
