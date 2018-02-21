@@ -29,6 +29,7 @@
 #include "Modules/ProjectileOutlines.h"
 #include "Modules/SteamTools.h"
 #include "Modules/TeamNames.h"
+#include "Modules/ClientTools.h"
 
 const char* const PLUGIN_VERSION_ID = "r17 final";
 const char* const PLUGIN_FULL_VERSION = strdup(strprintf("%s %s", PLUGIN_NAME, PLUGIN_VERSION_ID).c_str());
@@ -88,6 +89,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<ProjectileOutlines>("Projectile Outlines");
 	Modules().RegisterAndLoadModule<SteamTools>("Steam Tools");
 	Modules().RegisterAndLoadModule<TeamNames>("Team Names");
+	Modules().RegisterAndLoadModule<ClientTools>("Client Tools");
 
 	ConVar_Register();
 
