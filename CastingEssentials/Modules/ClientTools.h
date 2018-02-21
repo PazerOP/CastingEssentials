@@ -7,13 +7,14 @@
 class ClientTools : public Module<ClientTools>
 {
 public:
-	static ClientTools* GetModule() { return Modules().GetModule<ClientTools>(); }
-	static const char* GetModuleName() { return Modules().GetModuleName<ClientTools>().c_str(); }
+	ClientTools();
 
 	static bool CheckDependencies();
-private:
 
+private:
 	void UpdateWindowTitle(const char* oldval);
-	ConVar cv_windowtitle{ "ce_clienttools_windowtitle", "", FCVAR_NONE, "Overrides the game window title", [](IConVar* var, const char* oldval, float foldval) { GetModule()->UpdateWindowTitle(oldval); } };
-	std::string origtitle;
+
+	ConVar ce_clienttools_windowtitle;
+
+	std::string m_OriginalTitle;
 };
