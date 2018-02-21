@@ -73,6 +73,9 @@ template<class... Parameters> __forceinline void PluginColorMsg(const Color& col
 	ConColorMsg(color, fmt, param...);
 }
 
+bool TryParseInteger(const char* str, int& out);
+bool TryParseFloat(const char* str, float& out);
+
 inline bool IsInteger(const std::string &s)
 {
 	if (s.empty() || (!isdigit(s[0]) && s[0] != '-' && s[0] != '+'))

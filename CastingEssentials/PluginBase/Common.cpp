@@ -151,3 +151,27 @@ std::string KeyValuesDumpAsString(KeyValues* kv, int indentLevel)
 	kv->Dump(&context, indentLevel);
 	return context.m_String;
 }
+
+bool TryParseInteger(const char* str, int& out)
+{
+	Assert(str);
+	if (!str)
+		return false;
+
+	char* strEnd;
+	out = std::strtol(str, &strEnd, 0);
+
+	return strEnd != str;
+}
+
+bool TryParseFloat(const char* str, float& out)
+{
+	Assert(str);
+	if (!str)
+		return false;
+
+	char* strEnd;
+	out = std::strtof(str, &strEnd);
+
+	return strEnd != str;
+}
