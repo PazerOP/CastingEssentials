@@ -2,7 +2,6 @@
 #include "antifreeze.h"
 #include "PluginBase/Interfaces.h"
 
-#include <convar.h>
 #include <client/iclientmode.h>
 #include <tier3/tier3.h>
 #include <toolframework/ienginetool.h>
@@ -20,9 +19,9 @@ public:
 	virtual void OnTick();
 };
 
-AntiFreeze::AntiFreeze()
+AntiFreeze::AntiFreeze() :
+	ce_antifreeze_enabled("ce_antifreeze_enabled", "0", FCVAR_NONE, "enable antifreeze (forces the spectator GUI to refresh)")
 {
-	enabled = new ConVar("ce_antifreeze_enabled", "0", FCVAR_NONE, "enable antifreeze (forces the spectator GUI to refresh)");
 }
 
 bool AntiFreeze::CheckDependencies()
@@ -69,7 +68,7 @@ void AntiFreeze::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
-	if (inGame && enabled->GetBool())
+	if (inGame && ce_antifreeze_enabled.GetBool())
 	{
 		if (!m_Panel)
 		{

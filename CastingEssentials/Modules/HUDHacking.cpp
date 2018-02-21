@@ -15,12 +15,11 @@
 #undef min
 #undef max
 
-HUDHacking::HUDHacking()
+HUDHacking::HUDHacking() :
+	ce_hud_forward_playerpanel_border("ce_hud_forward_playerpanel_border", "1", FCVAR_NONE, "Sets the border of [playerpanel]->PanelColorBG to the same value as [playerpanel]."),
+	ce_hud_player_health_progressbars("ce_hud_player_health_progressbars", "1", FCVAR_NONE, "Enables [playerpanel]->PlayerHealth[Overheal](Red/Blue) ProgressBars.")
 {
 	m_ProgressBarApplySettingsHook = GetHooks()->AddHook<vgui_ProgressBar_ApplySettings>(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2));
-
-	ce_hud_forward_playerpanel_border.reset(new ConVar("ce_hud_forward_playerpanel_border", "1", FCVAR_NONE, "Sets the border of [playerpanel]->PanelColorBG to the same value as [playerpanel]."));
-	ce_hud_player_health_progressbars.reset(new ConVar("ce_hud_player_health_progressbars", "1", FCVAR_NONE, "Enables [playerpanel]->PlayerHealth[Overheal](Red/Blue) ProgressBars."));
 }
 
 HUDHacking::~HUDHacking()
@@ -118,10 +117,10 @@ void HUDHacking::OnTick(bool inGame)
 	if (!inGame)
 		return;
 
-	if (ce_hud_forward_playerpanel_border->GetBool())
+	if (ce_hud_forward_playerpanel_border.GetBool())
 		ForwardPlayerPanelBorders();
 
-	if (ce_hud_player_health_progressbars->GetBool())
+	if (ce_hud_player_health_progressbars.GetBool())
 		UpdatePlayerHealths();
 }
 

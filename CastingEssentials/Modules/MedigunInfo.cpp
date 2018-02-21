@@ -17,7 +17,6 @@
 #include "PluginBase/TFDefinitions.h"
 #include "PluginBase/TFPlayerResource.h"
 
-#include <convar.h>
 #include "vgui/IScheme.h"
 #include "vgui/ISurface.h"
 #include "vgui/IVGui.h"
@@ -81,17 +80,23 @@ private:
 	TFTeam team;
 };
 
-MedigunInfo::MedigunInfo()
-{
-	ce_mediguninfo_separate_enabled = new ConVar("ce_mediguninfo_separate_enabled", "0", FCVAR_NONE, "Enable separated medigun panels.");
-	ce_mediguninfo_separate_reload = new ConCommand("ce_mediguninfo_separate_reload", []() { GetModule()->ReloadSettings(); }, "Reload settings for the separated medigun panels from the .res file.", FCVAR_NONE);
+MedigunInfo::MedigunInfo() :
+	ce_mediguninfo_separate_enabled("ce_mediguninfo_separate_enabled", "0", FCVAR_NONE, "Enable separated medigun panels."),
+	ce_mediguninfo_separate_reload("ce_mediguninfo_separate_reload", []() { GetModule()->ReloadSettings(); },
+		"Reload settings for the separated medigun panels from the .res file."),
 
-	ce_mediguninfo_embedded_enabled = new ConVar("ce_mediguninfo_embedded_enabled", "0", FCVAR_NONE, "Enable medigun panels embedded in specgui player panels.");
-	ce_mediguninfo_embedded_medigun_text = new ConVar("ce_mediguninfo_embedded_medigun_text", "#TF_Weapon_Medigun", FCVAR_NONE, "Text to use for the Medi-Gun for the %medigun% dialog variable on playerpanels.");
-	ce_mediguninfo_embedded_kritzkrieg_text = new ConVar("ce_mediguninfo_embedded_kritzkrieg_text", "#TF_Unique_Achievement_Medigun1", FCVAR_NONE, "Text to use for the Kritzkrieg for the %medigun% dialog variable on playerpanels.");
-	ce_mediguninfo_embedded_quickfix_text = new ConVar("ce_mediguninfo_embedded_quickfix_text", "#TF_Unique_MediGun_QuickFix", FCVAR_NONE, "Text to use for the Quick-Fix for the %medigun% dialog variable on playerpanels.");
-	ce_mediguninfo_embedded_vaccinator_text = new ConVar("ce_mediguninfo_embedded_vaccinator_text", "#TF_Unique_MediGun_Resist", FCVAR_NONE, "Text to use for the Vaccinator for the %medigun% dialog variable on playerpanels.");
-	ce_mediguninfo_embedded_dead_text = new ConVar("ce_mediguninfo_embedded_dead_text", "", FCVAR_NONE, "Text to use for the %medigun% dialog variable on playerpanels when the player is dead.");
+	ce_mediguninfo_embedded_enabled("ce_mediguninfo_embedded_enabled", "0", FCVAR_NONE, "Enable medigun panels embedded in specgui player panels."),
+	ce_mediguninfo_embedded_medigun_text("ce_mediguninfo_embedded_medigun_text", "#TF_Weapon_Medigun", FCVAR_NONE,
+		"Text to use for the Medi-Gun for the %medigun% dialog variable on playerpanels."),
+	ce_mediguninfo_embedded_kritzkrieg_text("ce_mediguninfo_embedded_kritzkrieg_text", "#TF_Unique_Achievement_Medigun1", FCVAR_NONE,
+		"Text to use for the Kritzkrieg for the %medigun% dialog variable on playerpanels."),
+	ce_mediguninfo_embedded_quickfix_text("ce_mediguninfo_embedded_quickfix_text", "#TF_Unique_MediGun_QuickFix", FCVAR_NONE,
+		"Text to use for the Quick-Fix for the %medigun% dialog variable on playerpanels."),
+	ce_mediguninfo_embedded_vaccinator_text("ce_mediguninfo_embedded_vaccinator_text", "#TF_Unique_MediGun_Resist", FCVAR_NONE,
+		"Text to use for the Vaccinator for the %medigun% dialog variable on playerpanels."),
+	ce_mediguninfo_embedded_dead_text("ce_mediguninfo_embedded_dead_text", "", FCVAR_NONE,
+		"Text to use for the %medigun% dialog variable on playerpanels when the player is dead.")
+{
 }
 
 bool MedigunInfo::CheckDependencies()
@@ -194,8 +199,8 @@ void MedigunInfo::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
-	const bool separateEnabled = ce_mediguninfo_separate_enabled->GetBool();
-	const bool embeddedEnabled = ce_mediguninfo_embedded_enabled->GetBool();
+	const bool separateEnabled = ce_mediguninfo_separate_enabled.GetBool();
+	const bool embeddedEnabled = ce_mediguninfo_embedded_enabled.GetBool();
 
 	if (inGame && (separateEnabled || embeddedEnabled))
 	{
@@ -274,14 +279,14 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 		{
 			switch (data->m_Type)
 			{
-				case TFMedigun::MediGun:    medigunString = ce_mediguninfo_embedded_medigun_text->GetString(); break;
-				case TFMedigun::Kritzkrieg: medigunString = ce_mediguninfo_embedded_kritzkrieg_text->GetString(); break;
-				case TFMedigun::QuickFix:   medigunString = ce_mediguninfo_embedded_quickfix_text->GetString(); break;
-				case TFMedigun::Vaccinator: medigunString = ce_mediguninfo_embedded_vaccinator_text->GetString(); break;
+				case TFMedigun::MediGun:    medigunString = ce_mediguninfo_embedded_medigun_text.GetString(); break;
+				case TFMedigun::Kritzkrieg: medigunString = ce_mediguninfo_embedded_kritzkrieg_text.GetString(); break;
+				case TFMedigun::QuickFix:   medigunString = ce_mediguninfo_embedded_quickfix_text.GetString(); break;
+				case TFMedigun::Vaccinator: medigunString = ce_mediguninfo_embedded_vaccinator_text.GetString(); break;
 			}
 		}
 		else
-			medigunString = ce_mediguninfo_embedded_dead_text->GetString();
+			medigunString = ce_mediguninfo_embedded_dead_text.GetString();
 
 		auto localized = g_pVGuiLocalize->FindAsUTF8(medigunString);
 		playerPanel->SetDialogVariable("medigun", localized ? localized : medigunString);
@@ -337,9 +342,9 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 
 void MedigunInfo::ReloadSettings()
 {
-	if (!ce_mediguninfo_separate_enabled->GetBool())
+	if (!ce_mediguninfo_separate_enabled.GetBool())
 	{
-		Warning("%s must be enabled with %s 1 before using %s.\n", GetModuleName(), ce_mediguninfo_separate_enabled->GetName(), ce_mediguninfo_separate_reload->GetName());
+		Warning("%s must be enabled with %s 1 before using %s.\n", GetModuleName(), ce_mediguninfo_separate_enabled.GetName(), ce_mediguninfo_separate_reload.GetName());
 		return;
 	}
 

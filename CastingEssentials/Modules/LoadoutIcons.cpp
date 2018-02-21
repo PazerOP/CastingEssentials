@@ -14,15 +14,13 @@
 #include "vgui_controls/ImagePanel.h"
 #include <vprof.h>
 
-
-
-LoadoutIcons::LoadoutIcons()
+LoadoutIcons::LoadoutIcons() :
+	ce_loadout_enabled("ce_loadout_enabled", "0", FCVAR_NONE, "Enable weapon icons inside player panels in the specgui."),
+	ce_loadout_filter_active_red("ce_loadout_filter_active_red", "255 255 255 255", FCVAR_NONE, "drawcolor_override for red team's active loadout items."),
+	ce_loadout_filter_active_blu("ce_loadout_filter_active_blu", "255 255 255 255", FCVAR_NONE, "drawcolor_override for blu team's active loadout items."),
+	ce_loadout_filter_inactive_red("ce_loadout_filter_inactive_red", "255 255 255 255", FCVAR_NONE, "drawcolor_override for red team's inactive loadout items."),
+	ce_loadout_filter_inactive_blu("ce_loadout_filter_inactive_blu", "255 255 255 255", FCVAR_NONE, "drawcolor_override for blu team's inactive loadout items.")
 {
-	ce_loadout_enabled = new ConVar("ce_loadout_enabled", "0", FCVAR_NONE, "Enable weapon icons inside player panels in the specgui.");
-	ce_loadout_filter_active_red = new ConVar("ce_loadout_filter_active_red", "255 255 255 255", FCVAR_NONE, "drawcolor_override for red team's active loadout items.");
-	ce_loadout_filter_active_blu = new ConVar("ce_loadout_filter_active_blu", "255 255 255 255", FCVAR_NONE, "drawcolor_override for blu team's active loadout items.");
-	ce_loadout_filter_inactive_red = new ConVar("ce_loadout_filter_inactive_red", "255 255 255 255", FCVAR_NONE, "drawcolor_override for red team's inactive loadout items.");
-	ce_loadout_filter_inactive_blu = new ConVar("ce_loadout_filter_inactive_blu", "255 255 255 255", FCVAR_NONE, "drawcolor_override for blu team's inactive loadout items.");
 
 	memset(m_Weapons, 0, sizeof(m_Weapons));
 	memset(m_ActiveWeaponIndices, 0, sizeof(m_ActiveWeaponIndices));
@@ -61,7 +59,7 @@ bool LoadoutIcons::CheckDependencies()
 void LoadoutIcons::OnTick(bool ingame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (ingame && ce_loadout_enabled->GetBool())
+	if (ingame && ce_loadout_enabled.GetBool())
 	{
 		GatherWeapons();
 		DrawIcons();
@@ -151,7 +149,7 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 	{
 		auto childVPANEL = g_pVGuiPanel->GetChild(playerVPANEL, i);
 		auto childPanelName = g_pVGuiPanel->GetName(childVPANEL);
-		
+
 
 		for (uint_fast8_t iconIndex = 0; iconIndex < ITEM_COUNT; iconIndex++)
 		{
@@ -181,11 +179,11 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 
 				if (iconIndex == IDX_ACTIVE || m_ActiveWeaponIndices[playerIndex] == iconIndex)
 				{
-					*m_DrawColor = ColorFromConVar(team == TFTeam::Red ? *ce_loadout_filter_active_red : *ce_loadout_filter_active_blu);
+					*m_DrawColor = ColorFromConVar(team == TFTeam::Red ? ce_loadout_filter_active_red : ce_loadout_filter_active_blu);
 				}
 				else
 				{
-					*m_DrawColor = ColorFromConVar(team == TFTeam::Red ? *ce_loadout_filter_inactive_red : *ce_loadout_filter_inactive_blu);
+					*m_DrawColor = ColorFromConVar(team == TFTeam::Red ? ce_loadout_filter_inactive_red : ce_loadout_filter_inactive_blu);
 				}
 
 				iconPanel->SetVisible(true);

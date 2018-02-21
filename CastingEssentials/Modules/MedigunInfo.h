@@ -2,12 +2,11 @@
 
 #include "PluginBase/Modules.h"
 
+#include <convar.h>
+
 enum class TFMedigun;
 enum class TFResistType;
 enum class TFTeam;
-class ConCommand;
-class ConVar;
-class IConVar;
 
 namespace vgui
 {
@@ -45,15 +44,15 @@ private:
 	void UpdateEmbeddedPanels();
 	void UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel);
 
-	ConVar* ce_mediguninfo_separate_enabled;
-	ConCommand* ce_mediguninfo_separate_reload;
+	ConVar ce_mediguninfo_separate_enabled;
+	ConCommand ce_mediguninfo_separate_reload;
 
-	ConVar* ce_mediguninfo_embedded_enabled;
-	ConVar* ce_mediguninfo_embedded_medigun_text;
-	ConVar* ce_mediguninfo_embedded_kritzkrieg_text;
-	ConVar* ce_mediguninfo_embedded_quickfix_text;
-	ConVar* ce_mediguninfo_embedded_vaccinator_text;
-	ConVar* ce_mediguninfo_embedded_dead_text;
+	ConVar ce_mediguninfo_embedded_enabled;
+	ConVar ce_mediguninfo_embedded_medigun_text;
+	ConVar ce_mediguninfo_embedded_kritzkrieg_text;
+	ConVar ce_mediguninfo_embedded_quickfix_text;
+	ConVar ce_mediguninfo_embedded_vaccinator_text;
+	ConVar ce_mediguninfo_embedded_dead_text;
 
 	void ReloadSettings();
 

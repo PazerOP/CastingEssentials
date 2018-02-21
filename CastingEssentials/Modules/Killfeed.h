@@ -12,7 +12,7 @@ public:
 	virtual ~Killfeed() { }
 
 private:
-	ConVar* ce_killfeed_continuous_update;
+	ConVar ce_killfeed_continuous_update;
 
 	class DeathNoticePanelOverride : public CHudBaseDeathNotice
 	{

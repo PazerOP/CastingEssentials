@@ -2,8 +2,8 @@
 
 #include "PluginBase/Modules.h"
 
-class ConVar;
-class IConVar;
+#include <convar.h>
+
 class QAngle;
 class Vector;
 
@@ -20,10 +20,8 @@ private:
 	bool InToolModeOverride();
 	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov);
 
-	class HLTVCameraOverride;
-
-	ConVar *enabled;
-	ConVar *m_FOV;
-	ConVar *zoomed;
+	ConVar ce_fovoverride_enabled;
+	ConVar ce_fovoverride_fov;
+	ConVar ce_fovoverride_zoomed;
 	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
 };

@@ -24,11 +24,13 @@
 
 #include "Controls/StubPanel.h"
 
-CameraAutoSwitch::CameraAutoSwitch()
+CameraAutoSwitch::CameraAutoSwitch() :
+	ce_cameraautoswitch_enabled("ce_cameraautoswitch_enabled", "0", FCVAR_NONE, "enable automatic switching of camera"),
+
+	ce_cameraautoswitch_killer("ce_cameraautoswitch_killer", "0", FCVAR_NONE, "switch to killer upon spectated player death",
+		[](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleKillerEnabled(var, pOldValue, flOldValue); }),
+	ce_cameraautoswitch_killer_delay("ce_cameraautoswitch_killer_delay", "0", FCVAR_NONE, "delay before switching to killer", true, 0, false, FLT_MAX)
 {
-	enabled = new ConVar("ce_cameraautoswitch_enabled", "0", FCVAR_NONE, "enable automatic switching of camera");
-	m_SwitchToKiller = new ConVar("ce_cameraautoswitch_killer", "0", FCVAR_NONE, "switch to killer upon spectated player death", [](IConVar *var, const char *pOldValue, float flOldValue) { Modules().GetModule<CameraAutoSwitch>()->ToggleKillerEnabled(var, pOldValue, flOldValue); });
-	killer_delay = new ConVar("ce_cameraautoswitch_killer_delay", "0", FCVAR_NONE, "delay before switching to killer", true, 0, false, FLT_MAX, nullptr);
 }
 CameraAutoSwitch::~CameraAutoSwitch()
 {
@@ -93,7 +95,7 @@ void CameraAutoSwitch::FireGameEvent(IGameEvent *event)
 
 void CameraAutoSwitch::OnPlayerDeath(IGameEvent* event)
 {
-	if (!enabled->GetBool() || !m_SwitchToKiller->GetBool())
+	if (!ce_cameraautoswitch_enabled.GetBool() || !ce_cameraautoswitch_killer.GetBool())
 		return;
 
 	Assert(!strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH));
@@ -126,10 +128,10 @@ void CameraAutoSwitch::OnPlayerDeath(IGameEvent* event)
 	if (!killer)
 		return;
 
-	if (killer_delay->GetFloat() > 0.0f)
+	if (ce_cameraautoswitch_killer_delay.GetFloat() > 0.0f)
 	{
 		// Switch with a delay
-		QueueSwitchToPlayer(killer->entindex(), targetPlayer->entindex(), killer_delay->GetFloat());
+		QueueSwitchToPlayer(killer->entindex(), targetPlayer->entindex(), ce_cameraautoswitch_killer_delay.GetFloat());
 	}
 	else
 	{
@@ -147,7 +149,7 @@ void CameraAutoSwitch::OnPlayerDeath(IGameEvent* event)
 
 void CameraAutoSwitch::ToggleKillerEnabled(IConVar *var, const char *pOldValue, float flOldValue)
 {
-	if (enabled->GetBool())
+	if (ce_cameraautoswitch_enabled.GetBool())
 	{
 		if (!Interfaces::GetGameEventManager()->FindListener(this, GAME_EVENT_PLAYER_DEATH))
 			Interfaces::GetGameEventManager()->AddListener(this, GAME_EVENT_PLAYER_DEATH, false);
@@ -168,7 +170,7 @@ void CameraAutoSwitch::OnTick(bool inGame)
 		return;
 	}
 
-	if (enabled->GetBool() && m_AutoSwitchQueued && Interfaces::GetEngineTool()->HostTime() >= m_AutoSwitchTime)
+	if (ce_cameraautoswitch_enabled.GetBool() && m_AutoSwitchQueued && Interfaces::GetEngineTool()->HostTime() >= m_AutoSwitchTime)
 	{
 		m_AutoSwitchQueued = false;
 		Player* const localObserverTarget = Player::GetLocalObserverTarget();
@@ -186,7 +188,7 @@ void CameraAutoSwitch::OnTick(bool inGame)
 					Warning("%s\n", e.what());
 				}
 			}
-		}		
+		}
 	}
 }
 

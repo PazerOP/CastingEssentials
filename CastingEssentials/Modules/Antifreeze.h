@@ -1,8 +1,9 @@
 #pragma once
 #include "PluginBase/modules.h"
 
+#include <convar.h>
+
 class ConCommand;
-class ConVar;
 class IConVar;
 
 class AntiFreeze : public Module<AntiFreeze>
@@ -18,6 +19,6 @@ private:
 
 	void OnTick(bool inGame) override;
 
-	ConVar *enabled;
+	ConVar ce_antifreeze_enabled;
 	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
 };

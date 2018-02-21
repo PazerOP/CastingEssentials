@@ -2,9 +2,7 @@
 
 #include "PluginBase/Modules.h"
 
-class ConCommand;
-class ConVar;
-class IConVar;
+#include <convar.h>
 
 class FreezeInfo final : public Module<FreezeInfo>
 {
@@ -23,9 +21,10 @@ private:
 	void PostEntityPacketReceivedHook();
 	int m_PostEntityPacketReceivedHook;
 
-	ConVar *enabled;
-	ConCommand *reload_settings;
-	ConVar *threshold;
+	ConVar ce_freezeinfo_enabled;
+	ConVar ce_freezeinfo_threshold;
+	ConCommand ce_freezeinfo_reload_settings;
+
 	void ChangeThreshold(IConVar *var, const char *pOldValue, float flOldValue);
 	void ReloadSettings();
 	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);

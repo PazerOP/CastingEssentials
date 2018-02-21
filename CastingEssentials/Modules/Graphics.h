@@ -24,45 +24,45 @@ public:
 	Graphics();
 	~Graphics();
 
-	ConVar* GetDebugGlowConVar() const { return ce_graphics_debug_glow; }
+	const ConVar& GetDebugGlowConVar() const { return ce_graphics_debug_glow; }
 
 protected:
 	void OnTick(bool inGame) override;
 
 private:
-	ConVar* ce_graphics_disable_prop_fades;
-	ConVar* ce_graphics_debug_glow;
-	ConVar* ce_graphics_glow_silhouettes;
-	ConVar* ce_graphics_glow_intensity;
-	ConVar* ce_graphics_improved_glows;
-	ConVar* ce_graphics_fix_invisible_players;
+	ConVar ce_graphics_disable_prop_fades;
+	ConVar ce_graphics_debug_glow;
+	ConVar ce_graphics_glow_silhouettes;
+	ConVar ce_graphics_glow_intensity;
+	ConVar ce_graphics_improved_glows;
+	ConVar ce_graphics_fix_invisible_players;
 
-	ConVar* ce_outlines_mode;
-	ConVar* ce_outlines_players_override_red;
-	ConVar* ce_outlines_players_override_blue;
-	ConVar* ce_outlines_debug_stencil_out;
-	ConVar* ce_outlines_additive;
-	ConVar* ce_outlines_debug;
+	ConVar ce_outlines_mode;
+	ConVar ce_outlines_players_override_red;
+	ConVar ce_outlines_players_override_blue;
+	ConVar ce_outlines_debug_stencil_out;
+	ConVar ce_outlines_additive;
+	ConVar ce_outlines_debug;
 
-	ConCommand* ce_infills_test;
-	ConVar* ce_infills_enable;
-	ConVar* ce_infills_additive;
-	ConVar* ce_infills_debug;
-	ConVar* ce_infills_hurt_red;
-	ConVar* ce_infills_hurt_blue;
+	ConCommand ce_infills_test;
+	ConVar ce_infills_enable;
+	ConVar ce_infills_additive;
+	ConVar ce_infills_debug;
+	ConVar ce_infills_hurt_red;
+	ConVar ce_infills_hurt_blue;
 	//ConVar* ce_infills_normal_direction;
-	ConVar* ce_infills_buffed_red;
-	ConVar* ce_infills_buffed_blue;
+	ConVar ce_infills_buffed_red;
+	ConVar ce_infills_buffed_blue;
 	//ConVar* ce_infills_buffed_direction;
 
-	ConVar* ce_infills_flicker_hertz;
-	ConVar* ce_infills_flicker_intensity;
-	ConVar* ce_infills_flicker_after_hurt_time;
-	ConVar* ce_infills_flicker_after_hurt_bias;
-	ConVar* ce_infills_fade_after_hurt_time;
-	ConVar* ce_infills_fade_after_hurt_bias;
+	ConVar ce_infills_flicker_hertz;
+	ConVar ce_infills_flicker_intensity;
+	ConVar ce_infills_flicker_after_hurt_time;
+	ConVar ce_infills_flicker_after_hurt_bias;
+	ConVar ce_infills_fade_after_hurt_time;
+	ConVar ce_infills_fade_after_hurt_bias;
 
-	ConCommand* ce_graphics_dump_shader_params;
+	ConCommand ce_graphics_dump_shader_params;
 
 	static bool IsDefaultParam(const char* paramName);
 	static void DumpShaderParams(const CCommand& cmd);

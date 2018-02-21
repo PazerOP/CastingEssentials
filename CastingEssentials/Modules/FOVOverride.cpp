@@ -2,7 +2,6 @@
 
 #include <client/c_baseentity.h>
 #include <client/c_baseplayer.h>
-#include <convar.h>
 #include <icliententity.h>
 #include <shareddefs.h>
 #include <vprof.h>
@@ -13,14 +12,14 @@
 #include "PluginBase/TFDefinitions.h"
 #include "Misc/HLTVCameraHack.h"
 
-FOVOverride::FOVOverride()
+FOVOverride::FOVOverride() :
+	ce_fovoverride_enabled("ce_fovoverride_enabled", "0", FCVAR_NONE, "Enables FOV override.",
+		[](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); }),
+	ce_fovoverride_fov("ce_fovoverride_fov", "90", FCVAR_NONE, "The FOV to override with."),
+	ce_fovoverride_zoomed("ce_fovoverride_zoomed", "0", FCVAR_NONE, "Enable FOV override even when sniper rifle is zoomed?")
 {
 	inToolModeHook = 0;
 	setupEngineViewHook = 0;
-
-	enabled = new ConVar("ce_fovoverride_enabled", "0", FCVAR_NONE, "enable FOV override", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
-	m_FOV = new ConVar("ce_fovoverride_fov", "90", FCVAR_NONE, "the FOV value used");
-	zoomed = new ConVar("ce_fovoverride_zoomed", "0", FCVAR_NONE, "enable FOV override even when sniper rifle is zoomed");
 }
 
 bool FOVOverride::CheckDependencies()
@@ -100,14 +99,14 @@ bool FOVOverride::SetupEngineViewOverride(Vector &origin, QAngle &angles, float 
 		}
 	}
 
-	fov = m_FOV->GetFloat();
+	fov = ce_fovoverride_fov.GetFloat();
 	GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
 	return true;
 }
 
 void FOVOverride::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)
 {
-	if (enabled->GetBool())
+	if (ce_fovoverride_enabled.GetBool())
 	{
 		if (!inToolModeHook)
 			inToolModeHook = GetHooks()->AddHook<IClientEngineTools_InToolMode>(std::bind(&FOVOverride::InToolModeOverride, this));

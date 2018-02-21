@@ -1,6 +1,5 @@
 #include "freezeinfo.h"
 
-#include <convar.h>
 #include <client/iclientmode.h>
 #include <tier3/tier3.h>
 #include <toolframework/ienginetool.h>
@@ -27,12 +26,13 @@ private:
 	float threshold;
 };
 
-FreezeInfo::FreezeInfo()
+FreezeInfo::FreezeInfo() :
+	ce_freezeinfo_enabled("ce_freezeinfo_enabled", "0", FCVAR_NONE, "enables display of an info panel when a freeze is detected"),
+	ce_freezeinfo_threshold("ce_freezeinfo_threshold", "1", FCVAR_NONE, "the time of a freeze (in seconds) before the info panel is displayed",
+		[](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ChangeThreshold(var, pOldValue, flOldValue); }),
+	ce_freezeinfo_reload_settings("ce_freezeinfo_reload_settings", []() { GetModule()->ReloadSettings(); },
+		"reload settings for the freeze info panel from the resource file", FCVAR_NONE)
 {
-	enabled = new ConVar("ce_freezeinfo_enabled", "0", FCVAR_NONE, "enables display of an info panel when a freeze is detected");
-	reload_settings = new ConCommand("ce_freezeinfo_reload_settings", []() { GetModule()->ReloadSettings(); }, "reload settings for the freeze info panel from the resource file", FCVAR_NONE);
-	threshold = new ConVar("ce_freezeinfo_threshold", "1", FCVAR_NONE, "the time of a freeze (in seconds) before the info panel is displayed", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ChangeThreshold(var, pOldValue, flOldValue); });
-
 	m_PostEntityPacketReceivedHook = GetHooks()->AddHook<IPrediction_PostEntityPacketReceived>(std::bind(&FreezeInfo::PostEntityPacketReceivedHook, this));
 }
 
@@ -93,7 +93,7 @@ bool FreezeInfo::CheckDependencies()
 void FreezeInfo::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (inGame && enabled->GetBool())
+	if (inGame && ce_freezeinfo_enabled.GetBool())
 	{
 		if (!m_Panel)
 		{
@@ -103,7 +103,7 @@ void FreezeInfo::OnTick(bool inGame)
 				if (viewport)
 				{
 					m_Panel.reset(new Panel(viewport, "FreezeInfo"));
-					m_Panel->SetDisplayThreshold(threshold->GetFloat());
+					m_Panel->SetDisplayThreshold(ce_freezeinfo_threshold.GetFloat());
 				}
 				else
 					Warning("Could not initialize the panel!\n");
@@ -136,7 +136,7 @@ void FreezeInfo::PostEntityPacketReceivedHook()
 void FreezeInfo::ChangeThreshold(IConVar *var, const char *pOldValue, float flOldValue)
 {
 	if (m_Panel)
-		m_Panel->SetDisplayThreshold(threshold->GetFloat());
+		m_Panel->SetDisplayThreshold(ce_freezeinfo_threshold.GetFloat());
 }
 
 void FreezeInfo::ReloadSettings()

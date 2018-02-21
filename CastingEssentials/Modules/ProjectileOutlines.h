@@ -1,9 +1,11 @@
 #pragma once
 #include "PluginBase/Modules.h"
 
+#include <convar.h>
 #include <ehandle.h>
 
 #include <unordered_map>
+#include <vector>
 
 class C_BaseEntity;
 class IClientEntity;
@@ -16,17 +18,17 @@ public:
 	~ProjectileOutlines();
 
 private:
-	ConVar* m_RocketsEnabled;
-	ConVar* m_PillsEnabled;
-	ConVar* m_StickiesEnabled;
+	ConVar ce_projectileoutlines_rockets;
+	ConVar ce_projectileoutlines_pills;
+	ConVar ce_projectileoutlines_stickies;
 
-	ConVar* ce_projectileoutlines_mode;
+	ConVar ce_projectileoutlines_mode;
 
-	ConVar* ce_projectileoutlines_color_blu;
-	ConVar* ce_projectileoutlines_color_red;
+	ConVar ce_projectileoutlines_color_blu;
+	ConVar ce_projectileoutlines_color_red;
 
-	ConVar* ce_projectileoutlines_fade_start;
-	ConVar* ce_projectileoutlines_fade_end;
+	ConVar ce_projectileoutlines_fade_start;
+	ConVar ce_projectileoutlines_fade_end;
 
 	void OnTick(bool inGame) override;
 

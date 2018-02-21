@@ -2,10 +2,11 @@
 
 #include "PluginBase/Modules.h"
 
+#include <convar.h>
+
 #include <forward_list>
 #include <list>
 #include <map>
-#include <memory>
 #include <vector>
 
 class ConCommand;
@@ -25,8 +26,8 @@ public:
 	int GetBaseItemID(int specializedID) const;
 
 private:
-	std::unique_ptr<ConCommand> ce_itemschema_print;
-	std::unique_ptr<ConCommand> ce_itemschema_reload;
+	ConCommand ce_itemschema_print;
+	ConCommand ce_itemschema_reload;
 
 	void PrintAliases();
 

@@ -1,7 +1,6 @@
 #include "ConsoleTools.h"
 #include "PluginBase/HookManager.h"
 
-#include <convar.h>
 #include <vprof.h>
 
 #include <regex>
@@ -28,91 +27,26 @@ public:
 	}
 };
 
-ConsoleTools::ConsoleTools()
+ConsoleTools::ConsoleTools() :
+	ce_consoletools_filter_enabled("ce_consoletools_filter_enabled", "0", FCVAR_NONE, "Enables or disables console filtering.",
+		[](IConVar* var, const char* oldValue, float fOldValue) { GetModule()->ToggleFilterEnabled(var, oldValue, fOldValue); }),
+	ce_consoletools_filter_add("ce_consoletools_filter_add", [](const CCommand& cmd) { GetModule()->AddFilter(cmd); },
+		"Adds a new console filter. Uses regular expressions."),
+	ce_consoletools_filter_remove("ce_consoletools_filter_remove", [](const CCommand& cmd) { GetModule()->RemoveFilter(cmd); },
+		"Removes an existing console filter."),
+	ce_consoletools_filter_list("ce_consoletools_filter_list", [](const CCommand& cmd) { GetModule()->ListFilters(cmd); }, "Lists all console filters."),
+
+	ce_consoletools_flags_add("ce_consoletools_flags_add", [](const CCommand& cmd) { GetModule()->AddFlags(cmd); }, "Adds a flag to a cvar."),
+	ce_consoletools_flags_remove("ce_consoletools_flags_remove", [](const CCommand& cmd) { GetModule()->RemoveFlags(cmd); }, "Removes a flag from a cvar.")
 {
 	m_FilterPaused = false;
 	m_ConsoleColorPrintfHook = 0;
 	m_ConsoleDPrintfHook = 0;
 	m_ConsolePrintfHook = 0;
-
-	m_FilterEnabled = new ConVar("ce_consoletools_filter_enabled", "0", FCVAR_NONE, "Enables or disables console filtering.", &ConsoleTools::StaticToggleFilterEnabled);
-	m_FilterAdd = new ConCommand("ce_consoletools_filter_add", &ConsoleTools::StaticAddFilter, "Adds a new console filter. Uses regular expressions.");
-	m_FilterRemove = new ConCommand("ce_consoletools_filter_remove", &ConsoleTools::StaticRemoveFilter, "Removes an existing console filter.");
-	m_FilterList = new ConCommand("ce_consoletools_filter_list", &ConsoleTools::StaticListFilter, "Lists all console filters.");
-
-	m_FlagsAdd = new ConCommand("ce_consoletools_flags_add", &ConsoleTools::StaticAddFlags, "Adds a flag to a cvar.");
-	m_FlagsRemove = new ConCommand("ce_consoletools_flags_remove", &ConsoleTools::StaticRemoveFlags, "Removes a flag from a cvar.");
 }
 ConsoleTools::~ConsoleTools()
 {
 	DisableHooks();
-}
-
-void ConsoleTools::StaticAddFilter(const CCommand& command)
-{
-	ConsoleTools* module = Modules().GetModule<ConsoleTools>();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
-		return;
-	}
-
-	module->AddFilter(command);
-}
-void ConsoleTools::StaticRemoveFilter(const CCommand& command)
-{
-	ConsoleTools* module = Modules().GetModule<ConsoleTools>();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
-		return;
-	}
-
-	module->RemoveFilter(command);
-}
-void ConsoleTools::StaticListFilter(const CCommand& command)
-{
-	ConsoleTools* module = Modules().GetModule<ConsoleTools>();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
-		return;
-	}
-
-	module->ListFilters(command);
-}
-void ConsoleTools::StaticToggleFilterEnabled(IConVar* var, const char* oldValue, float fOldValue)
-{
-	ConsoleTools* module = Modules().GetModule<ConsoleTools>();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", var->GetName());
-		return;
-	}
-
-	module->ToggleFilterEnabled(var, oldValue, fOldValue);
-}
-void ConsoleTools::StaticAddFlags(const CCommand& command)
-{
-	ConsoleTools* module = Modules().GetModule<ConsoleTools>();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
-		return;
-	}
-
-	module->AddFlags(command);
-}
-void ConsoleTools::StaticRemoveFlags(const CCommand& command)
-{
-	ConsoleTools* module = Modules().GetModule<ConsoleTools>();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", command.Arg(0));
-		return;
-	}
-
-	module->RemoveFlags(command);
 }
 
 bool ConsoleTools::CheckDependencies()
@@ -163,7 +97,7 @@ void ConsoleTools::AddFilter(const CCommand &command)
 }
 void ConsoleTools::ToggleFilterEnabled(IConVar *var, const char *pOldValue, float flOldValue)
 {
-	if (m_FilterEnabled->GetBool())
+	if (ce_consoletools_filter_enabled.GetBool())
 	{
 		if (!m_ConsolePrintfHook)
 			m_ConsolePrintfHook = GetHooks()->AddHook<ICvar_ConsolePrintf>(std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1));
@@ -257,7 +191,7 @@ int ConsoleTools::ParseFlags(const CCommand& command)
 	for (int i = 2; i < command.ArgC(); i++)
 	{
 		const char* flag = command.Arg(i);
-		
+
 		if (!stricmp(flag, "game"))
 			retVal |= FCVAR_GAMEDLL;
 		else if (!stricmp(flag, "client"))
@@ -310,7 +244,7 @@ void ConsoleTools::RemoveFlags(const CCommand &command)
 			PluginWarning("%s is not a valid command or variable!\n", command.Arg(1));
 	}
 	else
-		PluginWarning("Usage: statusspec_consoletools_flags_remove <name> <flag1> [flag2 ...]\n");
+		PluginWarning("Usage: %s <name> <flag1> [flag2 ...]\n", command.Arg(0));
 }
 
 void ConsoleTools::AddFlags(const CCommand &command)
@@ -331,7 +265,7 @@ void ConsoleTools::AddFlags(const CCommand &command)
 			PluginWarning("%s is not a valid command or variable!\n", command.Arg(1));
 	}
 	else
-		PluginWarning("Usage: statusspec_consoletools_flags_add <name> <flag1> [flag2 ...]\n");
+		PluginWarning("Usage: %s <name> <flag1> [flag2 ...]\n", command.Arg(0));
 }
 
 void ConsoleTools::ListFilters(const CCommand& command)

@@ -1,7 +1,6 @@
 #include "ItemSchema.h"
 #include "PluginBase/Interfaces.h"
 
-#include <convar.h>
 #include <filesystem.h>
 #include <KeyValues.h>
 #include <utlbuffer.h>
@@ -13,10 +12,10 @@
 #undef min
 #undef max
 
-ItemSchema::ItemSchema()
+ItemSchema::ItemSchema() :
+	ce_itemschema_print("ce_itemschema_print", []() { GetModule()->PrintAliases(); }, "Prints the current state of the item schema module."),
+	ce_itemschema_reload("ce_itemschema_reload", []() { GetModule()->LoadItemSchema(); }, "Reloads the item schema module.")
 {
-	ce_itemschema_print.reset(new ConCommand("ce_itemschema_print", [](const auto&) { GetModule()->PrintAliases(); }, "Prints the current state of the item schema module."));
-	ce_itemschema_reload.reset(new ConCommand("ce_itemschema_reload", [](const auto&) { GetModule()->LoadItemSchema(); }, "Reloads the item schema module."));
 }
 
 void ItemSchema::PrintAliases()

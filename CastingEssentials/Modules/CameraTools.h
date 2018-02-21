@@ -2,6 +2,7 @@
 #include "PluginBase/ICameraOverride.h"
 #include "PluginBase/Modules.h"
 
+#include <convar.h>
 #include <mathlib/vector.h>
 #include <shareddefs.h>
 
@@ -9,10 +10,7 @@ enum class TFTeam;
 enum class TFClassType;
 
 class CCommand;
-class ConCommand;
-class ConVar;
 class KeyValues;
-class IConVar;
 class C_HLTVCamera;
 class C_BaseEntity;
 class Player;
@@ -35,36 +33,35 @@ private:
 	void SetModeOverride(int iMode);
 	void SetPrimaryTargetOverride(int nEntity);
 
-	ConVar* ce_cameratools_show_mode;
-	ConVar* m_ForceMode;
-	ConVar* m_ForceTarget;
-	ConVar* m_ForceValidTarget;
-	ConVar* m_SpecPlayerAlive;
-	ConCommand* m_SpecPosition;
-	ConCommand* m_SpecPositionDelta;
+	ConVar ce_cameratools_show_mode;
+	ConVar ce_cameratools_autodirector_mode;
+	ConVar ce_cameratools_force_target;
+	ConVar ce_cameratools_force_valid_target;
+	ConVar ce_cameratools_spec_player_alive;
 
-	ConVar* m_TPXShift;
-	ConVar* m_TPYShift;
-	ConVar* m_TPZShift;
-	ConVar* m_TPLockEnabled;
+	ConVar ce_tplock_enable;
+	ConVar ce_tplock_xoffset;
+	ConVar ce_tplock_yoffset;
+	ConVar ce_tplock_zoffset;
 
-	ConVar* m_TPLockPitch;
-	ConVar* m_TPLockYaw;
-	ConVar* m_TPLockRoll;
+	ConVar ce_tplock_force_pitch;
+	ConVar ce_tplock_force_yaw;
+	ConVar ce_tplock_force_roll;
 
-	ConVar* m_TPLockXDPS;
-	ConVar* m_TPLockYDPS;
-	ConVar* m_TPLockZDPS;
+	ConVar ce_tplock_dps_pitch;
+	ConVar ce_tplock_dps_yaw;
+	ConVar ce_tplock_dps_roll;
 
-	ConVar* m_TPLockBone;
+	ConVar ce_tplock_bone;
 
-	ConVar* m_NextPlayerMode;
-	ConCommand* m_SpecClass;
-	ConCommand* m_SpecSteamID;
-	ConCommand* m_SpecIndex;
-	ConCommand* m_SpecEntIndex;
+	ConCommand ce_cameratools_spec_pos;
+	ConCommand ce_cameratools_spec_pos_delta;
+	ConCommand ce_cameratools_spec_class;
+	ConCommand ce_cameratools_spec_steamid;
+	ConCommand ce_cameratools_spec_index;
+	ConCommand ce_cameratools_spec_entindex;
 
-	ConCommand* m_ShowUsers;
+	ConCommand ce_cameratools_show_users;
 	void ShowUsers(const CCommand& command);
 
 	void ChangeForceMode(IConVar *var, const char *pOldValue, float flOldValue);

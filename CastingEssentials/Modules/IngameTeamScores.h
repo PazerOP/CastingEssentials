@@ -2,8 +2,7 @@
 
 #include "PluginBase/Modules.h"
 
-class ConVar;
-class ConCommand;
+#include <convar.h>
 
 class IngameTeamScores final : public Module<IngameTeamScores>
 {
@@ -18,6 +17,6 @@ private:
 
 	void OnTick(bool inGame) override;
 
-	ConVar* ce_teamscores_enabled;
-	ConCommand* ce_teamscores_reload;
+	ConVar ce_teamscores_enabled;
+	ConCommand ce_teamscores_reload;
 };

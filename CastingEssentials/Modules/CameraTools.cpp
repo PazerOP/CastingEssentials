@@ -23,7 +23,47 @@
 #include <algorithm>
 #include <optional>
 
-CameraTools::CameraTools()
+CameraTools::CameraTools() :
+	ce_cameratools_show_mode("ce_cameratools_show_mode", "0", FCVAR_NONE, "Displays the current spec_mode in the top right corner of the screen."),
+
+	ce_cameratools_autodirector_mode("ce_cameratools_autodirector_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.",
+		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceMode(var, pOldValue, flOldValue); }),
+	ce_cameratools_force_target("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.",
+		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceTarget(var, pOldValue, flOldValue); }),
+	ce_cameratools_force_valid_target("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.",
+		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); }),
+	ce_cameratools_spec_player_alive("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players."),
+
+	ce_tplock_enable("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player."),
+	ce_tplock_xoffset("ce_tplock_xoffset", "18"),
+	ce_tplock_yoffset("ce_tplock_yoffset", "20"),
+	ce_tplock_zoffset("ce_tplock_zoffset", "-80"),
+
+	ce_tplock_force_pitch("ce_tplock_force_pitch", "0", FCVAR_NONE, "Value to force pitch to. Blank to follow player's eye angles."),
+	ce_tplock_force_yaw("ce_tplock_force_yaw", "", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles."),
+	ce_tplock_force_roll("ce_tplock_force_roll", "0", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles."),
+
+	ce_tplock_dps_pitch("ce_tplock_dps_pitch", "-1", FCVAR_NONE, "Max degrees per second for pitch. Set < 0 to uncap."),
+	ce_tplock_dps_yaw("ce_tplock_dps_yaw", "-1", FCVAR_NONE, "Max degrees per second for yaw. Set < 0 to uncap."),
+	ce_tplock_dps_roll("ce_tplock_dps_roll", "-1", FCVAR_NONE, "Max degrees per second for roll. Set < 0 to uncap."),
+
+	ce_tplock_bone("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings."),
+
+	ce_cameratools_spec_entindex("ce_cameratools_spec_entindex", [](const CCommand& args) { GetModule()->SpecEntIndex(args); },
+		"Spectates a player by entindex"),
+	ce_cameratools_spec_pos("ce_cameratools_spec_pos", [](const CCommand& args) { GetModule()->SpecPosition(args); },
+		"Moves the camera to a given position and angle."),
+	ce_cameratools_spec_pos_delta("ce_cameratools_spec_pos_delta", [](const CCommand& args) { GetModule()->SpecPositionDelta(args); },
+		"Offsets the camera by the given values."),
+	ce_cameratools_spec_class("ce_cameratools_spec_class", [](const CCommand& args) { GetModule()->SpecClass(args); },
+		"Spectates a specific class: ce_cameratools_spec_class <team> <class> [index]"),
+	ce_cameratools_spec_steamid("ce_cameratools_spec_steamid", [](const CCommand& args) { GetModule()->SpecSteamID(args); },
+		"Spectates a player with the given steamid: ce_cameratools_spec_steamid <steamID>"),
+	ce_cameratools_spec_index("ce_cameratools_spec_index", [](const CCommand& args) { GetModule()->SpecIndex(args); },
+		"Spectate a player based on their index in the tournament spectator hud."),
+
+	ce_cameratools_show_users("ce_cameratools_show_users", [](const CCommand& args) { GetModule()->ShowUsers(args); },
+		"Lists all currently connected players on the server.")
 {
 	m_SetModeHook = 0;
 	m_SetPrimaryTargetHook = 0;
@@ -31,38 +71,6 @@ CameraTools::CameraTools()
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
 
 	m_ViewOverride = false;
-
-	ce_cameratools_show_mode = new ConVar("ce_cameratools_show_mode", "0", FCVAR_NONE, "Displays the current spec_mode in the top right corner of the screen.");
-	m_ForceMode = new ConVar("ce_cameratools_autodirector_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceMode(var, pOldValue, flOldValue); });
-	m_ForceTarget = new ConVar("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceTarget(var, pOldValue, flOldValue); });
-	m_ForceValidTarget = new ConVar("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.", [](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); });
-	m_SpecPlayerAlive = new ConVar("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players.");
-
-	m_TPLockEnabled = new ConVar("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player.");
-
-	m_TPXShift = new ConVar("ce_tplock_xoffset", "18", FCVAR_NONE);
-	m_TPYShift = new ConVar("ce_tplock_yoffset", "20", FCVAR_NONE);
-	m_TPZShift = new ConVar("ce_tplock_zoffset", "-80", FCVAR_NONE);
-
-	m_TPLockPitch = new ConVar("ce_tplock_force_pitch", "0", FCVAR_NONE, "Value to force pitch to. Blank to follow player's eye angles.");
-	m_TPLockYaw = new ConVar("ce_tplock_force_yaw", "", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles.");
-	m_TPLockRoll = new ConVar("ce_tplock_force_roll", "0", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles.");
-
-	m_TPLockXDPS = new ConVar("ce_tplock_dps_pitch", "-1", FCVAR_NONE, "Max degrees per second for pitch. Set < 0 to uncap.");
-	m_TPLockYDPS = new ConVar("ce_tplock_dps_yaw", "-1", FCVAR_NONE, "Max degrees per second for yaw. Set < 0 to uncap.");
-	m_TPLockZDPS = new ConVar("ce_tplock_dps_roll", "-1", FCVAR_NONE, "Max degrees per second for roll. Set < 0 to uncap.");
-
-	m_TPLockBone = new ConVar("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings.");
-
-	m_SpecEntIndex = new ConCommand("ce_cameratools_spec_entindex", [](const CCommand& args) { GetModule()->SpecEntIndex(args); }, "Spectates a player by entindex");
-	m_SpecPosition = new ConCommand("ce_cameratools_spec_pos", [](const CCommand& args) { GetModule()->SpecPosition(args); }, "Moves the camera to a given position and angle.");
-	m_SpecPositionDelta = new ConCommand("ce_cameratools_spec_pos_delta", [](const CCommand& args) { GetModule()->SpecPositionDelta(args); }, "Offsets the camera by the given values.");
-
-	m_SpecClass = new ConCommand("ce_cameratools_spec_class", [](const CCommand& args) { GetModule()->SpecClass(args); }, "Spectates a specific class: ce_cameratools_spec_class <team> <class> [index]");
-	m_SpecSteamID = new ConCommand("ce_cameratools_spec_steamid", [](const CCommand& args) { GetModule()->SpecSteamID(args); }, "Spectates a player with the given steamid: ce_cameratools_spec_steamid <steamID>");
-	m_SpecIndex = new ConCommand("ce_cameratools_spec_index", [](const CCommand& args) { GetModule()->SpecIndex(args); }, "Spectate a player based on their index in the tournament spectator hud.");
-
-	m_ShowUsers = new ConCommand("ce_cameratools_show_users", [](const CCommand& args) { GetModule()->ShowUsers(args); }, "Lists all currently connected players on the server.");
 }
 
 bool CameraTools::CheckDependencies()
@@ -226,10 +234,10 @@ void CameraTools::ShowUsers(const CCommand& command)
 	Msg("%i Players:\n", red.size() + blu.size());
 
 	for (size_t i = 0; i < red.size(); i++)
-		ConColorMsg(Color(255, 128, 128, 255), "    alias player_red%i \"%s %s\"		// %s (%s)\n", i, m_SpecSteamID->GetName(), RenderSteamID(red[i]->GetSteamID().ConvertToUint64()).c_str(), red[i]->GetName(), TF_CLASS_NAMES[(int)red[i]->GetClass()]);
+		ConColorMsg(Color(255, 128, 128, 255), "    alias player_red%i \"%s %s\"		// %s (%s)\n", i, ce_cameratools_spec_steamid.GetName(), RenderSteamID(red[i]->GetSteamID().ConvertToUint64()).c_str(), red[i]->GetName(), TF_CLASS_NAMES[(int)red[i]->GetClass()]);
 
 	for (size_t i = 0; i < blu.size(); i++)
-		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s (%s)\n", i, m_SpecSteamID->GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName(), TF_CLASS_NAMES[(int)blu[i]->GetClass()]);
+		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s (%s)\n", i, ce_cameratools_spec_steamid.GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName(), TF_CLASS_NAMES[(int)blu[i]->GetClass()]);
 }
 
 void CameraTools::SpecClass(const CCommand& command)
@@ -237,7 +245,7 @@ void CameraTools::SpecClass(const CCommand& command)
 	// Usage: <team> <class> [classIndex]
 	if (command.ArgC() < 3 || command.ArgC() > 4)
 	{
-		PluginWarning("%s: Expected either 2 or 3 arguments\n", m_SpecClass->GetName());
+		PluginWarning("%s: Expected either 2 or 3 arguments\n", command.Arg(0));
 		goto Usage;
 	}
 
@@ -248,7 +256,7 @@ void CameraTools::SpecClass(const CCommand& command)
 		team = TFTeam::Red;
 	else
 	{
-		PluginWarning("%s: Unknown team \"%s\"\n", m_SpecClass->GetName(), command.Arg(1));
+		PluginWarning("%s: Unknown team \"%s\"\n", command.Arg(0), command.Arg(1));
 		goto Usage;
 	}
 
@@ -273,7 +281,7 @@ void CameraTools::SpecClass(const CCommand& command)
 		playerClass = TFClassType::Spy;
 	else
 	{
-		PluginWarning("%s: Unknown class \"%s\"\n", m_SpecClass->GetName(), command.Arg(2));
+		PluginWarning("%s: Unknown class \"%s\"\n", command.Arg(0), command.Arg(2));
 		goto Usage;
 	}
 
@@ -282,7 +290,7 @@ void CameraTools::SpecClass(const CCommand& command)
 	{
 		if (!IsInteger(command.Arg(3)))
 		{
-			PluginWarning("%s: class index \"%s\" is not an integer\n", m_SpecClass->GetName(), command.Arg(3));
+			PluginWarning("%s: class index \"%s\" is not an integer\n", command.Arg(0), command.Arg(3));
 			goto Usage;
 		}
 
@@ -293,7 +301,7 @@ void CameraTools::SpecClass(const CCommand& command)
 	return;
 
 Usage:
-	PluginWarning("Usage: %s\n", m_SpecClass->GetHelpText());
+	PluginWarning("Usage: %s\n", ce_cameratools_spec_class.GetHelpText());
 }
 
 void CameraTools::SpecClass(TFTeam team, TFClassType playerClass, int classIndex)
@@ -375,7 +383,7 @@ void CameraTools::SpecPlayer(int playerIndex)
 		return;
 	}
 
-	if (!m_SpecPlayerAlive->GetBool() || player->IsAlive())
+	if (!ce_cameratools_spec_player_alive.GetBool() || player->IsAlive())
 	{
 		if (Interfaces::GetEngineClient()->IsHLTV())
 		{
@@ -385,7 +393,7 @@ void CameraTools::SpecPlayer(int playerIndex)
 
 				HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 				if (hltvcamera)
-					hltvcamera->m_nCameraMode = m_TPLockEnabled->GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE;
+					hltvcamera->m_nCameraMode = ce_tplock_enable.GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE;
 			}
 			catch (bad_pointer &e)
 			{
@@ -406,7 +414,7 @@ void CameraTools::OnTick(bool inGame)
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (inGame)
 	{
-		if (ce_cameratools_show_mode->GetBool())
+		if (ce_cameratools_show_mode.GetBool())
 		{
 			int mode = -1;
 			int target = -1;
@@ -436,9 +444,6 @@ void CameraTools::OnTick(bool inGame)
 			}
 		}
 	}
-	else
-	{
-	}
 }
 
 Vector CameraTools::CalcPosForAngle(const Vector& orbitCenter, const QAngle& angle)
@@ -446,9 +451,9 @@ Vector CameraTools::CalcPosForAngle(const Vector& orbitCenter, const QAngle& ang
 	Vector forward, right, up;
 	AngleVectors(angle, &forward, &right, &up);
 
-	Vector idealPos = orbitCenter + forward * m_TPZShift->GetFloat();
-	idealPos += right * m_TPXShift->GetFloat();
-	idealPos += up * m_TPYShift->GetFloat();
+	Vector idealPos = orbitCenter + forward * ce_tplock_zoffset.GetFloat();
+	idealPos += right * ce_tplock_xoffset.GetFloat();
+	idealPos += up * ce_tplock_yoffset.GetFloat();
 
 	const Vector camDir = (idealPos - orbitCenter).Normalized();
 	const float dist = orbitCenter.DistTo(idealPos);
@@ -487,10 +492,10 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 		return false;
 
 	const Vector targetPos;
-	const int targetBone = baseAnimating->LookupBone(m_TPLockBone->GetString());
+	const int targetBone = baseAnimating->LookupBone(ce_tplock_bone.GetString());
 	if (targetBone < 0)
 	{
-		DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", m_TPLockBone->GetString());
+		DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", ce_tplock_bone.GetString());
 		const_cast<Vector&>(targetPos) = targetPlayer->GetEyePosition();
 	}
 	else
@@ -501,23 +506,23 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 
 	QAngle idealAngles = targetPlayer->GetEyeAngles();
 
-	if (!IsStringEmpty(m_TPLockPitch->GetString()))
-		idealAngles.x = m_TPLockPitch->GetFloat();
-	if (!IsStringEmpty(m_TPLockYaw->GetString()))
-		idealAngles.y = m_TPLockYaw->GetFloat();
-	if (!IsStringEmpty(m_TPLockRoll->GetString()))
-		idealAngles.z = m_TPLockRoll->GetFloat();
+	if (!IsStringEmpty(ce_tplock_force_pitch.GetString()))
+		idealAngles.x = ce_tplock_force_pitch.GetFloat();
+	if (!IsStringEmpty(ce_tplock_force_yaw.GetString()))
+		idealAngles.y = ce_tplock_force_yaw.GetFloat();
+	if (!IsStringEmpty(ce_tplock_force_roll.GetString()))
+		idealAngles.z = ce_tplock_force_roll.GetFloat();
 
 	if (m_LastTargetPlayer == targetPlayer)
 	{
 		const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
 
-		if (m_TPLockXDPS->GetFloat() >= 0)
-			idealAngles.x = ApproachAngle(idealAngles.x, m_LastFrameAngle.x, m_TPLockXDPS->GetFloat() * frametime);
-		if (m_TPLockYDPS->GetFloat() >= 0)
-			idealAngles.y = ApproachAngle(idealAngles.y, m_LastFrameAngle.y, m_TPLockYDPS->GetFloat() * frametime);
-		if (m_TPLockZDPS->GetFloat() >= 0)
-			idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, m_TPLockZDPS->GetFloat() * frametime);
+		if (ce_tplock_dps_pitch.GetFloat() >= 0)
+			idealAngles.x = ApproachAngle(idealAngles.x, m_LastFrameAngle.x, ce_tplock_dps_pitch.GetFloat() * frametime);
+		if (ce_tplock_dps_yaw.GetFloat() >= 0)
+			idealAngles.y = ApproachAngle(idealAngles.y, m_LastFrameAngle.y, ce_tplock_dps_yaw.GetFloat() * frametime);
+		if (ce_tplock_dps_roll.GetFloat() >= 0)
+			idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, ce_tplock_dps_roll.GetFloat() * frametime);
 	}
 
 	const Vector idealPos = CalcPosForAngle(targetPos, idealAngles);
@@ -528,7 +533,7 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 	if (hltvcamera->m_nCameraMode != OBS_MODE_CHASE)
 		return false;
 
-	if (!m_TPLockEnabled->GetBool())
+	if (!ce_tplock_enable.GetBool())
 		return false;
 
 	m_ViewOverride = true;
@@ -547,14 +552,14 @@ void CameraTools::SpecSteamID(const CCommand& command)
 	CSteamID parsed;
 	if (newCommand.ArgC() != 2)
 	{
-		PluginWarning("%s: Expected 1 argument\n", m_SpecSteamID->GetName());
+		PluginWarning("%s: Expected 1 argument\n", command.Arg(0));
 		goto Usage;
 	}
 
 	parsed.SetFromString(newCommand.Arg(1), k_EUniverseInvalid);
 	if (!parsed.IsValid())
 	{
-		PluginWarning("%s: Unable to parse steamid\n", m_SpecSteamID->GetName());
+		PluginWarning("%s: Unable to parse steamid\n", command.Arg(0));
 		goto Usage;
 	}
 
@@ -567,11 +572,11 @@ void CameraTools::SpecSteamID(const CCommand& command)
 		}
 	}
 
-	Warning("%s: couldn't find a user with the steam id %s on the server\n", m_SpecSteamID->GetName(), RenderSteamID(parsed).c_str());
+	Warning("%s: couldn't find a user with the steam id %s on the server\n", command.Arg(0), RenderSteamID(parsed).c_str());
 	return;
 
 Usage:
-	PluginWarning("Usage: %s\n", m_SpecSteamID->GetHelpText());
+	PluginWarning("Usage: %s\n", ce_cameratools_spec_steamid.GetHelpText());
 }
 
 void CameraTools::SpecIndex(const CCommand& command)
@@ -652,7 +657,7 @@ Usage:
 
 void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flOldValue)
 {
-	const int forceMode = m_ForceMode->GetInt();
+	const int forceMode = ce_cameratools_autodirector_mode.GetInt();
 
 	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
 	{
@@ -687,7 +692,7 @@ void CameraTools::SetModeOverride(int iMode)
 	static ConVarRef spec_autodirector("spec_autodirector");
 	if (spec_autodirector.GetBool())
 	{
-		const int forceMode = m_ForceMode->GetInt();
+		const int forceMode = ce_cameratools_autodirector_mode.GetInt();
 
 		if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
 			iMode = forceMode;
@@ -700,7 +705,7 @@ void CameraTools::SetModeOverride(int iMode)
 void CameraTools::SetPrimaryTargetOverride(int nEntity)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	const int forceTarget = m_ForceTarget->GetInt();
+	const int forceTarget = ce_cameratools_force_target.GetInt();
 
 	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
 		nEntity = forceTarget;
@@ -714,7 +719,7 @@ void CameraTools::SetPrimaryTargetOverride(int nEntity)
 
 void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float flOldValue)
 {
-	const int forceTarget = m_ForceTarget->GetInt();
+	const int forceTarget = ce_cameratools_force_target.GetInt();
 
 	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
 	{
@@ -733,7 +738,7 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 	}
 	else
 	{
-		if (!m_ForceValidTarget->GetBool())
+		if (!ce_cameratools_force_valid_target.GetBool())
 		{
 			if (m_SetPrimaryTargetHook)
 			{
@@ -838,7 +843,7 @@ void CameraTools::SpecPositionDelta(const CCommand& command)
 
 void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, float flOldValue)
 {
-	if (m_ForceValidTarget->GetBool())
+	if (ce_cameratools_force_valid_target.GetBool())
 	{
 		if (!m_SetPrimaryTargetHook)
 			m_SetPrimaryTargetHook = GetHooks()->GetHook<C_HLTVCamera_SetPrimaryTarget>()->AddHook(
@@ -846,7 +851,7 @@ void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, fl
 	}
 	else
 	{
-		if (!Interfaces::GetClientEntityList()->GetClientEntity(m_ForceTarget->GetInt()))
+		if (!Interfaces::GetClientEntityList()->GetClientEntity(ce_cameratools_force_target.GetInt()))
 		{
 			if (m_SetPrimaryTargetHook && GetHooks()->GetHook<C_HLTVCamera_SetPrimaryTarget>()->RemoveHook(m_SetPrimaryTargetHook, __FUNCSIG__))
 				m_SetPrimaryTargetHook = 0;

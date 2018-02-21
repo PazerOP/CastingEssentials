@@ -1,12 +1,10 @@
 #pragma once
 #include "PluginBase/Modules.h"
 
-#include <convar.h>	// COMMAND_COMPLETION_MAXITEMS/COMMAND_COMPLETION_ITEM_LENGTH
+#include <convar.h>
 #include <mathlib/vector.h>
 #include <vector>
 
-class ConVar;
-class ConCommand;
 class KeyValues;
 class C_BaseEntity;
 
@@ -41,21 +39,21 @@ private:
 	void ExecuteAction(const std::shared_ptr<Action>& action, C_BaseEntity* triggerer);
 
 	void BeginCameraTrigger();
-	ConCommand* ce_cameratrigger_begin;
+	ConCommand ce_cameratrigger_begin;
 	void EndCameraTrigger();
-	ConCommand* ce_cameratrigger_end;
+	ConCommand ce_cameratrigger_end;
 
 	void BeginStoryboard(const CCommand& args);
-	ConCommand* ce_autocamera_begin_storyboard;
+	ConCommand ce_autocamera_begin_storyboard;
 
-	ConCommand* ce_autocamera_mark_camera;
+	ConCommand ce_autocamera_create;
 	void MarkCamera(const CCommand& args);
 
-	ConCommand* ce_autocamera_cycle;
+	ConCommand ce_autocamera_cycle;
 	void CycleCamera(const CCommand& args);
 
-	ConCommand* ce_autocamera_goto_camera;
-	ConVar* ce_autocamera_goto_mode;
+	ConCommand ce_autocamera_goto;
+	ConVar ce_autocamera_goto_mode;
 	void GotoCamera(const std::shared_ptr<Camera>& camera);
 	void GotoCamera(const CCommand& args);
 	static int GotoCameraCompletion(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
@@ -63,9 +61,9 @@ private:
 	bool m_CreatingCameraTrigger;
 	Vector m_CameraTriggerStart;
 
-	ConCommand* ce_autocamera_reload_config;
-	ConVar* ce_autocamera_show_triggers;
-	ConVar* ce_autocamera_show_cameras;
+	ConCommand ce_autocamera_reload_config;
+	ConVar ce_autocamera_show_triggers;
+	ConVar ce_autocamera_show_cameras;
 
 	void DrawTriggers();
 	void DrawCameras();

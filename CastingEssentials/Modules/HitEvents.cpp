@@ -7,9 +7,9 @@
 #include <igameevents.h>
 #include <toolframework/ienginetool.h>
 
-HitEvents::HitEvents()
+HitEvents::HitEvents() :
+	ce_hitevents_enable("ce_hitevents_enable", "0", FCVAR_HIDDEN)
 {
-	ce_hitevents_enable.reset(new ConVar("ce_hitevents_enable", "0", FCVAR_HIDDEN));
 }
 
 void HitEvents::LevelInitPreEntity()
@@ -44,7 +44,7 @@ void HitEvents::TriggerPlayerHurt(int playerEntIndex, int damage)
 
 void HitEvents::OnTick(bool bInGame)
 {
-	if (!bInGame || !ce_hitevents_enable->GetBool())
+	if (!bInGame || !ce_hitevents_enable.GetBool())
 		return;
 
 	int newDamage[MAX_PLAYERS];

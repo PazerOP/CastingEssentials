@@ -1,7 +1,6 @@
 #include "Common.h"
 #include "Interfaces.h"
 
-#include <convar.h>
 #include <characterset.h>
 #include <cdll_int.h>
 #include <KeyValues.h>

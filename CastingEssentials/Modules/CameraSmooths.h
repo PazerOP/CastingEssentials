@@ -3,8 +3,9 @@
 #include "PluginBase/ICameraOverride.h"
 #include "PluginBase/Modules.h"
 
-#include <mathlib/vector.h>
+#include <convar.h>
 #include <ehandle.h>
+#include <mathlib/vector.h>
 
 #include <vector>
 
@@ -29,7 +30,7 @@ private:
 
 	float m_LastAngPercentage;
 	float m_LastOverallProgress;
-	
+
 	Vector m_SmoothStartPos;
 	QAngle m_SmoothStartAng;
 	float m_SmoothStartTime;
@@ -37,26 +38,26 @@ private:
 	bool InToolModeOverride() const override;
 	bool IsThirdPersonCameraOverride() const override;
 	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov) override;
-	
-	ConVar* ce_smoothing_enabled;
-	ConVar* ce_smoothing_fov;
-	ConVar* ce_smoothing_force_distance;
-	ConVar* ce_smoothing_max_distance;
 
-	ConVar* ce_smoothing_linear_speed;
-	ConVar* ce_smoothing_bezier_dist;
-	ConVar* ce_smoothing_bezier_duration;
+	ConVar ce_smoothing_enabled;
+	ConVar ce_smoothing_fov;
+	ConVar ce_smoothing_force_distance;
+	ConVar ce_smoothing_max_distance;
 
-	ConVar* ce_smoothing_ang_bias;
+	ConVar ce_smoothing_linear_speed;
+	ConVar ce_smoothing_bezier_dist;
+	ConVar ce_smoothing_bezier_duration;
 
-	ConVar* ce_smoothing_mode;
+	ConVar ce_smoothing_ang_bias;
 
-	ConVar* ce_smoothing_debug;
-	ConVar* ce_smoothing_debug_los;
+	ConVar ce_smoothing_mode;
 
-	ConVar* ce_smoothing_check_los;
-	ConVar* ce_smoothing_los_buffer;
-	ConVar* ce_smoothing_los_min;
+	ConVar ce_smoothing_debug;
+	ConVar ce_smoothing_debug_los;
+
+	ConVar ce_smoothing_check_los;
+	ConVar ce_smoothing_los_buffer;
+	ConVar ce_smoothing_los_min;
 
 	struct CollisionTest
 	{

@@ -1,17 +1,16 @@
 #include "MapConfigs.h"
 #include "PluginBase/Interfaces.h"
 
-#include <convar.h>
 #include <cdll_int.h>
 
-MapConfigs::MapConfigs()
+MapConfigs::MapConfigs() :
+	ce_mapconfigs_enabled("ce_mapconfigs_enabled", "0", FCVAR_NONE, "If 1, execs cfg/<mapname>.cfg on mapchange.")
 {
-	ce_mapconfigs_enabled = new ConVar("ce_mapconfigs_enabled", "0", FCVAR_NONE, "If 1, execs cfg/<mapname>.cfg on mapchange.");
 }
 
 void MapConfigs::LevelInitPreEntity()
 {
-	if (!ce_mapconfigs_enabled->GetBool())
+	if (!ce_mapconfigs_enabled.GetBool())
 		return;
 
 	const char* const bspName = Interfaces::GetEngineClient()->GetLevelName();

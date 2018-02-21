@@ -1,11 +1,9 @@
 #pragma once
 #include "PluginBase/Modules.h"
-#include <unordered_set>
 
-class CCommand;
-class ConCommand;
-class ConVar;
-class IConVar;
+#include <convar.h>
+
+#include <unordered_set>
 
 class ConsoleTools final : public Module<ConsoleTools>
 {
@@ -27,26 +25,20 @@ private:
 	int m_ConsolePrintfHook;
 	std::unordered_set<std::string> m_Filters;
 
-	ConVar* m_FilterEnabled;
-	ConCommand* m_FilterAdd;
-	ConCommand* m_FilterRemove;
-	ConCommand* m_FilterList;
+	ConVar ce_consoletools_filter_enabled;
+	ConCommand ce_consoletools_filter_add;
+	ConCommand ce_consoletools_filter_remove;
+	ConCommand ce_consoletools_filter_list;
 
-	ConCommand* m_FlagsAdd;
-	ConCommand* m_FlagsRemove;
+	ConCommand ce_consoletools_flags_add;
+	ConCommand ce_consoletools_flags_remove;
 
-	static void StaticAddFilter(const CCommand& command);
 	void AddFilter(const CCommand& command);
-	static void StaticRemoveFilter(const CCommand& command);
 	void RemoveFilter(const CCommand& command);
-	static void StaticListFilter(const CCommand& command);
 	void ListFilters(const CCommand& command);
-	static void StaticToggleFilterEnabled(IConVar* var, const char* oldValue, float fOldValue);
 	void ToggleFilterEnabled(IConVar* var, const char* oldValue, float fOldValue);
 
-	static void StaticAddFlags(const CCommand& command);
 	void AddFlags(const CCommand& command);
-	static void StaticRemoveFlags(const CCommand& command);
 	void RemoveFlags(const CCommand& command);
 
 	void DisableHooks();

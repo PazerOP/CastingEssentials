@@ -8,7 +8,6 @@
 
 #include <Windows.h>
 #include <Psapi.h>
-#include <convar.h>
 #include <icvar.h>
 #include <cdll_int.h>
 #include <client/hltvcamera.h>

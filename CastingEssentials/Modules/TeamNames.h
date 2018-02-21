@@ -1,9 +1,7 @@
 #pragma once
 #include "PluginBase/Modules.h"
 
-class ConVar;
-class ConCommand;
-class IConVar;
+#include <convar.h>
 
 class TeamNames final : public Module<TeamNames>
 {
@@ -24,9 +22,9 @@ private:
 	};
 
 	ConVar* m_OriginalCvars[TeamConvars::Count];
-	ConVar* m_OverrideCvars[TeamConvars::Count];
+	ConVar m_OverrideCvars[TeamConvars::Count];
 
-	ConCommand* ce_teamnames_swap;
+	ConCommand ce_teamnames_swap;
 	void SwapTeamNames();
 
 	std::string m_LastServerValues[(int)TeamConvars::Count];

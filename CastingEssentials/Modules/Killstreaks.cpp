@@ -11,7 +11,6 @@
 #include "killstreaks.h"
 
 #include <client/c_baseentity.h>
-#include <convar.h>
 #include <igameevents.h>
 #include <shareddefs.h>
 #include <vprof.h>
@@ -46,9 +45,9 @@ private:
 	int redTopKillstreakPlayer;
 };
 
-Killstreaks::Killstreaks()
+Killstreaks::Killstreaks() :
+	ce_killstreaks_enabled("ce_killstreaks_enabled", "0", FCVAR_NONE, "Show killstreak counts on the hud for all weapons, not just killstreak weapons.")
 {
-	enabled = new ConVar("ce_killstreaks_enabled", "0", FCVAR_NONE, "enable killstreaks display");
 	panel.reset(new Panel());
 }
 
@@ -145,7 +144,7 @@ bool Killstreaks::CheckDependencies()
 
 void Killstreaks::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)
 {
-	if (enabled->GetBool())
+	if (ce_killstreaks_enabled.GetBool())
 	{
 		if (!panel)
 		{

@@ -2,6 +2,7 @@
 
 #include "PluginBase/Modules.h"
 
+#include <convar.h>
 #include <shareddefs.h>
 
 class HitEvents final : public Module<HitEvents>
@@ -15,7 +16,7 @@ public:
 	static bool CheckDependencies() { return true; }
 
 private:
-	std::unique_ptr<ConVar> ce_hitevents_enable;
+	ConVar ce_hitevents_enable;
 
 	void TriggerPlayerHurt(int playerEntIndex, int damage);
 

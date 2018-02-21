@@ -3,24 +3,23 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
-#include <convar.h>
 #include <steam/steam_api.h>
 #include <cdll_int.h>
 #include <toolframework/ienginetool.h>
 #include <vprof.h>
 
-PlayerAliases::PlayerAliases()
+PlayerAliases::PlayerAliases() :
+	ce_playeraliases_enabled("ce_playeraliases_enabled", "0", FCVAR_NONE, "Enables player aliases.", &PlayerAliases::StaticToggleEnabled),
+	ce_playeraliases_format_blu("ce_playeraliases_format_blu", "%alias%", FCVAR_NONE, "Name format for BLU players."),
+	ce_playeraliases_format_red("ce_playeraliases_format_red", "%alias%", FCVAR_NONE, "Name format for RED players."),
+	ce_playeraliases_format_swap("ce_playeraliases_format_swap", []() { GetModule()->SwapTeamFormats(); },
+		"Swaps the values of ce_playeraliases_format_red and ce_playeraliases_format_blu."),
+
+	ce_playeraliases_list("ce_playeraliases_list", []() { GetModule()->PrintPlayerAliases(); }, "Prints all player aliases to console."),
+	ce_playeraliases_add("ce_playeraliases_add", [](const CCommand& args) { GetModule()->AddPlayerAlias(args); }, "Adds a new player alias."),
+	ce_playeraliases_remove("ce_playeraliases_remove", [](const CCommand& args) { GetModule()->RemovePlayerAlias(args); }, "Removes an existing player alias.")
 {
 	m_GetPlayerInfoHook = 0;
-
-	m_Enabled = new ConVar("ce_playeraliases_enabled", "0", FCVAR_NONE, "Enables player aliases.", &PlayerAliases::StaticToggleEnabled);
-	m_FormatBlue = new ConVar("ce_playeraliases_format_blu", "%alias%", FCVAR_NONE, "Name format for BLU players.");
-	m_FormatRed = new ConVar("ce_playeraliases_format_red", "%alias%", FCVAR_NONE, "Name format for RED players.");
-	m_FormatSwap = new ConCommand("ce_playeraliases_format_swap", [](const CCommand& args) { GetModule()->SwapTeamFormats(); }, "Swaps the values of ce_playeraliases_format_red and ce_playeraliases_format_blu.");
-
-	m_PrintPlayerAliases = new ConCommand("ce_playeraliases_list", [](const CCommand& args) { GetModule()->PrintPlayerAliases(); }, "Prints all player aliases to console.");
-	m_AddPlayerAlias = new ConCommand("ce_playeraliases_add", [](const CCommand& args) { GetModule()->AddPlayerAlias(args); }, "Adds a new player alias.");
-	m_RemovePlayerAlias = new ConCommand("ce_playeraliases_remove", [](const CCommand& args) { GetModule()->RemovePlayerAlias(args); }, "Removes an existing player alias.");
 }
 
 bool PlayerAliases::CheckDependencies()
@@ -100,11 +99,11 @@ bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 	switch (player->GetTeam())
 	{
 		case TFTeam::Red:
-			gameName = m_FormatRed->GetString();
+			gameName = ce_playeraliases_format_red.GetString();
 			break;
 
 		case TFTeam::Blue:
-			gameName = m_FormatBlue->GetString();
+			gameName = ce_playeraliases_format_blu.GetString();
 			break;
 
 		default:
@@ -135,9 +134,9 @@ const std::string& PlayerAliases::GetAlias(const CSteamID& player, const std::st
 
 void PlayerAliases::SwapTeamFormats()
 {
-	std::string red(m_FormatRed->GetString());
-	m_FormatRed->SetValue(m_FormatBlue->GetString());
-	m_FormatBlue->SetValue(red.c_str());
+	std::string red(ce_playeraliases_format_red.GetString());
+	ce_playeraliases_format_red.SetValue(ce_playeraliases_format_blu.GetString());
+	ce_playeraliases_format_blu.SetValue(red.c_str());
 }
 
 void PlayerAliases::PrintPlayerAliases()
@@ -156,7 +155,7 @@ void PlayerAliases::AddPlayerAlias(const CCommand& brokenCommand)
 
 	if (command.ArgC() != 3)
 	{
-		Warning("Usage: %s <steam id> <name>\n", m_AddPlayerAlias->GetName());
+		Warning("Usage: %s <steam id> <name>\n", ce_playeraliases_add.GetName());
 		return;
 	}
 
@@ -173,7 +172,7 @@ void PlayerAliases::AddPlayerAlias(const CCommand& brokenCommand)
 		if (found != m_CustomAliases.end())
 			m_CustomAliases.erase(found);
 	}
-	
+
 	{
 		const std::string& name = command.Arg(2);
 		m_CustomAliases.insert(std::make_pair(id, name));
@@ -212,7 +211,7 @@ void PlayerAliases::RemovePlayerAlias(const CCommand& brokenCommand)
 
 	return;
 Usage:
-	Warning("Usage: %s <steam id>\n", m_RemovePlayerAlias->GetName());
+	Warning("Usage: %s <steam id>\n", ce_playeraliases_remove.GetName());
 }
 
 void PlayerAliases::FindAndReplaceInString(std::string &str, const std::string &find, const std::string &replace)
@@ -231,7 +230,7 @@ void PlayerAliases::FindAndReplaceInString(std::string &str, const std::string &
 
 void PlayerAliases::ToggleEnabled(IConVar* var, const char* oldValue, float fOldValue)
 {
-	if (m_Enabled->GetBool())
+	if (ce_playeraliases_enabled.GetBool())
 	{
 		if (!m_GetPlayerInfoHook)
 		{

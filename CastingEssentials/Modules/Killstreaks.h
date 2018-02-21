@@ -1,9 +1,8 @@
 #pragma once
 
-class ConVar;
-class IConVar;
-
 #include "PluginBase/Modules.h"
+
+#include <convar.h>
 
 #include <memory>
 
@@ -18,6 +17,6 @@ private:
 	class Panel;
 	std::unique_ptr<Panel> panel;
 
-	ConVar *enabled;
+	ConVar ce_killstreaks_enabled;
 	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
 };

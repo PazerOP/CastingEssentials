@@ -23,32 +23,30 @@
 
 #include <regex>
 
-MapFlythroughs::MapFlythroughs()
-{
-	ce_cameratrigger_begin = new ConCommand("ce_autocamera_trigger_begin", [](const CCommand& args) { GetModule()->BeginCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED);
-	ce_cameratrigger_end = new ConCommand("ce_autocamera_trigger_end", [](const CCommand& args) { GetModule()->EndCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED);
+MapFlythroughs::MapFlythroughs() :
+	ce_cameratrigger_begin("ce_autocamera_trigger_begin", [](const CCommand& args) { GetModule()->BeginCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED),
+	ce_cameratrigger_end("ce_autocamera_trigger_end", [](const CCommand& args) { GetModule()->EndCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED),
 
-	ce_autocamera_begin_storyboard = new ConCommand("ce_autocamera_begin_storyboard", [](const CCommand& args) { GetModule()->BeginStoryboard(args); }, nullptr, FCVAR_UNREGISTERED);
+	ce_autocamera_begin_storyboard("ce_autocamera_begin_storyboard", [](const CCommand& args) { GetModule()->BeginStoryboard(args); }, nullptr, FCVAR_UNREGISTERED),
 
-	ce_autocamera_mark_camera = new ConCommand("ce_autocamera_create", [](const CCommand& args) { GetModule()->MarkCamera(args); });
-	ce_autocamera_goto_camera = new ConCommand("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &MapFlythroughs::GotoCameraCompletion);
-
-	ce_autocamera_goto_mode = new ConVar("ce_autocamera_goto_mode", "3", FCVAR_NONE, "spec_mode to use for ce_autocamera_goto and ce_autocamera_cycle.", true, 0, true, NUM_OBSERVER_MODES - 1);
-	ce_autocamera_cycle = new ConCommand("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); },
+	ce_autocamera_create("ce_autocamera_create", [](const CCommand& args) { GetModule()->MarkCamera(args); }),
+	ce_autocamera_goto("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &MapFlythroughs::GotoCameraCompletion),
+	ce_autocamera_goto_mode("ce_autocamera_goto_mode", "3", FCVAR_NONE, "spec_mode to use for ce_autocamera_goto and ce_autocamera_cycle.", true, 0, true, NUM_OBSERVER_MODES - 1),
+	ce_autocamera_cycle("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); },
 		"\nUsage: ce_autocamera_cycle <next/prev>. Cycles forwards or backwards logically through the available autocameras. The behavior is as follows:\n"
 		"\tIf already spectating from the position of an autocamera, progress forwards/backwards through the autocameras based on file order.\n"
 		"\tIf our current position doesn't match any autocamera definintions, try to find the nearest/furthest autocamera that has line of sight (LOS) to our current position.\n"
 		"\tIf no autocameras have LOS to our current position, find the nearest/furthest autocamera with our current position in its view frustum.\n"
-		"\tIf our position is not in any autocamera's view frustum, find the nearest/furthest autocamera to our current position.");
+		"\tIf our position is not in any autocamera's view frustum, find the nearest/furthest autocamera to our current position."),
 
-	ce_autocamera_reload_config = new ConCommand("ce_autocamera_reload_config", [](const CCommand& args) { GetModule()->LoadConfig(); },
-		"Reloads the autocamera definitions file (located in /tf/addons/castingessentials/autocameras/<mapname>.vdf)");
+	ce_autocamera_reload_config("ce_autocamera_reload_config", []() { GetModule()->LoadConfig(); },
+		"Reloads the autocamera definitions file (located in /tf/addons/castingessentials/autocameras/<mapname>.vdf)"),
 
-	ce_autocamera_show_triggers = new ConVar("ce_autocamera_show_triggers", "0", FCVAR_UNREGISTERED, "Shows all triggers on the map.");
-	ce_autocamera_show_cameras = new ConVar("ce_autocamera_show_cameras", "0", FCVAR_NONE,
+	ce_autocamera_show_triggers("ce_autocamera_show_triggers", "0", FCVAR_UNREGISTERED, "Shows all triggers on the map."),
+	ce_autocamera_show_cameras("ce_autocamera_show_cameras", "0", FCVAR_NONE,
 		"\n\t1 = Shows all cameras on the map.\n"
-		"\t2 = Shows view frustums as well.");
-
+		"\t2 = Shows view frustums as well.")
+{
 	m_CreatingCameraTrigger = false;
 	m_CameraTriggerStart.Init();
 }
@@ -127,10 +125,10 @@ void MapFlythroughs::OnTick(bool ingame)
 			}
 		}
 
-		if (ce_autocamera_show_triggers->GetBool())
+		if (ce_autocamera_show_triggers.GetBool())
 			DrawTriggers();
 
-		if (ce_autocamera_show_cameras->GetBool())
+		if (ce_autocamera_show_cameras.GetBool())
 			DrawCameras();
 	}
 }
@@ -594,7 +592,7 @@ void MapFlythroughs::EndCameraTrigger()
 {
 	if (!m_CreatingCameraTrigger)
 	{
-		PluginWarning("Must use %s before using %s!\n", ce_cameratrigger_begin->GetName(), ce_cameratrigger_end->GetName());
+		PluginWarning("Must use %s before using %s!\n", ce_cameratrigger_begin.GetName(), ce_cameratrigger_end.GetName());
 		return;
 	}
 
@@ -620,7 +618,7 @@ void MapFlythroughs::MarkCamera(const CCommand& args)
 {
 	if (args.ArgC() != 2)
 	{
-		Warning("Usage: %s <name>\n", ce_autocamera_mark_camera->GetName());
+		Warning("Usage: %s <name>\n", ce_autocamera_create.GetName());
 		return;
 	}
 
@@ -648,7 +646,7 @@ void MapFlythroughs::CycleCamera(const CCommand& args)
 {
 	if (m_Cameras.size() < 1)
 	{
-		Warning("%s: No defined cameras for this map!\n", ce_autocamera_cycle->GetName());
+		Warning("%s: No defined cameras for this map!\n", ce_autocamera_cycle.GetName());
 		return;
 	}
 
@@ -783,11 +781,11 @@ void MapFlythroughs::CycleCamera(const CCommand& args)
 			return GotoCamera(idealCamera);
 	}
 
-	Warning("%s: Unable to navigate to a camera for some reason.\n", ce_autocamera_cycle->GetName());
+	Warning("%s: Unable to navigate to a camera for some reason.\n", ce_autocamera_cycle.GetName());
 	return;
 
 Usage:
-	Warning("%s: Usage: %s <prev/next>\n", ce_autocamera_cycle->GetName(), ce_autocamera_cycle->GetName());
+	Warning("%s: Usage: %s <prev/next>\n", ce_autocamera_cycle.GetName(), ce_autocamera_cycle.GetName());
 }
 
 void MapFlythroughs::GotoCamera(const std::shared_ptr<Camera>& camera)
@@ -799,14 +797,14 @@ void MapFlythroughs::GotoCamera(const std::shared_ptr<Camera>& camera)
 		return;
 	}
 
-	ctools->SpecPosition(camera->m_Pos, camera->m_DefaultAngle, (ObserverMode)ce_autocamera_goto_mode->GetInt());
+	ctools->SpecPosition(camera->m_Pos, camera->m_DefaultAngle, (ObserverMode)ce_autocamera_goto_mode.GetInt());
 }
 
 void MapFlythroughs::GotoCamera(const CCommand& args)
 {
 	if (args.ArgC() != 2)
 	{
-		Warning("Usage: %s <camera name>\n", ce_autocamera_goto_camera->GetName());
+		Warning("Usage: %s <camera name>\n", args.Arg(0));
 		return;
 	}
 
@@ -815,9 +813,9 @@ void MapFlythroughs::GotoCamera(const CCommand& args)
 	if (!cam)
 	{
 		if (FindContainedString(m_MalformedCameras, name))
-			Warning("%s: Unable to goto camera \"%s\" because its definition in \"%s\" is malformed.\n", ce_autocamera_goto_camera->GetName(), name, m_ConfigFilename.c_str());
+			Warning("%s: Unable to goto camera \"%s\" because its definition in \"%s\" is malformed.\n", args.Arg(0), name, m_ConfigFilename.c_str());
 		else
-			Warning("%s: Unable to find camera with name \"%s\"!\n", ce_autocamera_goto_camera->GetName(), name);
+			Warning("%s: Unable to find camera with name \"%s\"!\n", args.Arg(0), name);
 
 		return;
 	}
@@ -828,7 +826,7 @@ void MapFlythroughs::GotoCamera(const CCommand& args)
 int MapFlythroughs::GotoCameraCompletion(const char* const partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
 {
 	std::cmatch match;
-	const std::string regexString = strprintf("\\s*%s\\s+\"?(.*?)\"?\\s*$", GetModule()->ce_autocamera_goto_camera->GetName());
+	const std::string regexString = strprintf("\\s*%s\\s+\"?(.*?)\"?\\s*$", GetModule()->ce_autocamera_goto.GetName());
 
 	// Interesting... this only works if you pass a const char* to std::regex's constructor, and not if you pass an std::string.
 	if (!std::regex_search(partial, match, std::regex(regexString.c_str(), std::regex_constants::icase)))
@@ -850,7 +848,7 @@ int MapFlythroughs::GotoCameraCompletion(const char* const partial, char command
 	size_t i;
 	for (i = 0; i < COMMAND_COMPLETION_MAXITEMS && i < cameras.size(); i++)
 	{
-		strcpy_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, mod->ce_autocamera_goto_camera->GetName());
+		strcpy_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, mod->ce_autocamera_goto.GetName());
 		const auto& nameStr = cameras[i]->m_Name;
 		strcat_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, (std::string(" ") + nameStr).c_str());
 	}
@@ -882,7 +880,7 @@ void MapFlythroughs::DrawCameras()
 		AngleVectors(camera->m_DefaultAngle, &forward, &right, &up);
 
 		// Draw cameras
-		if (ce_autocamera_show_cameras->GetInt() > 0)
+		if (ce_autocamera_show_cameras.GetInt() > 0)
 		{
 			NDebugOverlay::BoxAngles(camera->m_Pos, Vector(-16, -16, -16), Vector(16, 16, 16), camera->m_DefaultAngle, 128, 128, 255, 64, 0);
 
@@ -895,7 +893,7 @@ void MapFlythroughs::DrawCameras()
 
 		// From http://stackoverflow.com/a/27872276
 		// Draw camera frustums
-		if (ce_autocamera_show_cameras->GetInt() > 1)
+		if (ce_autocamera_show_cameras.GetInt() > 1)
 		{
 			constexpr float farDistance = 512;
 			constexpr float viewRatio = 16.0 / 9.0;

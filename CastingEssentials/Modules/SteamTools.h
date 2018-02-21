@@ -2,8 +2,7 @@
 
 #include "PluginBase/Modules.h"
 
-class ConVar;
-class IConVar;
+#include <convar.h>
 
 class SteamTools : public Module<SteamTools>
 {
@@ -13,6 +12,6 @@ public:
 	static bool CheckDependencies();
 
 private:
-	ConVar *rich_presence_status;
+	ConVar ce_steamtools_rich_presence;
 	void ChangeRichPresenceStatus(IConVar *var, const char *pOldValue, float flOldValue);
 };

@@ -4,7 +4,6 @@
 #include "PluginBase/TFTeamResource.h"
 
 #include <client/iclientmode.h>
-#include <convar.h>
 #include <vgui/IVGui.h>
 #include <vgui_controls/EditablePanel.h>
 
@@ -17,22 +16,19 @@ public:
 	virtual ~ScorePanel() { }
 
 	void OnTick() override;
-
-private:
-
 };
 
-IngameTeamScores::IngameTeamScores()
+IngameTeamScores::IngameTeamScores() :
+	ce_teamscores_enabled("ce_teamscores_enabled", "0", FCVAR_NONE, "Enable ingame team score display."),
+	ce_teamscores_reload("ce_teamscores_reload", []() { GetModule()->ReloadSettings(); }, "Reload settings for the team scores panel from the .res file.")
 {
-	ce_teamscores_enabled = new ConVar("ce_teamscores_enabled", "0", FCVAR_NONE, "Enable ingame team score display.");
-	ce_teamscores_reload = new ConCommand("ce_teamscores_reload", []() { GetModule()->ReloadSettings(); }, "Reload settings for the team scores panel from the .res file.", FCVAR_NONE);
 }
 
 void IngameTeamScores::ReloadSettings()
 {
-	if (!ce_teamscores_enabled->GetBool())
+	if (!ce_teamscores_enabled.GetBool())
 	{
-		Warning("%s must be enabled with %s 1 before using %s.\n", GetModuleName(), ce_teamscores_enabled->GetName(), ce_teamscores_reload->GetName());
+		Warning("%s must be enabled with %s 1 before using %s.\n", GetModuleName(), ce_teamscores_enabled.GetName(), ce_teamscores_reload.GetName());
 		return;
 	}
 
@@ -46,7 +42,7 @@ void IngameTeamScores::ReloadSettings()
 
 void IngameTeamScores::OnTick(bool inGame)
 {
-	if (inGame && ce_teamscores_enabled->GetBool())
+	if (inGame && ce_teamscores_enabled.GetBool())
 	{
 		if (!m_Panel)
 		{

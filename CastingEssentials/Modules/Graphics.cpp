@@ -9,7 +9,6 @@
 #include "PluginBase/TFDefinitions.h"
 
 #include <bone_setup.h>
-#include <convar.h>
 #include <debugoverlay_shared.h>
 #include <view_shared.h>
 #include <materialsystem/itexture.h>
@@ -34,40 +33,39 @@ static constexpr auto STENCIL_INDEX_MASK = 0xFC;
 // Should we use a hook to disable IStudioRender::ForcedMaterialOverride?
 static bool s_DisableForcedMaterialOverride = false;
 
-Graphics::Graphics()
+Graphics::Graphics() :
+	ce_graphics_disable_prop_fades("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading."),
+	ce_graphics_debug_glow("ce_graphics_debug_glow", "0", FCVAR_UNREGISTERED),
+	ce_graphics_glow_silhouettes("ce_graphics_glow_silhouettes", "0", FCVAR_NONE, "Turns outlines into silhouettes."),
+	ce_graphics_glow_intensity("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity"),
+	ce_graphics_improved_glows("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?"),
+	ce_graphics_fix_invisible_players("ce_graphics_fix_invisible_players", "1", FCVAR_NONE, "Fix a case where players are invisible if you're firstperson speccing them when the round starts."),
+
+	ce_outlines_mode("ce_outlines_mode", "1", FCVAR_NONE, "Changes the style of outlines.\n\t0: TF2-style hard outlines.\n\t1: L4D-style soft outlines."),
+	ce_outlines_debug_stencil_out("ce_outlines_debug_stencil_out", "1", FCVAR_NONE, "Should we stencil out the players during the final blend to screen?"),
+	ce_outlines_players_override_red("ce_outlines_players_override_red", "", FCVAR_NONE, "Override color for red players. [0, 255], format is \"<red> <green> <blue>\"."),
+	ce_outlines_players_override_blue("ce_outlines_players_override_blue", "", FCVAR_NONE, "Override color for blue players. [0, 255], format is \"<red> <green> <blue>\"."),
+	ce_outlines_additive("ce_outlines_additive", "1", FCVAR_NONE, "If set to 1, outlines will add to underlying colors rather than replace them."),
+	ce_outlines_debug("ce_outlines_debug", "0", FCVAR_NONE),
+
+	ce_infills_enable("ce_infills_enable", "0", FCVAR_NONE, "Enables player infills."),
+	ce_infills_additive("ce_infills_additive", "0", FCVAR_NONE, "Enables additive rendering of player infills."),
+	ce_infills_hurt_red("ce_infills_hurt_red", "255 0 0 64", FCVAR_NONE, "Infill for red players that are not overhealed."),
+	ce_infills_hurt_blue("ce_infills_hurt_blue", "0 0 255 64", FCVAR_NONE, "Infill for blue players that are not overhealed."),
+	ce_infills_buffed_red("ce_infills_buffed_red", "255 128 128 64", FCVAR_NONE, "Infill for red players that are overhealed."),
+	ce_infills_buffed_blue("ce_infills_buffed_blue", "128 128 255 64", FCVAR_NONE, "Infill for blue players that are overhealed."),
+	ce_infills_debug("ce_infills_debug", "0", FCVAR_NONE),
+	ce_infills_test("ce_infills_test", []() { GetModule()->ResetPlayerHurtTimes(); }, "Replay the hurt flicker/fades for all players for testing."),
+
+	ce_infills_flicker_hertz("ce_infills_flicker_hertz", "10", FCVAR_NONE, "Infill on-hurt flicker frequency.", true, 0, false, 1),
+	ce_infills_flicker_intensity("ce_infills_flicker_intensity", "0.5", FCVAR_NONE, "Infill on-hurt flicker intensity", true, 0, true, 1),
+	ce_infills_flicker_after_hurt_time("ce_infills_flicker_after_hurt_time", "1.0", FCVAR_NONE, "How long to fade from flickers into normal fades. -1 to disable."),
+	ce_infills_flicker_after_hurt_bias("ce_infills_flicker_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for flicker fade outs.", true, 0, true, 1),
+	ce_infills_fade_after_hurt_time("ce_infills_fade_after_hurt_time", "1.0", FCVAR_NONE, "How long to fade out infills after taking damage. -1 to disable."),
+	ce_infills_fade_after_hurt_bias("ce_infills_fade_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for infill fade outs.", true, 0, true, 1),
+
+	ce_graphics_dump_shader_params("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete)
 {
-	ce_graphics_disable_prop_fades = new ConVar("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading.");
-	ce_graphics_debug_glow = new ConVar("ce_graphics_debug_glow", "0", FCVAR_UNREGISTERED);
-	ce_graphics_glow_silhouettes = new ConVar("ce_graphics_glow_silhouettes", "0", FCVAR_NONE, "Turns outlines into silhouettes.");
-	ce_graphics_glow_intensity = new ConVar("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity");
-	ce_graphics_improved_glows = new ConVar("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?");
-	ce_graphics_fix_invisible_players = new ConVar("ce_graphics_fix_invisible_players", "1", FCVAR_NONE, "Fix a case where players are invisible if you're firstperson speccing them when the round starts.");
-
-	ce_outlines_mode = new ConVar("ce_outlines_mode", "1", FCVAR_NONE, "Changes the style of outlines.\n\t0: TF2-style hard outlines.\n\t1: L4D-style soft outlines.");
-	ce_outlines_debug_stencil_out = new ConVar("ce_outlines_debug_stencil_out", "1", FCVAR_NONE, "Should we stencil out the players during the final blend to screen?");
-	ce_outlines_players_override_red = new ConVar("ce_outlines_players_override_red", "", FCVAR_NONE, "Override color for red players. [0, 255], format is \"<red> <green> <blue>\".");
-	ce_outlines_players_override_blue = new ConVar("ce_outlines_players_override_blue", "", FCVAR_NONE, "Override color for blue players. [0, 255], format is \"<red> <green> <blue>\".");
-	ce_outlines_additive = new ConVar("ce_outlines_additive", "1", FCVAR_NONE, "If set to 1, outlines will add to underlying colors rather than replace them.");
-	ce_outlines_debug = new ConVar("ce_outlines_debug", "0", FCVAR_NONE);
-
-	ce_infills_enable = new ConVar("ce_infills_enable", "0", FCVAR_NONE, "Enables player infills.");
-	ce_infills_additive = new ConVar("ce_infills_additive", "0", FCVAR_NONE, "Enables additive rendering of player infills.");
-	ce_infills_hurt_red = new ConVar("ce_infills_hurt_red", "255 0 0 64", FCVAR_NONE, "Infill for red players that are not overhealed.");
-	ce_infills_hurt_blue = new ConVar("ce_infills_hurt_blue", "0 0 255 64", FCVAR_NONE, "Infill for blue players that are not overhealed.");
-	ce_infills_buffed_red = new ConVar("ce_infills_buffed_red", "255 128 128 64", FCVAR_NONE, "Infill for red players that are overhealed.");
-	ce_infills_buffed_blue = new ConVar("ce_infills_buffed_blue", "128 128 255 64", FCVAR_NONE, "Infill for blue players that are overhealed.");
-	ce_infills_debug = new ConVar("ce_infills_debug", "0", FCVAR_NONE);
-	ce_infills_test = new ConCommand("ce_infills_test", []() { GetModule()->ResetPlayerHurtTimes(); }, "Replay the hurt flicker/fades for all players for testing.");
-
-	ce_infills_flicker_hertz = new ConVar("ce_infills_flicker_hertz", "10", FCVAR_NONE, "Infill on-hurt flicker frequency.", true, 0, false, 1);
-	ce_infills_flicker_intensity = new ConVar("ce_infills_flicker_intensity", "0.5", FCVAR_NONE, "Infill on-hurt flicker intensity", true, 0, true, 1);
-	ce_infills_flicker_after_hurt_time = new ConVar("ce_infills_flicker_after_hurt_time", "1.0", FCVAR_NONE, "How long to fade from flickers into normal fades. -1 to disable.");
-	ce_infills_flicker_after_hurt_bias = new ConVar("ce_infills_flicker_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for flicker fade outs.", true, 0, true, 1);
-	ce_infills_fade_after_hurt_time = new ConVar("ce_infills_fade_after_hurt_time", "1.0", FCVAR_NONE, "How long to fade out infills after taking damage. -1 to disable.");
-	ce_infills_fade_after_hurt_bias = new ConVar("ce_infills_fade_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for infill fade outs.", true, 0, true, 1);
-
-	ce_graphics_dump_shader_params = new ConCommand("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete);
-
 	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
 	m_ApplyEntityGlowEffectsHook = GetHooks()->AddHook<CGlowObjectManager_ApplyEntityGlowEffects>(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9));
@@ -259,7 +257,7 @@ unsigned char Graphics::ComputeEntityFadeOveride(C_BaseEntity* entity, float min
 {
 	constexpr auto max = std::numeric_limits<unsigned char>::max();
 
-	if (ce_graphics_disable_prop_fades->GetBool())
+	if (ce_graphics_disable_prop_fades.GetBool())
 	{
 		GetHooks()->SetState<Global_UTILComputeEntityFade>(Hooking::HookAction::SUPERCEDE);
 		return max;
@@ -270,7 +268,7 @@ unsigned char Graphics::ComputeEntityFadeOveride(C_BaseEntity* entity, float min
 
 void Graphics::ApplyEntityGlowEffectsOverride(CGlowObjectManager * pThis, const CViewSetup * pSetup, int nSplitScreenSlot, CMatRenderContextPtr & pRenderContext, float flBloomScale, int x, int y, int w, int h)
 {
-	if (ce_graphics_improved_glows->GetBool())
+	if (ce_graphics_improved_glows.GetBool())
 	{
 		GetHooks()->SetState<CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::SUPERCEDE);
 		pThis->ApplyEntityGlowEffects(pSetup, nSplitScreenSlot, pRenderContext, flBloomScale, x, y, w, h);
@@ -523,18 +521,18 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector2D&
 float Graphics::ApplyInfillTimeEffects(float lastHurtTime)
 {
 	// Fade the whole thing out
-	const auto fadeProgress = ce_infills_fade_after_hurt_time->GetFloat() > 0 ?
-		RemapValClamped(lastHurtTime, 0, ce_infills_fade_after_hurt_time->GetFloat(), 0, 1) : 0;
+	const auto fadeProgress = ce_infills_fade_after_hurt_time.GetFloat() > 0 ?
+		RemapValClamped(lastHurtTime, 0, ce_infills_fade_after_hurt_time.GetFloat(), 0, 1) : 0;
 
-	const float fade = 1 - Bias(fadeProgress, ce_infills_fade_after_hurt_bias->GetFloat());
+	const float fade = 1 - Bias(fadeProgress, ce_infills_fade_after_hurt_bias.GetFloat());
 
-	const auto flickerProgress = ce_infills_flicker_after_hurt_time->GetFloat() > 0 ?
-		RemapValClamped(lastHurtTime, 0, ce_infills_flicker_after_hurt_time->GetFloat(), 0, 1) : 0;
+	const auto flickerProgress = ce_infills_flicker_after_hurt_time.GetFloat() > 0 ?
+		RemapValClamped(lastHurtTime, 0, ce_infills_flicker_after_hurt_time.GetFloat(), 0, 1) : 0;
 
-	const float flicker = Lerp(ce_infills_flicker_intensity->GetFloat(), fade,
-		std::cos(2 * lastHurtTime * M_PI_F * ce_infills_flicker_hertz->GetFloat()) * 0.5f + 0.5f);
+	const float flicker = Lerp(ce_infills_flicker_intensity.GetFloat(), fade,
+		std::cos(2 * lastHurtTime * M_PI_F * ce_infills_flicker_hertz.GetFloat()) * 0.5f + 0.5f);
 
-	const float combined = Lerp(Bias(flickerProgress, ce_infills_flicker_after_hurt_bias->GetFloat()), flicker, fade);
+	const float combined = Lerp(Bias(flickerProgress, ce_infills_flicker_after_hurt_bias.GetFloat()), flicker, fade);
 
 	return combined;
 }
@@ -545,18 +543,18 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 	m_ExtraGlowData.clear();
 
 	bool hasRedOverride, hasBlueOverride;
-	Vector redOverride = ColorToVector(ColorFromConVar(*ce_outlines_players_override_red, &hasRedOverride)) * ce_graphics_glow_intensity->GetFloat();
-	Vector blueOverride = ColorToVector(ColorFromConVar(*ce_outlines_players_override_blue, &hasBlueOverride)) * ce_graphics_glow_intensity->GetFloat();
+	Vector redOverride = ColorToVector(ColorFromConVar(ce_outlines_players_override_red, &hasRedOverride)) * ce_graphics_glow_intensity.GetFloat();
+	Vector blueOverride = ColorToVector(ColorFromConVar(ce_outlines_players_override_blue, &hasBlueOverride)) * ce_graphics_glow_intensity.GetFloat();
 
 	uint8_t stencilIndex = 0;
 
-	const bool infillsEnable = ce_infills_enable->GetBool();
-	const bool bInfillDebug = ce_infills_debug->GetBool();
+	const bool infillsEnable = ce_infills_enable.GetBool();
+	const bool bInfillDebug = ce_infills_debug.GetBool();
 
-	const Color redInfillNormal = ColorFromConVar(*ce_infills_hurt_red);
-	const Color blueInfillNormal = ColorFromConVar(*ce_infills_hurt_blue);
-	const Color redInfillBuffed = ColorFromConVar(*ce_infills_buffed_red);
-	const Color blueInfillBuffed = ColorFromConVar(*ce_infills_buffed_blue);
+	const Color redInfillNormal = ColorFromConVar(ce_infills_hurt_red);
+	const Color blueInfillNormal = ColorFromConVar(ce_infills_hurt_blue);
+	const Color redInfillBuffed = ColorFromConVar(ce_infills_buffed_red);
+	const Color blueInfillBuffed = ColorFromConVar(ce_infills_buffed_blue);
 
 	VMatrix worldToScreen;
 	if (infillsEnable)
@@ -678,7 +676,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 		});
 	}
 
-	if (ce_outlines_debug->GetBool())
+	if (ce_outlines_debug.GetBool())
 	{
 		int conIndex = 0;
 		engine->Con_NPrintf(conIndex++, "Glow object count: %zi/%i", m_ExtraGlowData.size(), glowMgr->m_GlowObjectDefinitions.Count());
@@ -766,7 +764,7 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
 	CRefPtrFix<IMaterial> infillMaterial(materials->FindMaterial(
-		ce_infills_additive->GetBool() ? "vgui/white_additive" : "vgui/white",
+		ce_infills_additive.GetBool() ? "vgui/white_additive" : "vgui/white",
 		TEXTURE_GROUP_OTHER, true));
 
 	CMeshBuilder meshBuilder;
@@ -796,7 +794,7 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 			continue;
 
 		ShaderStencilState_t stencilState;
-		stencilState.m_bEnable = !ce_infills_debug->GetBool();
+		stencilState.m_bEnable = !ce_infills_debug.GetBool();
 		stencilState.m_nReferenceValue = (currentExtra.m_StencilIndex << 2) | 1;
 		stencilState.m_nTestMask = 0xFFFFFFFD;
 		stencilState.m_CompareFunc = STENCILCOMPARISONFUNCTION_EQUAL;
@@ -951,7 +949,7 @@ void Graphics::DrawGlowAlways(int nSplitScreenSlot, CMatRenderContextPtr& pRende
 		}
 		else
 		{
-			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
+			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
 			render->SetColorModulation(vGlowColor.Base());
 		}
 
@@ -1062,7 +1060,7 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 		}
 		else
 		{
-			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
+			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
 			render->SetColorModulation(vGlowColor.Base());
 		}
 
@@ -1105,7 +1103,7 @@ void Graphics::DrawGlowVisible(int nSplitScreenSlot, CMatRenderContextPtr& pRend
 		}
 		else
 		{
-			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity->GetFloat());
+			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
 			render->SetColorModulation(vGlowColor.Base());
 		}
 
@@ -1252,7 +1250,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 
 	// Bloom glow models from _rt_FullFrameFB0 to backbuffer while stenciling out inside of models
 	{
-		if (graphicsModule->ce_graphics_glow_silhouettes->GetBool())
+		if (graphicsModule->ce_graphics_glow_silhouettes.GetBool())
 		{
 			CRefPtrFix<IMaterial> finalBlendMaterial(materials->FindMaterial("castingessentials/outlines/final_blend", TEXTURE_GROUP_RENDER_TARGET));
 			pRenderContext->Bind(finalBlendMaterial);
@@ -1270,7 +1268,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 		{
 			// Set stencil state
 			ShaderStencilState_t stencilState;
-			stencilState.m_bEnable = graphicsModule->ce_outlines_debug_stencil_out->GetBool();
+			stencilState.m_bEnable = graphicsModule->ce_outlines_debug_stencil_out.GetBool();
 			stencilState.m_nWriteMask = 0; // We're not changing stencil
 			stencilState.m_nReferenceValue = 1;
 			stencilState.m_nTestMask = 1;
@@ -1280,7 +1278,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 			stencilState.m_ZFailOp = STENCILOPERATION_KEEP;
 			stencilState.SetStencilState(pRenderContext);
 
-			if (graphicsModule->ce_outlines_mode->GetBool())
+			if (graphicsModule->ce_outlines_mode.GetBool())
 			{
 				//============================================
 				// Downsample _rt_FullFrameFB to _rt_SmallFB0
@@ -1349,7 +1347,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 				}
 
 				// Multiply alpha into _rt_SmallFB1
-				if (!graphicsModule->ce_outlines_additive->GetBool())
+				if (!graphicsModule->ce_outlines_additive.GetBool())
 				{
 					CRefPtrFix<IMaterial> pMatAlphaMul(materials->FindMaterial("castingessentials/outlines/l4d_ce_translucent_pass", TEXTURE_GROUP_OTHER, true));
 					pRenderContext->SetRenderTarget(pRtSmallFB1);
@@ -1366,10 +1364,10 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 					{
 						auto baseTextureVar = finalBlendL4D->FindVar("$basetexture", nullptr);
 						if (baseTextureVar)
-							baseTextureVar->SetTextureValue(graphicsModule->ce_outlines_additive->GetBool() ? pRtSmallFB0 : pRtSmallFB1);
+							baseTextureVar->SetTextureValue(graphicsModule->ce_outlines_additive.GetBool() ? pRtSmallFB0 : pRtSmallFB1);
 
-						finalBlendL4D->SetMaterialVarFlag(MaterialVarFlags_t::MATERIAL_VAR_TRANSLUCENT, !graphicsModule->ce_outlines_additive->GetBool());
-						finalBlendL4D->SetMaterialVarFlag(MaterialVarFlags_t::MATERIAL_VAR_ADDITIVE, graphicsModule->ce_outlines_additive->GetBool());
+						finalBlendL4D->SetMaterialVarFlag(MaterialVarFlags_t::MATERIAL_VAR_TRANSLUCENT, !graphicsModule->ce_outlines_additive.GetBool());
+						finalBlendL4D->SetMaterialVarFlag(MaterialVarFlags_t::MATERIAL_VAR_ADDITIVE, graphicsModule->ce_outlines_additive.GetBool());
 					}
 
 					// Draw quad
@@ -1400,7 +1398,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 	}
 
 	// Player infills
-	if (graphicsModule->ce_infills_enable->GetBool())
+	if (graphicsModule->ce_infills_enable.GetBool())
 		graphicsModule->DrawInfills(pRenderContext);
 
 	// Done with all of our "advanced" 3D rendering.
@@ -1432,7 +1430,7 @@ void Graphics::OnTick(bool inGame)
 	if (!Interfaces::GetEngineClient()->IsInGame())
 		return;
 
-	if (ce_graphics_fix_invisible_players->GetBool())
+	if (ce_graphics_fix_invisible_players.GetBool())
 	{
 		for (Player* p : Player::Iterable())
 		{

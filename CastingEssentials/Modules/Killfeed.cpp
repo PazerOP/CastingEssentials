@@ -3,7 +3,6 @@
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 
-#include <convar.h>
 #include <igameevents.h>
 #include <vprof.h>
 #include <client/iclientmode.h>
@@ -11,18 +10,17 @@
 #include <locale>
 #include <codecvt>
 
-Killfeed::Killfeed()
+Killfeed::Killfeed() :
+	ce_killfeed_continuous_update("ce_killfeed_continuous_update", "0", FCVAR_NONE, "Continually updates the killfeed background/icons based on the local player index.")
 {
 	m_DeathNoticePanel = nullptr;
-
-	ce_killfeed_continuous_update = new ConVar("ce_killfeed_continuous_update", "0", FCVAR_NONE, "Continually updates the killfeed background/icons based on the local player index.", true, 0, true, 1);
 }
 
 Killfeed::DeathNoticePanelOverride* Killfeed::FindDeathNoticePanel()
 {
 	auto const clientmode = Interfaces::GetClientMode();
 	vgui::Panel* const viewport = clientmode->GetViewport();
-	
+
 	const char* const moduleName = viewport->GetModuleName();
 
 	const auto& children = viewport->GetChildren();
@@ -47,7 +45,7 @@ void Killfeed::OnTick(bool inGame)
 	if (!inGame)
 		return;
 
-	if (!ce_killfeed_continuous_update->GetBool())
+	if (!ce_killfeed_continuous_update.GetBool())
 		return;
 
 	if (!m_DeathNoticePanel)

@@ -1,12 +1,9 @@
 #pragma once
 
-#include <igameevents.h>
 #include "PluginBase/Modules.h"
 
-class CCommand;
-class ConCommand;
-class ConVar;
-class IConVar;
+#include <convar.h>
+#include <igameevents.h>
 
 class CameraAutoSwitch final : public Module<CameraAutoSwitch>, IGameEventListener2
 {
@@ -17,9 +14,9 @@ public:
 	static bool CheckDependencies();
 
 private:
-	ConVar *enabled;
-	ConVar *m_SwitchToKiller;
-	ConVar *killer_delay;
+	ConVar ce_cameraautoswitch_enabled;
+	ConVar ce_cameraautoswitch_killer;
+	ConVar ce_cameraautoswitch_killer_delay;
 	void ToggleKillerEnabled(IConVar *var, const char *pOldValue, float flOldValue);
 
 	void QueueSwitchToPlayer(int player, int fromPlayer, float delay);

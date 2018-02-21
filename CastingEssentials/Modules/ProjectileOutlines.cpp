@@ -5,35 +5,34 @@
 #include "PluginBase/TFDefinitions.h"
 
 #include <client/c_baseentity.h>
-#include <convar.h>
 #include <toolframework/ienginetool.h>
 #include <vprof.h>
 
 // smh windows
 #undef IGNORE
 
-ProjectileOutlines::ProjectileOutlines()
-{
-	m_Init = false;
-	m_BaseEntityInitHook = 0;
+ProjectileOutlines::ProjectileOutlines() :
+	ce_projectileoutlines_rockets("ce_projectileoutlines_rockets", "0", FCVAR_NONE, "Enable projectile outlines for rockets."),
+	ce_projectileoutlines_pills("ce_projectileoutlines_pills", "0", FCVAR_NONE, "Enable projectile outlines for pills."),
+	ce_projectileoutlines_stickies("ce_projectileoutlines_stickies", "0", FCVAR_NONE, "Enable projectile outlines for stickies."),
 
-	m_RocketsEnabled = new ConVar("ce_projectileoutlines_rockets", "0", FCVAR_NONE, "Enable projectile outlines for rockets.");
-	m_PillsEnabled = new ConVar("ce_projectileoutlines_pills", "0", FCVAR_NONE, "Enable projectile outlines for pills.");
-	m_StickiesEnabled = new ConVar("ce_projectileoutlines_stickies", "0", FCVAR_NONE, "Enable projectile outlines for stickies.");
+	ce_projectileoutlines_color_blu("ce_projectileoutlines_color_blu", "125 169 197 255", FCVAR_NONE,
+		"The color used for outlines of BLU team's projectiles.", &ColorChanged),
+	ce_projectileoutlines_color_red("ce_projectileoutlines_color_red", "189 55 55 255", FCVAR_NONE,
+		"The color used for outlines of RED team's projectiles.", &ColorChanged),
+	ce_projectileoutlines_fade_start("ce_projectileoutlines_fade_start", "-1", FCVAR_NONE,
+		"Distance from the camera at which projectile outlines begin fading out."),
+	ce_projectileoutlines_fade_end("ce_projectileoutlines_fade_end", "-1", FCVAR_NONE,
+		"Distance from the camera at which projectile outlines finish fading out."),
 
-	ce_projectileoutlines_color_blu = new ConVar("ce_projectileoutlines_color_blu", "125 169 197 255", FCVAR_NONE, "The color used for outlines of BLU team's projectiles.", &ColorChanged);
-
-	ce_projectileoutlines_color_red = new ConVar("ce_projectileoutlines_color_red", "189 55 55 255", FCVAR_NONE, "The color used for outlines of RED team's projectiles.", &ColorChanged);
-
-	ce_projectileoutlines_fade_start = new ConVar("ce_projectileoutlines_fade_start", "-1", FCVAR_NONE, "Distance from the camera at which projectile outlines begin fading out.");
-	ce_projectileoutlines_fade_end = new ConVar("ce_projectileoutlines_fade_end", "-1", FCVAR_NONE, "Distance from the camera at which projectile outlines finish fading out.");
-
-	// For some reason this isn't hooked up, wtf valve
-	ce_projectileoutlines_mode = new ConVar("ce_projectileoutlines_mode", "1", FCVAR_NONE,
+	ce_projectileoutlines_mode("ce_projectileoutlines_mode", "1", FCVAR_NONE,
 		"Modes:"
 		"\n\t0: always"
 		"\n\t1: only when occluded"
-		"\n\t2: only when model is visible", true, 0, true, 2);
+		"\n\t2: only when model is visible", true, 0, true, 2)
+{
+	m_Init = false;
+	m_BaseEntityInitHook = 0;
 }
 
 ProjectileOutlines::~ProjectileOutlines()
@@ -48,15 +47,15 @@ void ProjectileOutlines::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
-	if (!m_RocketsEnabled->GetBool() && !m_PillsEnabled->GetBool() && !m_StickiesEnabled->GetBool())
+	if (!ce_projectileoutlines_rockets.GetBool() && !ce_projectileoutlines_pills.GetBool() && !ce_projectileoutlines_stickies.GetBool())
 		return;
 
 	if (inGame)
 	{
 		if (!m_Init)
 		{
-			ColorChanged(ce_projectileoutlines_color_blu, "", 0);
-			ColorChanged(ce_projectileoutlines_color_red, "", 0);
+			ColorChanged(&ce_projectileoutlines_color_blu, "", 0);
+			ColorChanged(&ce_projectileoutlines_color_red, "", 0);
 			m_BaseEntityInitHook = GetHooks()->AddHook<C_BaseEntity_Init>(std::bind(&ProjectileOutlines::InitDetour, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 			m_Init = true;
 		}
@@ -114,8 +113,8 @@ void ProjectileOutlines::OnTick(bool inGame)
 			const Vector entPos = baseEntity->GetAbsOrigin();
 			const float dist = viewPos.DistTo(entPos);
 
-			const byte alpha = (ce_projectileoutlines_fade_start->GetFloat() >= 0 && ce_projectileoutlines_fade_end->GetFloat() >= 0) ?
-				Lerp(smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start->GetFloat(), ce_projectileoutlines_fade_end->GetFloat(), 1, 0)), 0, 255) :
+			const byte alpha = (ce_projectileoutlines_fade_start.GetFloat() >= 0 && ce_projectileoutlines_fade_end.GetFloat() >= 0) ?
+				Lerp(smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start.GetFloat(), ce_projectileoutlines_fade_end.GetFloat(), 1, 0)), 0, 255) :
 				255;
 
 			Color* glowColor = Entities::GetEntityProp<Color*>(glowEntity, "m_glowColor");
@@ -143,7 +142,7 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 	{
 		IClientEntity* glowEntity = ent;
 		*Entities::GetEntityProp<bool*>(glowEntity, "m_bDisabled") = false;
-		*Entities::GetEntityProp<int*>(glowEntity, "m_iMode") = ce_projectileoutlines_mode->GetInt();
+		*Entities::GetEntityProp<int*>(glowEntity, "m_iMode") = ce_projectileoutlines_mode.GetInt();
 		Entities::GetEntityProp<EHANDLE*>(glowEntity, "m_hTarget")->Set(projectileEntity->GetBaseEntity());
 
 		Color* color = Entities::GetEntityProp<Color*>(glowEntity, "m_glowColor");
@@ -164,7 +163,7 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (!m_RocketsEnabled->GetBool())
+	if (!ce_projectileoutlines_rockets.GetBool())
 		return;
 
 	if (!Entities::CheckEntityBaseclass(entity, "TFProjectile_Rocket"))
@@ -176,8 +175,8 @@ void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	const bool pills = m_PillsEnabled->GetBool();
-	const bool stickies = m_StickiesEnabled->GetBool();
+	const bool pills = ce_projectileoutlines_pills.GetBool();
+	const bool stickies = ce_projectileoutlines_stickies.GetBool();
 	if (!pills && !stickies)
 		return;
 
@@ -251,9 +250,9 @@ void ProjectileOutlines::ColorChanged(IConVar* var, const char* oldValue, float 
 	{
 		const Color scannedColor(r, g, b, a);
 
-		if (!stricmp(var->GetName(), GetModule()->ce_projectileoutlines_color_blu->GetName()))
+		if (!stricmp(var->GetName(), GetModule()->ce_projectileoutlines_color_blu.GetName()))
 			GetModule()->m_ColorBlu = scannedColor;
-		else if (!stricmp(var->GetName(), GetModule()->ce_projectileoutlines_color_red->GetName()))
+		else if (!stricmp(var->GetName(), GetModule()->ce_projectileoutlines_color_red.GetName()))
 			GetModule()->m_ColorRed = scannedColor;
 		else
 			Error("[CastingEssentials] %s: Somehow we caught a FnChangeCallback_t for an IConVar named %s???", __FUNCSIG__, var->GetName());

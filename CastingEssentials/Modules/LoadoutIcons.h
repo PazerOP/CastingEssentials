@@ -1,10 +1,9 @@
 #pragma once
 #include "PluginBase/Modules.h"
 
+#include <convar.h>
 #include <shareddefs.h>
 
-class ConVar;
-class ConCommand;
 class IClientNetworkable;
 
 namespace vgui
@@ -34,11 +33,11 @@ private:
 
 	static int GetWeaponDefinitionIndex(IClientNetworkable* networkable);
 
-	ConVar* ce_loadout_enabled;
-	ConVar* ce_loadout_filter_active_red;
-	ConVar* ce_loadout_filter_active_blu;
-	ConVar* ce_loadout_filter_inactive_red;
-	ConVar* ce_loadout_filter_inactive_blu;
+	ConVar ce_loadout_enabled;
+	ConVar ce_loadout_filter_active_red;
+	ConVar ce_loadout_filter_active_blu;
+	ConVar ce_loadout_filter_inactive_red;
+	ConVar ce_loadout_filter_inactive_blu;
 
 	enum ItemIndex
 	{

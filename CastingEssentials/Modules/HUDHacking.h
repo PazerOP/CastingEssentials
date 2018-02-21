@@ -1,6 +1,8 @@
 #pragma once
 #include "PluginBase/Modules.h"
 
+#include <convar.h>
+
 class Player;
 
 namespace vgui
@@ -32,8 +34,8 @@ public:
 	static int* GetProgressDirection(vgui::ProgressBar* progressBar);
 
 private:
-	std::unique_ptr<ConVar> ce_hud_forward_playerpanel_border;
-	std::unique_ptr<ConVar> ce_hud_player_health_progressbars;
+	ConVar ce_hud_forward_playerpanel_border;
+	ConVar ce_hud_player_health_progressbars;
 
 	void OnTick(bool inGame) override;
 	void ForwardPlayerPanelBorders();

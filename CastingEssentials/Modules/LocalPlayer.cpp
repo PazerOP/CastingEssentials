@@ -8,7 +8,6 @@
 #include <client/c_baseplayer.h>
 #include <client/c_baseanimating.h>
 #include <cdll_int.h>
-#include <convar.h>
 #include <debugoverlay_shared.h>
 #include <vprof.h>
 #include <toolframework/ienginetool.h>
@@ -16,27 +15,15 @@
 
 #include <functional>
 
-class LocalPlayer::TickPanel final : public virtual vgui::StubPanel
-{
-public:
-	TickPanel(std::function<void()> setFunction)
-	{
-		m_SetToCurrentTarget = setFunction;
-	}
-
-	void OnTick() override;
-private:
-	std::function<void()> m_SetToCurrentTarget;
-};
-
-LocalPlayer::LocalPlayer()
+LocalPlayer::LocalPlayer() :
+	ce_localplayer_enabled("ce_localplayer_enabled", "0", FCVAR_NONE, "enable local player override",
+		[](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); }),
+	ce_localplayer_player("ce_localplayer_player", "0", FCVAR_NONE, "player index to set as the local player"),
+	ce_localplayer_set_current_target("ce_localplayer_set_current_target", []() { GetModule()->SetToCurrentTarget(); },
+		"set the local player to the current spectator target"),
+	ce_localplayer_track_spec_target("ce_localplayer_track_spec_target", "0", FCVAR_NONE, "have the local player value track the spectator target")
 {
 	m_GetLocalPlayerIndexHookID = 0;
-
-	enabled = new ConVar("ce_localplayer_enabled", "0", FCVAR_NONE, "enable local player override", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); });
-	player = new ConVar("ce_localplayer_player", "0", FCVAR_NONE, "player index to set as the local player");
-	set_current_target = new ConCommand("ce_localplayer_set_current_target", []() { GetModule()->SetToCurrentTarget(); }, "set the local player to the current spectator target", FCVAR_NONE);
-	track_spec_target = new ConVar("ce_localplayer_track_spec_target", "0", FCVAR_NONE, "have the local player value track the spectator target", [](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleTrackSpecTarget(var, pOldValue, flOldValue); });
 }
 
 bool LocalPlayer::CheckDependencies()
@@ -80,30 +67,16 @@ bool LocalPlayer::CheckDependencies()
 	return ready;
 }
 
-void LocalPlayer::ToggleTrackSpecTarget(IConVar *var, const char *pOldValue, float flOldValue)
-{
-	if (track_spec_target->GetBool())
-	{
-		if (!m_Panel)
-			m_Panel.reset(new TickPanel(std::bind(&LocalPlayer::SetToCurrentTarget, this)));
-	}
-	else
-	{
-		if (m_Panel)
-			m_Panel.reset();
-	}
-}
-
 int LocalPlayer::GetLocalPlayerIndexOverride()
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (enabled->GetBool() && Player::IsValidIndex(player->GetInt()))
+	if (ce_localplayer_enabled.GetBool() && Player::IsValidIndex(ce_localplayer_player.GetInt()))
 	{
-		Player* localPlayer = Player::GetPlayer(player->GetInt(), __FUNCSIG__);
+		Player* localPlayer = Player::GetPlayer(ce_localplayer_player.GetInt(), __FUNCSIG__);
 		if (localPlayer)
 		{
 			GetHooks()->GetHook<Global_GetLocalPlayerIndex>()->SetState(Hooking::HookAction::SUPERCEDE);
-			return player->GetInt();
+			return ce_localplayer_player.GetInt();
 		}
 	}
 
@@ -113,7 +86,7 @@ int LocalPlayer::GetLocalPlayerIndexOverride()
 
 void LocalPlayer::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)
 {
-	if (enabled->GetBool())
+	if (ce_localplayer_enabled.GetBool())
 	{
 		if (!m_GetLocalPlayerIndexHookID)
 		{
@@ -143,18 +116,22 @@ void LocalPlayer::SetToCurrentTarget()
 
 			if (targetPlayer)
 			{
-				player->SetValue(targetPlayer->GetEntity()->entindex());
+				ce_localplayer_player.SetValue(targetPlayer->GetEntity()->entindex());
 				return;
 			}
 		}
 	}
 
-	player->SetValue(Interfaces::GetEngineClient()->GetLocalPlayer());
+	ce_localplayer_player.SetValue(Interfaces::GetEngineClient()->GetLocalPlayer());
 }
 
-void LocalPlayer::TickPanel::OnTick()
+void LocalPlayer::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (Interfaces::GetEngineClient()->IsInGame())
-		m_SetToCurrentTarget();
+
+	if (!inGame)
+		return;
+
+	if (ce_localplayer_track_spec_target.GetBool())
+		SetToCurrentTarget();
 }
