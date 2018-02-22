@@ -4,6 +4,7 @@
 #include "PluginBase/TFTeamResource.h"
 
 #include <client/iclientmode.h>
+#include <toolframework/ienginetool.h>
 #include <vgui/IVGui.h>
 #include <vgui_controls/EditablePanel.h>
 
@@ -20,8 +21,21 @@ public:
 
 IngameTeamScores::IngameTeamScores() :
 	ce_teamscores_enabled("ce_teamscores_enabled", "0", FCVAR_NONE, "Enable ingame team score display."),
-	ce_teamscores_reload("ce_teamscores_reload", []() { GetModule()->ReloadSettings(); }, "Reload settings for the team scores panel from the .res file.")
+	ce_teamscores_reload("ce_teamscores_reload", []() { GetModule()->ReloadSettings(); }, "Reload settings for the team scores panel from the .res file."),
+
+	ce_teamscores_delta_blu("ce_teamscores_delta_blu", "0", FCVAR_NONE, "Delta for blu team score."),
+	ce_teamscores_delta_red("ce_teamscores_delta_red", "0", FCVAR_NONE, "Delta for red team score.")
 {
+	for (int i = 0; i < CUSTOM_TEXT_COUNT; i++)
+	{
+		char name[32];
+		sprintf_s(name, "ce_teamscores_text%i", i + 1);
+
+		// Help string is expected to be static data
+		sprintf_s(ce_teamscores_text_helpstrings[i], "Text to display in the %%customtext%i%% dialog variable.", i + 1);
+
+		ce_teamscores_text[i] = std::make_unique<ConVar>(name, "", FCVAR_NONE, ce_teamscores_text_helpstrings[i]);
+	}
 }
 
 void IngameTeamScores::ReloadSettings()
@@ -72,7 +86,9 @@ void IngameTeamScores::OnTick(bool inGame)
 IngameTeamScores::ScorePanel::ScorePanel(vgui::Panel* parent, const char* panelName) : BaseClass(parent, panelName)
 {
 	LoadControlSettings("Resource/UI/TeamScorePanel.res");
-	g_pVGui->AddTickSignal(GetVPanel());
+
+	// 1 tick per second should be perfectly fine for this panel
+	g_pVGui->AddTickSignal(GetVPanel(), 1000);
 }
 
 void IngameTeamScores::ScorePanel::OnTick()
@@ -83,11 +99,19 @@ void IngameTeamScores::ScorePanel::OnTick()
 	if (!teams)
 		return;
 
-	int redScore = teams->GetTeamScore(TFTeam::Red);
-	int blueScore = teams->GetTeamScore(TFTeam::Blue);
+	int redScore = teams->GetTeamScore(TFTeam::Red) + GetModule()->ce_teamscores_delta_red.GetInt();
+	int blueScore = teams->GetTeamScore(TFTeam::Blue) + GetModule()->ce_teamscores_delta_blu.GetInt();
 
 	SetDialogVariable("redteamscore", redScore);
 	SetDialogVariable("blueteamscore", blueScore);
+
+	for (int i = 0; i < CUSTOM_TEXT_COUNT; i++)
+	{
+		char dialogVarName[32];
+		sprintf_s(dialogVarName, "customtext%i", i);
+
+		SetDialogVariable(dialogVarName, GetModule()->ce_teamscores_text[i]->GetString());
+	}
 
 	static ConVarRef mp_tournament_blueteamname("mp_tournament_blueteamname");
 	static ConVarRef mp_tournament_redteamname("mp_tournament_redteamname");
