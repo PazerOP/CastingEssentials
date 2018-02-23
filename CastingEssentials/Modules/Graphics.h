@@ -17,6 +17,7 @@ class IMaterial;
 class ConCommand;
 class CCommand;
 enum OverrideType_t;
+class Player;
 
 class Graphics final : public Module<Graphics>
 {
@@ -43,6 +44,7 @@ private:
 	ConVar ce_outlines_debug_stencil_out;
 	ConVar ce_outlines_additive;
 	ConVar ce_outlines_debug;
+	ConVar ce_outlines_spy_visibility;
 
 	ConCommand ce_infills_test;
 	ConVar ce_infills_enable;
@@ -124,6 +126,8 @@ private:
 
 	void BuildMoveChildLists();
 	ExtraGlowData* FindExtraGlowData(int entindex);
+	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
+	void EnforceSpyVisibility(Player& player, CGlowObjectManager::GlowObjectDefinition_t& outline) const;
 
 	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
 
@@ -135,7 +139,6 @@ private:
 
 	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector2D& screenMins, Vector2D& screenMaxs);
 
-	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
 	float ApplyInfillTimeEffects(float lastHurtTime);
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);
 };

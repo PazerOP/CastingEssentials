@@ -39,29 +39,35 @@ Graphics::Graphics() :
 	ce_graphics_glow_silhouettes("ce_graphics_glow_silhouettes", "0", FCVAR_NONE, "Turns outlines into silhouettes."),
 	ce_graphics_glow_intensity("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity"),
 	ce_graphics_improved_glows("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?"),
-	ce_graphics_fix_invisible_players("ce_graphics_fix_invisible_players", "1", FCVAR_NONE, "Fix a case where players are invisible if you're firstperson speccing them when the round starts."),
+	ce_graphics_fix_invisible_players("ce_graphics_fix_invisible_players", "1", FCVAR_NONE,
+		"Fix a case where players are invisible if you're firstperson speccing them when the round starts."),
 
 	ce_outlines_mode("ce_outlines_mode", "1", FCVAR_NONE, "Changes the style of outlines.\n\t0: TF2-style hard outlines.\n\t1: L4D-style soft outlines."),
 	ce_outlines_debug_stencil_out("ce_outlines_debug_stencil_out", "1", FCVAR_NONE, "Should we stencil out the players during the final blend to screen?"),
-	ce_outlines_players_override_red("ce_outlines_players_override_red", "", FCVAR_NONE, "Override color for red players. [0, 255], format is \"<red> <green> <blue>\"."),
-	ce_outlines_players_override_blue("ce_outlines_players_override_blue", "", FCVAR_NONE, "Override color for blue players. [0, 255], format is \"<red> <green> <blue>\"."),
+	ce_outlines_players_override_red("ce_outlines_players_override_red", "", FCVAR_NONE,
+		"Override color for red players. [0, 255], format is \"<red> <green> <blue>\"."),
+	ce_outlines_players_override_blue("ce_outlines_players_override_blue", "", FCVAR_NONE,
+		"Override color for blue players. [0, 255], format is \"<red> <green> <blue>\"."),
 	ce_outlines_additive("ce_outlines_additive", "1", FCVAR_NONE, "If set to 1, outlines will add to underlying colors rather than replace them."),
 	ce_outlines_debug("ce_outlines_debug", "0", FCVAR_NONE),
+	ce_outlines_spy_visibility("ce_outlines_spy_visiblity", "1", FCVAR_NONE,
+		"If set to 1, always show outlines around cloaked spies (as opposed to only when they are behind walls)."),
 
 	ce_infills_enable("ce_infills_enable", "0", FCVAR_NONE, "Enables player infills."),
 	ce_infills_additive("ce_infills_additive", "0", FCVAR_NONE, "Enables additive rendering of player infills."),
-	ce_infills_hurt_red("ce_infills_hurt_red", "255 0 0 64", FCVAR_NONE, "Infill for red players that are not overhealed."),
-	ce_infills_hurt_blue("ce_infills_hurt_blue", "0 0 255 64", FCVAR_NONE, "Infill for blue players that are not overhealed."),
-	ce_infills_buffed_red("ce_infills_buffed_red", "255 128 128 64", FCVAR_NONE, "Infill for red players that are overhealed."),
-	ce_infills_buffed_blue("ce_infills_buffed_blue", "128 128 255 64", FCVAR_NONE, "Infill for blue players that are overhealed."),
+	ce_infills_hurt_red("ce_infills_hurt_red", "189 59 59 96", FCVAR_NONE, "Infill for red players that are not overhealed."),
+	ce_infills_hurt_blue("ce_infills_hurt_blue", "91 122 140 96", FCVAR_NONE, "Infill for blue players that are not overhealed."),
+	ce_infills_buffed_red("ce_infills_buffed_red", "240 129 73 0", FCVAR_NONE, "Infill for red players that are overhealed."),
+	ce_infills_buffed_blue("ce_infills_buffed_blue", "239 152 73 0", FCVAR_NONE, "Infill for blue players that are overhealed."),
 	ce_infills_debug("ce_infills_debug", "0", FCVAR_NONE),
 	ce_infills_test("ce_infills_test", []() { GetModule()->ResetPlayerHurtTimes(); }, "Replay the hurt flicker/fades for all players for testing."),
 
 	ce_infills_flicker_hertz("ce_infills_flicker_hertz", "10", FCVAR_NONE, "Infill on-hurt flicker frequency.", true, 0, false, 1),
-	ce_infills_flicker_intensity("ce_infills_flicker_intensity", "0.5", FCVAR_NONE, "Infill on-hurt flicker intensity", true, 0, true, 1),
-	ce_infills_flicker_after_hurt_time("ce_infills_flicker_after_hurt_time", "1.0", FCVAR_NONE, "How long to fade from flickers into normal fades. -1 to disable."),
+	ce_infills_flicker_intensity("ce_infills_flicker_intensity", "0.55", FCVAR_NONE, "Infill on-hurt flicker intensity", true, 0, true, 1),
+	ce_infills_flicker_after_hurt_time("ce_infills_flicker_after_hurt_time", "1.0", FCVAR_NONE,
+		"How long to fade from flickers into normal fades. -1 to disable."),
 	ce_infills_flicker_after_hurt_bias("ce_infills_flicker_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for flicker fade outs.", true, 0, true, 1),
-	ce_infills_fade_after_hurt_time("ce_infills_fade_after_hurt_time", "1.0", FCVAR_NONE, "How long to fade out infills after taking damage. -1 to disable."),
+	ce_infills_fade_after_hurt_time("ce_infills_fade_after_hurt_time", "2.0", FCVAR_NONE, "How long to fade out infills after taking damage. -1 to disable."),
 	ce_infills_fade_after_hurt_bias("ce_infills_fade_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for infill fade outs.", true, 0, true, 1),
 
 	ce_graphics_dump_shader_params("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete)
@@ -537,6 +543,12 @@ float Graphics::ApplyInfillTimeEffects(float lastHurtTime)
 	return combined;
 }
 
+void Graphics::EnforceSpyVisibility(Player& player, CGlowObjectManager::GlowObjectDefinition_t& outline) const
+{
+	if (ce_outlines_spy_visibility.GetBool())
+		outline.m_bRenderWhenUnoccluded = player.CheckCondition(TFCond::TFCond_Cloaked);
+}
+
 #include <client/view_scene.h>
 void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 {
@@ -560,7 +572,6 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 	if (infillsEnable)
 		Interfaces::GetEngineTool()->GetWorldToScreenMatrixForView(*m_View, &worldToScreen);
 
-
 	for (int i = 0; i < glowMgr->m_GlowObjectDefinitions.Count(); i++)
 	{
 		auto& current = glowMgr->m_GlowObjectDefinitions[i];
@@ -578,6 +589,9 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 				auto team = player->GetTeam();
 				if (team == TFTeam::Red || team == TFTeam::Blue)
 				{
+					// Kind of a hack, this being here
+					EnforceSpyVisibility(*player, current);
+
 					if (infillsEnable)
 					{
 						player->UpdateLastHurtTime();
@@ -627,7 +641,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 									bInfillDebug ? screenMaxs.x : m_View->width,
 									Lerp(overhealPercentage, screenMins.y, screenMaxs.y));
 
-								hurtInfill.m_Color = team == TFTeam::Red ? redInfillBuffed : blueInfillBuffed;
+								buffedInfill.m_Color = team == TFTeam::Red ? redInfillBuffed : blueInfillBuffed;
 
 								if (bInfillDebug)
 									buffedInfill.m_RectMin = screenMins;
@@ -824,7 +838,7 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 #else
 		auto mesh = pRenderContext->GetDynamicMesh(true, nullptr, nullptr, infillMaterial);
 
-		meshBuilder.Begin(mesh, MATERIAL_QUADS, 1);
+		meshBuilder.Begin(mesh, MATERIAL_QUADS, currentExtra.m_Infills.size());
 
 		for (size_t i = 0; i < currentExtra.m_Infills.size(); i++)
 		{
