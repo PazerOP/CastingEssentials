@@ -79,13 +79,13 @@ bool CameraTools::CheckDependencies()
 
 	if (!Interfaces::GetEngineTool())
 	{
-		PluginWarning("Required interface IEngineTool for module %s not available!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Required interface IEngineTool for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!g_pFullFileSystem)
 	{
-		PluginWarning("Required interface IFileSystem for module %s not available!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Required interface IFileSystem for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
@@ -95,7 +95,7 @@ bool CameraTools::CheckDependencies()
 	}
 	catch (bad_pointer)
 	{
-		PluginWarning("Required function C_HLTVCamera::SetCameraAngle for module %s not available!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Required function C_HLTVCamera::SetCameraAngle for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
@@ -105,7 +105,7 @@ bool CameraTools::CheckDependencies()
 	}
 	catch (bad_pointer)
 	{
-		PluginWarning("Required function C_HLTVCamera::SetMode for module %s not available!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Required function C_HLTVCamera::SetMode for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
@@ -115,31 +115,31 @@ bool CameraTools::CheckDependencies()
 	}
 	catch (bad_pointer)
 	{
-		PluginWarning("Required function C_HLTVCamera::SetPrimaryTarget for module %s not available!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Required function C_HLTVCamera::SetPrimaryTarget for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!g_pVGuiPanel)
 	{
-		PluginWarning("Required interface vgui::IPanel for module %s not available!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Required interface vgui::IPanel for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!g_pVGuiSchemeManager)
 	{
-		PluginWarning("Required interface vgui::ISchemeManager for module %s not available!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Required interface vgui::ISchemeManager for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!Player::CheckDependencies())
 	{
-		PluginWarning("Required player helper class for module %s not available!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Required player helper class for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!Player::IsNameRetrievalAvailable())
 	{
-		PluginWarning("Required player name retrieval for module %s not available!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Required player name retrieval for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
@@ -149,7 +149,7 @@ bool CameraTools::CheckDependencies()
 	}
 	catch (bad_pointer)
 	{
-		PluginWarning("Module %s requires IClientMode, which cannot be verified at this time!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Module %s requires IClientMode, which cannot be verified at this time!\n", GetModuleName());
 	}
 
 	try
@@ -158,7 +158,7 @@ bool CameraTools::CheckDependencies()
 	}
 	catch (bad_pointer)
 	{
-		PluginWarning("Module %s requires C_HLTVCamera, which cannot be verified at this time!\n", Modules().GetModuleName<CameraTools>().c_str());
+		PluginWarning("Module %s requires C_HLTVCamera, which cannot be verified at this time!\n", GetModuleName());
 	}
 
 	return ready;

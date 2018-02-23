@@ -28,25 +28,25 @@ bool PlayerAliases::CheckDependencies()
 
 	if (!Interfaces::GetEngineClient())
 	{
-		PluginWarning("Required interface IVEngineClient for module %s not available!\n", Modules().GetModuleName<PlayerAliases>().c_str());
+		PluginWarning("Required interface IVEngineClient for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!Interfaces::AreSteamLibrariesAvailable())
 	{
-		PluginWarning("Required Steam libraries for module %s not available!\n", Modules().GetModuleName<PlayerAliases>().c_str());
+		PluginWarning("Required Steam libraries for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!Player::CheckDependencies())
 	{
-		PluginWarning("Required player helper class for module %s not available!\n", Modules().GetModuleName<PlayerAliases>().c_str());
+		PluginWarning("Required player helper class for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!Player::IsSteamIDRetrievalAvailable())
 	{
-		PluginWarning("Required player Steam ID retrieval for module %s not available!\n", Modules().GetModuleName<PlayerAliases>().c_str());
+		PluginWarning("Required player Steam ID retrieval for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 

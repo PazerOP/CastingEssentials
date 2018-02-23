@@ -10,7 +10,7 @@ class ConsoleTools::PauseFilter final
 public:
 	PauseFilter()
 	{
-		ConsoleTools* module = Modules().GetModule<ConsoleTools>();
+		ConsoleTools* module = GetModule();
 		if (!module)
 			return;
 
@@ -18,7 +18,7 @@ public:
 	}
 	virtual ~PauseFilter()
 	{
-		ConsoleTools* module = Modules().GetModule<ConsoleTools>();
+		ConsoleTools* module = GetModule();
 		if (!module)
 			return;
 

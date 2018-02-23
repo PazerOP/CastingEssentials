@@ -44,19 +44,19 @@ bool CameraAutoSwitch::CheckDependencies()
 
 	if (!Interfaces::GetEngineClient())
 	{
-		PluginWarning("Required interface IVEngineClient for module %s not available!\n", Modules().GetModuleName<CameraAutoSwitch>().c_str());
+		PluginWarning("Required interface IVEngineClient for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!Interfaces::GetEngineTool())
 	{
-		PluginWarning("Required interface IEngineTool for module %s not available!\n", Modules().GetModuleName<CameraAutoSwitch>().c_str());
+		PluginWarning("Required interface IEngineTool for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!Interfaces::GetGameEventManager())
 	{
-		PluginWarning("Required interface IGameEventManager2 for module %s not available!\n", Modules().GetModuleName<CameraAutoSwitch>().c_str());
+		PluginWarning("Required interface IGameEventManager2 for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
@@ -66,13 +66,13 @@ bool CameraAutoSwitch::CheckDependencies()
 	}
 	catch (bad_pointer)
 	{
-		PluginWarning("Required function C_HLTVCamera::SetPrimaryTarget for module %s not available!\n", Modules().GetModuleName<CameraAutoSwitch>().c_str());
+		PluginWarning("Required function C_HLTVCamera::SetPrimaryTarget for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
 	if (!Player::CheckDependencies())
 	{
-		PluginWarning("Required player helper class for module %s not available!\n", Modules().GetModuleName<CameraAutoSwitch>().c_str());
+		PluginWarning("Required player helper class for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
 
@@ -82,7 +82,7 @@ bool CameraAutoSwitch::CheckDependencies()
 	}
 	catch (bad_pointer)
 	{
-		PluginWarning("Module %s requires C_HLTVCamera, which cannot be verified at this time!\n", Modules().GetModuleName<CameraAutoSwitch>().c_str());
+		PluginWarning("Module %s requires C_HLTVCamera, which cannot be verified at this time!\n", GetModuleName());
 	}
 
 	return ready;
