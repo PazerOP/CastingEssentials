@@ -21,6 +21,7 @@
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/player.h"
+#include "Modules/CameraState.h"
 
 #include "Controls/StubPanel.h"
 
@@ -113,8 +114,11 @@ void CameraAutoSwitch::OnPlayerDeath(IGameEvent* event)
 	if (!localPlayer)
 		return;
 
-	if (localPlayer->GetObserverMode() != OBS_MODE_FIXED && localPlayer->GetObserverMode() != OBS_MODE_IN_EYE && localPlayer->GetObserverMode() == OBS_MODE_CHASE)
-		return;
+	if (const auto cameraState = CameraState::GetModule(); cameraState)
+	{
+		if (cameraState->GetObserverMode() == OBS_MODE_ROAMING)
+			return;
+	}
 
 	Player* const targetPlayer = Player::AsPlayer(localPlayer->GetObserverTarget());
 	if (!targetPlayer)

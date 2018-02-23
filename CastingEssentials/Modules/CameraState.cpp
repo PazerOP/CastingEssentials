@@ -1,8 +1,12 @@
 #include "CameraState.h"
 #include "PluginBase/HookManager.h"
+#include "PluginBase/Interfaces.h"
+#include "PluginBase/Player.h"
+#include "Misc/HLTVCameraHack.h"
 #include "Modules/CameraTools.h"
 #include "Modules/CameraSmooths.h"
 
+#include <cdll_int.h>
 #include <vprof.h>
 
 #undef min
@@ -16,6 +20,21 @@ CameraState::CameraState()
 	m_InToolModeHook = 0;
 	m_IsThirdPersonCameraHook = 0;
 	m_SetupEngineViewHook = 0;
+}
+
+ObserverMode CameraState::GetObserverMode() const
+{
+	if (auto engineClient = Interfaces::GetEngineClient(); engineClient->IsHLTV())
+	{
+		if (auto hltvCamera = Interfaces::GetHLTVCamera(); hltvCamera)
+			return (ObserverMode)hltvCamera->m_nCameraMode;
+	}
+
+	if (const auto localPlayer = Player::GetLocalPlayer(); localPlayer)
+		return localPlayer->GetObserverMode();
+
+	Assert(!"Unable to determine current observer mode");
+	return OBS_MODE_NONE;
 }
 
 bool CameraState::InToolModeOverride()

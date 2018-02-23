@@ -4,11 +4,13 @@
 
 #include <mathlib/vector.h>
 
+enum ObserverMode;
+
 class CameraState final : public Module<CameraState>
 {
 public:
 	CameraState();
-	
+
 	const Vector& GetLastFramePluginViewOrigin() const { return m_LastFramePluginView.m_Origin; }
 	const QAngle& GetLastFramePluginViewAngles() const { return m_LastFramePluginView.m_Angles; }
 
@@ -16,6 +18,8 @@ public:
 	void GetLastFramePluginView(Vector& origin, QAngle& angles, float* fov = nullptr) const;
 	void GetThisFrameEngineView(Vector& origin, QAngle& angles, float* fov = nullptr) const;
 	void GetThisFramePluginView(Vector& origin, QAngle& angles, float* fov = nullptr) const;
+
+	ObserverMode GetObserverMode() const;
 
 private:
 	bool InToolModeOverride();
@@ -71,7 +75,7 @@ inline void CameraState::GetLastFramePluginView(Vector& origin, QAngle& angles, 
 	angles = m_LastFramePluginView.m_Angles;
 
 	if (fov)
-		*fov = m_LastFrameEngineView.m_FOV;	
+		*fov = m_LastFrameEngineView.m_FOV;
 }
 inline void CameraState::GetThisFrameEngineView(Vector& origin, QAngle& angles, float* fov) const
 {

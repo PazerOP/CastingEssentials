@@ -45,7 +45,7 @@ public:
 	int GetMaxOverheal() const;
 	const char* GetName() const;
 	static const char* GetName(int entIndex);
-	int GetObserverMode() const;
+	ObserverMode GetObserverMode() const;
 	C_BaseEntity* GetObserverTarget() const;
 	CSteamID GetSteamID() const;
 	TFTeam GetTeam() const;
@@ -110,7 +110,7 @@ private:
 	mutable TFClassType* m_CachedClass;
 	mutable int* m_CachedHealth;
 	mutable int* m_CachedMaxHealth;
-	mutable int* m_CachedObserverMode;
+	mutable ObserverMode* m_CachedObserverMode;
 	mutable CHandle<C_BaseEntity>* m_CachedObserverTarget;
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedWeapons[MAX_WEAPONS];
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedActiveWeapon;

@@ -669,12 +669,12 @@ QAngle Player::GetEyeAngles() const
 	return baseEntity->EyeAngles();
 }
 
-int Player::GetObserverMode() const
+ObserverMode Player::GetObserverMode() const
 {
 	if (IsValid())
 	{
 		if (CheckCache() || !m_CachedObserverMode)
-			m_CachedObserverMode = Entities::GetEntityProp<int*>(GetEntity(), { "m_iObserverMode" });
+			m_CachedObserverMode = Entities::GetEntityProp<ObserverMode*>(GetEntity(), { "m_iObserverMode" });
 
 		if (m_CachedObserverMode)
 			return *m_CachedObserverMode;
