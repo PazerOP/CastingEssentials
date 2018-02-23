@@ -8,10 +8,10 @@
 class KeyValues;
 class C_BaseEntity;
 
-class MapFlythroughs final : public Module<MapFlythroughs>
+class AutoCameras final : public Module<AutoCameras>
 {
 public:
-	MapFlythroughs();
+	AutoCameras();
 
 	void OnTick(bool ingame) override;
 

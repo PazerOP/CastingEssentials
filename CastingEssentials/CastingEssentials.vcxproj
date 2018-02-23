@@ -114,7 +114,7 @@
     <ClCompile Include="Modules\LoadoutIcons.cpp" />
     <ClCompile Include="Modules\LocalPlayer.cpp" />
     <ClCompile Include="Modules\MapConfigs.cpp" />
-    <ClCompile Include="Modules\MapFlythroughs.cpp" />
+    <ClCompile Include="Modules\AutoCameras.cpp" />
     <ClCompile Include="Modules\MedigunInfo.cpp" />
     <ClCompile Include="Modules\PlayerAliases.cpp" />
     <ClCompile Include="Modules\ProjectileOutlines.cpp" />
@@ -170,7 +170,7 @@
     <ClInclude Include="Modules\LoadoutIcons.h" />
     <ClInclude Include="Modules\LocalPlayer.h" />
     <ClInclude Include="Modules\MapConfigs.h" />
-    <ClInclude Include="Modules\MapFlythroughs.h" />
+    <ClInclude Include="Modules\AutoCameras.h" />
     <ClInclude Include="Modules\MedigunInfo.h" />
     <ClInclude Include="Modules\PlayerAliases.h" />
     <ClInclude Include="Modules\ProjectileOutlines.h" />

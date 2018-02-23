@@ -99,9 +99,6 @@
     <ClCompile Include="Modules\CameraSmooths.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Modules\MapFlythroughs.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Misc\MissingDefinitions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -151,6 +148,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Modules\ClientTools.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Modules\AutoCameras.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -263,9 +263,6 @@
     <ClInclude Include="Modules\CameraSmooths.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Modules\MapFlythroughs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Misc\HLTVCameraHack.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -321,6 +318,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\ClientTools.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\AutoCameras.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -6,6 +6,7 @@
 #include "Player.h"
 
 #include "Modules/Antifreeze.h"
+#include "Modules/AutoCameras.h"
 #include "Modules/CameraAutoSwitch.h"
 #include "Modules/CameraSmooths.h"
 #include "Modules/CameraState.h"
@@ -23,7 +24,6 @@
 #include "Modules/LoadoutIcons.h"
 #include "Modules/LocalPlayer.h"
 #include "Modules/MapConfigs.h"
-#include "Modules/MapFlythroughs.h"
 #include "Modules/MedigunInfo.h"
 #include "Modules/PlayerAliases.h"
 #include "Modules/ProjectileOutlines.h"
@@ -70,6 +70,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<CameraSmooths>("Camera Smooths");
 
 	Modules().RegisterAndLoadModule<AntiFreeze>("HUD Antifreeze");
+	Modules().RegisterAndLoadModule<AutoCameras>("AutoCameras");
 	Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
 	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
 	Modules().RegisterAndLoadModule<FOVOverride>("FOV Override");
@@ -83,7 +84,6 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<LoadoutIcons>("Loadout Icons");
 	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
 	Modules().RegisterAndLoadModule<MapConfigs>("Map Configs");
-	Modules().RegisterAndLoadModule<MapFlythroughs>("Map Flythroughs");
 	Modules().RegisterAndLoadModule<MedigunInfo>("Medigun Info");
 	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
 	Modules().RegisterAndLoadModule<ProjectileOutlines>("Projectile Outlines");

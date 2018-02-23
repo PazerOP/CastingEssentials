@@ -1,4 +1,4 @@
-#include "MapFlythroughs.h"
+#include "AutoCameras.h"
 #include "Misc/DebugOverlay.h"
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
@@ -23,14 +23,14 @@
 
 #include <regex>
 
-MapFlythroughs::MapFlythroughs() :
+AutoCameras::AutoCameras() :
 	ce_cameratrigger_begin("ce_autocamera_trigger_begin", [](const CCommand& args) { GetModule()->BeginCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED),
 	ce_cameratrigger_end("ce_autocamera_trigger_end", [](const CCommand& args) { GetModule()->EndCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED),
 
 	ce_autocamera_begin_storyboard("ce_autocamera_begin_storyboard", [](const CCommand& args) { GetModule()->BeginStoryboard(args); }, nullptr, FCVAR_UNREGISTERED),
 
 	ce_autocamera_create("ce_autocamera_create", [](const CCommand& args) { GetModule()->MarkCamera(args); }),
-	ce_autocamera_goto("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &MapFlythroughs::GotoCameraCompletion),
+	ce_autocamera_goto("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &AutoCameras::GotoCameraCompletion),
 	ce_autocamera_goto_mode("ce_autocamera_goto_mode", "3", FCVAR_NONE, "spec_mode to use for ce_autocamera_goto and ce_autocamera_cycle.", true, 0, true, NUM_OBSERVER_MODES - 1),
 	ce_autocamera_cycle("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); },
 		"\nUsage: ce_autocamera_cycle <next/prev>. Cycles forwards or backwards logically through the available autocameras. The behavior is as follows:\n"
@@ -89,7 +89,7 @@ static Vector GetCrosshairTarget()
 	return tr.endpos;
 }
 
-void MapFlythroughs::OnTick(bool ingame)
+void AutoCameras::OnTick(bool ingame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (ingame)
@@ -133,18 +133,18 @@ void MapFlythroughs::OnTick(bool ingame)
 	}
 }
 
-void MapFlythroughs::LevelInitPreEntity()
+void AutoCameras::LevelInitPreEntity()
 {
 	LoadConfig();
 }
 
-void MapFlythroughs::LoadConfig()
+void AutoCameras::LoadConfig()
 {
 	const char* const mapName = Interfaces::GetEngineClient()->GetLevelName();
 	LoadConfig(mapName);
 }
 
-void MapFlythroughs::LoadConfig(const char* bspName)
+void AutoCameras::LoadConfig(const char* bspName)
 {
 	debugoverlay->ClearAllOverlays();
 
@@ -215,7 +215,7 @@ static void FixupBounds(Vector& mins, Vector& maxs)
 		std::swap(mins.z, maxs.z);
 }
 
-bool MapFlythroughs::LoadTrigger(KeyValues* const trigger, const char* const filename)
+bool AutoCameras::LoadTrigger(KeyValues* const trigger, const char* const filename)
 {
 	std::shared_ptr<Trigger> newTrigger(new Trigger);
 	const char* const name = trigger->GetString("name", nullptr);
@@ -268,7 +268,7 @@ bool MapFlythroughs::LoadTrigger(KeyValues* const trigger, const char* const fil
 	return true;
 }
 
-bool MapFlythroughs::LoadCamera(KeyValues* const camera, const char* const filename)
+bool AutoCameras::LoadCamera(KeyValues* const camera, const char* const filename)
 {
 	std::shared_ptr<Camera> newCamera(new Camera);
 	const char* const name = camera->GetString("name", nullptr);
@@ -327,7 +327,7 @@ bool MapFlythroughs::LoadCamera(KeyValues* const camera, const char* const filen
 	return true;
 }
 
-bool MapFlythroughs::LoadStoryboard(KeyValues* const storyboard, const char* const filename)
+bool AutoCameras::LoadStoryboard(KeyValues* const storyboard, const char* const filename)
 {
 	std::shared_ptr<Storyboard> newStoryboard(new Storyboard);
 	const char* const name = storyboard->GetString("name", nullptr);
@@ -377,7 +377,7 @@ bool MapFlythroughs::LoadStoryboard(KeyValues* const storyboard, const char* con
 	return true;
 }
 
-bool MapFlythroughs::LoadShot(std::shared_ptr<StoryboardElement>& shotOut, KeyValues* const shotKV, const char* const storyboardName, const char* const filename)
+bool AutoCameras::LoadShot(std::shared_ptr<StoryboardElement>& shotOut, KeyValues* const shotKV, const char* const storyboardName, const char* const filename)
 {
 	std::shared_ptr<Shot> newShot(new Shot);
 
@@ -437,7 +437,7 @@ bool MapFlythroughs::LoadShot(std::shared_ptr<StoryboardElement>& shotOut, KeyVa
 	return true;
 }
 
-bool MapFlythroughs::LoadAction(std::shared_ptr<StoryboardElement>& actionOut, KeyValues* const actionKV, const char* const storyboardName, const char* const filename)
+bool AutoCameras::LoadAction(std::shared_ptr<StoryboardElement>& actionOut, KeyValues* const actionKV, const char* const storyboardName, const char* const filename)
 {
 	std::shared_ptr<Action> newAction(new Action);
 
@@ -504,7 +504,7 @@ bool MapFlythroughs::LoadAction(std::shared_ptr<StoryboardElement>& actionOut, K
 	return true;
 }
 
-void MapFlythroughs::CheckTrigger(const std::shared_ptr<Trigger>& trigger, std::vector<C_BaseEntity*>& entities)
+void AutoCameras::CheckTrigger(const std::shared_ptr<Trigger>& trigger, std::vector<C_BaseEntity*>& entities)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	Assert(trigger);
@@ -535,7 +535,7 @@ void MapFlythroughs::CheckTrigger(const std::shared_ptr<Trigger>& trigger, std::
 	}
 }
 
-void MapFlythroughs::ExecuteStoryboardElement(const std::shared_ptr<StoryboardElement>& element, C_BaseEntity* const triggerer)
+void AutoCameras::ExecuteStoryboardElement(const std::shared_ptr<StoryboardElement>& element, C_BaseEntity* const triggerer)
 {
 	// Shot
 	{
@@ -561,7 +561,7 @@ void MapFlythroughs::ExecuteStoryboardElement(const std::shared_ptr<StoryboardEl
 	return;
 }
 
-void MapFlythroughs::ExecuteShot(const std::shared_ptr<Shot>& shot, C_BaseEntity* const triggerer)
+void AutoCameras::ExecuteShot(const std::shared_ptr<Shot>& shot, C_BaseEntity* const triggerer)
 {
 	const auto& camera = shot->m_Camera;
 
@@ -577,18 +577,18 @@ void MapFlythroughs::ExecuteShot(const std::shared_ptr<Shot>& shot, C_BaseEntity
 	}
 }
 
-void MapFlythroughs::ExecuteAction(const std::shared_ptr<Action>& action, C_BaseEntity* const triggerer)
+void AutoCameras::ExecuteAction(const std::shared_ptr<Action>& action, C_BaseEntity* const triggerer)
 {
 	//Assert(!"Not implemented");
 }
 
-void MapFlythroughs::BeginCameraTrigger()
+void AutoCameras::BeginCameraTrigger()
 {
 	m_CameraTriggerStart = GetCrosshairTarget();
 	m_CreatingCameraTrigger = true;
 }
 
-void MapFlythroughs::EndCameraTrigger()
+void AutoCameras::EndCameraTrigger()
 {
 	if (!m_CreatingCameraTrigger)
 	{
@@ -607,14 +607,14 @@ void MapFlythroughs::EndCameraTrigger()
 	m_CameraTriggerStart.Init();
 }
 
-void MapFlythroughs::BeginStoryboard(const CCommand& args)
+void AutoCameras::BeginStoryboard(const CCommand& args)
 {
 	const auto& storyboard = m_Storyboards.front();
 	m_ActiveStoryboard = storyboard;
 	m_ActiveStoryboardElement = m_ActiveStoryboard->m_FirstElement;
 }
 
-void MapFlythroughs::MarkCamera(const CCommand& args)
+void AutoCameras::MarkCamera(const CCommand& args)
 {
 	if (args.ArgC() != 2)
 	{
@@ -642,7 +642,7 @@ constexpr vec_t BitsToFloat_cx(unsigned long i)
 	return *reinterpret_cast<vec_t*>(&i);
 }
 
-void MapFlythroughs::CycleCamera(const CCommand& args)
+void AutoCameras::CycleCamera(const CCommand& args)
 {
 	if (m_Cameras.size() < 1)
 	{
@@ -788,7 +788,7 @@ Usage:
 	Warning("%s: Usage: %s <prev/next>\n", ce_autocamera_cycle.GetName(), ce_autocamera_cycle.GetName());
 }
 
-void MapFlythroughs::GotoCamera(const std::shared_ptr<Camera>& camera)
+void AutoCameras::GotoCamera(const std::shared_ptr<Camera>& camera)
 {
 	CameraTools* const ctools = CameraTools::GetModule();
 	if (!ctools)
@@ -800,7 +800,7 @@ void MapFlythroughs::GotoCamera(const std::shared_ptr<Camera>& camera)
 	ctools->SpecPosition(camera->m_Pos, camera->m_DefaultAngle, (ObserverMode)ce_autocamera_goto_mode.GetInt());
 }
 
-void MapFlythroughs::GotoCamera(const CCommand& args)
+void AutoCameras::GotoCamera(const CCommand& args)
 {
 	if (args.ArgC() != 2)
 	{
@@ -823,7 +823,7 @@ void MapFlythroughs::GotoCamera(const CCommand& args)
 	GotoCamera(cam);
 }
 
-int MapFlythroughs::GotoCameraCompletion(const char* const partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
+int AutoCameras::GotoCameraCompletion(const char* const partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
 {
 	std::cmatch match;
 	const std::string regexString = strprintf("\\s*%s\\s+\"?(.*?)\"?\\s*$", GetModule()->ce_autocamera_goto.GetName());
@@ -832,7 +832,7 @@ int MapFlythroughs::GotoCameraCompletion(const char* const partial, char command
 	if (!std::regex_search(partial, match, std::regex(regexString.c_str(), std::regex_constants::icase)))
 		return 0;
 
-	MapFlythroughs* const mod = GetModule();
+	AutoCameras* const mod = GetModule();
 
 	auto cameras = mod->GetAlphabeticalCameras();
 	if (match[1].length() >= 1)
@@ -855,7 +855,7 @@ int MapFlythroughs::GotoCameraCompletion(const char* const partial, char command
 	return i;
 }
 
-void MapFlythroughs::DrawTriggers()
+void AutoCameras::DrawTriggers()
 {
 	for (const auto& trigger : m_Triggers)
 	{
@@ -871,7 +871,7 @@ constexpr float test(float input)
 	return input * 5020;
 }
 
-void MapFlythroughs::DrawCameras()
+void AutoCameras::DrawCameras()
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	for (auto camera : m_Cameras)
@@ -933,7 +933,7 @@ void MapFlythroughs::DrawCameras()
 	}
 }
 
-std::shared_ptr<MapFlythroughs::Trigger> MapFlythroughs::FindTrigger(const char* const triggerName)
+std::shared_ptr<AutoCameras::Trigger> AutoCameras::FindTrigger(const char* const triggerName)
 {
 	for (auto trigger : m_Triggers)
 	{
@@ -944,7 +944,7 @@ std::shared_ptr<MapFlythroughs::Trigger> MapFlythroughs::FindTrigger(const char*
 	return nullptr;
 }
 
-std::shared_ptr<MapFlythroughs::Camera> MapFlythroughs::FindCamera(const char* const cameraName)
+std::shared_ptr<AutoCameras::Camera> AutoCameras::FindCamera(const char* const cameraName)
 {
 	for (auto camera : m_Cameras)
 	{
@@ -955,7 +955,7 @@ std::shared_ptr<MapFlythroughs::Camera> MapFlythroughs::FindCamera(const char* c
 	return nullptr;
 }
 
-std::vector<std::shared_ptr<const MapFlythroughs::Camera>> MapFlythroughs::GetAlphabeticalCameras() const
+std::vector<std::shared_ptr<const AutoCameras::Camera>> AutoCameras::GetAlphabeticalCameras() const
 {
 	std::vector<std::shared_ptr<const Camera>> retVal;
 	for (auto cam : m_Cameras)
@@ -973,7 +973,7 @@ std::vector<std::shared_ptr<const MapFlythroughs::Camera>> MapFlythroughs::GetAl
 	return retVal;
 }
 
-void MapFlythroughs::SetupMirroredCameras()
+void AutoCameras::SetupMirroredCameras()
 {
 	for (auto camera : m_Cameras)
 	{
@@ -1000,7 +1000,7 @@ void MapFlythroughs::SetupMirroredCameras()
 	}
 }
 
-bool MapFlythroughs::FindContainedString(const std::vector<std::string>& vec, const char* str)
+bool AutoCameras::FindContainedString(const std::vector<std::string>& vec, const char* str)
 {
 	for (const std::string& x : vec)
 	{
