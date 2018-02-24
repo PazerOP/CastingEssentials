@@ -10,6 +10,7 @@ enum class TFTeam;
 enum class TFClassType;
 
 class CCommand;
+class IHandleEntity;
 class KeyValues;
 class C_HLTVCamera;
 class C_BaseEntity;
@@ -24,6 +25,11 @@ public:
 	static bool CheckDependencies();
 
 	void SpecPosition(const Vector& pos, const QAngle& angle, ObserverMode mode = OBS_MODE_FIXED);
+
+	static float CollisionTest3D(const Vector& startPos, const Vector& targetPos, float scale,
+	                             const IHandleEntity* ignoreEnt = nullptr);
+
+
 
 private:
 	int m_SetModeHook;

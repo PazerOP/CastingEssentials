@@ -227,6 +227,15 @@ constexpr float Deg2Rad(float degrees)
 	return degrees * float(3.14159265358979323846 / 180);
 }
 
+inline float UnscaleFOVByWidthRatio(float scaledFov, float ratio)
+{
+	return Rad2Deg(2 * std::atan(std::tan(Deg2Rad(scaledFov * 0.5f)) / ratio));
+}
+inline float UnscaleFOVByAspectRatio(float scaledFOV, float aspectRatio)
+{
+	return UnscaleFOVByWidthRatio(scaledFOV, aspectRatio / (4.0f / 3.0f));
+}
+
 template<class T>
 class VariablePusher final
 {

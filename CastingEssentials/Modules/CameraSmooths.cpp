@@ -6,6 +6,7 @@
 #include "Misc/DebugOverlay.h"
 #include "Misc/HLTVCameraHack.h"
 #include "Modules/CameraState.h"
+#include "Modules/CameraTools.h"
 
 #include <client/hltvcamera.h>
 #include <shareddefs.h>
@@ -20,45 +21,6 @@
 #undef min
 #undef max
 #include <algorithm>
-
-static const Vector TEST_POINTS[27] =
-{
-	Vector(0, 0, 0),
-	Vector(0, 0, 0.5),
-	Vector(0, 0, 1),
-
-	Vector(0, 0.5, 0),
-	Vector(0, 0.5, 0.5),
-	Vector(0, 0.5, 1),
-
-	Vector(0, 1, 0),
-	Vector(0, 1, 0.5),
-	Vector(0, 1, 1),
-
-	Vector(0.5, 0, 0),
-	Vector(0.5, 0, 0.5),
-	Vector(0.5, 0, 1),
-
-	Vector(0.5, 0.5, 0),
-	Vector(0.5, 0.5, 0.5),
-	Vector(0.5, 0.5, 1),
-
-	Vector(0.5, 1, 0),
-	Vector(0.5, 1, 0.5),
-	Vector(0.5, 1, 1),
-
-	Vector(1, 0, 0),
-	Vector(1, 0, 0.5),
-	Vector(1, 0, 1),
-
-	Vector(1, 0.5, 0),
-	Vector(1, 0.5, 0.5),
-	Vector(1, 0.5, 1),
-
-	Vector(1, 1, 0),
-	Vector(1, 1, 0.5),
-	Vector(1, 1, 1),
-};
 
 CameraSmooths::CameraSmooths() :
 	ce_smoothing_enabled("ce_smoothing_enabled", "0", FCVAR_NONE, "Enables smoothing between spectator targets."),
@@ -170,27 +132,15 @@ void CameraSmooths::UpdateCollisionTests()
 			CollisionTest newTest;
 			newTest.m_Entity = entity->GetRefEHandle();
 
-			const TFClassType playerClass = player->GetClass();
 			const Vector eyePos = player->GetEyePosition();
-			const Vector buffer(ce_smoothing_los_buffer.GetFloat());
-			newTest.m_Mins = eyePos - buffer;
-			newTest.m_Maxs = eyePos + buffer;
 
-			const Vector delta = newTest.m_Maxs - newTest.m_Mins;
-
-			size_t pointsPassed = 0;
-			for (const auto& testPoint : TEST_POINTS)
 			{
-				const Vector worldTestPoint = newTest.m_Mins + delta * testPoint;
-
-				trace_t tr;
-				UTIL_TraceLine(viewPos, worldTestPoint, MASK_VISIBLE, entity, COLLISION_GROUP_NONE, &tr);
-
-				if (tr.fraction >= 1)
-					pointsPassed++;
+				const Vector buffer(ce_smoothing_los_buffer.GetFloat());
+				newTest.m_Mins = eyePos - buffer;
+				newTest.m_Maxs = eyePos + buffer;
 			}
 
-			newTest.m_Visibility = (float)pointsPassed / arraysize(TEST_POINTS);
+			newTest.m_Visibility = CameraTools::CollisionTest3D(viewPos, eyePos, ce_smoothing_los_buffer.GetFloat(), entity);
 
 			m_CollisionTests.push_back(newTest);
 		}

@@ -5,6 +5,7 @@
 #include <mathlib/vector.h>
 
 enum ObserverMode;
+class Player;
 
 class CameraState final : public Module<CameraState>
 {
@@ -19,7 +20,7 @@ public:
 	void GetThisFrameEngineView(Vector& origin, QAngle& angles, float* fov = nullptr) const;
 	void GetThisFramePluginView(Vector& origin, QAngle& angles, float* fov = nullptr) const;
 
-	ObserverMode GetObserverMode() const;
+	static ObserverMode GetObserverMode();
 
 private:
 	bool InToolModeOverride();

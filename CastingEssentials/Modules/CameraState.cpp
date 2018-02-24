@@ -22,7 +22,7 @@ CameraState::CameraState()
 	m_SetupEngineViewHook = 0;
 }
 
-ObserverMode CameraState::GetObserverMode() const
+ObserverMode CameraState::GetObserverMode()
 {
 	if (auto engineClient = Interfaces::GetEngineClient(); engineClient->IsHLTV())
 	{

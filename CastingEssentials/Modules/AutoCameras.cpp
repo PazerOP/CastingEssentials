@@ -4,6 +4,8 @@
 #include "Modules/CameraTools.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
+#include "PluginBase/Player.h"
+#include "PluginBase/TFDefinitions.h"
 
 #include "Misc/HLTVCameraHack.h"
 
@@ -21,7 +23,12 @@
 #include <collisionutils.h>
 #include <vprof.h>
 
+#include <cstring>
+#include <iomanip>
 #include <regex>
+
+#undef min
+#undef max
 
 AutoCameras::AutoCameras() :
 	ce_cameratrigger_begin("ce_autocamera_trigger_begin", [](const CCommand& args) { GetModule()->BeginCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED),
@@ -33,11 +40,20 @@ AutoCameras::AutoCameras() :
 	ce_autocamera_goto("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &AutoCameras::GotoCameraCompletion),
 	ce_autocamera_goto_mode("ce_autocamera_goto_mode", "3", FCVAR_NONE, "spec_mode to use for ce_autocamera_goto and ce_autocamera_cycle.", true, 0, true, NUM_OBSERVER_MODES - 1),
 	ce_autocamera_cycle("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); },
-		"\nUsage: ce_autocamera_cycle <next/prev>. Cycles forwards or backwards logically through the available autocameras. The behavior is as follows:\n"
+		"\nUsage: ce_autocamera_cycle <next/prev> [group]. Cycles forwards or backwards logically through the available autocameras. The behavior is as follows:\n"
 		"\tIf already spectating from the position of an autocamera, progress forwards/backwards through the autocameras based on file order.\n"
 		"\tIf our current position doesn't match any autocamera definintions, try to find the nearest/furthest autocamera that has line of sight (LOS) to our current position.\n"
 		"\tIf no autocameras have LOS to our current position, find the nearest/furthest autocamera with our current position in its view frustum.\n"
 		"\tIf our position is not in any autocamera's view frustum, find the nearest/furthest autocamera to our current position."),
+
+	ce_autocamera_spec_player("ce_autocamera_spec_player", [](const CCommand& args) { GetModule()->SpecPlayer(args); }, "Switches to an autocamera with the best view of the current player."),
+	ce_autocamera_spec_player_fallback("ce_autocamera_spec_player_fallback", "firstperson", FCVAR_NONE, "Behavior to fall back to when using ce_autocamera_spec_player and no autocameras make it through the filters. Valid values: firstperson/thirdperson/fixed/none."),
+	ce_autocamera_spec_player_fov("ce_autocamera_spec_player_fov", "75", FCVAR_NONE,
+		"FOV to use when checking if a player is in view of an autocamera. -1 to disable check."),
+	ce_autocamera_spec_player_dist("ce_autocamera_spec_player_dist", "2000", FCVAR_NONE, "Maximum distance a player can be from an autocamera."),
+	ce_autocamera_spec_player_los("ce_autocamera_spec_player_los", "10", FCVAR_NONE,
+		"Hammer unit size of the 3x3x3 cube of points use for LOS check. -1 to disable."),
+	ce_autocamera_spec_player_debug("ce_autocamera_spec_player_debug", "0"),
 
 	ce_autocamera_reload_config("ce_autocamera_reload_config", []() { GetModule()->LoadConfig(); },
 		"Reloads the autocamera definitions file (located in /tf/addons/castingessentials/autocameras/<mapname>.vdf)"),
@@ -51,7 +67,7 @@ AutoCameras::AutoCameras() :
 	m_CameraTriggerStart.Init();
 }
 
-static bool GetView(Vector* pos, QAngle* ang)
+static bool GetView(Vector* pos, QAngle* ang, float* fov)
 {
 	CViewSetup view;
 	if (!Interfaces::GetClientDLL()->GetPlayerView(view))
@@ -65,6 +81,9 @@ static bool GetView(Vector* pos, QAngle* ang)
 
 	if (ang)
 		*ang = view.angles;
+
+	if (fov)
+		*fov = UnscaleFOVByAspectRatio(view.fov, view.m_flAspectRatio);
 
 	return true;
 }
@@ -99,26 +118,26 @@ void AutoCameras::OnTick(bool ingame)
 
 		while (m_ActiveStoryboard)
 		{
-			if (!m_ActiveStoryboardElement)
+			if (m_ActiveStoryboardElement)
 			{
-				m_ActiveStoryboard.reset();
+				m_ActiveStoryboard = nullptr;
 				break;
 			}
 
 			if (!m_ActiveStoryboardElement->m_Trigger)
 			{
-				ExecuteStoryboardElement(m_ActiveStoryboardElement, nullptr);
-				m_ActiveStoryboardElement = m_ActiveStoryboardElement->m_Next;
+				ExecuteStoryboardElement(*m_ActiveStoryboardElement, nullptr);
+				m_ActiveStoryboardElement = m_ActiveStoryboardElement->m_Next.get();
 			}
 			else
 			{
 				std::vector<C_BaseEntity*> entities;
-				CheckTrigger(m_ActiveStoryboardElement->m_Trigger, entities);
+				CheckTrigger(*m_ActiveStoryboardElement->m_Trigger, entities);
 
 				if (entities.size())
 				{
-					ExecuteStoryboardElement(m_ActiveStoryboardElement, entities.front());
-					m_ActiveStoryboardElement = m_ActiveStoryboardElement->m_Next;
+					ExecuteStoryboardElement(*m_ActiveStoryboardElement, entities.front());
+					m_ActiveStoryboardElement = m_ActiveStoryboardElement->m_Next.get();
 				}
 
 				break;
@@ -154,6 +173,10 @@ void AutoCameras::LoadConfig(const char* bspName)
 	m_Cameras.clear();
 	m_MalformedStoryboards.clear();
 	m_Storyboards.clear();
+
+	m_LastActiveCamera = nullptr;
+	m_ActiveStoryboard = nullptr;
+	m_ActiveStoryboardElement = nullptr;
 
 	std::string mapName(bspName);
 	mapName.erase(mapName.size() - 4, 4);	// remove .bsp
@@ -217,7 +240,7 @@ static void FixupBounds(Vector& mins, Vector& maxs)
 
 bool AutoCameras::LoadTrigger(KeyValues* const trigger, const char* const filename)
 {
-	std::shared_ptr<Trigger> newTrigger(new Trigger);
+	auto newTrigger = std::make_unique<Trigger>();
 	const char* const name = trigger->GetString("name", nullptr);
 	{
 		if (!name)
@@ -264,13 +287,13 @@ bool AutoCameras::LoadTrigger(KeyValues* const trigger, const char* const filena
 
 	FixupBounds(newTrigger->m_Mins, newTrigger->m_Maxs);
 
-	m_Triggers.push_back(newTrigger);
+	m_Triggers.push_back(std::move(newTrigger));
 	return true;
 }
 
 bool AutoCameras::LoadCamera(KeyValues* const camera, const char* const filename)
 {
-	std::shared_ptr<Camera> newCamera(new Camera);
+	auto newCamera = std::make_unique<Camera>();
 	const char* const name = camera->GetString("name", nullptr);
 	{
 		if (!name)
@@ -321,15 +344,26 @@ bool AutoCameras::LoadCamera(KeyValues* const camera, const char* const filename
 				return false;
 			}
 		}
+
+		// fov
+		if (const char* const fov = camera->GetString("fov", nullptr); fov)
+		{
+			if (!TryParseFloat(fov, newCamera->m_FOV))
+			{
+				Warning("Failed to parse fov \"%s\" in \"%s\" on camera named \"%s\"!\n", fov, filename, name);
+				m_MalformedCameras.push_back(name);
+				return false;
+			}
+		}
 	}
 
-	m_Cameras.push_back(newCamera);
+	m_Cameras.push_back(std::move(newCamera));
 	return true;
 }
 
 bool AutoCameras::LoadStoryboard(KeyValues* const storyboard, const char* const filename)
 {
-	std::shared_ptr<Storyboard> newStoryboard(new Storyboard);
+	auto newStoryboard = std::make_unique<Storyboard>();
 	const char* const name = storyboard->GetString("name", nullptr);
 	{
 		if (!name)
@@ -340,10 +374,10 @@ bool AutoCameras::LoadStoryboard(KeyValues* const storyboard, const char* const 
 		newStoryboard->m_Name = name;
 	}
 
-	std::shared_ptr<StoryboardElement> lastElement;
+	StoryboardElement* lastElement = nullptr;
 	for (KeyValues* element = storyboard->GetFirstTrueSubKey(); element; element = element->GetNextTrueSubKey())
 	{
-		std::shared_ptr<StoryboardElement> newElement;
+		std::unique_ptr<StoryboardElement> newElement;
 		if (!stricmp("shot", element->GetName()))
 		{
 			if (!LoadShot(newElement, element, name, filename))
@@ -363,23 +397,23 @@ bool AutoCameras::LoadStoryboard(KeyValues* const storyboard, const char* const 
 
 		if (!lastElement)
 		{
-			newStoryboard->m_FirstElement = newElement;
-			lastElement = newElement;
+			lastElement = newElement.get();
+			newStoryboard->m_FirstElement = std::move(newElement);
 		}
 		else
 		{
-			lastElement->m_Next = newElement;
-			lastElement = newElement;
+			lastElement = newElement.get();
+			lastElement->m_Next = std::move(newElement);
 		}
 	}
 
-	m_Storyboards.push_back(newStoryboard);
+	m_Storyboards.push_back(std::move(newStoryboard));
 	return true;
 }
 
-bool AutoCameras::LoadShot(std::shared_ptr<StoryboardElement>& shotOut, KeyValues* const shotKV, const char* const storyboardName, const char* const filename)
+bool AutoCameras::LoadShot(std::unique_ptr<StoryboardElement>& shotOut, KeyValues* const shotKV, const char* const storyboardName, const char* const filename)
 {
-	std::shared_ptr<Shot> newShot(new Shot);
+	std::unique_ptr<Shot> newShot(new Shot);
 
 	// camera
 	{
@@ -433,13 +467,13 @@ bool AutoCameras::LoadShot(std::shared_ptr<StoryboardElement>& shotOut, KeyValue
 			newShot->m_Target = Target::None;
 	}
 
-	shotOut = newShot;
+	shotOut = std::move(newShot);
 	return true;
 }
 
-bool AutoCameras::LoadAction(std::shared_ptr<StoryboardElement>& actionOut, KeyValues* const actionKV, const char* const storyboardName, const char* const filename)
+bool AutoCameras::LoadAction(std::unique_ptr<StoryboardElement>& actionOut, KeyValues* const actionKV, const char* const storyboardName, const char* const filename)
 {
-	std::shared_ptr<Action> newAction(new Action);
+	std::unique_ptr<Action> newAction(new Action);
 
 	// action
 	{
@@ -500,16 +534,13 @@ bool AutoCameras::LoadAction(std::shared_ptr<StoryboardElement>& actionOut, KeyV
 			newAction->m_Target = Target::None;
 	}
 
-	actionOut = newAction;
+	actionOut = std::move(newAction);
 	return true;
 }
 
-void AutoCameras::CheckTrigger(const std::shared_ptr<Trigger>& trigger, std::vector<C_BaseEntity*>& entities)
+void AutoCameras::CheckTrigger(const Trigger& trigger, std::vector<C_BaseEntity*>& entities)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	Assert(trigger);
-	if (!trigger)
-		return;
 
 	for (int i = 1; i <= Interfaces::GetEngineTool()->GetMaxClients(); i++)
 	{
@@ -524,7 +555,7 @@ void AutoCameras::CheckTrigger(const std::shared_ptr<Trigger>& trigger, std::vec
 		Vector mins, maxs;
 		renderable->GetRenderBoundsWorldspace(mins, maxs);
 
-		if (IsBoxIntersectingBox(trigger->m_Mins, trigger->m_Maxs, mins, maxs))
+		if (IsBoxIntersectingBox(trigger.m_Mins, trigger.m_Maxs, mins, maxs))
 		{
 			C_BaseEntity* const baseEntity = clientEnt->GetBaseEntity();
 			if (!baseEntity)
@@ -535,23 +566,21 @@ void AutoCameras::CheckTrigger(const std::shared_ptr<Trigger>& trigger, std::vec
 	}
 }
 
-void AutoCameras::ExecuteStoryboardElement(const std::shared_ptr<StoryboardElement>& element, C_BaseEntity* const triggerer)
+void AutoCameras::ExecuteStoryboardElement(const StoryboardElement& element, C_BaseEntity* const triggerer)
 {
 	// Shot
+	switch (element.GetType())
 	{
-		auto cast = std::dynamic_pointer_cast<Shot>(element);
-		if (cast)
+		case StoryboardElementType::Shot:
 		{
+			auto& cast = static_cast<const Shot&>(element);
 			ExecuteShot(cast, triggerer);
 			return;
 		}
-	}
 
-	// Action
-	{
-		auto cast = std::dynamic_pointer_cast<Action>(element);
-		if (cast)
+		case StoryboardElementType::Action:
 		{
+			auto& cast = static_cast<const Action&>(element);
 			ExecuteAction(cast, triggerer);
 			return;
 		}
@@ -561,13 +590,13 @@ void AutoCameras::ExecuteStoryboardElement(const std::shared_ptr<StoryboardEleme
 	return;
 }
 
-void AutoCameras::ExecuteShot(const std::shared_ptr<Shot>& shot, C_BaseEntity* const triggerer)
+void AutoCameras::ExecuteShot(const Shot& shot, C_BaseEntity* const triggerer)
 {
-	const auto& camera = shot->m_Camera;
+	const auto& camera = shot.m_Camera;
 
 	CameraTools::GetModule()->SpecPosition(camera->m_Pos, camera->m_DefaultAngle);
 
-	if (triggerer && shot->m_Target == Target::FirstPlayer)
+	if (triggerer && shot.m_Target == Target::FirstPlayer)
 	{
 		auto const hltvcamera = Interfaces::GetHLTVCamera();
 		//Interfaces::GetHLTVCamera()->
@@ -577,7 +606,7 @@ void AutoCameras::ExecuteShot(const std::shared_ptr<Shot>& shot, C_BaseEntity* c
 	}
 }
 
-void AutoCameras::ExecuteAction(const std::shared_ptr<Action>& action, C_BaseEntity* const triggerer)
+void AutoCameras::ExecuteAction(const Action& action, C_BaseEntity* const triggerer)
 {
 	//Assert(!"Not implemented");
 }
@@ -610,8 +639,8 @@ void AutoCameras::EndCameraTrigger()
 void AutoCameras::BeginStoryboard(const CCommand& args)
 {
 	const auto& storyboard = m_Storyboards.front();
-	m_ActiveStoryboard = storyboard;
-	m_ActiveStoryboardElement = m_ActiveStoryboard->m_FirstElement;
+	m_ActiveStoryboard = storyboard.get();
+	m_ActiveStoryboardElement = m_ActiveStoryboard->m_FirstElement.get();
 }
 
 void AutoCameras::MarkCamera(const CCommand& args)
@@ -622,19 +651,65 @@ void AutoCameras::MarkCamera(const CCommand& args)
 		return;
 	}
 
-	const Vector pos;
-	const QAngle ang;
-	if (!GetView(const_cast<Vector*>(&pos), const_cast<QAngle*>(&ang)))
+
+	Vector pos;
+	QAngle ang;
+	float fov;
+	if (!GetView(&pos, &ang, &fov))
 		return;
 
-	std::string angString;
-	if (fabs(ang.z) < 0.25)
-		angString = strprintf("\"%1.1f %1.1f\"", ang.x, ang.y);
-	else
-		angString = strprintf("\"%1.1f %1.1f %1.1f\"", ang.x, ang.y, ang.z);
+	std::stringstream camera;
 
-	ConColorMsg(Color(128, 255, 128, 255), "Camera { name \"%s\" pos \"%1.1f %1.1f %1.1f\" ang %s }\n",
-		args.Arg(1), pos.x, pos.y, pos.z, angString.c_str());
+	camera << "Camera {";
+
+	// name
+	{
+		camera << " name ";
+
+		const bool nameNeedsQuotes = std::strpbrk(args.Arg(1), "{}()'\": ");
+		if (nameNeedsQuotes)
+			camera << '"';
+
+		camera << args.Arg(1);
+
+		if (nameNeedsQuotes)
+			camera << '"';
+	}
+
+	// pos
+	{
+		camera << " pos \"";
+
+		camera << std::fixed << std::setprecision(1);
+		camera << pos.x << ' ' << pos.y << ' ' << pos.z;
+
+		camera << '"';
+	}
+
+	// ang
+	{
+		camera << " ang \"";
+
+		camera << std::fixed << std::setprecision(1);
+		camera << ang.x << ' ' << ang.y;
+
+		if (ang.z < -0.1 || ang.z > 0.1)
+			camera << ' ' << ang.z;
+
+		camera << '"';
+	}
+
+	// fov
+	{
+		camera << " fov ";
+
+		camera << std::fixed << std::setprecision(1);
+		camera << fov;
+	}
+
+	camera << " }";
+
+	ConColorMsg(Color(128, 255, 128, 255), "%s\n", camera.str().c_str());
 }
 
 constexpr vec_t BitsToFloat_cx(unsigned long i)
@@ -679,7 +754,7 @@ void AutoCameras::CycleCamera(const CCommand& args)
 	// Find an existing autocamera with the current origin, then go backwards/forwards (based on file order)
 	{
 		bool matchedPos = false;
-		std::shared_ptr<Camera> prevCamera;
+		const Camera* prevCamera;
 		for (const auto& camera : m_Cameras)
 		{
 			if (AlmostEqual(camera->m_Pos, camOrigin))
@@ -689,21 +764,21 @@ void AutoCameras::CycleCamera(const CCommand& args)
 				if (dir == PREV)
 				{
 					if (prevCamera)
-						return GotoCamera(prevCamera);
+						return GotoCamera(*prevCamera);
 					else
 						break;
 				}
 				else if (dir == NEXT)
 				{
-					prevCamera = camera;
+					prevCamera = camera.get();
 					continue;
 				}
 			}
 
 			if (dir == PREV)
-				prevCamera = camera;
+				prevCamera = camera.get();
 			else if (dir == NEXT && prevCamera)
-				return GotoCamera(camera);
+				return GotoCamera(*camera);
 		}
 
 		if (matchedPos)
@@ -711,9 +786,9 @@ void AutoCameras::CycleCamera(const CCommand& args)
 			// If we made it here, there's an edge case where we were asked to go backward from
 			// the start of the list, or forward from the end of the list.
 			if (dir == PREV && !prevCamera)
-				return GotoCamera(m_Cameras.back());
-			else if (dir == NEXT && prevCamera == m_Cameras.back())
-				return GotoCamera(m_Cameras.front());
+				return GotoCamera(*m_Cameras.back());
+			else if (dir == NEXT && prevCamera == m_Cameras.back().get())
+				return GotoCamera(*m_Cameras.front());
 			else
 				Error("[%s:%i] wat\n", __FUNCSIG__, __LINE__);
 		}
@@ -725,8 +800,8 @@ void AutoCameras::CycleCamera(const CCommand& args)
 		const Vector boxMins(camOrigin - Vector(0.5));
 		const Vector boxMaxs(camOrigin + Vector(0.5));
 
-		std::shared_ptr<Camera> idealCamera;
-		std::shared_ptr<Camera> idealCameraLOS;
+		const Camera* idealCamera = nullptr;
+		const Camera* idealCameraLOS = nullptr;
 		for (const auto& camera : m_Cameras)
 		{
 			const auto idealCameraDist = idealCamera ? idealCamera->m_Pos.DistTo(camOrigin) : FLOAT32_NAN;
@@ -750,22 +825,22 @@ void AutoCameras::CycleCamera(const CCommand& args)
 			if (tr.fraction >= 1)
 			{
 				if (!idealCameraLOS || (dir == NEXT) ? (idealCameraLOSDist > thisDist) : (idealCameraLOSDist < thisDist))
-					idealCameraLOS = idealCamera = camera;
+					idealCameraLOS = idealCamera = camera.get();
 			}
 			else if (!idealCamera || (dir == NEXT) ? (idealCameraDist > thisDist) : (idealCameraDist < thisDist))
-				idealCamera = camera;
+				idealCamera = camera.get();
 		}
 
 		if (idealCameraLOS)
-			return GotoCamera(idealCameraLOS);
+			return GotoCamera(*idealCameraLOS);
 		else if (idealCamera)
-			return GotoCamera(idealCamera);
+			return GotoCamera(*idealCamera);
 	}
 
 	// If we're here, nobody was looking at this point, regardless of LOS :(
 	// Find the nearest/furthest camera.
 	{
-		std::shared_ptr<Camera> idealCamera;
+		const Camera* idealCamera;
 		for (const auto& camera : m_Cameras)
 		{
 			const auto idealCameraDist = idealCamera ? idealCamera->m_Pos.DistTo(camOrigin) : FLOAT32_NAN;
@@ -774,11 +849,11 @@ void AutoCameras::CycleCamera(const CCommand& args)
 			if (idealCamera && (dir == NEXT) ? (idealCameraDist < thisDist) : (idealCameraDist > thisDist))
 				continue;	// Already have a better camera
 
-			idealCamera = camera;
+			idealCamera = camera.get();
 		}
 
 		if (idealCamera)
-			return GotoCamera(idealCamera);
+			return GotoCamera(*idealCamera);
 	}
 
 	Warning("%s: Unable to navigate to a camera for some reason.\n", ce_autocamera_cycle.GetName());
@@ -788,7 +863,151 @@ Usage:
 	Warning("%s: Usage: %s <prev/next>\n", ce_autocamera_cycle.GetName(), ce_autocamera_cycle.GetName());
 }
 
-void AutoCameras::GotoCamera(const std::shared_ptr<Camera>& camera)
+void AutoCameras::SpecPlayer(const CCommand& args)
+{
+	if (args.ArgC() < 2 || args.ArgC() > 3)
+	{
+		PluginWarning("Usage: %s <fixed/free/follow> [group]\n", args.Arg(0));
+		return;
+	}
+
+#if 0
+	if (auto currentMode = CameraState::GetObserverMode(); currentMode != OBS_MODE_CHASE && currentMode != OBS_MODE_IN_EYE)
+	{
+		PluginWarning("%s: Not currently spectating a player in firstperson or thirdperson\n", args.Arg(0));
+		return;
+	}
+#endif
+
+	Player* localObserverTarget = Player::GetLocalObserverTarget();
+	if (!localObserverTarget)
+	{
+		PluginWarning("%s: Not currently spectating a player\n", args.Arg(0));
+		return;
+	}
+
+	const auto observedOrigin = localObserverTarget->GetAbsOrigin();
+
+	ObserverMode mode;
+	bool bFollow = false;
+	if (!stricmp(args.Arg(1), "fixed"))
+		mode = OBS_MODE_FIXED;
+	else if (!stricmp(args.Arg(1), "free"))
+		mode = OBS_MODE_ROAMING;
+	else if (!stricmp(args.Arg(1), "follow"))
+	{
+		mode = OBS_MODE_FIXED;
+		bFollow = true;
+	}
+	else
+	{
+		PluginWarning("%s: Unknown camera mode \"%s\"\n", args.Arg(0), args.Arg(1));
+		return;
+	}
+
+	if (ce_autocamera_spec_player_debug.GetBool())
+		Msg("Scoring cameras:\n");
+
+	float bestCameraScore = -std::numeric_limits<float>::max();
+	const Camera* bestCamera = nullptr;
+	for (const auto& camera : m_Cameras)
+	{
+		const auto cameraScore = ScoreSpecPlayerCamera(*camera, observedOrigin);
+
+		if (ce_autocamera_spec_player_debug.GetBool() && cameraScore > 0)
+			Msg("\tcam %s scored %f\n", camera->m_Name.c_str(), cameraScore);
+
+		if (cameraScore > bestCameraScore)
+		{
+			bestCameraScore = cameraScore;
+			bestCamera = camera.get();
+		}
+	}
+
+	if (bestCameraScore <= 0)
+	{
+		if (ce_autocamera_spec_player_debug.GetBool())
+			PluginMsg("%s: No best camera found\n", args.Arg(0));
+
+		if (auto fallback = ce_autocamera_spec_player_fallback.GetString(); fallback[0])
+		{
+			if (!stricmp(fallback, "firstperson"))
+				mode = OBS_MODE_IN_EYE;
+			else if (!stricmp(fallback, "thirdperson"))
+				mode = OBS_MODE_CHASE;
+			else if (!stricmp(fallback, "fixed"))
+				mode = OBS_MODE_FIXED;
+			else if (!stricmp(fallback, "none"))
+				return;
+			else
+			{
+				PluginWarning("%s: unknown fallback mode \"%s\"\n", ce_autocamera_spec_player_fallback.GetName(), fallback);
+				return;
+			}
+
+			GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(mode);
+		}
+
+		return;
+	}
+
+	Assert(bestCamera);
+
+	const auto camState = CameraState::GetModule();
+	if (bestCamera != m_LastActiveCamera ||
+		!VectorsAreEqual(camState->GetLastFramePluginViewOrigin(), m_LastActiveCamera->m_Pos, 25) ||
+		(!bFollow && !QAnglesAreEqual(camState->GetLastFramePluginViewAngles(), m_LastActiveCamera->m_DefaultAngle)))
+	{
+		GotoCamera(*bestCamera, mode);
+
+		if (bFollow)
+		{
+			// Since we just switched positions, snap angles to target player
+			VectorAngles((observedOrigin - bestCamera->m_Pos).Normalized(), Interfaces::GetHLTVCamera()->m_aCamAngle);
+			Interfaces::GetHLTVCamera()->m_flLastAngleUpdateTime = -1;
+		}
+	}
+
+	if (bFollow)
+		GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(localObserverTarget->entindex());
+}
+
+float AutoCameras::ScoreSpecPlayerCamera(const Camera& camera, const Vector& position, const IHandleEntity* targetEnt) const
+{
+	float score = 1;
+
+	const Vector toPosition(position - camera.m_Pos);
+
+	if (const float fov = ce_autocamera_spec_player_fov.GetFloat(); score > 0 && fov > 0)
+	{
+		Vector camForward;
+		AngleVectors(camera.m_DefaultAngle, &camForward);
+
+		const float ang = Rad2Deg(std::acos(camForward.Dot(toPosition.Normalized())));
+
+		score *= RemapVal(ang, 0, fov, 1, 0);
+	}
+	if (const float dist = ce_autocamera_spec_player_dist.GetFloat(); score > 0 && dist > 0)
+	{
+		const auto positionDist = toPosition.Length();
+		constexpr auto minDistBegin = 256;
+		constexpr auto minDistEnd = 128;
+		score *= RemapValClamped(positionDist, minDistEnd, minDistBegin, 0, 1) * RemapVal(positionDist, 256, dist, 1, 0);
+	}
+	if (const float los = ce_autocamera_spec_player_los.GetFloat(); score > 0 && los > 0)
+	{
+		score *= CameraTools::CollisionTest3D(camera.m_Pos, position, los, targetEnt);
+	}
+
+	return score;
+}
+
+void AutoCameras::GotoCamera(const Camera& camera)
+{
+	GotoCamera(camera, (ObserverMode)ce_autocamera_goto_mode.GetInt());
+}
+
+void AutoCameras::GotoCamera(const Camera& camera, ObserverMode mode)
 {
 	CameraTools* const ctools = CameraTools::GetModule();
 	if (!ctools)
@@ -797,7 +1016,8 @@ void AutoCameras::GotoCamera(const std::shared_ptr<Camera>& camera)
 		return;
 	}
 
-	ctools->SpecPosition(camera->m_Pos, camera->m_DefaultAngle, (ObserverMode)ce_autocamera_goto_mode.GetInt());
+	ctools->SpecPosition(camera.m_Pos, camera.m_DefaultAngle, mode);
+	m_LastActiveCamera = &camera;
 }
 
 void AutoCameras::GotoCamera(const CCommand& args)
@@ -820,7 +1040,7 @@ void AutoCameras::GotoCamera(const CCommand& args)
 		return;
 	}
 
-	GotoCamera(cam);
+	GotoCamera(*cam);
 }
 
 int AutoCameras::GotoCameraCompletion(const char* const partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
@@ -866,15 +1086,10 @@ void AutoCameras::DrawTriggers()
 	}
 }
 
-constexpr float test(float input)
-{
-	return input * 5020;
-}
-
 void AutoCameras::DrawCameras()
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	for (auto camera : m_Cameras)
+	for (const auto& camera : m_Cameras)
 	{
 		Vector forward, up, right;
 		AngleVectors(camera->m_DefaultAngle, &forward, &right, &up);
@@ -933,49 +1148,43 @@ void AutoCameras::DrawCameras()
 	}
 }
 
-std::shared_ptr<AutoCameras::Trigger> AutoCameras::FindTrigger(const char* const triggerName)
+const AutoCameras::Trigger* AutoCameras::FindTrigger(const char* const triggerName) const
 {
-	for (auto trigger : m_Triggers)
+	for (const auto& trigger : m_Triggers)
 	{
 		if (!stricmp(trigger->m_Name.c_str(), triggerName))
-			return trigger;
+			return trigger.get();
 	}
 
 	return nullptr;
 }
 
-std::shared_ptr<AutoCameras::Camera> AutoCameras::FindCamera(const char* const cameraName)
+const AutoCameras::Camera* AutoCameras::FindCamera(const char* const cameraName) const
 {
-	for (auto camera : m_Cameras)
+	for (const auto& camera : m_Cameras)
 	{
 		if (!stricmp(camera->m_Name.c_str(), cameraName))
-			return camera;
+			return camera.get();
 	}
 
 	return nullptr;
 }
 
-std::vector<std::shared_ptr<const AutoCameras::Camera>> AutoCameras::GetAlphabeticalCameras() const
+std::vector<const AutoCameras::Camera*> AutoCameras::GetAlphabeticalCameras() const
 {
-	std::vector<std::shared_ptr<const Camera>> retVal;
-	for (auto cam : m_Cameras)
-		retVal.push_back(cam);
+	std::vector<const Camera*> retVal;
+	for (const auto& cam : m_Cameras)
+		retVal.push_back(cam.get());
 
-	for (size_t a = 0; a < retVal.size(); a++)
-	{
-		for (size_t b = a + 1; b < retVal.size(); b++)
-		{
-			if (stricmp(retVal[a]->m_Name.c_str(), retVal[b]->m_Name.c_str()) < 0)
-				std::swap(retVal.begin() + a, retVal.begin() + b);
-		}
-	}
+	std::sort(retVal.begin(), retVal.end(),
+		[](const Camera* a, const Camera* b) { return stricmp(a->m_Name.c_str(), b->m_Name.c_str()); });
 
 	return retVal;
 }
 
 void AutoCameras::SetupMirroredCameras()
 {
-	for (auto camera : m_Cameras)
+	for (const auto& camera : m_Cameras)
 	{
 		if (camera->m_MirroredCameraName.empty())
 			continue;
@@ -991,9 +1200,12 @@ void AutoCameras::SetupMirroredCameras()
 			continue;
 		}
 
+		// bad programmer alert
+		Camera* cameraEdit = const_cast<Camera*>(camera.get());
+
 		const Vector relativeBasePos = camToMirror->m_Pos - m_MapOrigin;
-		camera->m_Pos = Vector(-relativeBasePos.x, -relativeBasePos.y, relativeBasePos.z) + m_MapOrigin;
-		camera->m_DefaultAngle = QAngle(
+		cameraEdit->m_Pos = Vector(-relativeBasePos.x, -relativeBasePos.y, relativeBasePos.z) + m_MapOrigin;
+		cameraEdit->m_DefaultAngle = QAngle(
 			AngleNormalize(camToMirror->m_DefaultAngle.x),
 			AngleNormalize(camToMirror->m_DefaultAngle.y + 180),
 			AngleNormalize(camToMirror->m_DefaultAngle.z));

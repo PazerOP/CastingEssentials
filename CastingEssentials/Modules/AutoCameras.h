@@ -5,8 +5,10 @@
 #include <mathlib/vector.h>
 #include <vector>
 
-class KeyValues;
 class C_BaseEntity;
+class KeyValues;
+class IHandleEntity;
+enum ObserverMode;
 
 class AutoCameras final : public Module<AutoCameras>
 {
@@ -29,14 +31,14 @@ private:
 	bool LoadTrigger(KeyValues* trigger, const char* filename);
 	bool LoadCamera(KeyValues* camera, const char* filename);
 	bool LoadStoryboard(KeyValues* storyboard, const char* filename);
-	bool LoadShot(std::shared_ptr<StoryboardElement>& shot, KeyValues* shotKV, const char* storyboardName, const char* filename);
-	bool LoadAction(std::shared_ptr<StoryboardElement>& action, KeyValues* actionKV, const char* storyboardName, const char* filename);
+	bool LoadShot(std::unique_ptr<StoryboardElement>& shot, KeyValues* shotKV, const char* storyboardName, const char* filename);
+	bool LoadAction(std::unique_ptr<StoryboardElement>& action, KeyValues* actionKV, const char* storyboardName, const char* filename);
 
-	void CheckTrigger(const std::shared_ptr<Trigger>& trigger, std::vector<C_BaseEntity*>& entities);
+	void CheckTrigger(const Trigger& trigger, std::vector<C_BaseEntity*>& entities);
 
-	void ExecuteStoryboardElement(const std::shared_ptr<StoryboardElement>& element, C_BaseEntity* triggerer);
-	void ExecuteShot(const std::shared_ptr<Shot>& shot, C_BaseEntity* triggerer);
-	void ExecuteAction(const std::shared_ptr<Action>& action, C_BaseEntity* triggerer);
+	void ExecuteStoryboardElement(const StoryboardElement& element, C_BaseEntity* triggerer);
+	void ExecuteShot(const Shot& shot, C_BaseEntity* triggerer);
+	void ExecuteAction(const Action& action, C_BaseEntity* triggerer);
 
 	void BeginCameraTrigger();
 	ConCommand ce_cameratrigger_begin;
@@ -52,9 +54,19 @@ private:
 	ConCommand ce_autocamera_cycle;
 	void CycleCamera(const CCommand& args);
 
+	ConCommand ce_autocamera_spec_player;
+	ConVar ce_autocamera_spec_player_fallback;
+	ConVar ce_autocamera_spec_player_fov;
+	ConVar ce_autocamera_spec_player_dist;
+	ConVar ce_autocamera_spec_player_los;
+	ConVar ce_autocamera_spec_player_debug;
+	void SpecPlayer(const CCommand& args);
+	float ScoreSpecPlayerCamera(const Camera& camera, const Vector& position, const IHandleEntity* targetEnt = nullptr) const;
+
 	ConCommand ce_autocamera_goto;
 	ConVar ce_autocamera_goto_mode;
-	void GotoCamera(const std::shared_ptr<Camera>& camera);
+	void GotoCamera(const Camera& camera);
+	void GotoCamera(const Camera& camera, ObserverMode mode);
 	void GotoCamera(const CCommand& args);
 	static int GotoCameraCompletion(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
 
@@ -81,63 +93,70 @@ private:
 		Vector m_Mins;
 		Vector m_Maxs;
 	};
-	std::vector<std::shared_ptr<Trigger>> m_Triggers;
+	std::vector<std::unique_ptr<const Trigger>> m_Triggers;
 	std::vector<std::string> m_MalformedTriggers;
-	std::shared_ptr<Trigger> FindTrigger(const char* triggerName);
+	const Trigger* FindTrigger(const char* triggerName) const;
 
 	struct Camera
 	{
 		std::string m_Name;
 		Vector m_Pos;
 		QAngle m_DefaultAngle;
+		float m_FOV;
 
 		std::string m_MirroredCameraName;
 		Camera* m_CameraToMirror;
 	};
-	std::vector<std::shared_ptr<Camera>> m_Cameras;
+	std::vector<std::unique_ptr<const Camera>> m_Cameras;
 	std::vector<std::string> m_MalformedCameras;
-	std::shared_ptr<Camera> FindCamera(const char* cameraName);
-	std::vector<std::shared_ptr<const Camera>> GetAlphabeticalCameras() const;
+	const Camera* FindCamera(const char* cameraName) const;
+	std::vector<const Camera*> GetAlphabeticalCameras() const;
 
 	void SetupMirroredCameras();
 
+	enum class StoryboardElementType
+	{
+		Shot,
+		Action
+	};
+
 	struct StoryboardElement
 	{
-		virtual ~StoryboardElement() = default;
-		StoryboardElement()
-		{
-			m_Target = Target::Invalid;
-		}
-		std::shared_ptr<Trigger> m_Trigger;
-		Target m_Target;
+		virtual StoryboardElementType GetType() const = 0;
 
-		std::shared_ptr<StoryboardElement> m_Next;
+		const Trigger* m_Trigger = nullptr;
+		Target m_Target = Target::Invalid;
+
+		std::unique_ptr<const StoryboardElement> m_Next;
 	};
 
 	struct Shot : public StoryboardElement
 	{
-		virtual ~Shot() = default;
-		std::shared_ptr<Camera> m_Camera;
+		StoryboardElementType GetType() const override { return StoryboardElementType::Shot; }
+
+		const Camera* m_Camera = nullptr;
 	};
 
 	struct Action : public StoryboardElement
 	{
-		virtual ~Action() = default;
+		StoryboardElementType GetType() const override { return StoryboardElementType::Action; }
+
 		enum Effect
 		{
 			Invalid,
 			LerpToPlayer,
 		};
 
-		Effect m_Action;
+		Effect m_Action = Effect::Invalid;
 	};
 
 	struct Storyboard
 	{
 		std::string m_Name;
-		std::shared_ptr<StoryboardElement> m_FirstElement;
+
+		std::unique_ptr<const StoryboardElement> m_FirstElement;
 	};
-	std::vector<std::shared_ptr<Storyboard>> m_Storyboards;
+	std::vector<std::unique_ptr<const Storyboard>> m_Storyboards;
 	std::vector<std::string> m_MalformedStoryboards;
 
 	bool FindContainedString(const std::vector<std::string>& vec, const char* str);
@@ -146,6 +165,7 @@ private:
 
 	Vector m_MapOrigin;
 
-	std::shared_ptr<Storyboard> m_ActiveStoryboard;
-	std::shared_ptr<StoryboardElement> m_ActiveStoryboardElement;
+	const Camera* m_LastActiveCamera;
+	const Storyboard* m_ActiveStoryboard;
+	const StoryboardElement* m_ActiveStoryboardElement;
 };

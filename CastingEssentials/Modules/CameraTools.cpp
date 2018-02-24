@@ -207,6 +207,68 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverM
 	}
 }
 
+float CameraTools::CollisionTest3D(const Vector& startPos, const Vector& targetPos, float scale, const IHandleEntity* ignoreEnt)
+{
+	static constexpr Vector TEST_POINTS[27] =
+	{
+		Vector(0, 0, 0),
+		Vector(0, 0, 0.5),
+		Vector(0, 0, 1),
+
+		Vector(0, 0.5, 0),
+		Vector(0, 0.5, 0.5),
+		Vector(0, 0.5, 1),
+
+		Vector(0, 1, 0),
+		Vector(0, 1, 0.5),
+		Vector(0, 1, 1),
+
+		Vector(0.5, 0, 0),
+		Vector(0.5, 0, 0.5),
+		Vector(0.5, 0, 1),
+
+		Vector(0.5, 0.5, 0),
+		Vector(0.5, 0.5, 0.5),
+		Vector(0.5, 0.5, 1),
+
+		Vector(0.5, 1, 0),
+		Vector(0.5, 1, 0.5),
+		Vector(0.5, 1, 1),
+
+		Vector(1, 0, 0),
+		Vector(1, 0, 0.5),
+		Vector(1, 0, 1),
+
+		Vector(1, 0.5, 0),
+		Vector(1, 0.5, 0.5),
+		Vector(1, 0.5, 1),
+
+		Vector(1, 1, 0),
+		Vector(1, 1, 0.5),
+		Vector(1, 1, 1),
+	};
+
+	const Vector scaleVec(scale);
+	const Vector mins(targetPos - Vector(scale));
+	const Vector maxs(targetPos + Vector(scale));
+
+	const Vector delta = maxs - mins;
+
+	size_t pointsPassed = 0;
+	for (const auto& testPoint : TEST_POINTS)
+	{
+		const Vector worldTestPoint = mins + delta * testPoint;
+
+		trace_t tr;
+		UTIL_TraceLine(startPos, worldTestPoint, MASK_VISIBLE, ignoreEnt, COLLISION_GROUP_NONE, &tr);
+
+		if (tr.fraction >= 1)
+			pointsPassed++;
+	}
+
+	return pointsPassed / float(std::size(TEST_POINTS));
+}
+
 void CameraTools::ShowUsers(const CCommand& command)
 {
 	std::vector<Player*> red;
