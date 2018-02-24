@@ -20,6 +20,7 @@ CameraState::CameraState()
 	m_InToolModeHook = 0;
 	m_IsThirdPersonCameraHook = 0;
 	m_SetupEngineViewHook = 0;
+	m_LastSpecTarget = 0;
 }
 
 ObserverMode CameraState::GetObserverMode()
@@ -35,6 +36,19 @@ ObserverMode CameraState::GetObserverMode()
 
 	Assert(!"Unable to determine current observer mode");
 	return OBS_MODE_NONE;
+}
+
+C_BaseEntity* CameraState::GetLastSpecTarget() const
+{
+	if (m_LastSpecTarget < 0 || m_LastSpecTarget > MAX_EDICTS)
+		return nullptr;
+
+	auto list = Interfaces::GetClientEntityList();
+	if (!list)
+		return nullptr;
+
+	auto clientEnt = list->GetClientEntity(m_LastSpecTarget);
+	return clientEnt ? clientEnt->GetBaseEntity() : nullptr;
 }
 
 bool CameraState::InToolModeOverride()
@@ -112,6 +126,10 @@ void CameraState::OnTick(bool inGame)
 	{
 		if (!m_HooksAttached)
 			SetupHooks(m_HooksAttached = true);
+
+		// Update last spec target
+		if (auto primaryTarget = Interfaces::GetHLTVCamera()->m_iTraget1; primaryTarget > 0 && primaryTarget < MAX_EDICTS)
+			m_LastSpecTarget = primaryTarget;
 	}
 	else
 	{

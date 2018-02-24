@@ -47,7 +47,8 @@ AutoCameras::AutoCameras() :
 		"\tIf our position is not in any autocamera's view frustum, find the nearest/furthest autocamera to our current position."),
 
 	ce_autocamera_spec_player("ce_autocamera_spec_player", [](const CCommand& args) { GetModule()->SpecPlayer(args); }, "Switches to an autocamera with the best view of the current player."),
-	ce_autocamera_spec_player_fallback("ce_autocamera_spec_player_fallback", "firstperson", FCVAR_NONE, "Behavior to fall back to when using ce_autocamera_spec_player and no autocameras make it through the filters. Valid values: firstperson/thirdperson/fixed/none."),
+	ce_autocamera_spec_player_fallback("ce_autocamera_spec_player_fallback", "firstperson", FCVAR_NONE,
+"Behavior to fall back to when using ce_autocamera_spec_player and no autocameras make it through the filters. Valid values: firstperson/thirdperson/none."),
 	ce_autocamera_spec_player_fov("ce_autocamera_spec_player_fov", "75", FCVAR_NONE,
 		"FOV to use when checking if a player is in view of an autocamera. -1 to disable check."),
 	ce_autocamera_spec_player_dist("ce_autocamera_spec_player_dist", "2000", FCVAR_NONE, "Maximum distance a player can be from an autocamera."),
@@ -811,7 +812,6 @@ void AutoCameras::CycleCamera(const CCommand& args)
 			if (idealCameraLOS && (dir == NEXT) ? (idealCameraLOSDist < thisDist) : (idealCameraLOSDist > thisDist))
 				continue;	// Already have a better camera with LOS
 
-			constexpr float test = 100000;
 			Frustum_t frustum;
 			GeneratePerspectiveFrustum(camera->m_Pos, camera->m_DefaultAngle, 1, 100000, 90, (16.0 / 9.0), frustum);
 
@@ -879,14 +879,25 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 	}
 #endif
 
-	Player* localObserverTarget = Player::GetLocalObserverTarget();
-	if (!localObserverTarget)
+	const auto camState = CameraState::GetModule();
+	if (!camState)
 	{
-		PluginWarning("%s: Not currently spectating a player\n", args.Arg(0));
+		PluginWarning("%s: Camera State module not loaded\n", args.Arg(0));
 		return;
 	}
 
-	const auto observedOrigin = localObserverTarget->GetAbsOrigin();
+	C_BaseEntity* observeTarget;
+	{
+		if (auto playerTarget = Player::GetLocalObserverTarget())
+			observeTarget = playerTarget->GetBaseEntity();
+		else if (auto lastTarget = camState->GetLastSpecTarget())
+			observeTarget = lastTarget;
+		else
+		{
+			PluginWarning("%s: Not currently spectating a player\n", args.Arg(0));
+			return;
+		}
+	}
 
 	ObserverMode mode;
 	bool bFollow = false;
@@ -907,6 +918,8 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 
 	if (ce_autocamera_spec_player_debug.GetBool())
 		Msg("Scoring cameras:\n");
+
+	const auto observedOrigin = observeTarget->GetAbsOrigin();
 
 	float bestCameraScore = -std::numeric_limits<float>::max();
 	const Camera* bestCamera = nullptr;
@@ -935,8 +948,6 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 				mode = OBS_MODE_IN_EYE;
 			else if (!stricmp(fallback, "thirdperson"))
 				mode = OBS_MODE_CHASE;
-			else if (!stricmp(fallback, "fixed"))
-				mode = OBS_MODE_FIXED;
 			else if (!stricmp(fallback, "none"))
 				return;
 			else
@@ -953,7 +964,6 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 
 	Assert(bestCamera);
 
-	const auto camState = CameraState::GetModule();
 	if (bestCamera != m_LastActiveCamera ||
 		!VectorsAreEqual(camState->GetLastFramePluginViewOrigin(), m_LastActiveCamera->m_Pos, 25) ||
 		(!bFollow && !QAnglesAreEqual(camState->GetLastFramePluginViewAngles(), m_LastActiveCamera->m_DefaultAngle)))
@@ -969,7 +979,7 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 	}
 
 	if (bFollow)
-		GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(localObserverTarget->entindex());
+		GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(observeTarget->entindex());
 }
 
 float AutoCameras::ScoreSpecPlayerCamera(const Camera& camera, const Vector& position, const IHandleEntity* targetEnt) const

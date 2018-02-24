@@ -4,6 +4,7 @@
 
 #include <mathlib/vector.h>
 
+class C_BaseEntity;
 enum ObserverMode;
 class Player;
 
@@ -21,6 +22,8 @@ public:
 	void GetThisFramePluginView(Vector& origin, QAngle& angles, float* fov = nullptr) const;
 
 	static ObserverMode GetObserverMode();
+
+	C_BaseEntity* GetLastSpecTarget() const;
 
 private:
 	bool InToolModeOverride();
@@ -52,6 +55,8 @@ private:
 
 	bool m_LastFrameIsThirdPerson;
 	bool m_ThisFrameIsThirdPerson;
+
+	int m_LastSpecTarget;
 
 	void Invalidate(bool& b);
 
