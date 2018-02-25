@@ -16,6 +16,12 @@ class C_HLTVCamera;
 class C_BaseEntity;
 class Player;
 
+enum class ModeSwitchReason
+{
+	Unknown,
+	SpecPosition,
+};
+
 class CameraTools final : public Module<CameraTools>, public ICameraOverride
 {
 public:
@@ -24,16 +30,17 @@ public:
 
 	static bool CheckDependencies();
 
-	void SpecPosition(const Vector& pos, const QAngle& angle, ObserverMode mode = OBS_MODE_FIXED);
+	void SpecPosition(const Vector& pos, const QAngle& angle, ObserverMode mode = OBS_MODE_FIXED, float fov = -1);
 
 	static float CollisionTest3D(const Vector& startPos, const Vector& targetPos, float scale,
 	                             const IHandleEntity* ignoreEnt = nullptr);
 
-
+	ModeSwitchReason GetModeSwitchReason() const { return m_SwitchReason; }
 
 private:
 	int m_SetModeHook;
 	int m_SetPrimaryTargetHook;
+	int m_GetDefaultFOVHook;
 	KeyValues* m_SpecGUISettings;
 
 	void SetModeOverride(int iMode);
@@ -94,7 +101,12 @@ private:
 	bool InToolModeOverride() const override { return m_ViewOverride; }
 	bool IsThirdPersonCameraOverride() const override { return m_ViewOverride; }
 	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov) override;
+	int GetDefaultFOVOverride() const;
 	bool m_ViewOverride;
 	QAngle m_LastFrameAngle;
 	Player* m_LastTargetPlayer;
+
+	void AttachHooks(bool attach);
+
+	ModeSwitchReason m_SwitchReason;
 };

@@ -11,15 +11,20 @@
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
 #include "Misc/HLTVCameraHack.h"
+#include "Modules/CameraState.h"
+#include "Modules/CameraTools.h"
 
 FOVOverride::FOVOverride() :
-	ce_fovoverride_enabled("ce_fovoverride_enabled", "0", FCVAR_NONE, "Enables FOV override.",
-		[](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); }),
-	ce_fovoverride_fov("ce_fovoverride_fov", "90", FCVAR_NONE, "The FOV to override with."),
-	ce_fovoverride_zoomed("ce_fovoverride_zoomed", "0", FCVAR_NONE, "Enable FOV override even when sniper rifle is zoomed?")
+	ce_fovoverride_firstperson("ce_fovoverride_firstperson", "90"),
+	ce_fovoverride_thirdperson("ce_fovoverride_thirdperson", "90"),
+	ce_fovoverride_roaming("ce_fovoverride_roaming", "90"),
+	ce_fovoverride_fixed("ce_fovoverride_fixed", "90"),
+	ce_fovoverride_test("ce_fovoverride_test", "90", FCVAR_NONE, "FOV override to apply in all cases. Only enabled if ce_fovoverride_all_enabled is nonzero. Designed to help with the placement of autocameras."),
+	ce_fovoverride_test_enabled("ce_fovoverride_test_enabled", "0", FCVAR_NONE, "Enables ce_fovoverride_test.")
 {
-	inToolModeHook = 0;
-	setupEngineViewHook = 0;
+	m_InToolModeHook = 0;
+	m_SetupEngineViewHook = 0;
+	m_GetDefaultFOVHook = 0;
 }
 
 bool FOVOverride::CheckDependencies()
@@ -59,19 +64,124 @@ bool FOVOverride::CheckDependencies()
 	return ready;
 }
 
+float FOVOverride::GetBaseFOV(ObserverMode mode) const
+{
+	float fov = 0;
+	switch (mode)
+	{
+		case OBS_MODE_IN_EYE:  fov = ce_fovoverride_firstperson.GetFloat(); break;
+		case OBS_MODE_CHASE:   fov = ce_fovoverride_thirdperson.GetFloat(); break;
+		case OBS_MODE_FIXED:   fov = ce_fovoverride_fixed.GetFloat(); break;
+		case OBS_MODE_ROAMING: fov = ce_fovoverride_roaming.GetFloat(); break;
+	}
+
+	if (fov == 0)
+	{
+		static ConVarRef fov_desired("fov_desired");
+		fov = fov_desired.GetFloat();
+	}
+
+	return fov;
+}
+
+void FOVOverride::OnTick(bool inGame)
+{
+	if (inGame)
+	{
+		if (!m_InToolModeHook)
+			m_InToolModeHook = GetHooks()->AddHook<IClientEngineTools_InToolMode>(std::bind(&FOVOverride::InToolModeOverride, this));
+
+		if (!m_SetupEngineViewHook)
+			m_SetupEngineViewHook = GetHooks()->AddHook<IClientEngineTools_SetupEngineView>(std::bind(&FOVOverride::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	}
+	else
+	{
+		if (m_InToolModeHook && GetHooks()->RemoveHook<IClientEngineTools_InToolMode>(m_InToolModeHook, __FUNCSIG__))
+			m_InToolModeHook = 0;
+
+		Assert(!m_InToolModeHook);
+
+		if (m_SetupEngineViewHook && GetHooks()->RemoveHook<IClientEngineTools_SetupEngineView>(m_SetupEngineViewHook, __FUNCSIG__))
+			m_SetupEngineViewHook = 0;
+
+		Assert(!m_SetupEngineViewHook);
+	}
+}
+
 bool FOVOverride::InToolModeOverride()
 {
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	GetHooks()->SetState<IClientEngineTools_InToolMode>(Hooking::HookAction::SUPERCEDE);
 	return true;
 }
 
-bool FOVOverride::SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov)
+bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (!Interfaces::GetEngineClient()->IsInGame())
-		return false;
 
+	if (ce_fovoverride_test_enabled.GetBool())
+	{
+		fov = ce_fovoverride_test.GetFloat();
+	}
+	else
+	{
+		auto camTools = CameraTools::GetModule();
+
+		switch (CameraState::GetObserverMode())
+		{
+			case OBS_MODE_IN_EYE:
+			{
+				auto newFov = ce_fovoverride_firstperson.GetFloat();
+				if (newFov == 0)
+					return false;
+
+				auto target = Player::GetLocalObserverTarget();
+				if (!target || target->CheckCondition(TFCond_Zoomed))
+					return false;
+
+				fov = newFov;
+				break;
+			}
+			case OBS_MODE_CHASE:
+			{
+				auto newFov = ce_fovoverride_thirdperson.GetFloat();
+				if (newFov == 0)
+					return false;
+
+				fov = newFov;
+				break;
+			}
+			case OBS_MODE_ROAMING:
+			{
+				if (camTools->GetModeSwitchReason() == ModeSwitchReason::SpecPosition)
+					return false;
+
+				auto newFov = ce_fovoverride_roaming.GetFloat();
+				if (newFov == 0)
+					return false;
+
+				fov = newFov;
+				break;
+			}
+
+			case OBS_MODE_FIXED:
+			{
+				if (camTools->GetModeSwitchReason() == ModeSwitchReason::SpecPosition)
+					return false;
+
+				auto newFov = ce_fovoverride_fixed.GetFloat();
+				if (newFov == 0)
+					return false;
+
+				fov = newFov;
+				break;
+			}
+
+			default:
+				return false;
+		}
+	}
+
+#if 0
 	if (Interfaces::GetEngineClient()->IsHLTV())
 	{
 		const auto target = Interfaces::GetHLTVCamera()->m_iTraget1;
@@ -79,7 +189,22 @@ bool FOVOverride::SetupEngineViewOverride(Vector &origin, QAngle &angles, float 
 			return false;
 
 		Player* const targetPlayer = Player::GetPlayer(target, __FUNCSIG__);
-		if (Interfaces::GetHLTVCamera()->m_nCameraMode == OBS_MODE_IN_EYE && targetPlayer && targetPlayer->CheckCondition(TFCond_Zoomed))
+		if (targetPlayer)
+		{
+			if (auto basePlayer = targetPlayer->GetBasePlayer())
+			{
+				//basePlayer->m_iDefaultFOV = std::lroundf(ce_fovoverride_fov.GetFloat());
+				engine->Con_NPrintf(0, "GetFOV(): %f", GetHooks()->GetRawFunc_C_BasePlayer_GetFOV()(basePlayer));
+				engine->Con_NPrintf(1, "m_iFOV: %i", basePlayer->m_iFOV);
+				engine->Con_NPrintf(2, "m_iFOVStart: %i", basePlayer->m_iFOVStart);
+				engine->Con_NPrintf(3, "m_flFOVTime: %f", basePlayer->m_flFOVTime);
+				engine->Con_NPrintf(4, "m_iDefaultFOV: %i", basePlayer->m_iDefaultFOV);
+				engine->Con_NPrintf(5, "hltv fov: %f", Interfaces::GetHLTVCamera()->m_flFOV);
+				return false;
+			}
+		}
+
+		if (Interfaces::GetHLTVCamera()->GetMode() == OBS_MODE_IN_EYE && targetPlayer && targetPlayer->CheckCondition(TFCond_Zoomed))
 			return false;
 	}
 	else
@@ -98,32 +223,9 @@ bool FOVOverride::SetupEngineViewOverride(Vector &origin, QAngle &angles, float 
 			}
 		}
 	}
+#endif
 
-	fov = ce_fovoverride_fov.GetFloat();
+	//fov = ce_fovoverride_fov.GetFloat();
 	GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
 	return true;
-}
-
-void FOVOverride::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)
-{
-	if (ce_fovoverride_enabled.GetBool())
-	{
-		if (!inToolModeHook)
-			inToolModeHook = GetHooks()->AddHook<IClientEngineTools_InToolMode>(std::bind(&FOVOverride::InToolModeOverride, this));
-
-		if (!setupEngineViewHook)
-			setupEngineViewHook = GetHooks()->AddHook<IClientEngineTools_SetupEngineView>(std::bind(&FOVOverride::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	}
-	else
-	{
-		if (inToolModeHook && GetHooks()->RemoveHook<IClientEngineTools_InToolMode>(inToolModeHook, __FUNCSIG__))
-			inToolModeHook = 0;
-
-		Assert(!inToolModeHook);
-
-		if (setupEngineViewHook && GetHooks()->RemoveHook<IClientEngineTools_SetupEngineView>(setupEngineViewHook, __FUNCSIG__))
-			setupEngineViewHook = 0;
-
-		Assert(!setupEngineViewHook);
-	}
 }

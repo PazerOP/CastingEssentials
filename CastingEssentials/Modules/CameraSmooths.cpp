@@ -280,11 +280,11 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 	const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
 	const float hosttime = Interfaces::GetEngineTool()->HostTime();
 
-	if (hltvcamera->m_nCameraMode == OBS_MODE_IN_EYE || hltvcamera->m_nCameraMode == OBS_MODE_CHASE)
+	if (hltvcamera->GetMode() == OBS_MODE_IN_EYE || hltvcamera->GetMode() == OBS_MODE_CHASE)
 	{
-		if (hltvcamera->m_iTraget1 != m_EndTarget || (hltvcamera->m_nCameraMode != m_EndMode && !m_InProgress))
+		if (hltvcamera->m_iTraget1 != m_EndTarget || (hltvcamera->GetMode() != m_EndMode && !m_InProgress))
 		{
-			m_EndMode = hltvcamera->m_nCameraMode;
+			m_EndMode = hltvcamera->GetMode();
 			m_EndTarget = hltvcamera->m_iTraget1;
 
 			Vector currentForward;
@@ -416,7 +416,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 		}
 	}
 
-	m_EndMode = hltvcamera->m_nCameraMode;
+	m_EndMode = hltvcamera->GetMode();
 	m_EndTarget = hltvcamera->m_iTraget1;
 	m_InProgress = false;
 	m_LastHostTime = hosttime;

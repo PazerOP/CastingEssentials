@@ -160,6 +160,11 @@ C_BaseAnimating * Player::GetBaseAnimating() const
 	return entity ? entity->GetBaseAnimating() : nullptr;
 }
 
+C_BasePlayer* Player::GetBasePlayer() const
+{
+	return dynamic_cast<C_BasePlayer*>(GetEntity());
+}
+
 bool Player::CheckCondition(TFCond condition) const
 {
 	if (IsValid())

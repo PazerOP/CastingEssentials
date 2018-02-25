@@ -26,7 +26,12 @@ namespace Hooking
 	{
 		// Detours a global function.
 		Global,
+
+		// Detours a member function of a class. Applies to all instances, but passes the class
+		// pointer through to the detour function.
 		GlobalClass,
+
+		// Detours a member function of a class. Applies to all instances.
 		Class,
 
 		// Detours a specific instance of a class (replaces a function pointer in a duplicated vtable).

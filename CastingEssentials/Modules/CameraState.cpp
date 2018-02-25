@@ -25,13 +25,13 @@ CameraState::CameraState()
 
 ObserverMode CameraState::GetObserverMode()
 {
-	if (auto engineClient = Interfaces::GetEngineClient(); engineClient->IsHLTV())
+	if (auto engineClient = Interfaces::GetEngineClient(); engineClient && engineClient->IsHLTV())
 	{
-		if (auto hltvCamera = Interfaces::GetHLTVCamera(); hltvCamera)
-			return (ObserverMode)hltvCamera->m_nCameraMode;
+		if (auto hltvCamera = Interfaces::GetHLTVCamera())
+			return hltvCamera->GetMode();
 	}
 
-	if (const auto localPlayer = Player::GetLocalPlayer(); localPlayer)
+	if (const auto localPlayer = Player::GetLocalPlayer())
 		return localPlayer->GetObserverMode();
 
 	Assert(!"Unable to determine current observer mode");

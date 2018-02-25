@@ -1,10 +1,13 @@
 #pragma once
 #include <client/hltvcamera.h>
 
+enum ObserverMode;
+
 class HLTVCameraOverride : public C_HLTVCamera
 {
 public:
-	using C_HLTVCamera::m_nCameraMode;
+	ObserverMode GetMode() const { return (ObserverMode)m_nCameraMode; }
+	//using C_HLTVCamera::m_nCameraMode;
 	using C_HLTVCamera::m_iCameraMan;
 	using C_HLTVCamera::m_vCamOrigin;
 	using C_HLTVCamera::m_aCamAngle;

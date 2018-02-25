@@ -1,4 +1,5 @@
 #include <client/c_baseanimating.h>
+#include <client/c_baseplayer.h>
 #include <vgui_controls/ImagePanel.h>
 #include <vgui_controls/ProgressBar.h>
 
@@ -13,6 +14,10 @@ class OffsetChecking
 	OFFSET_CHECK(C_BaseAnimating, m_nHitboxSet, 1376);
 	OFFSET_CHECK(C_BaseAnimating, m_bDynamicModelPending, 2185);
 	OFFSET_CHECK(C_BaseAnimating, m_pStudioHdr, 2192);
+
+	OFFSET_CHECK(C_BasePlayer, m_iFOVStart, 4152);
+	OFFSET_CHECK(C_BasePlayer, m_iDefaultFOV, 4160);
+	OFFSET_CHECK(C_BasePlayer, m_hVehicle, 4300);
 
 	OFFSET_CHECK(vgui::ContinuousProgressBar, _unknown0, 388);
 	OFFSET_CHECK(vgui::ContinuousProgressBar, _unknown1, 392);

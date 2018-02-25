@@ -2,6 +2,7 @@
 #include "Misc/HLTVCameraHack.h"
 #include "Modules/CameraSmooths.h"
 #include "Modules/CameraState.h"
+#include "Modules/FOVOverride.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
@@ -67,6 +68,7 @@ CameraTools::CameraTools() :
 {
 	m_SetModeHook = 0;
 	m_SetPrimaryTargetHook = 0;
+	m_SwitchReason = ModeSwitchReason::Unknown;
 	m_SpecGUISettings = new KeyValues("Resource/UI/SpectatorTournament.res");
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
 
@@ -164,7 +166,7 @@ bool CameraTools::CheckDependencies()
 	return ready;
 }
 
-void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverMode mode)
+void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverMode mode, float fov)
 {
 	if (Interfaces::GetEngineClient()->IsHLTV())
 	{
@@ -172,7 +174,9 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverM
 		{
 			HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 
-			hltvcamera->m_nCameraMode = mode;
+			GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(mode);
+			m_SwitchReason = ModeSwitchReason::SpecPosition;
+
 			hltvcamera->m_iCameraMan = 0;
 			hltvcamera->m_vCamOrigin = pos;
 			hltvcamera->m_aCamAngle = angle;
@@ -180,15 +184,15 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverM
 			hltvcamera->m_iTraget2 = 0;
 			hltvcamera->m_flLastAngleUpdateTime = -1;
 
+			if (fov > 0)
+				hltvcamera->m_flFOV = fov;
+
 			// We may have to set angles directly
 			if (mode == OBS_MODE_ROAMING)
 			{
 				QAngle wtf(angle);	// Why does this take a non-const reference
 				Interfaces::GetEngineClient()->SetViewAngles(wtf);
 			}
-
-			static ConVarRef fov_desired("fov_desired");
-			hltvcamera->m_flFOV = fov_desired.GetFloat();
 
 			GetHooks()->GetFunc<C_HLTVCamera_SetCameraAngle>()(hltvcamera->m_aCamAngle);
 		}
@@ -455,7 +459,7 @@ void CameraTools::SpecPlayer(int playerIndex)
 
 				HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 				if (hltvcamera)
-					hltvcamera->m_nCameraMode = ce_tplock_enable.GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE;
+					GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(ce_tplock_enable.GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE);
 			}
 			catch (bad_pointer &e)
 			{
@@ -474,6 +478,9 @@ void CameraTools::SpecPlayer(int playerIndex)
 void CameraTools::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+
+	AttachHooks(inGame);
+
 	if (inGame)
 	{
 		if (ce_cameratools_show_mode.GetBool())
@@ -483,7 +490,7 @@ void CameraTools::OnTick(bool inGame)
 			std::string playerName;
 			if (Interfaces::GetEngineClient()->IsHLTV())
 			{
-				mode = Interfaces::GetHLTVCamera()->m_nCameraMode;
+				mode = Interfaces::GetHLTVCamera()->GetMode();
 				target = Interfaces::GetHLTVCamera()->m_iTraget1;
 				if (Player::IsValidIndex(target) && Player::GetPlayer(target, __FUNCSIG__))
 					playerName = Player::GetPlayer(target, __FUNCSIG__)->GetName();
@@ -505,6 +512,22 @@ void CameraTools::OnTick(bool inGame)
 					target, target == 0 ? " (Unspecified)" : (strprintf(" (%s)", playerName.c_str())).c_str());
 			}
 		}
+	}
+}
+
+void CameraTools::AttachHooks(bool attach)
+{
+	if (attach)
+	{
+		if (!m_SetModeHook)
+			m_SetModeHook = GetHooks()->AddHook<C_HLTVCamera_SetMode>(std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1));
+	}
+	else
+	{
+		if (m_SetModeHook && GetHooks()->RemoveHook<C_HLTVCamera_SetMode>(m_SetModeHook, __FUNCSIG__))
+			m_SetModeHook = 0;
+
+		Assert(!m_SetModeHook);
 	}
 }
 
@@ -592,7 +615,7 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 	m_LastFrameAngle = idealAngles;
 	m_LastTargetPlayer = targetPlayer;
 
-	if (hltvcamera->m_nCameraMode != OBS_MODE_CHASE)
+	if (hltvcamera->GetMode() != OBS_MODE_CHASE)
 		return false;
 
 	if (!ce_tplock_enable.GetBool())
@@ -723,10 +746,6 @@ void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flO
 
 	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
 	{
-		if (!m_SetModeHook)
-			m_SetModeHook = GetHooks()->AddHook<C_HLTVCamera_SetMode>(
-				std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1));
-
 		try
 		{
 			GetHooks()->GetHook<C_HLTVCamera_SetMode>()->GetOriginal()(forceMode);
@@ -738,13 +757,8 @@ void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flO
 	}
 	else
 	{
+		PluginWarning("%s: Unsupported spec_mode \"%s\"", var->GetName(), ce_cameratools_autodirector_mode.GetString());
 		var->SetValue(OBS_MODE_NONE);
-
-		if (m_SetModeHook)
-		{
-			GetHooks()->RemoveHook<C_HLTVCamera_SetMode>(m_SetModeHook, __FUNCSIG__);
-			m_SetModeHook = 0;
-		}
 	}
 }
 
@@ -762,6 +776,8 @@ void CameraTools::SetModeOverride(int iMode)
 		GetHooks()->GetOriginal<C_HLTVCamera_SetMode>()(iMode);
 		GetHooks()->GetHook<C_HLTVCamera_SetMode>()->SetState(Hooking::HookAction::SUPERCEDE);
 	}
+
+	m_SwitchReason = ModeSwitchReason::Unknown;
 }
 
 void CameraTools::SetPrimaryTargetOverride(int nEntity)
@@ -875,7 +891,7 @@ void CameraTools::SpecPosition(const CCommand &command)
 	QAngle pluginAng;
 	CameraState::GetModule()->GetLastFramePluginView(pluginPos, pluginAng);
 
-	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->m_nCameraMode;
+	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->GetMode();
 
 	// Legacy support, we used to always force OBS_MODE_FIXED
 	if (ParseSpecPosCommand(command, pos, ang, mode, pluginPos, pluginAng, defaultMode))
@@ -888,7 +904,7 @@ void CameraTools::SpecPositionDelta(const CCommand& command)
 	QAngle ang;
 	ObserverMode mode;
 
-	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->m_nCameraMode;
+	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->GetMode();
 
 	if (ParseSpecPosCommand(command, pos, ang, mode, vec3_origin, vec3_angle, defaultMode))
 	{

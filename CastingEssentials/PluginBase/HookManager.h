@@ -8,6 +8,7 @@
 
 #include <memory>
 
+class C_BasePlayer;
 class C_HLTVCamera;
 enum ERenderDepthMode : int;
 enum OverrideType_t : int;
@@ -80,6 +81,8 @@ class HookManager final
 		C_BaseAnimating_GetBonePosition,
 		C_BaseAnimating_DrawModel,
 		C_BaseAnimating_InternalDrawModel,
+		C_BasePlayer_GetDefaultFOV,
+		C_BasePlayer_GetFOV,
 		C_TFPlayer_DrawModel,
 		vgui_ProgressBar_ApplySettings,
 
@@ -225,6 +228,8 @@ class HookManager final
 	typedef void(__thiscall *Raw_ImagePanel_SetImage)(vgui::ImagePanel* pThis, const char* imageName);
 	typedef void(__thiscall *Raw_ProgressBar_ApplySettings)(vgui::ProgressBar* pThis, KeyValues* pSettings);
 	typedef bool(__thiscall *Raw_C_BaseAnimating_ComputeHitboxSurroundingBox)(C_BaseAnimating* pThis, Vector* pVecWorldMins, Vector* pVecWorldMaxs);
+	typedef int(__thiscall *Raw_C_BasePlayer_GetDefaultFOV)(C_BasePlayer* pThis);
+	typedef float(__thiscall *Raw_C_BasePlayer_GetFOV)(C_BasePlayer* pThis);
 
 	typedef bool(__cdecl *Raw_RenderBox)(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Color c, bool zBuffer, bool insideOut);
 	typedef bool(__cdecl *Raw_RenderBox_1)(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Color c, IMaterial* material, bool insideOut);
@@ -253,6 +258,7 @@ class HookManager final
 	static RawApplyEntityGlowEffectsFn GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects();
 	static RawGetIconFn GetRawFunc_CHudBaseDeathNotice_GetIcon();
 	static Raw_ProgressBar_ApplySettings GetRawFunc_ProgressBar_ApplySettings();
+	static Raw_C_BasePlayer_GetDefaultFOV GetRawFunc_C_BasePlayer_GetDefaultFOV();
 
 public:
 	HookManager();
@@ -267,6 +273,7 @@ public:
 	static Raw_RenderWireframeBox GetRawFunc_RenderWireframeBox();
 	static Raw_RenderLine GetRawFunc_RenderLine();
 	static Raw_RenderTriangle GetRawFunc_RenderTriangle();
+	static Raw_C_BasePlayer_GetFOV GetRawFunc_C_BasePlayer_GetFOV();
 
 	static bool Load();
 	static bool Unload();
@@ -301,6 +308,8 @@ public:
 	typedef GlobalClassHook<Func::C_BaseAnimating_GetBonePosition, false, C_BaseAnimating, void, int, Vector&, QAngle&> C_BaseAnimating_GetBonePosition;
 	typedef GlobalClassHook<Func::C_BaseAnimating_DrawModel, false, C_BaseAnimating, int, int> C_BaseAnimating_DrawModel;
 	typedef GlobalClassHook<Func::C_BaseAnimating_InternalDrawModel, false, C_BaseAnimating, int, int> C_BaseAnimating_InternalDrawModel;
+
+	typedef GlobalClassHook<Func::C_BasePlayer_GetDefaultFOV, false, C_BasePlayer, int> C_BasePlayer_GetDefaultFOV;
 
 	typedef GlobalClassHook<Func::C_TFPlayer_DrawModel, false, C_TFPlayer, int, int> C_TFPlayer_DrawModel;
 
@@ -337,6 +346,7 @@ public:
 	template<> C_HLTVCamera_SetPrimaryTarget* GetHook<C_HLTVCamera_SetPrimaryTarget>() { return &m_Hook_C_HLTVCamera_SetPrimaryTarget; }
 	template<> C_BaseAnimating_DrawModel* GetHook<C_BaseAnimating_DrawModel>() { return &m_Hook_C_BaseAnimating_DrawModel; }
 	template<> C_BaseAnimating_InternalDrawModel* GetHook<C_BaseAnimating_InternalDrawModel>() { return &m_Hook_C_BaseAnimating_InternalDrawModel; }
+	template<> C_BasePlayer_GetDefaultFOV* GetHook<C_BasePlayer_GetDefaultFOV>() { return &m_Hook_C_BasePlayer_GetDefaultFOV; }
 	template<> C_TFPlayer_DrawModel* GetHook<C_TFPlayer_DrawModel>() { return &m_Hook_C_TFPlayer_DrawModel; }
 	template<> C_BaseEntity_Init* GetHook<C_BaseEntity_Init>() { return &m_Hook_C_BaseEntity_Init; }
 	template<> Global_CreateEntityByName* GetHook<Global_CreateEntityByName>() { return &m_Hook_Global_CreateEntityByName; }
@@ -405,6 +415,7 @@ private:
 
 	C_BaseAnimating_DrawModel m_Hook_C_BaseAnimating_DrawModel;
 	C_BaseAnimating_InternalDrawModel m_Hook_C_BaseAnimating_InternalDrawModel;
+	C_BasePlayer_GetDefaultFOV m_Hook_C_BasePlayer_GetDefaultFOV;
 	C_TFPlayer_DrawModel m_Hook_C_TFPlayer_DrawModel;
 	vgui_ProgressBar_ApplySettings m_Hook_vgui_ProgressBar_ApplySettings;
 
@@ -456,6 +467,7 @@ using C_BaseAnimating_LookupBone = HookManager::C_BaseAnimating_LookupBone;
 using C_BaseAnimating_GetBonePosition = HookManager::C_BaseAnimating_GetBonePosition;
 using C_BaseAnimating_DrawModel = HookManager::C_BaseAnimating_DrawModel;
 using C_BaseAnimating_InternalDrawModel = HookManager::C_BaseAnimating_InternalDrawModel;
+using C_BasePlayer_GetDefaultFOV = HookManager::C_BasePlayer_GetDefaultFOV;
 using C_TFPlayer_DrawModel = HookManager::C_TFPlayer_DrawModel;
 using vgui_ProgressBar_ApplySettings = HookManager::vgui_ProgressBar_ApplySettings;
 

@@ -452,6 +452,22 @@ HookManager::Raw_ProgressBar_ApplySettings HookManager::GetRawFunc_ProgressBar_A
 	return fn;
 }
 
+HookManager::Raw_C_BasePlayer_GetDefaultFOV HookManager::GetRawFunc_C_BasePlayer_GetDefaultFOV()
+{
+	static Raw_C_BasePlayer_GetDefaultFOV fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x57\x8B\xF9\x8B\x07\xFF\x90????\x83\xF8\x04";
+		constexpr const char* MASK = "xxxxxxx????xxx";
+
+		fn = (Raw_C_BasePlayer_GetDefaultFOV)SignatureScan("client", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("C_BasePlayer_GetDefaultFOV");
+	}
+
+	return fn;
+}
+
 HookManager::RawShouldDrawLocalPlayerFn HookManager::GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer()
 {
 	static RawShouldDrawLocalPlayerFn s_RawShouldDrawLocalPlayerFn = nullptr;
@@ -596,6 +612,22 @@ HookManager::Raw_RenderTriangle HookManager::GetRawFunc_RenderTriangle()
 	return fn;
 }
 
+HookManager::Raw_C_BasePlayer_GetFOV HookManager::GetRawFunc_C_BasePlayer_GetFOV()
+{
+	static Raw_C_BasePlayer_GetFOV fn = nullptr;
+	if (!fn)
+	{
+		constexpr const char* SIG = "\x55\x8B\xEC\x83\xEC\x10\x56\x8B\xF1\x8B\x0D????\x8B\x01";
+		constexpr const char* MASK = "xxxxxxxxxxx????xx";
+
+		fn = (Raw_C_BasePlayer_GetFOV)SignatureScan("client", SIG, MASK);
+		if (!fn)
+			throw bad_pointer("C_BasePlayer_GetFOV");
+	}
+
+	return fn;
+}
+
 void HookManager::IngameStateChanged(bool inGame)
 {
 	if (inGame)
@@ -634,6 +666,7 @@ HookManager::HookManager()
 
 	m_Hook_C_BaseAnimating_DrawModel.AttachHook(std::make_shared<C_BaseAnimating_DrawModel::Inner>(GetRawFunc_C_BaseAnimating_DrawModel()));
 	m_Hook_C_BaseAnimating_InternalDrawModel.AttachHook(std::make_shared<C_BaseAnimating_InternalDrawModel::Inner>(GetRawFunc_C_BaseAnimating_InternalDrawModel()));
+	m_Hook_C_BasePlayer_GetDefaultFOV.AttachHook(std::make_shared<C_BasePlayer_GetDefaultFOV::Inner>(GetRawFunc_C_BasePlayer_GetDefaultFOV()));
 	m_Hook_C_TFPlayer_DrawModel.AttachHook(std::make_shared<C_TFPlayer_DrawModel::Inner>(GetRawFunc_C_TFPlayer_DrawModel()));
 	m_Hook_vgui_ProgressBar_ApplySettings.AttachHook(std::make_shared<vgui_ProgressBar_ApplySettings::Inner>(GetRawFunc_ProgressBar_ApplySettings()));
 

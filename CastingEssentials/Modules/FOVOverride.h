@@ -4,6 +4,7 @@
 
 #include <convar.h>
 
+enum ObserverMode;
 class QAngle;
 class Vector;
 
@@ -14,14 +15,23 @@ public:
 
 	static bool CheckDependencies();
 
+	float GetBaseFOV(ObserverMode mode) const;
+
+protected:
+	void OnTick(bool inGame) override;
+
 private:
-	int inToolModeHook;
-	int setupEngineViewHook;
+	ConVar ce_fovoverride_firstperson;
+	ConVar ce_fovoverride_thirdperson;
+	ConVar ce_fovoverride_roaming;
+	ConVar ce_fovoverride_fixed;
+
+	ConVar ce_fovoverride_test;
+	ConVar ce_fovoverride_test_enabled;
+
+	int m_InToolModeHook;
+	int m_SetupEngineViewHook;
+	int m_GetDefaultFOVHook;
 	bool InToolModeOverride();
 	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov);
-
-	ConVar ce_fovoverride_enabled;
-	ConVar ce_fovoverride_fov;
-	ConVar ce_fovoverride_zoomed;
-	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
 };

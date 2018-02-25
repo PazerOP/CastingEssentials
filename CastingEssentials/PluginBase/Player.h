@@ -16,6 +16,7 @@ class IClientEntity;
 class C_BaseEntity;
 class C_BaseCombatWeapon;
 class C_BaseAnimating;
+class C_BasePlayer;
 
 class Player final
 {
@@ -37,6 +38,7 @@ public:
 	IClientEntity* GetEntity() const { return m_PlayerEntity.Get(); }
 	C_BaseEntity* GetBaseEntity() const;
 	C_BaseAnimating* GetBaseAnimating() const;
+	C_BasePlayer* GetBasePlayer() const;
 
 	bool CheckCondition(TFCond condition) const;
 	TFClassType GetClass() const;
