@@ -2,6 +2,7 @@
 #include "Misc/DebugOverlay.h"
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
+#include "Modules/FOVOverride.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
@@ -30,6 +31,11 @@
 #undef min
 #undef max
 
+#undef MAX_FOV
+
+static const auto MIN_FOV = std::nextafter(-180.0f, 0.0f);
+static const auto MAX_FOV = std::nextafter(180.0f, 0.0f);
+
 AutoCameras::AutoCameras() :
 	ce_cameratrigger_begin("ce_autocamera_trigger_begin", [](const CCommand& args) { GetModule()->BeginCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED),
 	ce_cameratrigger_end("ce_autocamera_trigger_end", [](const CCommand& args) { GetModule()->EndCameraTrigger(); }, nullptr, FCVAR_UNREGISTERED),
@@ -39,6 +45,8 @@ AutoCameras::AutoCameras() :
 	ce_autocamera_create("ce_autocamera_create", [](const CCommand& args) { GetModule()->MarkCamera(args); }),
 	ce_autocamera_goto("ce_autocamera_goto", [](const CCommand& args) { GetModule()->GotoCamera(args); }, nullptr, 0, &AutoCameras::GotoCameraCompletion),
 	ce_autocamera_goto_mode("ce_autocamera_goto_mode", "3", FCVAR_NONE, "spec_mode to use for ce_autocamera_goto and ce_autocamera_cycle.", true, 0, true, NUM_OBSERVER_MODES - 1),
+
+	ce_autocamera_cycle_debug("ce_autocamera_cycle_debug", "0"),
 	ce_autocamera_cycle("ce_autocamera_cycle", [](const CCommand& args) { GetModule()->CycleCamera(args); },
 		"\nUsage: ce_autocamera_cycle <next/prev> [group]. Cycles forwards or backwards logically through the available autocameras. The behavior is as follows:\n"
 		"\tIf already spectating from the position of an autocamera, progress forwards/backwards through the autocameras based on file order.\n"
@@ -46,7 +54,7 @@ AutoCameras::AutoCameras() :
 		"\tIf no autocameras have LOS to our current position, find the nearest/furthest autocamera with our current position in its view frustum.\n"
 		"\tIf our position is not in any autocamera's view frustum, find the nearest/furthest autocamera to our current position."),
 
-	ce_autocamera_spec_player("ce_autocamera_spec_player", [](const CCommand& args) { GetModule()->SpecPlayer(args); }, "Switches to an autocamera with the best view of the current player."),
+	ce_autocamera_spec_player("ce_autocamera_spec_player", [](const CCommand& args) { GetModule()->SpecPlayer(args); }, "Switches to an autocamera with the best view of the current player. Usage: ce_autocamera_spec_player [group]."),
 	ce_autocamera_spec_player_fallback("ce_autocamera_spec_player_fallback", "firstperson", FCVAR_NONE,
 "Behavior to fall back to when using ce_autocamera_spec_player and no autocameras make it through the filters. Valid values: firstperson/thirdperson/none."),
 	ce_autocamera_spec_player_fov("ce_autocamera_spec_player_fov", "75", FCVAR_NONE,
@@ -172,6 +180,7 @@ void AutoCameras::LoadConfig(const char* bspName)
 	m_Triggers.clear();
 	m_MalformedCameras.clear();
 	m_Cameras.clear();
+	m_CameraGroups.clear();
 	m_MalformedStoryboards.clear();
 	m_Storyboards.clear();
 
@@ -216,6 +225,14 @@ void AutoCameras::LoadConfig(const char* bspName)
 		LoadCamera(camera, m_ConfigFilename.c_str());
 	}
 
+	if (auto cameraGroups = kv->FindKey("CameraGroups"))
+	{
+		for (KeyValues* group = cameraGroups->GetFirstTrueSubKey(); group; group = group->GetNextTrueSubKey())
+			LoadCameraGroup(group);
+	}
+
+	CreateDefaultCameraGroup();
+
 	for (KeyValues* storyboard = kv->GetFirstTrueSubKey(); storyboard; storyboard = storyboard->GetNextTrueSubKey())
 	{
 		if (stricmp("storyboard", storyboard->GetName()))
@@ -227,6 +244,30 @@ void AutoCameras::LoadConfig(const char* bspName)
 	SetupMirroredCameras();
 
 	PluginMsg("Loaded autocameras from %s.\n", m_ConfigFilename.c_str());
+}
+
+bool AutoCameras::LoadCameraGroup(KeyValues* group)
+{
+	auto newGroup = std::make_unique<CameraGroup>();
+	newGroup->m_Name = group->GetName();
+	newGroup->m_Name.shrink_to_fit();
+
+	for (KeyValues* camNameValue = group->GetFirstValue(); camNameValue; camNameValue = camNameValue->GetNextValue())
+	{
+		auto camName = camNameValue->GetName();
+		auto found = FindCamera(camName);
+		if (!found)
+		{
+			PluginWarning("CameraGroup \"%s\" in \"%s\" referenced unknown camera \"%s\"", newGroup->m_Name.c_str(), m_ConfigFilename.c_str(), camName);
+			continue;
+		}
+
+		newGroup->m_Cameras.push_back(found);
+	}
+
+	newGroup->m_Cameras.shrink_to_fit();
+	m_CameraGroups.push_back(std::move(newGroup));
+	return true;
 }
 
 static void FixupBounds(Vector& mins, Vector& maxs)
@@ -355,7 +396,16 @@ bool AutoCameras::LoadCamera(KeyValues* const camera, const char* const filename
 				m_MalformedCameras.push_back(name);
 				return false;
 			}
+			else if (newCamera->m_FOV < MIN_FOV || newCamera->m_FOV > MAX_FOV)
+			{
+				Warning("FOV %f for camera \"%s\" in \"%s\" was out of range (valid range is [%f, %f]). Clamping.",
+					newCamera->m_FOV, name, m_ConfigFilename.c_str(), MIN_FOV, MAX_FOV);
+
+				newCamera->m_FOV = std::clamp<float>(newCamera->m_FOV, MIN_FOV, MAX_FOV);
+			}
 		}
+		else
+			newCamera->m_FOV = 0;
 	}
 
 	m_Cameras.push_back(std::move(newCamera));
@@ -652,7 +702,6 @@ void AutoCameras::MarkCamera(const CCommand& args)
 		return;
 	}
 
-
 	Vector pos;
 	QAngle ang;
 	float fov;
@@ -661,7 +710,7 @@ void AutoCameras::MarkCamera(const CCommand& args)
 
 	std::stringstream camera;
 
-	camera << "Camera {";
+	camera << "\tCamera {";
 
 	// name
 	{
@@ -713,21 +762,24 @@ void AutoCameras::MarkCamera(const CCommand& args)
 	ConColorMsg(Color(128, 255, 128, 255), "%s\n", camera.str().c_str());
 }
 
-constexpr vec_t BitsToFloat_cx(unsigned long i)
-{
-	return *reinterpret_cast<vec_t*>(&i);
-}
-
 void AutoCameras::CycleCamera(const CCommand& args)
 {
 	if (m_Cameras.size() < 1)
 	{
-		Warning("%s: No defined cameras for this map!\n", ce_autocamera_cycle.GetName());
+		Warning("%s: No defined cameras for this map!\n", args.Arg(0));
 		return;
 	}
 
-	if (args.ArgC() != 2)
+	if (args.ArgC() < 2 || args.ArgC() > 3)
 		goto Usage;
+
+	const char* const groupName = args.ArgC() > 2 ? args.Arg(2) : "";
+	auto camGroup = FindCameraGroup(groupName);
+	if (!camGroup)
+	{
+		Warning("%s: Unable to find group with name \"%s\"!\n", args.Arg(0), groupName);
+		return;
+	}
 
 	enum Direction
 	{
@@ -752,115 +804,101 @@ void AutoCameras::CycleCamera(const CCommand& args)
 			CameraState::GetModule()->GetThisFramePluginView(const_cast<Vector&>(camOrigin), dummy);
 	}
 
-	// Find an existing autocamera with the current origin, then go backwards/forwards (based on file order)
+	// Check if we're already at a camera, in which case we just operate by file (group) order
 	{
-		bool matchedPos = false;
-		const Camera* prevCamera;
-		for (const auto& camera : m_Cameras)
+		const auto compareFunc = [&](const Camera* c) { return c->m_Pos.DistToSqr(camOrigin) < 100; };
+
+		if (dir == NEXT)
 		{
-			if (AlmostEqual(camera->m_Pos, camOrigin))
+			auto found = std::find_if(camGroup->m_Cameras.begin(), camGroup->m_Cameras.end(), compareFunc);
+			if (found != camGroup->m_Cameras.end())
 			{
-				matchedPos = true;
-
-				if (dir == PREV)
-				{
-					if (prevCamera)
-						return GotoCamera(*prevCamera);
-					else
-						break;
-				}
-				else if (dir == NEXT)
-				{
-					prevCamera = camera.get();
-					continue;
-				}
+				auto next = std::next(found);
+				if (next == camGroup->m_Cameras.end())
+					return GotoCamera(**camGroup->m_Cameras.begin());
+				else
+					return GotoCamera(**next);
 			}
-
-			if (dir == PREV)
-				prevCamera = camera.get();
-			else if (dir == NEXT && prevCamera)
-				return GotoCamera(*camera);
 		}
-
-		if (matchedPos)
+		else
 		{
-			// If we made it here, there's an edge case where we were asked to go backward from
-			// the start of the list, or forward from the end of the list.
-			if (dir == PREV && !prevCamera)
-				return GotoCamera(*m_Cameras.back());
-			else if (dir == NEXT && prevCamera == m_Cameras.back().get())
-				return GotoCamera(*m_Cameras.front());
-			else
-				Error("[%s:%i] wat\n", __FUNCSIG__, __LINE__);
+			auto found = std::find_if(camGroup->m_Cameras.rbegin(), camGroup->m_Cameras.rend(), compareFunc);
+			if (found != camGroup->m_Cameras.rend())
+			{
+				auto next = std::next(found);
+				if (next == camGroup->m_Cameras.rend())
+					return GotoCamera(**camGroup->m_Cameras.rbegin());
+				else
+					return GotoCamera(**next);
+			}
 		}
 	}
 
-	// If we're here, our camera position didn't match any autocamera definitions. Find autocameras
-	// with line of sight to the current position.
+	const float aspectRatio = 16.0 / 9.0;	// Just blindly assume 16:9 for now
+
+	const Camera* bestCameras[1];
+
+	const Vector boxMins(camOrigin - Vector(0.5));
+	const Vector boxMaxs(camOrigin + Vector(0.5));
+
+	const ObserverMode gotoMode = (ObserverMode)ce_autocamera_goto_mode.GetInt();
+
+	auto lastBest = std::partial_sort_copy(camGroup->m_Cameras.begin(), camGroup->m_Cameras.end(), std::begin(bestCameras), std::end(bestCameras),
+		[&](const Camera* c1, const Camera* c2)
 	{
-		const Vector boxMins(camOrigin - Vector(0.5));
-		const Vector boxMaxs(camOrigin + Vector(0.5));
+		const auto dist1 = c1->m_Pos.DistToSqr(camOrigin);
+		const auto dist2 = c2->m_Pos.DistToSqr(camOrigin);
 
-		const Camera* idealCamera = nullptr;
-		const Camera* idealCameraLOS = nullptr;
-		for (const auto& camera : m_Cameras)
+		// Check if either of the cameras have our current position within their frustum
 		{
-			const auto idealCameraDist = idealCamera ? idealCamera->m_Pos.DistTo(camOrigin) : FLOAT32_NAN;
-			const auto idealCameraLOSDist = idealCameraLOS ? idealCameraLOS->m_Pos.DistTo(camOrigin) : FLOAT32_NAN;
-			const auto thisDist = camera->m_Pos.DistTo(camOrigin);
+			Frustum_t frustum1, frustum2;
+			GeneratePerspectiveFrustum(c1->m_Pos, c1->m_DefaultAngle, 1, 100000, GetCameraFOV(*c1, gotoMode), aspectRatio, frustum1);
+			GeneratePerspectiveFrustum(c2->m_Pos, c2->m_DefaultAngle, 1, 100000, GetCameraFOV(*c2, gotoMode), aspectRatio, frustum2);
 
-			if (idealCameraLOS && (dir == NEXT) ? (idealCameraLOSDist < thisDist) : (idealCameraLOSDist > thisDist))
-				continue;	// Already have a better camera with LOS
+			const bool inFrustum1 = R_CullBox(boxMins, boxMaxs, frustum1);
+			const bool inFrustum2 = R_CullBox(boxMins, boxMaxs, frustum2);
 
-			Frustum_t frustum;
-			GeneratePerspectiveFrustum(camera->m_Pos, camera->m_DefaultAngle, 1, 100000, 90, (16.0 / 9.0), frustum);
+			if (inFrustum1 && !inFrustum2)
+				return true;
+			else if (!inFrustum1 && inFrustum2)
+				return false;
+			else if (!inFrustum1 && !inFrustum2)
+				return dist1 < dist2;
+		}
 
-			if (!R_CullBox(boxMins, boxMaxs, frustum))
-				continue;	// Not in frustum
-
+		// Check if either of the cameras have LOS to the current point
+		{
 			CTraceFilterNoNPCsOrPlayer noPlayers(nullptr, COLLISION_GROUP_NONE);
-			trace_t tr;
-			UTIL_TraceLine(camera->m_Pos, camOrigin, MASK_OPAQUE, &noPlayers, &tr);
+			trace_t tr1, tr2;
+			UTIL_TraceLine(c1->m_Pos, camOrigin, MASK_OPAQUE, &noPlayers, &tr1);
+			UTIL_TraceLine(c2->m_Pos, camOrigin, MASK_OPAQUE, &noPlayers, &tr2);
 
-			if (tr.fraction >= 1)
-			{
-				if (!idealCameraLOS || (dir == NEXT) ? (idealCameraLOSDist > thisDist) : (idealCameraLOSDist < thisDist))
-					idealCameraLOS = idealCamera = camera.get();
-			}
-			else if (!idealCamera || (dir == NEXT) ? (idealCameraDist > thisDist) : (idealCameraDist < thisDist))
-				idealCamera = camera.get();
+			const bool hasLOS1 = tr1.fraction >= 1;
+			const bool hasLOS2 = tr2.fraction >= 1;
+
+			if (hasLOS1 && !hasLOS2)
+				return true;
+			else if (!hasLOS1 && hasLOS2)
+				return false;
+			else if (!hasLOS1 && !hasLOS2)
+				return dist1 < dist2;
 		}
 
-		if (idealCameraLOS)
-			return GotoCamera(*idealCameraLOS);
-		else if (idealCamera)
-			return GotoCamera(*idealCamera);
-	}
+		// Whoever is closest
+		return dist1 < dist2;
+	});
 
-	// If we're here, nobody was looking at this point, regardless of LOS :(
-	// Find the nearest/furthest camera.
-	{
-		const Camera* idealCamera;
-		for (const auto& camera : m_Cameras)
-		{
-			const auto idealCameraDist = idealCamera ? idealCamera->m_Pos.DistTo(camOrigin) : FLOAT32_NAN;
-			const auto thisDist = camera->m_Pos.DistTo(camOrigin);
+	if (lastBest == std::begin(bestCameras))
+		Warning("%s: Unable to navigate to a camera for some reason.\n", args.Arg(0));
+	else //if (dir == NEXT)
+		GotoCamera(*bestCameras[0]);
+	//else  // dir == PREV
+	//	GotoCamera(*bestCameras[1]);
 
-			if (idealCamera && (dir == NEXT) ? (idealCameraDist < thisDist) : (idealCameraDist > thisDist))
-				continue;	// Already have a better camera
-
-			idealCamera = camera.get();
-		}
-
-		if (idealCamera)
-			return GotoCamera(*idealCamera);
-	}
-
-	Warning("%s: Unable to navigate to a camera for some reason.\n", ce_autocamera_cycle.GetName());
 	return;
 
 Usage:
-	Warning("%s: Usage: %s <prev/next>\n", ce_autocamera_cycle.GetName(), ce_autocamera_cycle.GetName());
+	Warning("%s: Usage: %s <prev/next> [group]\n", args.Arg(0), args.Arg(0));
 }
 
 void AutoCameras::SpecPlayer(const CCommand& args)
@@ -883,6 +921,14 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 	if (!camState)
 	{
 		PluginWarning("%s: Camera State module not loaded\n", args.Arg(0));
+		return;
+	}
+
+	const char* camGroupName = args.ArgC() > 2 ? args.Arg(2) : "";
+	auto camGroup = FindCameraGroup(camGroupName);
+	if (!camGroup)
+	{
+		PluginWarning("%s: Unable to find camera group \"%s\"\n", args.Arg(0), args.Arg(2));
 		return;
 	}
 
@@ -923,7 +969,7 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 
 	float bestCameraScore = -std::numeric_limits<float>::max();
 	const Camera* bestCamera = nullptr;
-	for (const auto& camera : m_Cameras)
+	for (const auto& camera : camGroup->m_Cameras)
 	{
 		const auto cameraScore = ScoreSpecPlayerCamera(*camera, observedOrigin);
 
@@ -933,7 +979,7 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 		if (cameraScore > bestCameraScore)
 		{
 			bestCameraScore = cameraScore;
-			bestCamera = camera.get();
+			bestCamera = camera;
 		}
 	}
 
@@ -1026,7 +1072,21 @@ void AutoCameras::GotoCamera(const Camera& camera, ObserverMode mode)
 		return;
 	}
 
-	ctools->SpecPosition(camera.m_Pos, camera.m_DefaultAngle, mode);
+	Assert(mode == OBS_MODE_FIXED || mode == OBS_MODE_ROAMING);
+
+	auto fov = camera.m_FOV;
+	if (fov == 0)
+	{
+		if (auto fovOverride = FOVOverride::GetModule())
+			fov = fovOverride->GetBaseFOV(mode);
+		else
+		{
+			static ConVarRef fov_desired("fov_desired");
+			fov = fov_desired.GetFloat();
+		}
+	}
+
+	ctools->SpecPosition(camera.m_Pos, camera.m_DefaultAngle, mode, fov);
 	m_LastActiveCamera = &camera;
 }
 
@@ -1083,6 +1143,19 @@ int AutoCameras::GotoCameraCompletion(const char* const partial, char commands[C
 		strcat_s(commands[i], COMMAND_COMPLETION_ITEM_LENGTH, (std::string(" ") + nameStr).c_str());
 	}
 	return i;
+}
+
+float AutoCameras::GetCameraFOV(const Camera& camera, ObserverMode mode) const
+{
+	if (camera.m_FOV != 0)
+		return camera.m_FOV;
+	else if (auto fov = FOVOverride::GetModule())
+		return fov->GetBaseFOV(mode);
+	else
+	{
+		static ConVarRef fov_desired("fov_desired");
+		return fov_desired.GetFloat();
+	}
 }
 
 void AutoCameras::DrawTriggers()
@@ -1167,6 +1240,30 @@ const AutoCameras::Trigger* AutoCameras::FindTrigger(const char* const triggerNa
 	}
 
 	return nullptr;
+}
+
+const AutoCameras::CameraGroup* AutoCameras::FindCameraGroup(const char* groupName) const
+{
+	for (const auto& group : m_CameraGroups)
+	{
+		if (!stricmp(group->m_Name.c_str(), groupName))
+			return group.get();
+	}
+
+	return nullptr;
+}
+
+void AutoCameras::CreateDefaultCameraGroup()
+{
+	Assert(!FindCameraGroup(""));
+
+	auto newGroup = std::make_unique<CameraGroup>();
+
+	for (const auto& camera : m_Cameras)
+		newGroup->m_Cameras.push_back(camera.get());
+
+	newGroup->m_Cameras.shrink_to_fit();
+	m_CameraGroups.insert(m_CameraGroups.begin(), std::move(newGroup));
 }
 
 const AutoCameras::Camera* AutoCameras::FindCamera(const char* const cameraName) const

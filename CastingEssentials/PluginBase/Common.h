@@ -236,6 +236,20 @@ inline float UnscaleFOVByAspectRatio(float scaledFOV, float aspectRatio)
 	return UnscaleFOVByWidthRatio(scaledFOV, aspectRatio / (4.0f / 3.0f));
 }
 
+template<typename T> constexpr T* FirstNotNull(T* first, T* second)
+{
+	return first ? first : second;
+}
+template<typename T> constexpr T* FirstNotNull(T* first, T* second, T* third)
+{
+	if (first)
+		return first;
+	if (second)
+		return second;
+
+	return third;
+}
+
 template<class T>
 class VariablePusher final
 {

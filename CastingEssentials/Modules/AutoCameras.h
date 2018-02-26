@@ -28,6 +28,7 @@ private:
 
 	void LoadConfig();
 	void LoadConfig(const char* mapName);
+	bool LoadCameraGroup(KeyValues* cameraGroup);
 	bool LoadTrigger(KeyValues* trigger, const char* filename);
 	bool LoadCamera(KeyValues* camera, const char* filename);
 	bool LoadStoryboard(KeyValues* storyboard, const char* filename);
@@ -52,6 +53,7 @@ private:
 	void MarkCamera(const CCommand& args);
 
 	ConCommand ce_autocamera_cycle;
+	ConVar ce_autocamera_cycle_debug;
 	void CycleCamera(const CCommand& args);
 
 	ConCommand ce_autocamera_spec_player;
@@ -77,6 +79,8 @@ private:
 	ConVar ce_autocamera_show_triggers;
 	ConVar ce_autocamera_show_cameras;
 
+	float GetCameraFOV(const Camera& camera, ObserverMode mode) const;
+
 	void DrawTriggers();
 	void DrawCameras();
 
@@ -96,6 +100,16 @@ private:
 	std::vector<std::unique_ptr<const Trigger>> m_Triggers;
 	std::vector<std::string> m_MalformedTriggers;
 	const Trigger* FindTrigger(const char* triggerName) const;
+
+	struct CameraGroup
+	{
+		std::string m_Name;
+
+		std::vector<const Camera*> m_Cameras;
+	};
+	std::vector<std::unique_ptr<const CameraGroup>> m_CameraGroups;
+	const CameraGroup* FindCameraGroup(const char* groupName) const;
+	void CreateDefaultCameraGroup();
 
 	struct Camera
 	{
