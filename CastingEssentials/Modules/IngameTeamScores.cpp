@@ -28,13 +28,12 @@ IngameTeamScores::IngameTeamScores() :
 {
 	for (int i = 0; i < CUSTOM_TEXT_COUNT; i++)
 	{
-		char name[32];
-		sprintf_s(name, "ce_teamscores_text%i", i + 1);
+		sprintf_s(ce_teamscores_text_names[i], "ce_teamscores_text%i", i + 1);
 
 		// Help string is expected to be static data
 		sprintf_s(ce_teamscores_text_helpstrings[i], "Text to display in the %%customtext%i%% dialog variable.", i + 1);
 
-		ce_teamscores_text[i] = std::make_unique<ConVar>(name, "", FCVAR_NONE, ce_teamscores_text_helpstrings[i]);
+		ce_teamscores_text[i] = std::make_unique<ConVar>(ce_teamscores_text_names[i], "", FCVAR_NONE, ce_teamscores_text_helpstrings[i]);
 	}
 }
 

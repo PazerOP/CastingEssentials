@@ -26,5 +26,6 @@ private:
 	static constexpr int CUSTOM_TEXT_COUNT = 4;
 
 	std::unique_ptr<ConVar> ce_teamscores_text[CUSTOM_TEXT_COUNT];
+	char ce_teamscores_text_names[CUSTOM_TEXT_COUNT][32];
 	char ce_teamscores_text_helpstrings[CUSTOM_TEXT_COUNT][64];
 };
