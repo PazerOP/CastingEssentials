@@ -93,7 +93,7 @@ bool CameraTools::CheckDependencies()
 
 	try
 	{
-		GetHooks()->GetFunc<C_HLTVCamera_SetCameraAngle>();
+		GetHooks()->GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	}
 	catch (bad_pointer)
 	{
@@ -103,7 +103,7 @@ bool CameraTools::CheckDependencies()
 
 	try
 	{
-		GetHooks()->GetFunc<C_HLTVCamera_SetMode>();
+		GetHooks()->GetRawFunc_C_HLTVCamera_SetMode();
 	}
 	catch (bad_pointer)
 	{
@@ -113,7 +113,7 @@ bool CameraTools::CheckDependencies()
 
 	try
 	{
-		GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>();
+		GetHooks()->GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
 	}
 	catch (bad_pointer)
 	{
@@ -174,7 +174,7 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverM
 		{
 			HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 
-			GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(mode);
+			GetHooks()->GetRawFunc_C_HLTVCamera_SetMode()(hltvcamera, mode);
 			m_SwitchReason = ModeSwitchReason::SpecPosition;
 
 			hltvcamera->m_iCameraMan = 0;
@@ -194,7 +194,7 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverM
 				Interfaces::GetEngineClient()->SetViewAngles(wtf);
 			}
 
-			GetHooks()->GetFunc<C_HLTVCamera_SetCameraAngle>()(hltvcamera->m_aCamAngle);
+			GetHooks()->GetRawFunc_C_HLTVCamera_SetCameraAngle()(hltvcamera, hltvcamera->m_aCamAngle);
 		}
 		catch (bad_pointer &e)
 		{
@@ -450,11 +450,13 @@ void CameraTools::SpecPlayer(int playerIndex)
 		{
 			try
 			{
-				GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(player->GetEntity()->entindex());
 
 				HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 				if (hltvcamera)
-					GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(ce_tplock_enable.GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE);
+				{
+					GetHooks()->GetRawFunc_C_HLTVCamera_SetPrimaryTarget()(hltvcamera, player->GetEntity()->entindex());
+					GetHooks()->GetRawFunc_C_HLTVCamera_SetMode()(hltvcamera, ce_tplock_enable.GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE);
+				}
 			}
 			catch (bad_pointer &e)
 			{
@@ -802,7 +804,7 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 
 		try
 		{
-			GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(forceTarget);
+			GetHooks()->GetRawFunc_C_HLTVCamera_SetPrimaryTarget()(Interfaces::GetHLTVCamera(), forceTarget);
 		}
 		catch (bad_pointer)
 		{

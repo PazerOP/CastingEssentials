@@ -77,7 +77,7 @@ bool CameraSmooths::CheckDependencies()
 
 	try
 	{
-		GetHooks()->GetFunc<C_HLTVCamera_SetCameraAngle>();
+		HookManager::GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	}
 	catch (bad_pointer)
 	{
@@ -87,7 +87,7 @@ bool CameraSmooths::CheckDependencies()
 
 	try
 	{
-		GetHooks()->GetFunc<C_HLTVCamera_SetMode>();
+		HookManager::GetRawFunc_C_HLTVCamera_SetMode();
 	}
 	catch (bad_pointer)
 	{
@@ -378,7 +378,7 @@ bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, floa
 			m_InProgress = false;
 
 			if (hltvcamera)
-				GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(m_EndMode);
+				hltvcamera->SetMode(m_EndMode);
 		}
 		else
 		{

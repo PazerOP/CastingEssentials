@@ -205,7 +205,7 @@ class HookManager final
 
 	typedef void(__thiscall *RawSetCameraAngleFn)(C_HLTVCamera*, const QAngle&);
 	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);
-	typedef void(__thiscall *RawSetPrimaryTargetFn)(C_HLTVCamera*, int);
+	typedef void(__thiscall *RawSetPrimaryTargetFn)(C_HLTVCamera* pThis, int targetEntindex);
 	typedef CBoneCache*(__thiscall *RawGetBoneCacheFn)(C_BaseAnimating*, CStudioHdr*);
 	typedef void(__thiscall *RawLockStudioHdrFn)(C_BaseAnimating*);
 	typedef void(__thiscall *RawCalcAbsolutePositionFn)(C_BaseEntity*);
@@ -238,7 +238,16 @@ class HookManager final
 	typedef bool(__cdecl *Raw_RenderLine)(const Vector& p0, const Vector& p1, Color c, bool zBuffer);
 	typedef bool(__cdecl *Raw_RenderTriangle)(const Vector& p0, const Vector& p1, const Vector& p2, Color c, bool zBuffer);
 
-
+public:
+	HookManager();
+	static RawCreateTFGlowObjectFn GetRawFunc_Global_CreateTFGlowObject();
+	static RawShouldDrawLocalPlayerFn GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer();
+	static Raw_EditablePanel_GetDialogVariables GetRawFunc_EditablePanel_GetDialogVariables();
+	static Raw_ImagePanel_SetImage GetRawFunc_ImagePanel_SetImage();
+	static Raw_C_BaseAnimating_ComputeHitboxSurroundingBox GetRawFunc_C_BaseAnimating_ComputeHitboxSurroundingBox();
+	static Raw_C_BasePlayer_GetFOV GetRawFunc_C_BasePlayer_GetFOV();
+	static Raw_C_BasePlayer_GetLocalPlayer GetRawFunc_C_BasePlayer_GetLocalPlayer();
+	static RawGetLocalPlayerIndexFn GetRawFunc_Global_GetLocalPlayerIndex();
 	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
 	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
 	static RawSetPrimaryTargetFn GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
@@ -250,7 +259,6 @@ class HookManager final
 	static RawBaseAnimatingDrawModelFn GetRawFunc_C_BaseAnimating_DrawModel();
 	static Raw_C_BaseAnimating_InternalDrawModel GetRawFunc_C_BaseAnimating_InternalDrawModel();
 	static RawTFPlayerDrawModelFn GetRawFunc_C_TFPlayer_DrawModel();
-	static RawGetLocalPlayerIndexFn GetRawFunc_Global_GetLocalPlayerIndex();
 	static RawCreateEntityByNameFn GetRawFunc_Global_CreateEntityByName();
 	static RawBaseEntityInitFn GetRawFunc_C_BaseEntity_Init();
 	static RawUTILComputeEntityFadeFn GetRawFunc_Global_UTILComputeEntityFade();
@@ -260,16 +268,6 @@ class HookManager final
 	static RawGetIconFn GetRawFunc_CHudBaseDeathNotice_GetIcon();
 	static Raw_ProgressBar_ApplySettings GetRawFunc_ProgressBar_ApplySettings();
 	static Raw_C_BasePlayer_GetDefaultFOV GetRawFunc_C_BasePlayer_GetDefaultFOV();
-
-public:
-	HookManager();
-	static RawCreateTFGlowObjectFn GetRawFunc_Global_CreateTFGlowObject();
-	static RawShouldDrawLocalPlayerFn GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer();
-	static Raw_EditablePanel_GetDialogVariables GetRawFunc_EditablePanel_GetDialogVariables();
-	static Raw_ImagePanel_SetImage GetRawFunc_ImagePanel_SetImage();
-	static Raw_C_BaseAnimating_ComputeHitboxSurroundingBox GetRawFunc_C_BaseAnimating_ComputeHitboxSurroundingBox();
-	static Raw_C_BasePlayer_GetFOV GetRawFunc_C_BasePlayer_GetFOV();
-	static Raw_C_BasePlayer_GetLocalPlayer GetRawFunc_C_BasePlayer_GetLocalPlayer();
 
 	static Raw_RenderBox GetRawFunc_RenderBox();
 	static Raw_RenderBox_1 GetRawFunc_RenderBox_1();
@@ -329,7 +327,7 @@ public:
 	typedef GlobalHook<Func::Global_DrawOpaqueRenderable, false, void, IClientRenderable*, bool, ERenderDepthMode, int> Global_DrawOpaqueRenderable;
 	typedef GlobalHook<Func::Global_DrawTranslucentRenderable, false, void, IClientRenderable*, bool, bool, bool> Global_DrawTranslucentRenderable;
 
-	template<class Hook> typename Hook::Functional GetFunc() { static_assert(false, "Invalid hook type"); }
+	template<class Hook> typename Hook::OriginalFnType GetFunc() { static_assert(false, "Invalid hook type"); }
 
 	template<class Hook> Hook* GetHook() { static_assert(false, "Invalid hook type"); }
 	template<> ICvar_ConsoleColorPrintf* GetHook<ICvar_ConsoleColorPrintf>() { return &m_Hook_ICvar_ConsoleColorPrintf; }
@@ -486,83 +484,3 @@ using Global_DrawTranslucentRenderable = HookManager::Global_DrawTranslucentRend
 
 extern void* SignatureScan(const char* moduleName, const char* signature, const char* mask);
 extern HookManager* GetHooks();
-
-template<> inline C_HLTVCamera_SetCameraAngle::Functional HookManager::GetFunc<C_HLTVCamera_SetCameraAngle>()
-{
-	return std::bind(
-		[](RawSetCameraAngleFn func, C_HLTVCamera* pThis, const QAngle& ang) { func(pThis, ang); },
-		GetRawFunc_C_HLTVCamera_SetCameraAngle(), GetHLTVCamera(), std::placeholders::_1);
-}
-template<> inline HookManager::C_HLTVCamera_SetMode::Functional HookManager::GetFunc<HookManager::C_HLTVCamera_SetMode>()
-{
-	return std::bind(
-		[](int mode) { GetRawFunc_C_HLTVCamera_SetMode()(GetHLTVCamera(), mode); },
-		std::placeholders::_1);
-}
-template<> inline C_HLTVCamera_SetPrimaryTarget::Functional HookManager::GetFunc<C_HLTVCamera_SetPrimaryTarget>()
-{
-	return std::bind(
-		[](RawSetPrimaryTargetFn func, C_HLTVCamera* pThis, int target) { func(pThis, target); },
-		GetRawFunc_C_HLTVCamera_SetPrimaryTarget(), GetHLTVCamera(), std::placeholders::_1);
-}
-
-template<> inline CHudBaseDeathNotice_GetIcon::Functional HookManager::GetFunc<CHudBaseDeathNotice_GetIcon>()
-{
-	return std::bind(
-		GetRawFunc_CHudBaseDeathNotice_GetIcon(),
-		std::placeholders::_1, std::placeholders::_2);
-}
-
-template<> inline C_BaseAnimating_GetBoneCache::Functional HookManager::GetFunc<C_BaseAnimating_GetBoneCache>()
-{
-	return std::bind(
-		[](RawGetBoneCacheFn func, C_BaseAnimating* pThis, CStudioHdr* pStudioHdr) { return func(pThis, pStudioHdr); },
-		GetRawFunc_C_BaseAnimating_GetBoneCache(), std::placeholders::_1, std::placeholders::_2);
-}
-template<> inline C_BaseAnimating_LockStudioHdr::Functional HookManager::GetFunc<C_BaseAnimating_LockStudioHdr>()
-{
-	return std::bind(
-		[](RawLockStudioHdrFn func, C_BaseAnimating* pThis) { func(pThis); },
-		GetRawFunc_C_BaseAnimating_LockStudioHdr(), std::placeholders::_1);
-}
-template<> inline C_BaseAnimating_LookupBone::Functional HookManager::GetFunc<C_BaseAnimating_LookupBone>()
-{
-	return std::bind(
-		[](RawLookupBoneFn func, C_BaseAnimating* pThis, const char* szName) { return func(pThis, szName); },
-		GetRawFunc_C_BaseAnimating_LookupBone(), std::placeholders::_1, std::placeholders::_2);
-}
-template<> inline C_BaseAnimating_GetBonePosition::Functional HookManager::GetFunc<C_BaseAnimating_GetBonePosition>()
-{
-	return std::bind(
-		[](RawGetBonePositionFn func, C_BaseAnimating* pThis, int iBone, Vector& origin, QAngle& angles) { return func(pThis, iBone, origin, angles); },
-		GetRawFunc_C_BaseAnimating_GetBonePosition(), std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
-}
-
-template<> inline C_BaseEntity_CalcAbsolutePosition::Functional HookManager::GetFunc<C_BaseEntity_CalcAbsolutePosition>()
-{
-	return std::bind(
-		[](RawCalcAbsolutePositionFn func, C_BaseEntity* pThis) { func(pThis); },
-		GetRawFunc_C_BaseEntity_CalcAbsolutePosition(), std::placeholders::_1);
-}
-
-template<> inline CGlowObjectManager_ApplyEntityGlowEffects::Functional HookManager::GetFunc<CGlowObjectManager_ApplyEntityGlowEffects>()
-{
-	return std::bind(
-		[](RawApplyEntityGlowEffectsFn func, CGlowObjectManager* pThis, const CViewSetup* pSetup, int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext, float flBloomScale, int x, int y, int w, int h) { return func(pThis, pSetup, nSplitScreenSlot, pRenderContext, flBloomScale, x, y, w, h); },
-		GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects(), std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9);
-}
-
-template<> inline Global_GetLocalPlayerIndex::Functional HookManager::GetFunc<Global_GetLocalPlayerIndex>()
-{
-	return std::bind(GetRawFunc_Global_GetLocalPlayerIndex());
-}
-
-template<> inline Global_CreateEntityByName::Functional HookManager::GetFunc<Global_CreateEntityByName>()
-{
-	return std::bind(GetRawFunc_Global_CreateEntityByName(), std::placeholders::_1);
-}
-
-template<> inline Global_CreateTFGlowObject::Functional HookManager::GetFunc<Global_CreateTFGlowObject>()
-{
-	return std::bind(GetRawFunc_Global_CreateTFGlowObject(), std::placeholders::_1, std::placeholders::_2);
-}

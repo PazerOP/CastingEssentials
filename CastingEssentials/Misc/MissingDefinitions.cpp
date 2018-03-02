@@ -1,3 +1,4 @@
+#include "Misc/HLTVCameraHack.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/HookManager.h"
 
@@ -263,11 +264,11 @@ bool IsBoxIntersectingBox(const Vector& boxMin1, const Vector& boxMax1,
 
 void C_BaseAnimating::GetBonePosition(int iBone, Vector &origin, QAngle &angles)
 {
-	return GetHooks()->GetFunc<C_BaseAnimating_GetBonePosition>()(this, iBone, origin, angles);
+	return HookManager::GetRawFunc_C_BaseAnimating_GetBonePosition()(this, iBone, origin, angles);
 }
 void C_BaseEntity::CalcAbsolutePosition()
 {
-	return GetHooks()->GetFunc<C_BaseEntity_CalcAbsolutePosition>()(this);
+	return HookManager::GetRawFunc_C_BaseEntity_CalcAbsolutePosition()(this);
 }
 void C_BaseEntity::AddToLeafSystem()
 {
@@ -290,15 +291,15 @@ void C_BaseEntity::AddToLeafSystem(RenderGroup_t group)
 }
 int C_BaseAnimating::LookupBone(const char* szName)
 {
-	return GetHooks()->GetFunc<C_BaseAnimating_LookupBone>()(this, szName);
+	return HookManager::GetRawFunc_C_BaseAnimating_LookupBone()(this, szName);
 }
 CBoneCache* C_BaseAnimating::GetBoneCache(CStudioHdr* hdr)
 {
-	return GetHooks()->GetFunc<C_BaseAnimating_GetBoneCache>()(this, hdr);
+	return HookManager::GetRawFunc_C_BaseAnimating_GetBoneCache()(this, hdr);
 }
 void C_BaseAnimating::LockStudioHdr()
 {
-	return GetHooks()->GetFunc<C_BaseAnimating_LockStudioHdr>()(this);
+	return HookManager::GetRawFunc_C_BaseAnimating_LockStudioHdr()(this);
 }
 bool C_BaseAnimating::ComputeHitboxSurroundingBox(Vector *pVecWorldMins, Vector *pVecWorldMaxs)
 {
@@ -321,7 +322,11 @@ bool C_HLTVCamera::IsPVSLocked()
 }
 void C_HLTVCamera::SetPrimaryTarget(int entIndex)
 {
-	return GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(entIndex);
+	return HookManager::GetRawFunc_C_HLTVCamera_SetPrimaryTarget()(this, entIndex);
+}
+void C_HLTVCamera::SetMode(int mode)
+{
+	return HookManager::GetRawFunc_C_HLTVCamera_SetMode()(this, mode);
 }
 void CSteamID::SetFromString(const char* pchSteamID, EUniverse eDefaultUniverse)
 {

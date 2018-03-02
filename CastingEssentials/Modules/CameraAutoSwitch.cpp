@@ -10,6 +10,13 @@
 
 #include "CameraAutoSwitch.h"
 
+#include "Controls/StubPanel.h"
+#include "Misc/HLTVCameraHack.h"
+#include "Modules/CameraState.h"
+#include "PluginBase/HookManager.h"
+#include "PluginBase/Interfaces.h"
+#include "PluginBase/player.h"
+
 #include <client/c_baseentity.h>
 #include <cdll_int.h>
 #include <gameeventdefs.h>
@@ -17,13 +24,6 @@
 #include <toolframework/ienginetool.h>
 #include <vgui/IVGui.h>
 #include <vprof.h>
-
-#include "PluginBase/HookManager.h"
-#include "PluginBase/Interfaces.h"
-#include "PluginBase/player.h"
-#include "Modules/CameraState.h"
-
-#include "Controls/StubPanel.h"
 
 CameraAutoSwitch::CameraAutoSwitch() :
 	ce_cameraautoswitch_enabled("ce_cameraautoswitch_enabled", "0", FCVAR_NONE, "enable automatic switching of camera"),
@@ -62,7 +62,7 @@ bool CameraAutoSwitch::CheckDependencies()
 
 	try
 	{
-		GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>();
+		HookManager::GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
 	}
 	catch (bad_pointer)
 	{
@@ -142,7 +142,7 @@ void CameraAutoSwitch::OnPlayerDeath(IGameEvent* event)
 		// Switch immediately
 		try
 		{
-			GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(killer->GetEntity()->entindex());
+			Interfaces::GetHLTVCamera()->SetPrimaryTarget(killer->GetEntity()->entindex());
 		}
 		catch (bad_pointer &e)
 		{
@@ -185,7 +185,7 @@ void CameraAutoSwitch::OnTick(bool inGame)
 			{
 				try
 				{
-					GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(m_AutoSwitchToPlayer);
+					Interfaces::GetHLTVCamera()->SetPrimaryTarget(m_AutoSwitchToPlayer);
 				}
 				catch (bad_pointer &e)
 				{

@@ -56,7 +56,7 @@ bool LocalPlayer::CheckDependencies()
 
 	try
 	{
-		GetHooks()->GetFunc<Global_GetLocalPlayerIndex>();
+		HookManager::GetRawFunc_Global_GetLocalPlayerIndex();
 	}
 	catch (bad_pointer)
 	{

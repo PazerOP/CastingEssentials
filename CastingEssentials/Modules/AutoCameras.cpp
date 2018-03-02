@@ -984,6 +984,8 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 		}
 	}
 
+	auto const hltvcamera = Interfaces::GetHLTVCamera();
+
 	if (bestCameraScore <= 0)
 	{
 		if (ce_autocamera_spec_player_debug.GetBool())
@@ -1003,7 +1005,7 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 				return;
 			}
 
-			GetHooks()->GetFunc<C_HLTVCamera_SetMode>()(mode);
+			hltvcamera->SetMode(mode);
 		}
 
 		return;
@@ -1020,13 +1022,13 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 		if (bFollow)
 		{
 			// Since we just switched positions, snap angles to target player
-			VectorAngles((observedOrigin - bestCamera->m_Pos).Normalized(), Interfaces::GetHLTVCamera()->m_aCamAngle);
-			Interfaces::GetHLTVCamera()->m_flLastAngleUpdateTime = -1;
+			VectorAngles((observedOrigin - bestCamera->m_Pos).Normalized(), hltvcamera->m_aCamAngle);
+			hltvcamera->m_flLastAngleUpdateTime = -1;
 		}
 	}
 
 	if (bFollow)
-		GetHooks()->GetFunc<C_HLTVCamera_SetPrimaryTarget>()(observeTarget->entindex());
+		hltvcamera->SetPrimaryTarget(observeTarget->entindex());
 }
 
 float AutoCameras::ScoreSpecPlayerCamera(const Camera& camera, const Vector& position, const IHandleEntity* targetEnt) const
