@@ -3,22 +3,28 @@
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
+#include <igameevents.h>
 #include <shareddefs.h>
 
-class HitEvents final : public Module<HitEvents>
+#include <vector>
+
+class HitEvents final : public Module<HitEvents>, IGameEventListener2
 {
 public:
 	HitEvents();
 
 	void OnTick(bool bInGame) override;
-	void LevelInitPreEntity() override;
 
 	static bool CheckDependencies() { return true; }
 
+protected:
+	void FireGameEvent(IGameEvent* event) override;
+
 private:
-	ConVar ce_hitevents_enable;
+	std::vector<IGameEvent*> m_EventsToIgnore;
 
-	void TriggerPlayerHurt(int playerEntIndex, int damage);
+	ConVar ce_hitevents_enabled;
+	ConVar ce_hitevents_debug;
 
-	int m_LastDamage[MAX_PLAYERS];
+	IGameEvent* TriggerPlayerHurt(int playerEntIndex, int damage);
 };

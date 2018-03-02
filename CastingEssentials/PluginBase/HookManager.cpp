@@ -282,13 +282,15 @@ HookManager::RawGetLocalPlayerIndexFn HookManager::GetRawFunc_Global_GetLocalPla
 	static RawGetLocalPlayerIndexFn s_GetLocalPlayerIndexFn = nullptr;
 	if (!s_GetLocalPlayerIndexFn)
 	{
-		constexpr const char* SIG = "\xE8\x00\x00\x00\x00\x85\xC0\x74\x08\x8D\x48\x08\x8B\x01\xFF\x60\x24\x33\xC0\xC3";
+		constexpr const char* SIG = "\xE8????\x85\xC0\x74\x08\x8D\x48\x08\x8B\x01\xFF\x60\x24\x33\xC0\xC3";
 		constexpr const char* MASK = "x????xxxxxxxxxxxxxxx";
 
 		s_GetLocalPlayerIndexFn = (RawGetLocalPlayerIndexFn)SignatureScan("client", SIG, MASK);
 
 		if (!s_GetLocalPlayerIndexFn)
 			throw bad_pointer("GetLocalPlayerIndex");
+
+		Assert(*(uint8_t*)s_GetLocalPlayerIndexFn == 0xE8);
 	}
 
 	return s_GetLocalPlayerIndexFn;
@@ -628,6 +630,26 @@ HookManager::Raw_C_BasePlayer_GetFOV HookManager::GetRawFunc_C_BasePlayer_GetFOV
 	return fn;
 }
 
+HookManager::Raw_C_BasePlayer_GetLocalPlayer HookManager::GetRawFunc_C_BasePlayer_GetLocalPlayer()
+{
+	static Raw_C_BasePlayer_GetLocalPlayer fn = nullptr;
+	if (!fn)
+	{
+		// We know that C_BasePlayer::GetLocalPlayerIndex() immediately calls C_BasePlayer::GetLocalPlayer().
+		// Since GetLocalPlayer just returns a global variable, it's not reliable to find it with a signature.
+		// Instead, we find GetLocalPlayer indirectly through GetLocalPlayerIndex.
+		auto localPlayerIndexFn = GetRawFunc_Global_GetLocalPlayerIndex();
+
+		// We only handle relative offsets, this needs an update if GetLocalPlayerIndex signature ever changes
+		Assert(*(uint8_t*)localPlayerIndexFn == 0xE8);
+		auto offset = *(int*)((std::byte*)localPlayerIndexFn + 1);
+
+		fn = (Raw_C_BasePlayer_GetLocalPlayer)((std::byte*)localPlayerIndexFn + 5 + offset);
+	}
+
+	return fn;
+}
+
 void HookManager::IngameStateChanged(bool inGame)
 {
 	if (inGame)
@@ -642,6 +664,9 @@ void HookManager::IngameStateChanged(bool inGame)
 
 HookManager::HookManager()
 {
+	// Set this up before we start hooking stuff and modifying the function we want to look at
+	GetRawFunc_C_BasePlayer_GetLocalPlayer();
+
 	Assert(!s_HookManager);
 	m_Panel.reset(new Panel());
 	m_Hook_ICvar_ConsoleColorPrintf.AttachHook(std::make_shared<ICvar_ConsoleColorPrintf::Inner>(g_pCVar, &ICvar::ConsoleColorPrintf));

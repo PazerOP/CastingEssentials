@@ -352,15 +352,10 @@ void CameraTools::SpecClass(const CCommand& command)
 	}
 
 	int classIndex = -1;
-	if (command.ArgC() > 3)
+	if (command.ArgC() > 3 && !TryParseInteger(command.Arg(3), classIndex))
 	{
-		if (!IsInteger(command.Arg(3)))
-		{
-			PluginWarning("%s: class index \"%s\" is not an integer\n", command.Arg(0), command.Arg(3));
-			goto Usage;
-		}
-
-		classIndex = atoi(command.Arg(3));
+		PluginWarning("%s: class index \"%s\" is not an integer\n", command.Arg(0), command.Arg(3));
+		goto Usage;
 	}
 
 	SpecClass(team, playerClass, classIndex);
@@ -426,14 +421,14 @@ void CameraTools::SpecEntIndex(const CCommand& command)
 		goto Usage;
 	}
 
-	if (!IsInteger(command.Arg(1)))
+	int index;
+	if (!TryParseInteger(command.Arg(1), index))
 	{
 		PluginWarning("%s: entindex \"%s\" is not an integer\n", command.Arg(0), command.Arg(1));
 		goto Usage;
 	}
 
-	auto idx = atoi(command.Arg(1));
-	SpecPlayer(idx);
+	SpecPlayer(index);
 	return;
 
 Usage:
@@ -843,11 +838,7 @@ bool CameraTools::ParseSpecPosCommand(const CCommand& command, Vector& pos, QAng
 		{
 			param = i < 4 ? defaultPos[i - 1] : defaultAng[i - 4];
 		}
-		else if (IsFloat(arg))
-		{
-			param = atof(command.Arg(i));
-		}
-		else
+		else if (!TryParseFloat(arg, param))
 		{
 			PluginWarning("Invalid parameter \"%s\" (arg %i) for %s command\n", command.Arg(i), i - 1, command.Arg(0));
 			goto PrintUsage;

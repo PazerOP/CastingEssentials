@@ -4,7 +4,7 @@
 #include "Hooking/GroupClassHook.h"
 #include "Hooking/GroupVirtualHook.h"
 #include "Hooking/GroupGlobalVirtualHook.h"
-#include "PluginBase/Modules.h"
+//#include "PluginBase/Modules.h"
 
 #include <memory>
 
@@ -215,6 +215,7 @@ class HookManager final
 	typedef int(__thiscall *Raw_C_BaseAnimating_InternalDrawModel)(C_BaseAnimating* pThis, int flags);
 	typedef int(__thiscall *RawTFPlayerDrawModelFn)(C_TFPlayer*, int);
 	typedef int(*RawGetLocalPlayerIndexFn)();
+	typedef C_BasePlayer*(__cdecl *Raw_C_BasePlayer_GetLocalPlayer)();
 	typedef C_BaseEntity*(__cdecl *RawCreateEntityByNameFn)(const char* entityName);
 	typedef IClientNetworkable*(__cdecl *RawCreateTFGlowObjectFn)(int entNum, int serialNum);
 	typedef bool(__thiscall *RawBaseEntityInitFn)(C_BaseEntity* pThis, int entnum, int iSerialNum);
@@ -267,13 +268,14 @@ public:
 	static Raw_EditablePanel_GetDialogVariables GetRawFunc_EditablePanel_GetDialogVariables();
 	static Raw_ImagePanel_SetImage GetRawFunc_ImagePanel_SetImage();
 	static Raw_C_BaseAnimating_ComputeHitboxSurroundingBox GetRawFunc_C_BaseAnimating_ComputeHitboxSurroundingBox();
+	static Raw_C_BasePlayer_GetFOV GetRawFunc_C_BasePlayer_GetFOV();
+	static Raw_C_BasePlayer_GetLocalPlayer GetRawFunc_C_BasePlayer_GetLocalPlayer();
 
 	static Raw_RenderBox GetRawFunc_RenderBox();
 	static Raw_RenderBox_1 GetRawFunc_RenderBox_1();
 	static Raw_RenderWireframeBox GetRawFunc_RenderWireframeBox();
 	static Raw_RenderLine GetRawFunc_RenderLine();
 	static Raw_RenderTriangle GetRawFunc_RenderTriangle();
-	static Raw_C_BasePlayer_GetFOV GetRawFunc_C_BasePlayer_GetFOV();
 
 	static bool Load();
 	static bool Unload();
@@ -434,7 +436,6 @@ private:
 
 	// Passthrough from Interfaces so we don't have to #include "Interfaces.h" yet
 	static C_HLTVCamera* GetHLTVCamera();
-	static CBaseEntityList* GetBaseEntityList();
 };
 
 using ICvar_ConsoleColorPrintf = HookManager::ICvar_ConsoleColorPrintf;

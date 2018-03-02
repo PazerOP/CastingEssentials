@@ -2,6 +2,7 @@
 
 #include "interface.h"
 
+class C_BasePlayer;
 class C_HLTVCamera;
 class HLTVCameraOverride;
 class CSteamAPIContext;
@@ -26,6 +27,9 @@ class IClientLeafSystem;
 class Interfaces final
 {
 public:
+	Interfaces() = delete;
+	~Interfaces() = delete;
+
 	static void Load(CreateInterfaceFn factory);
 	static void Unload();
 
@@ -75,6 +79,8 @@ public:
 	// #include "Misc/HLTVCameraHack.h"
 	static HLTVCameraOverride *GetHLTVCamera();
 
+	static C_BasePlayer*& GetLocalPlayer();
+
 	// #include <engine/ivdebugoverlay.h>
 	static IVDebugOverlay* GetDebugOverlay() { return s_DebugOverlay; }
 
@@ -111,7 +117,4 @@ private:
 
 	static IClientMode* s_ClientMode;
 	static C_HLTVCamera** s_HLTVCamera;
-
-	Interfaces() { }
-	~Interfaces() { }
 };

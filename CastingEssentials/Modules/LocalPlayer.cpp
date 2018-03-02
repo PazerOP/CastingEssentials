@@ -80,7 +80,6 @@ int LocalPlayer::GetLocalPlayerIndexOverride()
 		}
 	}
 
-	GetHooks()->GetHook<Global_GetLocalPlayerIndex>()->SetState(Hooking::HookAction::IGNORE);
 	return 0;
 }
 

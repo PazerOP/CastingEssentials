@@ -51,6 +51,8 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CastingPlugin, IServerPluginCallbacks, INTERFA
 
 bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory)
 {
+	const auto startTime = std::chrono::high_resolution_clock::now();
+
 	Msg("Hello from %s!\n", PLUGIN_FULL_VERSION);
 
 #ifdef DEBUG
@@ -93,7 +95,9 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 
 	ConVar_Register();
 
-	PluginMsg("Finished loading!\n");
+	const auto endTime = std::chrono::high_resolution_clock::now();
+	const auto delta = std::chrono::duration<float>(endTime - startTime);
+	PluginMsg("Finished loading in %1.2f seconds.\n", delta.count());
 
 	return true;
 }

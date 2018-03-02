@@ -1,4 +1,5 @@
 #include "Interfaces.h"
+#include "Hooking/ModuleSegments.h"
 #include "Misc/HLTVCameraHack.h"
 #include "PluginBase/HookManager.h"
 #include "Exceptions.h"
@@ -22,6 +23,8 @@
 #include <engine/IEngineTrace.h>
 #include <client/cliententitylist.h>
 #include <shaderapi/ishaderapi.h>
+
+#include <Windows.h>
 
 IBaseClientDLL *Interfaces::pClientDLL = nullptr;
 IClientEngineTools *Interfaces::pClientEngineTools = nullptr;
@@ -177,7 +180,7 @@ HLTVCameraOverride* Interfaces::GetHLTVCamera()
 
 		s_HLTVCamera = (C_HLTVCamera**)((char*)SignatureScan("client", SIG, MASK) + OFFSET);
 
-		if (!s_HLTVCamera)
+		if (s_HLTVCamera == (C_HLTVCamera**)OFFSET)
 			throw bad_pointer("C_HLTVCamera");
 	}
 
@@ -186,4 +189,19 @@ HLTVCameraOverride* Interfaces::GetHLTVCamera()
 		throw bad_pointer("C_HLTVCamera");
 
 	return (HLTVCameraOverride*)deref;
+}
+
+C_BasePlayer*& Interfaces::GetLocalPlayer()
+{
+	static C_BasePlayer** s_LocalPlayer = nullptr;
+	if (!s_LocalPlayer)
+	{
+		auto localPlayerFn = HookManager::GetRawFunc_C_BasePlayer_GetLocalPlayer();
+
+		auto location = *(intptr_t*)((std::byte*)localPlayerFn + 1);
+
+		s_LocalPlayer = (C_BasePlayer**)location;
+	}
+
+	return *s_LocalPlayer;
 }

@@ -93,6 +93,7 @@
     <ClCompile Include="Controls\VariableLabel.cpp" />
     <ClCompile Include="Hooking\IBaseHook.cpp" />
     <ClCompile Include="Hooking\IGroupHook.cpp" />
+    <ClCompile Include="Hooking\ModuleSegments.cpp" />
     <ClCompile Include="Misc\DebugOverlay.cpp" />
     <ClCompile Include="Misc\OffsetChecking.cpp" />
     <ClCompile Include="Modules\ClientTools.cpp" />
@@ -138,6 +139,7 @@
     <ClInclude Include="Controls\VariableLabel.h" />
     <ClInclude Include="Hooking\BaseGroupHook.h" />
     <ClInclude Include="Hooking\GroupGlobalVirtualHook.h" />
+    <ClInclude Include="Hooking\ModuleSegments.h" />
     <ClInclude Include="Hooking\TemplateFunctions.h" />
     <ClInclude Include="Hooking\GroupClassHook.h" />
     <ClInclude Include="Hooking\GroupGlobalHook.h" />

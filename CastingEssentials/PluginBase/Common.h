@@ -76,42 +76,13 @@ template<class... Parameters> __forceinline void PluginColorMsg(const Color& col
 bool TryParseInteger(const char* str, int& out);
 bool TryParseFloat(const char* str, float& out);
 
-inline bool IsInteger(const std::string &s)
-{
-	if (s.empty() || (!isdigit(s[0]) && s[0] != '-' && s[0] != '+'))
-		return false;
-
-	char *p;
-	strtoull(s.c_str(), &p, 10);
-
-	return (*p == 0);
-}
-
-inline bool IsFloat(const std::string& s)
-{
-	if (s.empty())
-		return false;
-
-	char* p;
-	strtof(s.c_str(), &p);
-
-	return (*p == 0);
-}
-
-inline bool IsStringEmpty(const std::string& s) { return s.empty(); }
+inline bool IsStringEmpty(const std::string_view& s) { return s.empty(); }
 inline bool IsStringEmpty(const std::string* s)
 {
 	if (!s)
 		return true;
 
 	return s->empty();
-}
-inline bool IsStringEmpty(const char* s)
-{
-	if (!s)
-		return true;
-
-	return !(s[0]);
 }
 
 inline std::string vstrprintf(const char* fmt, va_list args)

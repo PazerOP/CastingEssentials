@@ -54,9 +54,10 @@ AutoCameras::AutoCameras() :
 		"\tIf no autocameras have LOS to our current position, find the nearest/furthest autocamera with our current position in its view frustum.\n"
 		"\tIf our position is not in any autocamera's view frustum, find the nearest/furthest autocamera to our current position."),
 
-	ce_autocamera_spec_player("ce_autocamera_spec_player", [](const CCommand& args) { GetModule()->SpecPlayer(args); }, "Switches to an autocamera with the best view of the current player. Usage: ce_autocamera_spec_player [group]."),
+	ce_autocamera_spec_player("ce_autocamera_spec_player", [](const CCommand& args) { GetModule()->SpecPlayer(args); },
+		"Switches to an autocamera with the best view of the current player. Usage: ce_autocamera_spec_player [group]."),
 	ce_autocamera_spec_player_fallback("ce_autocamera_spec_player_fallback", "firstperson", FCVAR_NONE,
-"Behavior to fall back to when using ce_autocamera_spec_player and no autocameras make it through the filters. Valid values: firstperson/thirdperson/none."),
+		"Behavior to fall back to when using ce_autocamera_spec_player and no autocameras make it through the filters. Valid values: firstperson/thirdperson/none."),
 	ce_autocamera_spec_player_fov("ce_autocamera_spec_player_fov", "75", FCVAR_NONE,
 		"FOV to use when checking if a player is in view of an autocamera. -1 to disable check."),
 	ce_autocamera_spec_player_dist("ce_autocamera_spec_player_dist", "2000", FCVAR_NONE, "Maximum distance a player can be from an autocamera."),
