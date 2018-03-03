@@ -50,7 +50,7 @@ Graphics::Graphics() :
 		"Override color for blue players. [0, 255], format is \"<red> <green> <blue>\"."),
 	ce_outlines_additive("ce_outlines_additive", "1", FCVAR_NONE, "If set to 1, outlines will add to underlying colors rather than replace them."),
 	ce_outlines_debug("ce_outlines_debug", "0", FCVAR_NONE),
-	ce_outlines_spy_visibility("ce_outlines_spy_visiblity", "1", FCVAR_NONE,
+	ce_outlines_spy_visibility("ce_outlines_spy_visibility", "1", FCVAR_NONE,
 		"If set to 1, always show outlines around cloaked spies (as opposed to only when they are behind walls)."),
 
 	ce_infills_enable("ce_infills_enable", "0", FCVAR_NONE, "Enables player infills."),
