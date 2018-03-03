@@ -8,6 +8,10 @@
 
 #include <vector>
 
+class C_BaseCombatCharacter; 
+class CDamageAccountPanel;
+class C_TFPlayer;
+
 class HitEvents final : public Module<HitEvents>, IGameEventListener2
 {
 public:
@@ -22,6 +26,8 @@ protected:
 
 private:
 	std::vector<IGameEvent*> m_EventsToIgnore;
+
+	void DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool unknown);
 
 	ConVar ce_hitevents_enabled;
 	ConVar ce_hitevents_debug;

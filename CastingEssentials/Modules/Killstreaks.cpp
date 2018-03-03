@@ -167,12 +167,12 @@ Killstreaks::Panel::Panel()
 
 void Killstreaks::Panel::Init()
 {
-	m_FireEventClientSideHook = GetHooks()->AddHook<IGameEventManager2_FireEventClientSide>(std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
+	m_FireEventClientSideHook = GetHooks()->AddHook<HookFunc::IGameEventManager2_FireEventClientSide>(std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
 }
 
 Killstreaks::Panel::~Panel()
 {
-	if (m_FireEventClientSideHook && GetHooks()->RemoveHook<IGameEventManager2_FireEventClientSide>(m_FireEventClientSideHook, __FUNCSIG__))
+	if (m_FireEventClientSideHook && GetHooks()->RemoveHook<HookFunc::IGameEventManager2_FireEventClientSide>(m_FireEventClientSideHook, __FUNCSIG__))
 		m_FireEventClientSideHook = 0;
 
 	Assert(!m_FireEventClientSideHook);
@@ -228,9 +228,9 @@ void Killstreaks::Panel::OnTick()
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (Interfaces::GetEngineClient()->IsInGame())
 	{
-		if (!m_FireEventClientSideHook && GetHooks()->GetHook<IGameEventManager2_FireEventClientSide>())
+		if (!m_FireEventClientSideHook && GetHooks()->GetHook<HookFunc::IGameEventManager2_FireEventClientSide>())
 		{
-			m_FireEventClientSideHook = GetHooks()->AddHook<IGameEventManager2_FireEventClientSide>(std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
+			m_FireEventClientSideHook = GetHooks()->AddHook<HookFunc::IGameEventManager2_FireEventClientSide>(std::bind(&Killstreaks::Panel::FireEventClientSideOverride, this, std::placeholders::_1));
 		}
 
 		Assert(TFPlayerResource::GetPlayerResource());
@@ -287,7 +287,7 @@ void Killstreaks::Panel::OnTick()
 
 		if (m_FireEventClientSideHook)
 		{
-			if (GetHooks()->RemoveHook<IGameEventManager2_FireEventClientSide>(m_FireEventClientSideHook, __FUNCSIG__))
+			if (GetHooks()->RemoveHook<HookFunc::IGameEventManager2_FireEventClientSide>(m_FireEventClientSideHook, __FUNCSIG__))
 				m_FireEventClientSideHook = 0;
 
 			Assert(!m_FireEventClientSideHook);

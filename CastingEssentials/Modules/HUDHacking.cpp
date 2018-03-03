@@ -19,12 +19,12 @@ HUDHacking::HUDHacking() :
 	ce_hud_forward_playerpanel_border("ce_hud_forward_playerpanel_border", "1", FCVAR_NONE, "Sets the border of [playerpanel]->PanelColorBG to the same value as [playerpanel]."),
 	ce_hud_player_health_progressbars("ce_hud_player_health_progressbars", "1", FCVAR_NONE, "Enables [playerpanel]->PlayerHealth[Overheal](Red/Blue) ProgressBars.")
 {
-	m_ProgressBarApplySettingsHook = GetHooks()->AddHook<vgui_ProgressBar_ApplySettings>(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2));
+	m_ProgressBarApplySettingsHook = GetHooks()->AddHook<HookFunc::vgui_ProgressBar_ApplySettings>(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2));
 }
 
 HUDHacking::~HUDHacking()
 {
-	if (m_ProgressBarApplySettingsHook && GetHooks()->RemoveHook<vgui_ProgressBar_ApplySettings>(m_ProgressBarApplySettingsHook, __FUNCTION__))
+	if (m_ProgressBarApplySettingsHook && GetHooks()->RemoveHook<HookFunc::vgui_ProgressBar_ApplySettings>(m_ProgressBarApplySettingsHook, __FUNCTION__))
 		m_ProgressBarApplySettingsHook = 0;
 
 	Assert(!m_ProgressBarApplySettingsHook);
@@ -65,7 +65,7 @@ Player* HUDHacking::GetPlayerFromPanel(vgui::EditablePanel* playerPanel)
 		return nullptr;
 	}
 
-	auto dv = HookManager::GetRawFunc_EditablePanel_GetDialogVariables()(playerPanel);
+	auto dv = HookManager::GetRawFunc<HookFunc::vgui_EditablePanel_GetDialogVariables>()(playerPanel);
 
 	const char* playername = dv->GetString("playername");
 	Assert(playername);	// Not a spectator gui playerpanel?
@@ -238,5 +238,5 @@ void HUDHacking::ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValue
 		dirVar = vgui::ProgressBar::PROGRESS_EAST;
 
 	// Always execute the real function after we run this hook
-	GetHooks()->SetState<vgui_ProgressBar_ApplySettings>(Hooking::HookAction::IGNORE);
+	GetHooks()->SetState<HookFunc::vgui_ProgressBar_ApplySettings>(Hooking::HookAction::IGNORE);
 }

@@ -18,7 +18,7 @@ private:
 	void ConsoleDPrintfHook(const char* msg);
 	void ConsolePrintfHook(const char* msg);
 
-	bool CheckFilters(const std::string& msg) const;
+	bool CheckFilters(const char* msg) const;
 
 	int m_ConsoleColorPrintfHook;
 	int m_ConsoleDPrintfHook;

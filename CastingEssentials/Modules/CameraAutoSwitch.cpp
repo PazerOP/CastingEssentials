@@ -62,7 +62,7 @@ bool CameraAutoSwitch::CheckDependencies()
 
 	try
 	{
-		HookManager::GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
+		HookManager::GetRawFunc<HookFunc::C_HLTVCamera_SetPrimaryTarget>();
 	}
 	catch (bad_pointer)
 	{

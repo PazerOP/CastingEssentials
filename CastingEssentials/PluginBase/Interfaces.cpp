@@ -196,7 +196,7 @@ C_BasePlayer*& Interfaces::GetLocalPlayer()
 	static C_BasePlayer** s_LocalPlayer = nullptr;
 	if (!s_LocalPlayer)
 	{
-		auto localPlayerFn = HookManager::GetRawFunc_C_BasePlayer_GetLocalPlayer();
+		auto localPlayerFn = HookManager::GetRawFunc<HookFunc::C_BasePlayer_GetLocalPlayer>();
 
 		auto location = *(intptr_t*)((std::byte*)localPlayerFn + 1);
 

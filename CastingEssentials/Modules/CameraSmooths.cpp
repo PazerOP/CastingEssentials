@@ -77,7 +77,7 @@ bool CameraSmooths::CheckDependencies()
 
 	try
 	{
-		HookManager::GetRawFunc_C_HLTVCamera_SetCameraAngle();
+		HookManager::GetRawFunc<HookFunc::C_HLTVCamera_SetCameraAngle>();
 	}
 	catch (bad_pointer)
 	{
@@ -87,7 +87,7 @@ bool CameraSmooths::CheckDependencies()
 
 	try
 	{
-		HookManager::GetRawFunc_C_HLTVCamera_SetMode();
+		HookManager::GetRawFunc<HookFunc::C_HLTVCamera_SetMode>();
 	}
 	catch (bad_pointer)
 	{

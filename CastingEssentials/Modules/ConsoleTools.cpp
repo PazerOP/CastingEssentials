@@ -59,17 +59,17 @@ bool ConsoleTools::CheckDependencies()
 		ready = false;
 	}
 
-	if (!GetHooks()->GetHook<HookManager::ICvar_ConsoleColorPrintf>())
+	if (!GetHooks()->GetHook<HookFunc::ICvar_ConsoleColorPrintf>())
 	{
 		PluginWarning("Required hook ICvar::ConsoleColorPrintf for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
-	if (!GetHooks()->GetHook<HookManager::ICvar_ConsoleDPrintf>())
+	if (!GetHooks()->GetHook<HookFunc::ICvar_ConsoleDPrintf>())
 	{
 		PluginWarning("Required hook ICvar::ConsoleDPrintf for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
-	if (!GetHooks()->GetHook<HookManager::ICvar_ConsolePrintf>())
+	if (!GetHooks()->GetHook<HookFunc::ICvar_ConsolePrintf>())
 	{
 		PluginWarning("Required hook ICvar::ConsolePrintf for module %s not available!\n", GetModuleName());
 		ready = false;
@@ -100,13 +100,13 @@ void ConsoleTools::ToggleFilterEnabled(IConVar *var, const char *pOldValue, floa
 	if (ce_consoletools_filter_enabled.GetBool())
 	{
 		if (!m_ConsolePrintfHook)
-			m_ConsolePrintfHook = GetHooks()->AddHook<ICvar_ConsolePrintf>(std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1));
+			m_ConsolePrintfHook = GetHooks()->AddHook<HookFunc::ICvar_ConsolePrintf>(std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1));
 
 		if (!m_ConsoleDPrintfHook)
-			m_ConsoleDPrintfHook = GetHooks()->AddHook<ICvar_ConsoleDPrintf>(std::bind(&ConsoleTools::ConsoleDPrintfHook, this, std::placeholders::_1));
+			m_ConsoleDPrintfHook = GetHooks()->AddHook<HookFunc::ICvar_ConsoleDPrintf>(std::bind(&ConsoleTools::ConsoleDPrintfHook, this, std::placeholders::_1));
 
 		if (!m_ConsoleColorPrintfHook)
-			m_ConsoleColorPrintfHook = GetHooks()->AddHook<ICvar_ConsoleColorPrintf>(std::bind(&ConsoleTools::ConsoleColorPrintfHook, this, std::placeholders::_1, std::placeholders::_2));
+			m_ConsoleColorPrintfHook = GetHooks()->AddHook<HookFunc::ICvar_ConsoleColorPrintf>(std::bind(&ConsoleTools::ConsoleColorPrintfHook, this, std::placeholders::_1, std::placeholders::_2));
 	}
 	else
 		DisableHooks();
@@ -114,15 +114,15 @@ void ConsoleTools::ToggleFilterEnabled(IConVar *var, const char *pOldValue, floa
 
 void ConsoleTools::DisableHooks()
 {
-	if (m_ConsoleColorPrintfHook && GetHooks()->RemoveHook<ICvar_ConsoleColorPrintf>(m_ConsoleColorPrintfHook, __FUNCSIG__))
+	if (m_ConsoleColorPrintfHook && GetHooks()->RemoveHook<HookFunc::ICvar_ConsoleColorPrintf>(m_ConsoleColorPrintfHook, __FUNCSIG__))
 	{
 		m_ConsoleColorPrintfHook = 0;
 	}
-	if (m_ConsoleDPrintfHook && GetHooks()->RemoveHook<ICvar_ConsoleDPrintf>(m_ConsoleDPrintfHook, __FUNCSIG__))
+	if (m_ConsoleDPrintfHook && GetHooks()->RemoveHook<HookFunc::ICvar_ConsoleDPrintf>(m_ConsoleDPrintfHook, __FUNCSIG__))
 	{
 		m_ConsoleDPrintfHook = 0;
 	}
-	if (m_ConsolePrintfHook && GetHooks()->RemoveHook<ICvar_ConsolePrintf>(m_ConsolePrintfHook, __FUNCSIG__))
+	if (m_ConsolePrintfHook && GetHooks()->RemoveHook<HookFunc::ICvar_ConsolePrintf>(m_ConsolePrintfHook, __FUNCSIG__))
 	{
 		m_ConsolePrintfHook = 0;
 	}
@@ -132,24 +132,24 @@ void ConsoleTools::ConsoleColorPrintfHook(const Color &clr, const char *message)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!m_FilterPaused && CheckFilters(message))
-		GetHooks()->GetHook<ICvar_ConsoleColorPrintf>()->SetState(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->GetHook<HookFunc::ICvar_ConsoleColorPrintf>()->SetState(Hooking::HookAction::SUPERCEDE);
 }
 
 void ConsoleTools::ConsoleDPrintfHook(const char *message)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!m_FilterPaused && CheckFilters(message))
-		GetHooks()->GetHook<ICvar_ConsoleDPrintf>()->SetState(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->GetHook<HookFunc::ICvar_ConsoleDPrintf>()->SetState(Hooking::HookAction::SUPERCEDE);
 }
 
 void ConsoleTools::ConsolePrintfHook(const char *message)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!m_FilterPaused && CheckFilters(message))
-		GetHooks()->GetHook<ICvar_ConsolePrintf>()->SetState(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->GetHook<HookFunc::ICvar_ConsolePrintf>()->SetState(Hooking::HookAction::SUPERCEDE);
 }
 
-bool ConsoleTools::CheckFilters(const std::string& message) const
+bool ConsoleTools::CheckFilters(const char* message) const
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	for (std::string filter : m_Filters)

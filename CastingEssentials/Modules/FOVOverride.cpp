@@ -89,19 +89,19 @@ void FOVOverride::OnTick(bool inGame)
 	if (inGame)
 	{
 		if (!m_InToolModeHook)
-			m_InToolModeHook = GetHooks()->AddHook<IClientEngineTools_InToolMode>(std::bind(&FOVOverride::InToolModeOverride, this));
+			m_InToolModeHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_InToolMode>(std::bind(&FOVOverride::InToolModeOverride, this));
 
 		if (!m_SetupEngineViewHook)
-			m_SetupEngineViewHook = GetHooks()->AddHook<IClientEngineTools_SetupEngineView>(std::bind(&FOVOverride::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+			m_SetupEngineViewHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_SetupEngineView>(std::bind(&FOVOverride::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	}
 	else
 	{
-		if (m_InToolModeHook && GetHooks()->RemoveHook<IClientEngineTools_InToolMode>(m_InToolModeHook, __FUNCSIG__))
+		if (m_InToolModeHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_InToolMode>(m_InToolModeHook, __FUNCSIG__))
 			m_InToolModeHook = 0;
 
 		Assert(!m_InToolModeHook);
 
-		if (m_SetupEngineViewHook && GetHooks()->RemoveHook<IClientEngineTools_SetupEngineView>(m_SetupEngineViewHook, __FUNCSIG__))
+		if (m_SetupEngineViewHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_SetupEngineView>(m_SetupEngineViewHook, __FUNCSIG__))
 			m_SetupEngineViewHook = 0;
 
 		Assert(!m_SetupEngineViewHook);
@@ -110,7 +110,7 @@ void FOVOverride::OnTick(bool inGame)
 
 bool FOVOverride::InToolModeOverride()
 {
-	GetHooks()->SetState<IClientEngineTools_InToolMode>(Hooking::HookAction::SUPERCEDE);
+	GetHooks()->SetState<HookFunc::IClientEngineTools_InToolMode>(Hooking::HookAction::SUPERCEDE);
 	return true;
 }
 
@@ -226,6 +226,6 @@ bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 #endif
 
 	//fov = ce_fovoverride_fov.GetFloat();
-	GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
+	GetHooks()->SetState<HookFunc::IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
 	return true;
 }

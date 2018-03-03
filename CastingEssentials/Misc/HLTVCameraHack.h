@@ -26,6 +26,8 @@ public:
 	using C_HLTVCamera::m_szTitleText;
 	using C_HLTVCamera::m_LastCmd;
 	using C_HLTVCamera::m_vecVelocity;
+
+	using C_HLTVCamera::SetCameraAngle;
 };
 
 #undef WALL_OFFSET

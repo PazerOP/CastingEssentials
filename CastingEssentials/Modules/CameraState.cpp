@@ -67,7 +67,7 @@ bool CameraState::InToolModeOverride()
 	}
 
 	if (m_ThisFrameInToolMode)
-		GetHooks()->SetState<IClientEngineTools_InToolMode>(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->SetState<HookFunc::IClientEngineTools_InToolMode>(Hooking::HookAction::SUPERCEDE);
 
 	return m_ThisFrameInToolMode;
 }
@@ -88,7 +88,7 @@ bool CameraState::IsThirdPersonCameraOverride()
 	}
 
 	if (m_ThisFrameIsThirdPerson)
-		GetHooks()->SetState<IClientEngineTools_IsThirdPersonCamera>(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->SetState<HookFunc::IClientEngineTools_IsThirdPersonCamera>(Hooking::HookAction::SUPERCEDE);
 
 	return m_ThisFrameIsThirdPerson;
 }
@@ -114,7 +114,7 @@ bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 	m_ThisFramePluginView.Set(origin, angles, fov);
 
 	if (retVal)
-		GetHooks()->SetState<IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->SetState<HookFunc::IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
 
 	return retVal;
 }
@@ -167,23 +167,23 @@ void CameraState::SetupHooks(bool connect)
 {
 	if (connect)
 	{
-		m_InToolModeHook = GetHooks()->AddHook<IClientEngineTools_InToolMode>(std::bind(&CameraState::InToolModeOverride, this));
-		m_IsThirdPersonCameraHook = GetHooks()->AddHook<IClientEngineTools_IsThirdPersonCamera>(std::bind(&CameraState::IsThirdPersonCameraOverride, this));
-		m_SetupEngineViewHook = GetHooks()->AddHook<IClientEngineTools_SetupEngineView>(std::bind(&CameraState::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+		m_InToolModeHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_InToolMode>(std::bind(&CameraState::InToolModeOverride, this));
+		m_IsThirdPersonCameraHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_IsThirdPersonCamera>(std::bind(&CameraState::IsThirdPersonCameraOverride, this));
+		m_SetupEngineViewHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_SetupEngineView>(std::bind(&CameraState::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	}
 	else
 	{
-		if (m_InToolModeHook && GetHooks()->RemoveHook<IClientEngineTools_InToolMode>(m_InToolModeHook, __FUNCSIG__))
+		if (m_InToolModeHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_InToolMode>(m_InToolModeHook, __FUNCSIG__))
 			m_InToolModeHook = 0;
 
 		Assert(!m_InToolModeHook);
 
-		if (m_IsThirdPersonCameraHook && GetHooks()->RemoveHook<IClientEngineTools_IsThirdPersonCamera>(m_IsThirdPersonCameraHook, __FUNCSIG__))
+		if (m_IsThirdPersonCameraHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_IsThirdPersonCamera>(m_IsThirdPersonCameraHook, __FUNCSIG__))
 			m_IsThirdPersonCameraHook = 0;
 
 		Assert(!m_IsThirdPersonCameraHook);
 
-		if (m_SetupEngineViewHook && GetHooks()->RemoveHook<IClientEngineTools_SetupEngineView>(m_SetupEngineViewHook, __FUNCSIG__))
+		if (m_SetupEngineViewHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_SetupEngineView>(m_SetupEngineViewHook, __FUNCSIG__))
 			m_SetupEngineViewHook = 0;
 
 		Assert(!m_SetupEngineViewHook);

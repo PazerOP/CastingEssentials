@@ -72,26 +72,26 @@ Graphics::Graphics() :
 
 	ce_graphics_dump_shader_params("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete)
 {
-	m_ComputeEntityFadeHook = GetHooks()->AddHook<Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+	m_ComputeEntityFadeHook = GetHooks()->AddHook<HookFunc::Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
-	m_ApplyEntityGlowEffectsHook = GetHooks()->AddHook<CGlowObjectManager_ApplyEntityGlowEffects>(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9));
+	m_ApplyEntityGlowEffectsHook = GetHooks()->AddHook<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9));
 
-	m_ForcedMaterialOverrideHook = GetHooks()->AddHook<IStudioRender_ForcedMaterialOverride>(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2));
+	m_ForcedMaterialOverrideHook = GetHooks()->AddHook<HookFunc::IStudioRender_ForcedMaterialOverride>(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 Graphics::~Graphics()
 {
-	if (m_ComputeEntityFadeHook && GetHooks()->RemoveHook<Global_UTILComputeEntityFade>(m_ComputeEntityFadeHook, __FUNCSIG__))
+	if (m_ComputeEntityFadeHook && GetHooks()->RemoveHook<HookFunc::Global_UTILComputeEntityFade>(m_ComputeEntityFadeHook, __FUNCSIG__))
 		m_ComputeEntityFadeHook = 0;
 
 	Assert(!m_ComputeEntityFadeHook);
 
-	if (m_ApplyEntityGlowEffectsHook && GetHooks()->RemoveHook<CGlowObjectManager_ApplyEntityGlowEffects>(m_ApplyEntityGlowEffectsHook, __FUNCSIG__))
+	if (m_ApplyEntityGlowEffectsHook && GetHooks()->RemoveHook<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>(m_ApplyEntityGlowEffectsHook, __FUNCSIG__))
 		m_ApplyEntityGlowEffectsHook = 0;
 
 	Assert(!m_ApplyEntityGlowEffectsHook);
 
-	if (m_ForcedMaterialOverrideHook && GetHooks()->RemoveHook<IStudioRender_ForcedMaterialOverride>(m_ForcedMaterialOverrideHook, __FUNCSIG__))
+	if (m_ForcedMaterialOverrideHook && GetHooks()->RemoveHook<HookFunc::IStudioRender_ForcedMaterialOverride>(m_ForcedMaterialOverrideHook, __FUNCSIG__))
 		m_ForcedMaterialOverrideHook = 0;
 
 	Assert(!m_ForcedMaterialOverrideHook);
@@ -265,7 +265,7 @@ unsigned char Graphics::ComputeEntityFadeOveride(C_BaseEntity* entity, float min
 
 	if (ce_graphics_disable_prop_fades.GetBool())
 	{
-		GetHooks()->SetState<Global_UTILComputeEntityFade>(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->SetState<HookFunc::Global_UTILComputeEntityFade>(Hooking::HookAction::SUPERCEDE);
 		return max;
 	}
 
@@ -276,12 +276,12 @@ void Graphics::ApplyEntityGlowEffectsOverride(CGlowObjectManager * pThis, const 
 {
 	if (ce_graphics_improved_glows.GetBool())
 	{
-		GetHooks()->SetState<CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->SetState<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::SUPERCEDE);
 		pThis->ApplyEntityGlowEffects(pSetup, nSplitScreenSlot, pRenderContext, flBloomScale, x, y, w, h);
 	}
 	else
 	{
-		GetHooks()->SetState<CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::IGNORE);
+		GetHooks()->SetState<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::IGNORE);
 	}
 }
 
@@ -289,12 +289,12 @@ void Graphics::ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_
 {
 	if (s_DisableForcedMaterialOverride)
 	{
-		GetHooks()->SetState<IStudioRender_ForcedMaterialOverride>(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->SetState<HookFunc::IStudioRender_ForcedMaterialOverride>(Hooking::HookAction::SUPERCEDE);
 		// Do nothing
 	}
 	else
 	{
-		GetHooks()->SetState<IStudioRender_ForcedMaterialOverride>(Hooking::HookAction::IGNORE);
+		GetHooks()->SetState<HookFunc::IStudioRender_ForcedMaterialOverride>(Hooking::HookAction::IGNORE);
 	}
 }
 

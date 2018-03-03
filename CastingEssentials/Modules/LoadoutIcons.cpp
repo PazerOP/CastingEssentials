@@ -44,8 +44,8 @@ bool LoadoutIcons::CheckDependencies()
 
 	try
 	{
-		HookManager::GetRawFunc_EditablePanel_GetDialogVariables();
-		HookManager::GetRawFunc_ImagePanel_SetImage();
+		HookManager::GetRawFunc<HookFunc::vgui_EditablePanel_GetDialogVariables>();
+		HookManager::GetRawFunc<HookFunc::vgui_ImagePanel_SetImage>();
 	}
 	catch (bad_pointer ex)
 	{
@@ -172,7 +172,7 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 				// Dumb, evil, unsafe hacks
 				auto hackImgPanel = reinterpret_cast<vgui::ImagePanel*>(iconPanel);
 
-				HookManager::GetRawFunc_ImagePanel_SetImage()(hackImgPanel, materialBuffer);
+				HookManager::GetRawFunc<HookFunc::vgui_ImagePanel_SetImage>()(hackImgPanel, materialBuffer);
 
 				//Color* m_FillColor = (Color*)(((DWORD*)hackImgPanel) + 94);
 				Color* m_DrawColor = (Color*)(((DWORD*)hackImgPanel) + 95);

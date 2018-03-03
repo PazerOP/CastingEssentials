@@ -56,7 +56,7 @@ bool LocalPlayer::CheckDependencies()
 
 	try
 	{
-		HookManager::GetRawFunc_Global_GetLocalPlayerIndex();
+		HookManager::GetRawFunc<HookFunc::Global_GetLocalPlayerIndex>();
 	}
 	catch (bad_pointer)
 	{
@@ -75,7 +75,7 @@ int LocalPlayer::GetLocalPlayerIndexOverride()
 		Player* localPlayer = Player::GetPlayer(ce_localplayer_player.GetInt(), __FUNCSIG__);
 		if (localPlayer)
 		{
-			GetHooks()->GetHook<Global_GetLocalPlayerIndex>()->SetState(Hooking::HookAction::SUPERCEDE);
+			GetHooks()->GetHook<HookFunc::Global_GetLocalPlayerIndex>()->SetState(Hooking::HookAction::SUPERCEDE);
 			return ce_localplayer_player.GetInt();
 		}
 	}
@@ -89,12 +89,12 @@ void LocalPlayer::ToggleEnabled(IConVar *var, const char *pOldValue, float flOld
 	{
 		if (!m_GetLocalPlayerIndexHookID)
 		{
-			m_GetLocalPlayerIndexHookID = GetHooks()->GetHook<Global_GetLocalPlayerIndex>()->AddHook(std::bind(&LocalPlayer::GetLocalPlayerIndexOverride, this));
+			m_GetLocalPlayerIndexHookID = GetHooks()->GetHook<HookFunc::Global_GetLocalPlayerIndex>()->AddHook(std::bind(&LocalPlayer::GetLocalPlayerIndexOverride, this));
 		}
 	}
 	else
 	{
-		if (m_GetLocalPlayerIndexHookID && GetHooks()->GetHook<Global_GetLocalPlayerIndex>()->RemoveHook(m_GetLocalPlayerIndexHookID, __FUNCSIG__))
+		if (m_GetLocalPlayerIndexHookID && GetHooks()->GetHook<HookFunc::Global_GetLocalPlayerIndex>()->RemoveHook(m_GetLocalPlayerIndexHookID, __FUNCSIG__))
 			m_GetLocalPlayerIndexHookID = 0;
 
 		Assert(!m_GetLocalPlayerIndexHookID);

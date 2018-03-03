@@ -50,7 +50,7 @@ bool PlayerAliases::CheckDependencies()
 		ready = false;
 	}
 
-	if (!GetHooks()->GetHook<IVEngineClient_GetPlayerInfo>())
+	if (!GetHooks()->GetHook<HookFunc::IVEngineClient_GetPlayerInfo>())
 	{
 		PluginWarning("Required hook IVEngineClient::GetPlayerInfo for module %s not available!\n", GetModuleName());
 		ready = false;
@@ -74,7 +74,7 @@ void PlayerAliases::StaticToggleEnabled(IConVar* var, const char* oldValue, floa
 bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	bool result = GetHooks()->GetHook<IVEngineClient_GetPlayerInfo>()->GetOriginal()(ent_num, pinfo);
+	bool result = GetHooks()->GetHook<HookFunc::IVEngineClient_GetPlayerInfo>()->GetOriginal()(ent_num, pinfo);
 
 	if (ent_num < 1 || ent_num > Interfaces::GetEngineTool()->GetMaxClients())
 		return result;
@@ -116,7 +116,7 @@ bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 
 	V_strcpy_safe(pinfo->name, gameName.c_str());
 
-	GetHooks()->GetHook<IVEngineClient_GetPlayerInfo>()->SetState(Hooking::HookAction::SUPERCEDE);
+	GetHooks()->SetState<HookFunc::IVEngineClient_GetPlayerInfo>(Hooking::HookAction::SUPERCEDE);
 	return result;
 }
 
@@ -234,12 +234,12 @@ void PlayerAliases::ToggleEnabled(IConVar* var, const char* oldValue, float fOld
 	{
 		if (!m_GetPlayerInfoHook)
 		{
-			m_GetPlayerInfoHook = GetHooks()->AddHook<IVEngineClient_GetPlayerInfo>(std::bind(&PlayerAliases::GetPlayerInfoOverride, this, std::placeholders::_1, std::placeholders::_2));
+			m_GetPlayerInfoHook = GetHooks()->AddHook<HookFunc::IVEngineClient_GetPlayerInfo>(std::bind(&PlayerAliases::GetPlayerInfoOverride, this, std::placeholders::_1, std::placeholders::_2));
 		}
 	}
 	else
 	{
-		if (m_GetPlayerInfoHook && GetHooks()->RemoveHook<IVEngineClient_GetPlayerInfo>(m_GetPlayerInfoHook, __FUNCSIG__))
+		if (m_GetPlayerInfoHook && GetHooks()->RemoveHook<HookFunc::IVEngineClient_GetPlayerInfo>(m_GetPlayerInfoHook, __FUNCSIG__))
 			m_GetPlayerInfoHook = 0;
 
 		Assert(!m_GetPlayerInfoHook);

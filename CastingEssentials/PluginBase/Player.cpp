@@ -338,7 +338,7 @@ bool Player::IsValid() const
 
 	{
 		player_info_t info;
-		if (!GetHooks()->GetOriginal<IVEngineClient_GetPlayerInfo>()(entindex(), &info))
+		if (!GetHooks()->GetOriginal<HookFunc::IVEngineClient_GetPlayerInfo>()(entindex(), &info))
 			return false;
 
 		if (info.userID != m_UserID)
@@ -465,7 +465,7 @@ Player* Player::GetPlayer(int entIndex, const char* functionName)
 			return nullptr;
 
 		player_info_t info;
-		if (!GetHooks()->GetOriginal<IVEngineClient_GetPlayerInfo>()(entIndex, &info))
+		if (!GetHooks()->GetOriginal<HookFunc::IVEngineClient_GetPlayerInfo>()(entIndex, &info))
 			return nullptr;
 
 		s_Players[entIndex - 1] = std::unique_ptr<Player>(p = new Player(playerEntity, info.userID));

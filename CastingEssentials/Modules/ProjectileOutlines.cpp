@@ -37,7 +37,7 @@ ProjectileOutlines::ProjectileOutlines() :
 
 ProjectileOutlines::~ProjectileOutlines()
 {
-	if (m_BaseEntityInitHook && GetHooks()->RemoveHook<C_BaseEntity_Init>(m_BaseEntityInitHook, __FUNCSIG__))
+	if (m_BaseEntityInitHook && GetHooks()->RemoveHook<HookFunc::C_BaseEntity_Init>(m_BaseEntityInitHook, __FUNCSIG__))
 		m_BaseEntityInitHook = 0;
 
 	Assert(!m_BaseEntityInitHook);
@@ -56,7 +56,7 @@ void ProjectileOutlines::OnTick(bool inGame)
 		{
 			ColorChanged(&ce_projectileoutlines_color_blu, "", 0);
 			ColorChanged(&ce_projectileoutlines_color_red, "", 0);
-			m_BaseEntityInitHook = GetHooks()->AddHook<C_BaseEntity_Init>(std::bind(&ProjectileOutlines::InitDetour, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+			m_BaseEntityInitHook = GetHooks()->AddHook<HookFunc::C_BaseEntity_Init>(std::bind(&ProjectileOutlines::InitDetour, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 			m_Init = true;
 		}
 
@@ -135,7 +135,7 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 {
 	C_BaseEntity* ent;
 	{
-		IClientNetworkable* networkable = GetHooks()->GetRawFunc_Global_CreateTFGlowObject()(MAGIC_ENTNUM, MAGIC_SERIALNUM);
+		IClientNetworkable* networkable = GetHooks()->GetRawFunc<HookFunc::Global_CreateTFGlowObject>()(MAGIC_ENTNUM, MAGIC_SERIALNUM);
 		ent = networkable->GetIClientUnknown()->GetBaseEntity();
 	}
 
@@ -195,14 +195,14 @@ bool ProjectileOutlines::InitDetour(C_BaseEntity* pThis, int entnum, int iSerial
 {
 	if (entnum == MAGIC_ENTNUM && iSerialNum == MAGIC_SERIALNUM)
 	{
-		GetHooks()->SetState<C_BaseEntity_Init>(Hooking::HookAction::SUPERCEDE);
+		GetHooks()->SetState<HookFunc::C_BaseEntity_Init>(Hooking::HookAction::SUPERCEDE);
 		return pThis->InitializeAsClientEntity(nullptr, RENDER_GROUP_OTHER);
 	}
 
 	// Potential new entities for glow next OnTick()
 	m_NewEntities.push_back(entnum);
 
-	GetHooks()->SetState<C_BaseEntity_Init>(Hooking::HookAction::IGNORE);
+	GetHooks()->SetState<HookFunc::C_BaseEntity_Init>(Hooking::HookAction::IGNORE);
 	return true;
 }
 

@@ -33,12 +33,12 @@ FreezeInfo::FreezeInfo() :
 	ce_freezeinfo_reload_settings("ce_freezeinfo_reload_settings", []() { GetModule()->ReloadSettings(); },
 		"reload settings for the freeze info panel from the resource file", FCVAR_NONE)
 {
-	m_PostEntityPacketReceivedHook = GetHooks()->AddHook<IPrediction_PostEntityPacketReceived>(std::bind(&FreezeInfo::PostEntityPacketReceivedHook, this));
+	m_PostEntityPacketReceivedHook = GetHooks()->AddHook<HookFunc::IPrediction_PostEntityPacketReceived>(std::bind(&FreezeInfo::PostEntityPacketReceivedHook, this));
 }
 
 FreezeInfo::~FreezeInfo()
 {
-	if (m_PostEntityPacketReceivedHook && GetHooks()->RemoveHook<IPrediction_PostEntityPacketReceived>(m_PostEntityPacketReceivedHook, __FUNCSIG__))
+	if (m_PostEntityPacketReceivedHook && GetHooks()->RemoveHook<HookFunc::IPrediction_PostEntityPacketReceived>(m_PostEntityPacketReceivedHook, __FUNCSIG__))
 		m_PostEntityPacketReceivedHook = 0;
 
 	Assert(!m_PostEntityPacketReceivedHook);

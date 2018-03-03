@@ -336,7 +336,7 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 		if (!imgPanel)
 			continue;
 
-		HookManager::GetRawFunc_ImagePanel_SetImage()(imgPanel, materialBuf);
+		HookManager::GetRawFunc<HookFunc::vgui_ImagePanel_SetImage>()(imgPanel, materialBuf);
 	}
 }
 

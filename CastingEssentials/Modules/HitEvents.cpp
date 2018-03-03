@@ -1,4 +1,5 @@
 #include "HitEvents.h"
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFPlayerResource.h"
@@ -13,6 +14,7 @@ HitEvents::HitEvents() :
 	ce_hitevents_enabled("ce_hitevents_enabled", "0"),
 	ce_hitevents_debug("ce_hitevents_debug", "0")
 {
+	GetHooks()->AddHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(std::bind(&HitEvents::DisplayDamageFeedbackOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
 }
 
 IGameEvent* HitEvents::TriggerPlayerHurt(int playerEntIndex, int damage)
@@ -141,6 +143,26 @@ void HitEvents::FireGameEvent(IGameEvent* event)
 
 	//VariablePusher<C_BasePlayer*> localPlayerPusher(Interfaces::GetLocalPlayer(), );
 	gameeventmanager->FireEventClientSide(newEvent);
+}
+
+void HitEvents::DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool unknown)
+{
+	auto DisplayDamageFeedback = GetHooks()->GetOriginal<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>();
+
+	auto localPlayer = C_BasePlayer::GetLocalPlayer();
+
+	Assert(localPlayer->IsPlayer());
+
+	auto localEntindex = localPlayer->entindex();
+
+	auto otherLocalAttacker = (C_BaseEntity*)pAttacker;
+	auto otherLocalEntindex = otherLocalAttacker->entindex();
+	if (localEntindex != otherLocalEntindex)
+		return;
+
+	DisplayDamageFeedback(pThis, pAttacker, pVictim, iDamageAmount, iHealth, unknown);
+	GetHooks()->SetState<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(Hooking::HookAction::SUPERCEDE);
+	Assert(true);
 }
 
 void HitEvents::OnTick(bool bInGame)

@@ -59,7 +59,7 @@ void Killfeed::OnTick(bool inGame)
 
 	static_assert(sizeof(DeathNoticeItem) == 408, "sizeof(DeathNoticeItem) doesn't match TF2!");
 
-	auto const localPlayerIndex = GetHooks()->GetRawFunc_Global_GetLocalPlayerIndex()();
+	auto const localPlayerIndex = GetHooks()->GetRawFunc<HookFunc::Global_GetLocalPlayerIndex>()();
 	Player* localPlayer = Player::GetPlayer(localPlayerIndex, __FUNCSIG__);
 	auto const localPlayerUserID = localPlayer->GetUserID();
 
@@ -107,7 +107,7 @@ void Killfeed::OnTick(bool inGame)
 			current.iKillerID == localPlayerUserID ||
 			current.iVictimID == localPlayerUserID;
 
-		auto const GetIcon = GetHooks()->GetRawFunc_CHudBaseDeathNotice_GetIcon();
+		auto const GetIcon = GetHooks()->GetRawFunc<HookFunc::CHudBaseDeathNotice_GetIcon>();
 
 		const EDeathNoticeIconFormat fmt = current.bLocalPlayerInvolved ? EDeathNoticeIconFormat::kDeathNoticeIcon_Inverted : EDeathNoticeIconFormat::kDeathNoticeIcon_Standard;
 

@@ -158,15 +158,7 @@ float UTIL_VecToYaw(const Vector &vec)
 
 C_BasePlayer* C_BasePlayer::GetLocalPlayer()
 {
-	IClientEntityList* const entityList = Interfaces::GetClientEntityList();
-	if (!entityList)
-		return nullptr;
-
-	IClientEntity* const localPlayer = entityList->GetClientEntity(Interfaces::GetEngineClient()->GetLocalPlayer());
-	if (!localPlayer)
-		return nullptr;
-
-	return dynamic_cast<C_BasePlayer*>(localPlayer->GetBaseEntity());
+	return Interfaces::GetLocalPlayer();
 }
 
 void C_BasePlayer::EyeVectors(Vector *pForward, Vector *pRight, Vector *pUp)
@@ -264,11 +256,11 @@ bool IsBoxIntersectingBox(const Vector& boxMin1, const Vector& boxMax1,
 
 void C_BaseAnimating::GetBonePosition(int iBone, Vector &origin, QAngle &angles)
 {
-	return HookManager::GetRawFunc_C_BaseAnimating_GetBonePosition()(this, iBone, origin, angles);
+	return HookManager::GetRawFunc<HookFunc::C_BaseAnimating_GetBonePosition>()(this, iBone, origin, angles);
 }
 void C_BaseEntity::CalcAbsolutePosition()
 {
-	return HookManager::GetRawFunc_C_BaseEntity_CalcAbsolutePosition()(this);
+	return HookManager::GetRawFunc<HookFunc::C_BaseEntity_CalcAbsolutePosition>()(this);
 }
 void C_BaseEntity::AddToLeafSystem()
 {
@@ -291,19 +283,19 @@ void C_BaseEntity::AddToLeafSystem(RenderGroup_t group)
 }
 int C_BaseAnimating::LookupBone(const char* szName)
 {
-	return HookManager::GetRawFunc_C_BaseAnimating_LookupBone()(this, szName);
+	return HookManager::GetRawFunc<HookFunc::C_BaseAnimating_LookupBone>()(this, szName);
 }
 CBoneCache* C_BaseAnimating::GetBoneCache(CStudioHdr* hdr)
 {
-	return HookManager::GetRawFunc_C_BaseAnimating_GetBoneCache()(this, hdr);
+	return HookManager::GetRawFunc<HookFunc::C_BaseAnimating_GetBoneCache>()(this, hdr);
 }
 void C_BaseAnimating::LockStudioHdr()
 {
-	return HookManager::GetRawFunc_C_BaseAnimating_LockStudioHdr()(this);
+	return HookManager::GetRawFunc<HookFunc::C_BaseAnimating_LockStudioHdr>()(this);
 }
 bool C_BaseAnimating::ComputeHitboxSurroundingBox(Vector *pVecWorldMins, Vector *pVecWorldMaxs)
 {
-	return HookManager::GetRawFunc_C_BaseAnimating_ComputeHitboxSurroundingBox()(this, pVecWorldMins, pVecWorldMaxs);
+	return HookManager::GetRawFunc<HookFunc::C_BaseAnimating_ComputeHitboxSurroundingBox>()(this, pVecWorldMins, pVecWorldMaxs);
 }
 
 CBasePlayer *UTIL_PlayerByIndex(int entindex)
@@ -322,11 +314,15 @@ bool C_HLTVCamera::IsPVSLocked()
 }
 void C_HLTVCamera::SetPrimaryTarget(int entIndex)
 {
-	return HookManager::GetRawFunc_C_HLTVCamera_SetPrimaryTarget()(this, entIndex);
+	return HookManager::GetRawFunc<HookFunc::C_HLTVCamera_SetPrimaryTarget>()(this, entIndex);
 }
 void C_HLTVCamera::SetMode(int mode)
 {
-	return HookManager::GetRawFunc_C_HLTVCamera_SetMode()(this, mode);
+	return HookManager::GetRawFunc<HookFunc::C_HLTVCamera_SetMode>()(this, mode);
+}
+void C_HLTVCamera::SetCameraAngle(QAngle& ang)
+{
+	return HookManager::GetRawFunc<HookFunc::C_HLTVCamera_SetCameraAngle>()(this, ang);
 }
 void CSteamID::SetFromString(const char* pchSteamID, EUniverse eDefaultUniverse)
 {

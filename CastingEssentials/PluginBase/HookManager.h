@@ -4,12 +4,13 @@
 #include "Hooking/GroupClassHook.h"
 #include "Hooking/GroupVirtualHook.h"
 #include "Hooking/GroupGlobalVirtualHook.h"
-//#include "PluginBase/Modules.h"
 
 #include <memory>
 
+class C_BaseCombatCharacter;
 class C_BasePlayer;
 class C_HLTVCamera;
+class CDamageAccountPanel;
 enum ERenderDepthMode : int;
 enum OverrideType_t : int;
 class QAngle;
@@ -47,60 +48,70 @@ namespace vgui
 	class ProgressBar;
 }
 
+enum class HookFunc
+{
+	Global_CreateEntityByName,
+	Global_CreateTFGlowObject,
+	Global_DrawOpaqueRenderable,
+	Global_DrawTranslucentRenderable,
+	Global_GetLocalPlayerIndex,
+	Global_UTILComputeEntityFade,
+
+	C_BaseAnimating_ComputeHitboxSurroundingBox,
+	C_BaseAnimating_DrawModel,
+	C_BaseAnimating_GetBoneCache,
+	C_BaseAnimating_GetBonePosition,
+	C_BaseAnimating_InternalDrawModel,
+	C_BaseAnimating_LockStudioHdr,
+	C_BaseAnimating_LookupBone,
+
+	C_BaseEntity_Init,
+	C_BaseEntity_CalcAbsolutePosition,
+
+	C_BasePlayer_GetDefaultFOV,
+	C_BasePlayer_GetFOV,
+	C_BasePlayer_GetLocalPlayer,
+	C_BasePlayer_ShouldDrawLocalPlayer,
+
+	C_HLTVCamera_SetCameraAngle,
+	C_HLTVCamera_SetMode,
+	C_HLTVCamera_SetPrimaryTarget,
+
+	C_TFPlayer_DrawModel,
+
+	CDamageAccountPanel_DisplayDamageFeedback,
+
+	CGlowObjectManager_ApplyEntityGlowEffects,
+
+	CHudBaseDeathNotice_GetIcon,
+
+	IClientEngineTools_InToolMode,
+	IClientEngineTools_IsThirdPersonCamera,
+	IClientEngineTools_SetupEngineView,
+
+	IClientRenderable_DrawModel,
+
+	ICvar_ConsoleColorPrintf,
+	ICvar_ConsoleDPrintf,
+	ICvar_ConsolePrintf,
+
+	IGameEventManager2_FireEventClientSide,
+
+	IPrediction_PostEntityPacketReceived,
+
+	IStudioRender_ForcedMaterialOverride,
+
+	IVEngineClient_GetPlayerInfo,
+
+	vgui_EditablePanel_GetDialogVariables,
+	vgui_ImagePanel_SetImage,
+	vgui_ProgressBar_ApplySettings,
+
+	Count,
+};
+
 class HookManager final
 {
-	enum class Func
-	{
-		ICvar_ConsoleColorPrintf,
-		ICvar_ConsoleDPrintf,
-		ICvar_ConsolePrintf,
-
-		IClientEngineTools_InToolMode,
-		IClientEngineTools_IsThirdPersonCamera,
-		IClientEngineTools_SetupEngineView,
-
-		IVEngineClient_GetPlayerInfo,
-
-		IGameEventManager2_FireEventClientSide,
-
-		IPrediction_PostEntityPacketReceived,
-
-		IStudioRender_ForcedMaterialOverride,
-
-		IClientRenderable_DrawModel,
-
-		C_HLTVCamera_SetCameraAngle,
-		C_HLTVCamera_SetMode,
-		C_HLTVCamera_SetPrimaryTarget,
-
-		CHudBaseDeathNotice_GetIcon,
-
-		C_BaseAnimating_GetBoneCache,
-		C_BaseAnimating_LockStudioHdr,
-		C_BaseAnimating_LookupBone,
-		C_BaseAnimating_GetBonePosition,
-		C_BaseAnimating_DrawModel,
-		C_BaseAnimating_InternalDrawModel,
-		C_BasePlayer_GetDefaultFOV,
-		C_BasePlayer_GetFOV,
-		C_TFPlayer_DrawModel,
-		vgui_ProgressBar_ApplySettings,
-
-		C_BaseEntity_Init,
-		C_BaseEntity_CalcAbsolutePosition,
-
-		CGlowObjectManager_ApplyEntityGlowEffects,
-
-		Global_CreateEntityByName,
-		Global_GetLocalPlayerIndex,
-		Global_CreateTFGlowObject,
-		Global_UTILComputeEntityFade,
-		Global_DrawOpaqueRenderable,
-		Global_DrawTranslucentRenderable,
-
-		Count,
-	};
-
 	enum ShimType;
 	template<class HookType, class... Args> class HookShim final :
 		public Hooking::BaseGroupHook<ShimType, (ShimType)HookType::HOOK_ID, typename HookType::Functional, typename HookType::RetVal, Args...>
@@ -192,45 +203,16 @@ class HookManager final
 		std::map<uint64, uint64> m_ActiveHooks;
 	};
 
-	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using VirtualHook =
-		HookShim<Hooking::GroupVirtualHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
-	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using GlobalVirtualHook =
-		HookShim<Hooking::GroupGlobalVirtualHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
-	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using ClassHook =
-		HookShim<Hooking::GroupClassHook<Func, fn, vaArgs, Type, RetVal, Args...>, Args...>;
-	template<Func fn, bool vaArgs, class RetVal, class... Args> using GlobalHook =
-		HookShim<Hooking::GroupGlobalHook<Func, fn, vaArgs, RetVal, Args...>, Args...>;
-	template<Func fn, bool vaArgs, class Type, class RetVal, class... Args> using GlobalClassHook =
-		HookShim<Hooking::GroupManualClassHook<Func, fn, vaArgs, Type, RetVal, Args...>, Type*, Args...>;
-
-	typedef void(__thiscall *RawSetCameraAngleFn)(C_HLTVCamera*, const QAngle&);
-	typedef void(__thiscall *RawSetModeFn)(C_HLTVCamera*, int);
-	typedef void(__thiscall *RawSetPrimaryTargetFn)(C_HLTVCamera* pThis, int targetEntindex);
-	typedef CBoneCache*(__thiscall *RawGetBoneCacheFn)(C_BaseAnimating*, CStudioHdr*);
-	typedef void(__thiscall *RawLockStudioHdrFn)(C_BaseAnimating*);
-	typedef void(__thiscall *RawCalcAbsolutePositionFn)(C_BaseEntity*);
-	typedef int(__thiscall *RawLookupBoneFn)(C_BaseAnimating*, const char*);
-	typedef void(__thiscall *RawGetBonePositionFn)(C_BaseAnimating*, int, Vector&, QAngle&);
-	typedef int(__thiscall *RawBaseAnimatingDrawModelFn)(C_BaseAnimating*, int);
-	typedef int(__thiscall *Raw_C_BaseAnimating_InternalDrawModel)(C_BaseAnimating* pThis, int flags);
-	typedef int(__thiscall *RawTFPlayerDrawModelFn)(C_TFPlayer*, int);
-	typedef int(*RawGetLocalPlayerIndexFn)();
-	typedef C_BasePlayer*(__cdecl *Raw_C_BasePlayer_GetLocalPlayer)();
-	typedef C_BaseEntity*(__cdecl *RawCreateEntityByNameFn)(const char* entityName);
-	typedef IClientNetworkable*(__cdecl *RawCreateTFGlowObjectFn)(int entNum, int serialNum);
-	typedef bool(__thiscall *RawBaseEntityInitFn)(C_BaseEntity* pThis, int entnum, int iSerialNum);
-	typedef unsigned char(__cdecl *RawUTILComputeEntityFadeFn)(C_BaseEntity* pEntity, float flMinDist, float flMaxDist, float flFadeScale);
-	typedef void(__cdecl *RawDrawOpaqueRenderableFn)(IClientRenderable* pEnt, bool bTwoPass, ERenderDepthMode DepthMode, int nDefaultFlags);
-	typedef void(__cdecl *RawDrawTranslucentRenderableFn)(IClientRenderable* pEnt, bool bTwoPass, bool bShadowDepth, bool bIgnoreDepth);
-	typedef void(__thiscall *RawApplyEntityGlowEffectsFn)(CGlowObjectManager*, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int);
-	typedef CHudTexture*(__stdcall *RawGetIconFn)(const char* szIcon, int eIconFormat);
-	typedef bool(*RawShouldDrawLocalPlayerFn)();
-	typedef KeyValues*(__thiscall *Raw_EditablePanel_GetDialogVariables)(vgui::EditablePanel* pThis);
-	typedef void(__thiscall *Raw_ImagePanel_SetImage)(vgui::ImagePanel* pThis, const char* imageName);
-	typedef void(__thiscall *Raw_ProgressBar_ApplySettings)(vgui::ProgressBar* pThis, KeyValues* pSettings);
-	typedef bool(__thiscall *Raw_C_BaseAnimating_ComputeHitboxSurroundingBox)(C_BaseAnimating* pThis, Vector* pVecWorldMins, Vector* pVecWorldMaxs);
-	typedef int(__thiscall *Raw_C_BasePlayer_GetDefaultFOV)(C_BasePlayer* pThis);
-	typedef float(__thiscall *Raw_C_BasePlayer_GetFOV)(C_BasePlayer* pThis);
+	template<HookFunc fn, bool vaArgs, class Type, class RetVal, class... Args> using VirtualHook =
+		HookShim<Hooking::GroupVirtualHook<HookFunc, fn, vaArgs, Type, RetVal, Args...>, Args...>;
+	template<HookFunc fn, bool vaArgs, class Type, class RetVal, class... Args> using GlobalVirtualHook =
+		HookShim<Hooking::GroupGlobalVirtualHook<HookFunc, fn, vaArgs, Type, RetVal, Args...>, Args...>;
+	template<HookFunc fn, bool vaArgs, class Type, class RetVal, class... Args> using ClassHook =
+		HookShim<Hooking::GroupClassHook<HookFunc, fn, vaArgs, Type, RetVal, Args...>, Args...>;
+	template<HookFunc fn, bool vaArgs, class RetVal, class... Args> using GlobalHook =
+		HookShim<Hooking::GroupGlobalHook<HookFunc, fn, vaArgs, RetVal, Args...>, Args...>;
+	template<HookFunc fn, bool vaArgs, class Type, class RetVal, class... Args> using GlobalClassHook =
+		HookShim<Hooking::GroupManualClassHook<HookFunc, fn, vaArgs, Type, RetVal, Args...>, Type*, Args...>;
 
 	typedef bool(__cdecl *Raw_RenderBox)(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Color c, bool zBuffer, bool insideOut);
 	typedef bool(__cdecl *Raw_RenderBox_1)(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Color c, IMaterial* material, bool insideOut);
@@ -238,152 +220,231 @@ class HookManager final
 	typedef bool(__cdecl *Raw_RenderLine)(const Vector& p0, const Vector& p1, Color c, bool zBuffer);
 	typedef bool(__cdecl *Raw_RenderTriangle)(const Vector& p0, const Vector& p1, const Vector& p2, Color c, bool zBuffer);
 
+#pragma region HookFuncType
+	template<HookFunc fn> struct HookFuncType { };
+
+	template<> struct HookFuncType<HookFunc::ICvar_ConsoleColorPrintf>
+	{
+		typedef VirtualHook<HookFunc::ICvar_ConsoleColorPrintf, true, ICvar, void, const Color&, const char*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::ICvar_ConsoleDPrintf>
+	{
+		typedef VirtualHook<HookFunc::ICvar_ConsoleDPrintf, true, ICvar, void, const char*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::ICvar_ConsolePrintf>
+	{
+		typedef VirtualHook<HookFunc::ICvar_ConsolePrintf, true, ICvar, void, const char*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::IClientEngineTools_InToolMode>
+	{
+		typedef VirtualHook<HookFunc::IClientEngineTools_InToolMode, false, IClientEngineTools, bool> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::IClientEngineTools_IsThirdPersonCamera>
+	{
+		typedef VirtualHook<HookFunc::IClientEngineTools_IsThirdPersonCamera, false, IClientEngineTools, bool> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::IClientEngineTools_SetupEngineView>
+	{
+		typedef VirtualHook<HookFunc::IClientEngineTools_SetupEngineView, false, IClientEngineTools, bool, Vector&, QAngle&, float&> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::IVEngineClient_GetPlayerInfo>
+	{
+		typedef VirtualHook<HookFunc::IVEngineClient_GetPlayerInfo, false, IVEngineClient, bool, int, player_info_t*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::IGameEventManager2_FireEventClientSide>
+	{
+		typedef VirtualHook<HookFunc::IGameEventManager2_FireEventClientSide, false, IGameEventManager2, bool, IGameEvent*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::IPrediction_PostEntityPacketReceived>
+	{
+		typedef VirtualHook<HookFunc::IPrediction_PostEntityPacketReceived, false, IPrediction, void> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::IStudioRender_ForcedMaterialOverride>
+	{
+		typedef VirtualHook<HookFunc::IStudioRender_ForcedMaterialOverride, false, IStudioRender, void, IMaterial*, OverrideType_t> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::IClientRenderable_DrawModel>
+	{
+		typedef GlobalVirtualHook<HookFunc::IClientRenderable_DrawModel, false, IClientRenderable, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_HLTVCamera_SetCameraAngle>
+	{
+		typedef void(__thiscall *Raw)(C_HLTVCamera* pThis, const QAngle& ang);
+		typedef ClassHook<HookFunc::C_HLTVCamera_SetCameraAngle, false, C_HLTVCamera, void, const QAngle&> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_HLTVCamera_SetMode>
+	{
+		typedef void(__thiscall *Raw)(C_HLTVCamera* pThis, int mode);
+		typedef ClassHook<HookFunc::C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_HLTVCamera_SetPrimaryTarget>
+	{
+		typedef void(__thiscall *Raw)(C_HLTVCamera* pThis, int targetEntindex);
+		typedef ClassHook<HookFunc::C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::CHudBaseDeathNotice_GetIcon>
+	{
+		typedef CHudTexture*(__stdcall *Raw)(const char* szIcon, int eIconFormat);
+		typedef GlobalHook<HookFunc::CHudBaseDeathNotice_GetIcon, false, CHudTexture*, const char*, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseAnimating_ComputeHitboxSurroundingBox>
+	{
+		typedef bool(__thiscall *Raw)(C_BaseAnimating* pThis, Vector* pVecWorldMins, Vector* pVecWorldMaxs);
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseAnimating_GetBoneCache>
+	{
+		typedef CBoneCache*(__thiscall *Raw)(C_BaseAnimating*, CStudioHdr*);
+		typedef GlobalClassHook<HookFunc::C_BaseAnimating_GetBoneCache, false, C_BaseAnimating, CBoneCache*, CStudioHdr*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseAnimating_LockStudioHdr>
+	{
+		typedef void(__thiscall *Raw)(C_BaseAnimating*);
+		typedef GlobalClassHook<HookFunc::C_BaseAnimating_LockStudioHdr, false, C_BaseAnimating, void> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseAnimating_LookupBone>
+	{
+		typedef int(__thiscall *Raw)(C_BaseAnimating*, const char*);
+		typedef GlobalClassHook<HookFunc::C_BaseAnimating_LookupBone, false, C_BaseAnimating, int, const char*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseAnimating_GetBonePosition>
+	{
+		typedef void(__thiscall *Raw)(C_BaseAnimating*, int, Vector&, QAngle&);
+		typedef GlobalClassHook<HookFunc::C_BaseAnimating_GetBonePosition, false, C_BaseAnimating, void, int, Vector&, QAngle&> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseAnimating_DrawModel>
+	{
+		typedef int(__thiscall *Raw)(C_BaseAnimating*, int);
+		typedef GlobalClassHook<HookFunc::C_BaseAnimating_DrawModel, false, C_BaseAnimating, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseAnimating_InternalDrawModel>
+	{
+		typedef int(__thiscall *Raw)(C_BaseAnimating* pThis, int flags);
+		typedef GlobalClassHook<HookFunc::C_BaseAnimating_InternalDrawModel, false, C_BaseAnimating, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseEntity_CalcAbsolutePosition>
+	{
+		typedef void(__thiscall *Raw)(C_BaseEntity* pThis);
+		typedef GlobalClassHook<HookFunc::C_BaseEntity_CalcAbsolutePosition, false, C_BaseEntity, void> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseEntity_Init>
+	{
+		typedef bool(__thiscall *Raw)(C_BaseEntity* pThis, int entnum, int iSerialNum);
+		typedef GlobalClassHook<HookFunc::C_BaseEntity_Init, false, C_BaseEntity, bool, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BasePlayer_GetDefaultFOV>
+	{
+		typedef int(__thiscall *Raw)(C_BasePlayer* pThis);
+		typedef GlobalClassHook<HookFunc::C_BasePlayer_GetDefaultFOV, false, C_BasePlayer, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BasePlayer_GetFOV>
+	{
+		typedef float(__thiscall *Raw)(C_BasePlayer* pThis);
+	};
+	template<> struct HookFuncType<HookFunc::C_BasePlayer_GetLocalPlayer>
+	{
+		typedef C_BasePlayer*(__cdecl *Raw)();
+	};
+	template<> struct HookFuncType<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer>
+	{
+		typedef bool(*Raw)();
+	};
+	template<> struct HookFuncType<HookFunc::C_TFPlayer_DrawModel>
+	{
+		typedef int(__thiscall *Raw)(C_TFPlayer*, int);
+		typedef GlobalClassHook<HookFunc::C_TFPlayer_DrawModel, false, C_TFPlayer, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::vgui_EditablePanel_GetDialogVariables>
+	{
+		typedef KeyValues*(__thiscall *Raw)(vgui::EditablePanel* pThis);
+	};
+	template<> struct HookFuncType<HookFunc::vgui_ProgressBar_ApplySettings>
+	{
+		typedef void(__thiscall *Raw)(vgui::ProgressBar* pThis, KeyValues* pSettings);
+		typedef GlobalClassHook<HookFunc::vgui_ProgressBar_ApplySettings, false, vgui::ProgressBar, void, KeyValues*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::vgui_ImagePanel_SetImage>
+	{
+		typedef void(__thiscall *Raw)(vgui::ImagePanel* pThis, const char* imageName);
+	};
+	template<> struct HookFuncType<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>
+	{
+		typedef void(__thiscall *Raw)(CGlowObjectManager*, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int);
+		typedef GlobalClassHook<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects, false, CGlowObjectManager, void, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>
+	{
+		typedef void(__thiscall *Raw)(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool unknown);
+		typedef GlobalClassHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback, false, CDamageAccountPanel, void, C_TFPlayer*, C_BaseCombatCharacter*, int, int, bool> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_CreateEntityByName>
+	{
+		typedef C_BaseEntity*(__cdecl *Raw)(const char* entityName);
+		typedef GlobalHook<HookFunc::Global_CreateEntityByName, false, C_BaseEntity*, const char*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_GetLocalPlayerIndex>
+	{
+		typedef int(*Raw)();
+		typedef GlobalHook<HookFunc::Global_GetLocalPlayerIndex, false, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_CreateTFGlowObject>
+	{
+		typedef IClientNetworkable*(__cdecl *Raw)(int entNum, int serialNum);
+		typedef GlobalHook<HookFunc::Global_CreateTFGlowObject, false, IClientNetworkable*, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_UTILComputeEntityFade>
+	{
+		typedef unsigned char(__cdecl *Raw)(C_BaseEntity* pEntity, float flMinDist, float flMaxDist, float flFadeScale);
+		typedef GlobalHook<HookFunc::Global_UTILComputeEntityFade, false, unsigned char, C_BaseEntity*, float, float, float> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_DrawOpaqueRenderable>
+	{
+		typedef void(__cdecl *Raw)(IClientRenderable* pEnt, bool bTwoPass, ERenderDepthMode DepthMode, int nDefaultFlags);
+		typedef GlobalHook<HookFunc::Global_DrawOpaqueRenderable, false, void, IClientRenderable*, bool, ERenderDepthMode, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_DrawTranslucentRenderable>
+	{
+		typedef void(__cdecl *Raw)(IClientRenderable* pEnt, bool bTwoPass, bool bShadowDepth, bool bIgnoreDepth);
+		typedef GlobalHook<HookFunc::Global_DrawTranslucentRenderable, false, void, IClientRenderable*, bool, bool, bool> Hook;
+	};
+#pragma endregion HookFuncType
+
 public:
 	HookManager();
-	static RawCreateTFGlowObjectFn GetRawFunc_Global_CreateTFGlowObject();
-	static RawShouldDrawLocalPlayerFn GetRawFunc_C_BasePlayer_ShouldDrawLocalPlayer();
-	static Raw_EditablePanel_GetDialogVariables GetRawFunc_EditablePanel_GetDialogVariables();
-	static Raw_ImagePanel_SetImage GetRawFunc_ImagePanel_SetImage();
-	static Raw_C_BaseAnimating_ComputeHitboxSurroundingBox GetRawFunc_C_BaseAnimating_ComputeHitboxSurroundingBox();
-	static Raw_C_BasePlayer_GetFOV GetRawFunc_C_BasePlayer_GetFOV();
-	static Raw_C_BasePlayer_GetLocalPlayer GetRawFunc_C_BasePlayer_GetLocalPlayer();
-	static RawGetLocalPlayerIndexFn GetRawFunc_Global_GetLocalPlayerIndex();
-	static RawSetCameraAngleFn GetRawFunc_C_HLTVCamera_SetCameraAngle();
-	static RawSetModeFn GetRawFunc_C_HLTVCamera_SetMode();
-	static RawSetPrimaryTargetFn GetRawFunc_C_HLTVCamera_SetPrimaryTarget();
-	static RawGetBoneCacheFn GetRawFunc_C_BaseAnimating_GetBoneCache();
-	static RawLockStudioHdrFn GetRawFunc_C_BaseAnimating_LockStudioHdr();
-	static RawCalcAbsolutePositionFn GetRawFunc_C_BaseEntity_CalcAbsolutePosition();
-	static RawLookupBoneFn GetRawFunc_C_BaseAnimating_LookupBone();
-	static RawGetBonePositionFn GetRawFunc_C_BaseAnimating_GetBonePosition();
-	static RawBaseAnimatingDrawModelFn GetRawFunc_C_BaseAnimating_DrawModel();
-	static Raw_C_BaseAnimating_InternalDrawModel GetRawFunc_C_BaseAnimating_InternalDrawModel();
-	static RawTFPlayerDrawModelFn GetRawFunc_C_TFPlayer_DrawModel();
-	static RawCreateEntityByNameFn GetRawFunc_Global_CreateEntityByName();
-	static RawBaseEntityInitFn GetRawFunc_C_BaseEntity_Init();
-	static RawUTILComputeEntityFadeFn GetRawFunc_Global_UTILComputeEntityFade();
-	static RawDrawOpaqueRenderableFn GetRawFunc_Global_DrawOpaqueRenderable();
-	static RawDrawTranslucentRenderableFn GetRawFunc_Global_DrawTranslucentRenderable();
-	static RawApplyEntityGlowEffectsFn GetRawFunc_CGlowObjectManager_ApplyEntityGlowEffects();
-	static RawGetIconFn GetRawFunc_CHudBaseDeathNotice_GetIcon();
-	static Raw_ProgressBar_ApplySettings GetRawFunc_ProgressBar_ApplySettings();
-	static Raw_C_BasePlayer_GetDefaultFOV GetRawFunc_C_BasePlayer_GetDefaultFOV();
-
-	static Raw_RenderBox GetRawFunc_RenderBox();
-	static Raw_RenderBox_1 GetRawFunc_RenderBox_1();
-	static Raw_RenderWireframeBox GetRawFunc_RenderWireframeBox();
-	static Raw_RenderLine GetRawFunc_RenderLine();
-	static Raw_RenderTriangle GetRawFunc_RenderTriangle();
 
 	static bool Load();
 	static bool Unload();
 
-	typedef VirtualHook<Func::ICvar_ConsoleColorPrintf, true, ICvar, void, const Color&, const char*> ICvar_ConsoleColorPrintf;
-	typedef VirtualHook<Func::ICvar_ConsoleDPrintf, true, ICvar, void, const char*> ICvar_ConsoleDPrintf;
-	typedef VirtualHook<Func::ICvar_ConsolePrintf, true, ICvar, void, const char*> ICvar_ConsolePrintf;
+	template<HookFunc fn> typename HookFuncType<fn>::Hook::OriginalFnType GetFunc() { return GetHook<fn>()->GetOriginal(); }
+	template<HookFunc fn> typename HookFuncType<fn>::Hook* GetHook() { return static_cast<HookFuncType<fn>::Hook*>(m_Hooks[(int)fn].get()); };
+	template<HookFunc fn> static typename HookFuncType<fn>::Raw GetRawFunc() { return (HookFuncType<fn>::Raw)s_RawFunctions[(int)fn]; }
 
-	typedef VirtualHook<Func::IClientEngineTools_InToolMode, false, IClientEngineTools, bool> IClientEngineTools_InToolMode;
-	typedef VirtualHook<Func::IClientEngineTools_IsThirdPersonCamera, false, IClientEngineTools, bool> IClientEngineTools_IsThirdPersonCamera;
-	typedef VirtualHook<Func::IClientEngineTools_SetupEngineView, false, IClientEngineTools, bool, Vector&, QAngle&, float&> IClientEngineTools_SetupEngineView;
-
-	typedef GlobalVirtualHook<Func::IClientRenderable_DrawModel, false, IClientRenderable, int, int> IClientRenderable_DrawModel;
-
-	typedef VirtualHook<Func::IVEngineClient_GetPlayerInfo, false, IVEngineClient, bool, int, player_info_t*> IVEngineClient_GetPlayerInfo;
-
-	typedef VirtualHook<Func::IGameEventManager2_FireEventClientSide, false, IGameEventManager2, bool, IGameEvent*> IGameEventManager2_FireEventClientSide;
-
-	typedef VirtualHook<Func::IPrediction_PostEntityPacketReceived, false, IPrediction, void> IPrediction_PostEntityPacketReceived;
-
-	typedef VirtualHook<Func::IStudioRender_ForcedMaterialOverride, false, IStudioRender, void, IMaterial*, OverrideType_t> IStudioRender_ForcedMaterialOverride;
-
-	typedef ClassHook<Func::C_HLTVCamera_SetCameraAngle, false, C_HLTVCamera, void, const QAngle&> C_HLTVCamera_SetCameraAngle;
-	typedef ClassHook<Func::C_HLTVCamera_SetMode, false, C_HLTVCamera, void, int> C_HLTVCamera_SetMode;
-	typedef ClassHook<Func::C_HLTVCamera_SetPrimaryTarget, false, C_HLTVCamera, void, int> C_HLTVCamera_SetPrimaryTarget;
-
-	typedef GlobalHook<Func::CHudBaseDeathNotice_GetIcon, false, CHudTexture*, const char*, int> CHudBaseDeathNotice_GetIcon;
-
-	typedef GlobalClassHook<Func::C_BaseAnimating_GetBoneCache, false, C_BaseAnimating, CBoneCache*, CStudioHdr*> C_BaseAnimating_GetBoneCache;
-	typedef GlobalClassHook<Func::C_BaseAnimating_LockStudioHdr, false, C_BaseAnimating, void> C_BaseAnimating_LockStudioHdr;
-	typedef GlobalClassHook<Func::C_BaseAnimating_LookupBone, false, C_BaseAnimating, int, const char*> C_BaseAnimating_LookupBone;
-	typedef GlobalClassHook<Func::C_BaseAnimating_GetBonePosition, false, C_BaseAnimating, void, int, Vector&, QAngle&> C_BaseAnimating_GetBonePosition;
-	typedef GlobalClassHook<Func::C_BaseAnimating_DrawModel, false, C_BaseAnimating, int, int> C_BaseAnimating_DrawModel;
-	typedef GlobalClassHook<Func::C_BaseAnimating_InternalDrawModel, false, C_BaseAnimating, int, int> C_BaseAnimating_InternalDrawModel;
-
-	typedef GlobalClassHook<Func::C_BasePlayer_GetDefaultFOV, false, C_BasePlayer, int> C_BasePlayer_GetDefaultFOV;
-
-	typedef GlobalClassHook<Func::C_TFPlayer_DrawModel, false, C_TFPlayer, int, int> C_TFPlayer_DrawModel;
-
-	typedef GlobalClassHook<Func::vgui_ProgressBar_ApplySettings, false, vgui::ProgressBar, void, KeyValues*> vgui_ProgressBar_ApplySettings;
-
-	typedef GlobalClassHook<Func::C_BaseEntity_Init, false, C_BaseEntity, bool, int, int> C_BaseEntity_Init;
-	typedef GlobalClassHook<Func::C_BaseEntity_CalcAbsolutePosition, false, C_BaseEntity, void> C_BaseEntity_CalcAbsolutePosition;
-
-	typedef GlobalClassHook<Func::CGlowObjectManager_ApplyEntityGlowEffects, false, CGlowObjectManager, void, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int> CGlowObjectManager_ApplyEntityGlowEffects;
-
-	typedef GlobalHook<Func::Global_GetLocalPlayerIndex, false, int> Global_GetLocalPlayerIndex;
-	typedef GlobalHook<Func::Global_CreateEntityByName, false, C_BaseEntity*, const char*> Global_CreateEntityByName;
-	typedef GlobalHook<Func::Global_CreateTFGlowObject, false, IClientNetworkable*, int, int> Global_CreateTFGlowObject;
-	typedef GlobalHook<Func::Global_UTILComputeEntityFade, false, unsigned char, C_BaseEntity*, float, float, float> Global_UTILComputeEntityFade;
-	typedef GlobalHook<Func::Global_DrawOpaqueRenderable, false, void, IClientRenderable*, bool, ERenderDepthMode, int> Global_DrawOpaqueRenderable;
-	typedef GlobalHook<Func::Global_DrawTranslucentRenderable, false, void, IClientRenderable*, bool, bool, bool> Global_DrawTranslucentRenderable;
-
-	template<class Hook> typename Hook::OriginalFnType GetFunc() { static_assert(false, "Invalid hook type"); }
-
-	template<class Hook> Hook* GetHook() { static_assert(false, "Invalid hook type"); }
-	template<> ICvar_ConsoleColorPrintf* GetHook<ICvar_ConsoleColorPrintf>() { return &m_Hook_ICvar_ConsoleColorPrintf; }
-	template<> ICvar_ConsoleDPrintf* GetHook<ICvar_ConsoleDPrintf>() { return &m_Hook_ICvar_ConsoleDPrintf; }
-	template<> ICvar_ConsolePrintf* GetHook<ICvar_ConsolePrintf>() { return &m_Hook_ICvar_ConsolePrintf; }
-	template<> IClientEngineTools_InToolMode* GetHook<IClientEngineTools_InToolMode>() { return &m_Hook_IClientEngineTools_InToolMode; }
-	template<> IClientEngineTools_IsThirdPersonCamera* GetHook<IClientEngineTools_IsThirdPersonCamera>() { return &m_Hook_IClientEngineTools_IsThirdPersonCamera; }
-	template<> IClientEngineTools_SetupEngineView* GetHook<IClientEngineTools_SetupEngineView>() { return &m_Hook_IClientEngineTools_SetupEngineView; }
-	template<> IClientRenderable_DrawModel* GetHook<IClientRenderable_DrawModel>() { return &m_Hook_IClientRenderable_DrawModel; }
-	template<> IVEngineClient_GetPlayerInfo* GetHook<IVEngineClient_GetPlayerInfo>() { return &m_Hook_IVEngineClient_GetPlayerInfo; }
-	template<> IGameEventManager2_FireEventClientSide* GetHook<IGameEventManager2_FireEventClientSide>() { return &m_Hook_IGameEventManager2_FireEventClientSide; }
-	template<> IPrediction_PostEntityPacketReceived* GetHook<IPrediction_PostEntityPacketReceived>() { return &m_Hook_IPrediction_PostEntityPacketReceived; }
-	template<> IStudioRender_ForcedMaterialOverride* GetHook<IStudioRender_ForcedMaterialOverride>() { return &m_Hook_IStudioRender_ForcedMaterialOverride; }
-	template<> C_HLTVCamera_SetCameraAngle* GetHook<C_HLTVCamera_SetCameraAngle>() { return &m_Hook_C_HLTVCamera_SetCameraAngle; }
-	template<> C_HLTVCamera_SetMode* GetHook<C_HLTVCamera_SetMode>() { return &m_Hook_C_HLTVCamera_SetMode; }
-	template<> C_HLTVCamera_SetPrimaryTarget* GetHook<C_HLTVCamera_SetPrimaryTarget>() { return &m_Hook_C_HLTVCamera_SetPrimaryTarget; }
-	template<> C_BaseAnimating_DrawModel* GetHook<C_BaseAnimating_DrawModel>() { return &m_Hook_C_BaseAnimating_DrawModel; }
-	template<> C_BaseAnimating_InternalDrawModel* GetHook<C_BaseAnimating_InternalDrawModel>() { return &m_Hook_C_BaseAnimating_InternalDrawModel; }
-	template<> C_BasePlayer_GetDefaultFOV* GetHook<C_BasePlayer_GetDefaultFOV>() { return &m_Hook_C_BasePlayer_GetDefaultFOV; }
-	template<> C_TFPlayer_DrawModel* GetHook<C_TFPlayer_DrawModel>() { return &m_Hook_C_TFPlayer_DrawModel; }
-	template<> C_BaseEntity_Init* GetHook<C_BaseEntity_Init>() { return &m_Hook_C_BaseEntity_Init; }
-	template<> Global_CreateEntityByName* GetHook<Global_CreateEntityByName>() { return &m_Hook_Global_CreateEntityByName; }
-	template<> Global_GetLocalPlayerIndex* GetHook<Global_GetLocalPlayerIndex>() { return &m_Hook_Global_GetLocalPlayerIndex; }
-	template<> Global_UTILComputeEntityFade* GetHook<Global_UTILComputeEntityFade>() { return &m_Hook_Global_UTILComputeEntityFade; }
-	template<> Global_DrawOpaqueRenderable* GetHook<Global_DrawOpaqueRenderable>() { return &m_Hook_Global_DrawOpaqueRenderable; }
-	template<> Global_DrawTranslucentRenderable* GetHook<Global_DrawTranslucentRenderable>() { return &m_Hook_Global_DrawTranslucentRenderable; }
-	template<> CGlowObjectManager_ApplyEntityGlowEffects* GetHook<CGlowObjectManager_ApplyEntityGlowEffects>() { return &m_Hook_CGlowObjectManager_ApplyEntityGlowEffects; }
-	template<> vgui_ProgressBar_ApplySettings* GetHook<vgui_ProgressBar_ApplySettings>() { return &m_Hook_vgui_ProgressBar_ApplySettings; }
-
-	template<class Hook> int AddHook(const typename Hook::Functional& hook)
+	template<HookFunc fn> int AddHook(const typename HookFuncType<fn>::Hook::Functional& hook)
 	{
-		auto hkPtr = GetHook<Hook>();
+		auto hkPtr = GetHook<fn>();
 		if (!hkPtr)
 			return 0;
 
 		return hkPtr->AddHook(hook);
 	}
-	template<class Hook> bool RemoveHook(int hookID, const char* funcName)
+	template<HookFunc fn> bool RemoveHook(int hookID, const char* funcName)
 	{
-		auto hkPtr = GetHook<Hook>();
+		auto hkPtr = GetHook<fn>();
 		if (!hkPtr)
 			return false;
 
 		return hkPtr->RemoveHook(hookID, funcName);
 	}
-	template<class Hook> typename Hook::Functional GetOriginal()
+	template<HookFunc fn> typename HookFuncType<fn>::Hook::Functional GetOriginal()
 	{
-		auto hkPtr = GetHook<Hook>();
+		auto hkPtr = GetHook<fn>();
 		if (!hkPtr)
 			return nullptr;
 
 		return hkPtr->GetOriginal();
 	}
-	template<class Hook> void SetState(Hooking::HookAction state)
+	template<HookFunc fn> void SetState(Hooking::HookAction state)
 	{
-		auto hkPtr = GetHook<Hook>();
+		auto hkPtr = GetHook<fn>();
 		if (!hkPtr)
 			return;
 
@@ -391,96 +452,20 @@ public:
 	}
 
 private:
-	ICvar_ConsoleColorPrintf m_Hook_ICvar_ConsoleColorPrintf;
-	ICvar_ConsoleDPrintf m_Hook_ICvar_ConsoleDPrintf;
-	ICvar_ConsolePrintf m_Hook_ICvar_ConsolePrintf;
+	std::unique_ptr<Hooking::IGroupHook> m_Hooks[(int)HookFunc::Count];
 
-	IClientEngineTools_InToolMode m_Hook_IClientEngineTools_InToolMode;
-	IClientEngineTools_IsThirdPersonCamera m_Hook_IClientEngineTools_IsThirdPersonCamera;
-	IClientEngineTools_SetupEngineView m_Hook_IClientEngineTools_SetupEngineView;
+	template<HookFunc fn, class... Args> void InitHook(Args&&... args);
+	template<HookFunc fn> void InitGlobalHook();
 
-	IClientRenderable_DrawModel m_Hook_IClientRenderable_DrawModel;
-
-	IVEngineClient_GetPlayerInfo m_Hook_IVEngineClient_GetPlayerInfo;
-
-	IGameEventManager2_FireEventClientSide m_Hook_IGameEventManager2_FireEventClientSide;
-
-	IPrediction_PostEntityPacketReceived m_Hook_IPrediction_PostEntityPacketReceived;
-
-	IStudioRender_ForcedMaterialOverride m_Hook_IStudioRender_ForcedMaterialOverride;
-
-	C_HLTVCamera_SetCameraAngle m_Hook_C_HLTVCamera_SetCameraAngle;
-	C_HLTVCamera_SetMode m_Hook_C_HLTVCamera_SetMode;
-	C_HLTVCamera_SetPrimaryTarget m_Hook_C_HLTVCamera_SetPrimaryTarget;
-
-	C_BaseAnimating_DrawModel m_Hook_C_BaseAnimating_DrawModel;
-	C_BaseAnimating_InternalDrawModel m_Hook_C_BaseAnimating_InternalDrawModel;
-	C_BasePlayer_GetDefaultFOV m_Hook_C_BasePlayer_GetDefaultFOV;
-	C_TFPlayer_DrawModel m_Hook_C_TFPlayer_DrawModel;
-	vgui_ProgressBar_ApplySettings m_Hook_vgui_ProgressBar_ApplySettings;
-
-	C_BaseEntity_Init m_Hook_C_BaseEntity_Init;
-
-	Global_CreateEntityByName m_Hook_Global_CreateEntityByName;
-	Global_GetLocalPlayerIndex m_Hook_Global_GetLocalPlayerIndex;
-	Global_UTILComputeEntityFade m_Hook_Global_UTILComputeEntityFade;
-	Global_DrawOpaqueRenderable m_Hook_Global_DrawOpaqueRenderable;
-	Global_DrawTranslucentRenderable m_Hook_Global_DrawTranslucentRenderable;
-	CGlowObjectManager_ApplyEntityGlowEffects m_Hook_CGlowObjectManager_ApplyEntityGlowEffects;
+	static void* s_RawFunctions[(int)HookFunc::Count];
+	static void InitRawFunctionsList();
+	template<HookFunc fn> static void FindFunc(const char* signature, const char* mask, int offset = 0, const char* module = "client");
+	static void FindFunc_C_BasePlayer_GetLocalPlayer();
 
 	void IngameStateChanged(bool inGame);
 	class Panel;
 	std::unique_ptr<Panel> m_Panel;
-
-	// Passthrough from Interfaces so we don't have to #include "Interfaces.h" yet
-	static C_HLTVCamera* GetHLTVCamera();
 };
-
-using ICvar_ConsoleColorPrintf = HookManager::ICvar_ConsoleColorPrintf;
-using ICvar_ConsoleDPrintf = HookManager::ICvar_ConsoleDPrintf;
-using ICvar_ConsolePrintf = HookManager::ICvar_ConsolePrintf;
-
-using IClientEngineTools_InToolMode = HookManager::IClientEngineTools_InToolMode;
-using IClientEngineTools_IsThirdPersonCamera = HookManager::IClientEngineTools_IsThirdPersonCamera;
-using IClientEngineTools_SetupEngineView = HookManager::IClientEngineTools_SetupEngineView;
-
-using IClientRenderable_DrawModel = HookManager::IClientRenderable_DrawModel;
-
-using IVEngineClient_GetPlayerInfo = HookManager::IVEngineClient_GetPlayerInfo;
-
-using IGameEventManager2_FireEventClientSide = HookManager::IGameEventManager2_FireEventClientSide;
-
-using IPrediction_PostEntityPacketReceived = HookManager::IPrediction_PostEntityPacketReceived;
-
-using IStudioRender_ForcedMaterialOverride = HookManager::IStudioRender_ForcedMaterialOverride;
-
-using C_HLTVCamera_SetCameraAngle = HookManager::C_HLTVCamera_SetCameraAngle;
-using C_HLTVCamera_SetMode = HookManager::C_HLTVCamera_SetMode;
-using C_HLTVCamera_SetPrimaryTarget = HookManager::C_HLTVCamera_SetPrimaryTarget;
-
-using CHudBaseDeathNotice_GetIcon = HookManager::CHudBaseDeathNotice_GetIcon;
-
-using C_BaseAnimating_GetBoneCache = HookManager::C_BaseAnimating_GetBoneCache;
-using C_BaseAnimating_LockStudioHdr = HookManager::C_BaseAnimating_LockStudioHdr;
-using C_BaseAnimating_LookupBone = HookManager::C_BaseAnimating_LookupBone;
-using C_BaseAnimating_GetBonePosition = HookManager::C_BaseAnimating_GetBonePosition;
-using C_BaseAnimating_DrawModel = HookManager::C_BaseAnimating_DrawModel;
-using C_BaseAnimating_InternalDrawModel = HookManager::C_BaseAnimating_InternalDrawModel;
-using C_BasePlayer_GetDefaultFOV = HookManager::C_BasePlayer_GetDefaultFOV;
-using C_TFPlayer_DrawModel = HookManager::C_TFPlayer_DrawModel;
-using vgui_ProgressBar_ApplySettings = HookManager::vgui_ProgressBar_ApplySettings;
-
-using C_BaseEntity_Init = HookManager::C_BaseEntity_Init;
-using C_BaseEntity_CalcAbsolutePosition = HookManager::C_BaseEntity_CalcAbsolutePosition;
-
-using CGlowObjectManager_ApplyEntityGlowEffects = HookManager::CGlowObjectManager_ApplyEntityGlowEffects;
-
-using Global_GetLocalPlayerIndex = HookManager::Global_GetLocalPlayerIndex;
-using Global_CreateEntityByName = HookManager::Global_CreateEntityByName;
-using Global_CreateTFGlowObject = HookManager::Global_CreateTFGlowObject;
-using Global_UTILComputeEntityFade = HookManager::Global_UTILComputeEntityFade;
-using Global_DrawOpaqueRenderable = HookManager::Global_DrawOpaqueRenderable;
-using Global_DrawTranslucentRenderable = HookManager::Global_DrawTranslucentRenderable;
 
 extern void* SignatureScan(const char* moduleName, const char* signature, const char* mask);
 extern HookManager* GetHooks();
