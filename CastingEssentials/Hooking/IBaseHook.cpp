@@ -223,7 +223,7 @@ std::shared_ptr<IBaseHook> Hooking::CreateVTableSwapHook(void* instance, void* d
 	return std::shared_ptr<IBaseHook>(std::make_shared<VTableSwapHook>(instance, detourFunc, vTableIndex));
 }
 
-int ::Hooking::Internal::MFI_GetVTblOffset(void * mfp)
+constexpr int ::Hooking::Internal::MFI_GetVTblOffset(void * mfp)
 {
 	// Code stolen from SourceHook
 	//static_assert(_MSC_VER == 1900, "Only verified on VS2015!");

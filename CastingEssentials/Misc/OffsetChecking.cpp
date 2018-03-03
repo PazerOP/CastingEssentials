@@ -15,6 +15,8 @@ class OffsetChecking
 	OFFSET_CHECK(C_BaseAnimating, m_bDynamicModelPending, 2185);
 	OFFSET_CHECK(C_BaseAnimating, m_pStudioHdr, 2192);
 
+	OFFSET_CHECK(C_BaseEntity, m_lifeState, 165);
+
 	OFFSET_CHECK(C_BasePlayer, m_iFOVStart, 4152);
 	OFFSET_CHECK(C_BasePlayer, m_iDefaultFOV, 4160);
 	OFFSET_CHECK(C_BasePlayer, m_hVehicle, 4300);

@@ -20,9 +20,9 @@ namespace Hooking
 
 	namespace Internal
 	{
-		extern int MFI_GetVTblOffset(void* mfp);
+		extern constexpr int MFI_GetVTblOffset(void* mfp);
 	}
-	template<class F> static int VTableOffset(F func)
+	template<class F> static constexpr int VTableOffset(F func)
 	{
 		union
 		{

@@ -227,20 +227,38 @@ class VariablePusher final
 public:
 	VariablePusher() = delete;
 	VariablePusher(const VariablePusher<T>& other) = delete;
+	VariablePusher(VariablePusher<T>&& other)
+	{
+		other.m_IsPushed = false;
+		m_Variable = std::move(other.m_Variable);
+		m_OldValue = std::move(other.m_OldValue);
+	}
 	VariablePusher(T& variable, const T& newValue) : m_Variable(&variable)
 	{
 		m_OldValue = std::move(*m_Variable);
-		*m_Variable = newValue;
+		*m_Variable = std::move(newValue);
+	}
+	VariablePusher(T& variable, T&& newValue) : m_Variable(&variable)
+	{
+		m_OldValue = std::move(*m_Variable);
+		*m_Variable = std::move(newValue);
 	}
 	~VariablePusher()
 	{
-		*m_Variable = std::move(m_OldValue);
+		if (m_IsPushed)
+			*m_Variable = std::move(m_OldValue);
 	}
 
 private:
+	bool m_IsPushed = true;
 	T* const m_Variable;
 	T m_OldValue;
 };
+
+template<class T> inline VariablePusher<T> CreateVariablePusher(T& variable, T&& newValue)
+{
+	return VariablePusher<T>(variable, newValue);
+}
 
 // smh why were these omitted
 namespace std

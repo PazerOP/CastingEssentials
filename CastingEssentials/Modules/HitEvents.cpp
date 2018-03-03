@@ -156,9 +156,13 @@ void HitEvents::DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPl
 	auto localEntindex = localPlayer->entindex();
 
 	auto otherLocalAttacker = (C_BaseEntity*)pAttacker;
-	auto otherLocalEntindex = otherLocalAttacker->entindex();
+	auto otherLocalEntindex = otherLocalAttacker ? otherLocalAttacker->entindex() : -1;
 	if (localEntindex != otherLocalEntindex)
 		return;
+
+	static auto isPlayerOffset = Hooking::VTableOffset(&C_BasePlayer::IsPlayer);
+
+	auto lifeStatePusher = CreateVariablePusher<char>(localPlayer->m_lifeState, LIFE_ALIVE);
 
 	DisplayDamageFeedback(pThis, pAttacker, pVictim, iDamageAmount, iHealth, unknown);
 	GetHooks()->SetState<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(Hooking::HookAction::SUPERCEDE);
