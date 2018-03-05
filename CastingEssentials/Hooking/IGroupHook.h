@@ -47,6 +47,8 @@ namespace Hooking
 		virtual ~IGroupHook() { }
 
 		virtual void SetState(HookAction action) = 0;
+		virtual bool IsInHook() const = 0;
+
 		virtual bool RemoveHook(int hookID, const char* funcName) = 0;
 
 		virtual void InitHook() = 0;

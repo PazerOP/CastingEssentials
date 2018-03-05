@@ -10,7 +10,9 @@
 class C_BaseCombatCharacter;
 class C_BasePlayer;
 class C_HLTVCamera;
+class CAccountPanel;
 class CDamageAccountPanel;
+using trace_t = class CGameTrace;
 enum ERenderDepthMode : int;
 enum OverrideType_t : int;
 class QAngle;
@@ -55,7 +57,9 @@ enum class HookFunc
 	Global_DrawOpaqueRenderable,
 	Global_DrawTranslucentRenderable,
 	Global_GetLocalPlayerIndex,
+	Global_GetVectorInScreenSpace,
 	Global_UTILComputeEntityFade,
+	Global_UTIL_TraceLine,
 
 	C_BaseAnimating_ComputeHitboxSurroundingBox,
 	C_BaseAnimating_DrawModel,
@@ -79,7 +83,10 @@ enum class HookFunc
 
 	C_TFPlayer_DrawModel,
 
+	CAccountPanel_OnAccountValueChanged,
+	CAccountPanel_Paint,
 	CDamageAccountPanel_DisplayDamageFeedback,
+	CDamageAccountPanel_ShouldDraw,
 
 	CGlowObjectManager_ApplyEntityGlowEffects,
 
@@ -371,10 +378,25 @@ class HookManager final
 		typedef void(__thiscall *Raw)(CGlowObjectManager*, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int);
 		typedef GlobalClassHook<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects, false, CGlowObjectManager, void, const CViewSetup*, int, CMatRenderContextPtr&, float, int, int, int, int> Hook;
 	};
+	template<> struct HookFuncType<HookFunc::CAccountPanel_OnAccountValueChanged>
+	{
+		typedef void*(__thiscall *Raw)(CAccountPanel* pThis, int unknown, int healthDelta, int deltaType);
+		typedef GlobalClassHook<HookFunc::CAccountPanel_OnAccountValueChanged, false, CAccountPanel, void*, int, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::CAccountPanel_Paint>
+	{
+		typedef void(__thiscall* Raw)(CAccountPanel* pThis);
+		typedef GlobalClassHook<HookFunc::CAccountPanel_Paint, false, CAccountPanel, void> Hook;
+	};
 	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>
 	{
 		typedef void(__thiscall *Raw)(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool unknown);
 		typedef GlobalClassHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback, false, CDamageAccountPanel, void, C_TFPlayer*, C_BaseCombatCharacter*, int, int, bool> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_ShouldDraw>
+	{
+		typedef bool(__thiscall *Raw)(CDamageAccountPanel* pThis);
+		typedef GlobalClassHook<HookFunc::CDamageAccountPanel_ShouldDraw, false, CDamageAccountPanel, bool> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::Global_CreateEntityByName>
 	{
@@ -386,6 +408,11 @@ class HookManager final
 		typedef int(*Raw)();
 		typedef GlobalHook<HookFunc::Global_GetLocalPlayerIndex, false, int> Hook;
 	};
+	template<> struct HookFuncType<HookFunc::Global_GetVectorInScreenSpace>
+	{
+		typedef bool(__cdecl* Raw)(Vector pos, int& x, int& y, Vector* offset);
+		typedef GlobalHook<HookFunc::Global_GetVectorInScreenSpace, false, bool, Vector, int&, int&, Vector*> Hook;
+	};
 	template<> struct HookFuncType<HookFunc::Global_CreateTFGlowObject>
 	{
 		typedef IClientNetworkable*(__cdecl *Raw)(int entNum, int serialNum);
@@ -395,6 +422,11 @@ class HookManager final
 	{
 		typedef unsigned char(__cdecl *Raw)(C_BaseEntity* pEntity, float flMinDist, float flMaxDist, float flFadeScale);
 		typedef GlobalHook<HookFunc::Global_UTILComputeEntityFade, false, unsigned char, C_BaseEntity*, float, float, float> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_UTIL_TraceLine>
+	{
+		typedef void(__cdecl* Raw)(const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, const IHandleEntity* ignore, int collisionGroup, trace_t* ptr);
+		typedef GlobalHook<HookFunc::Global_UTIL_TraceLine, false, void, const Vector&, const Vector&, unsigned int, const IHandleEntity*, int, trace_t*> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::Global_DrawOpaqueRenderable>
 	{
@@ -449,6 +481,14 @@ public:
 			return;
 
 		hkPtr->SetState(state);
+	}
+	template<HookFunc fn> bool IsInHook()
+	{
+		auto hkPtr = GetHook<fn>();
+		if (!hkPtr)
+			return false;
+
+		return hkPtr->IsInHook();
 	}
 
 private:

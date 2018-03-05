@@ -265,3 +265,11 @@ namespace std
 {
 	inline std::string to_string(const char* str) { return std::string(str); }
 }
+
+template<size_t i> struct _PADDING_HELPER : _PADDING_HELPER<i - 1>
+{
+	std::byte : 8;
+};
+template<> struct _PADDING_HELPER<0> { };
+
+#define PADDING(size) _PADDING_HELPER<size> EXPAND_CONCAT(CE_PADDING, __COUNTER__)

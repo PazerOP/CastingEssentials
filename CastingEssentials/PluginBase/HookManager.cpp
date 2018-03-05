@@ -191,7 +191,9 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::Global_DrawOpaqueRenderable>("\x55\x8B\xEC\x83\xEC\x20\x8B\x0D????\x53\x56\x33\xF6", "xxxxxxxx????xxxx");
 	FindFunc<HookFunc::Global_DrawTranslucentRenderable>("\x55\x8B\xEC\x83\xEC\x0C\x53\x8B\x5D\x08\x8B\xCB\x8B\x03\xFF\x50\x34", "xxxxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::Global_GetLocalPlayerIndex>("\xE8????\x85\xC0\x74\x08\x8D\x48\x08\x8B\x01\xFF\x60\x24\x33\xC0\xC3", "x????xxxxxxxxxxxxxxx");
+	FindFunc<HookFunc::Global_GetVectorInScreenSpace>("\x55\x8B\xEC\x8B\x45\x1C\x83\xEC\x10", "xxxxxxxxx");
 	FindFunc<HookFunc::Global_UTILComputeEntityFade>("\x55\x8B\xEC\x83\xEC\x40\x80\x3D", "xxxxxxxx");
+	FindFunc<HookFunc::Global_UTIL_TraceLine>("\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x83\xEC\x6C\x8D\x4D\xA0\x56\xFF\x73\x0C", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
 	FindFunc<HookFunc::C_BaseAnimating_ComputeHitboxSurroundingBox>("\x55\x8B\xEC\x81\xEC????\x56\x8B\xF1\x57\x80\xBE?????\x0F\x85????\x83\xBE?????\x75\x05\xE8????\x8B\xBE????\x85\xFF\x0F\x84????\x8B\x86????\x8B\x17\x53", "xxxxx????xxxxxx?????xx????xx?????xxx????xx????xxxx????xx????xxx");
 	FindFunc<HookFunc::C_BaseAnimating_DrawModel>("\x55\x8B\xEC\x83\xEC\x20\x8B\x15????\x53\x33\xDB\x56", "xxxxxxxx????xxxx");
@@ -214,7 +216,10 @@ void HookManager::InitRawFunctionsList()
 
 	FindFunc<HookFunc::C_TFPlayer_DrawModel>("\x55\x8B\xEC\x51\x57\x8B\xF9\x80\x7F\x54\x17", "xxxxxxxxxxx");
 
+	FindFunc<HookFunc::CAccountPanel_OnAccountValueChanged>("\x55\x8B\xEC\x51\x53\x8B\x5D\x0C\x56\x8B\xF1\x53", "xxxxxxxxxxxx");
+	FindFunc<HookFunc::CAccountPanel_Paint>("\x55\x8B\xEC\x83\xEC\x74\x56\x8B\xC1", "xxxxxxxxx");
 	FindFunc<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>("\x55\x8B\xEC\x81\xEC????\x83\x7D\x10\x00\x53\x8B\xD9\x0F\x8E", "xxxxx????xxxxxxxxx");
+	FindFunc<HookFunc::CDamageAccountPanel_ShouldDraw>("\x56\x8B\xF1\xE8????\x8B\xC8\x85\xC9\x74\x0E", "xxxx????xxxxxx");
 
 	FindFunc<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>("\x55\x8B\xEC\x83\xEC\x3C\x53\x56\x57\x8B\xD9\x8B\x0D", "xxxxxxxxxxxxx");
 
@@ -230,13 +235,17 @@ void HookManager::InitRawFunctionsList()
 template<HookFunc fn> void HookManager::FindFunc(const char* signature, const char* mask, int offset, const char* module)
 {
 	std::byte* result = (std::byte*)SignatureScan(module, signature, mask);
-	if (!result)
+	if (result)
+	{
+		result += offset;
+	}
+	else
 	{
 		Assert(!"Failed to find function!");
-		return;
+		result = nullptr;
 	}
 
-	s_RawFunctions[(int)fn] = (void*)(result + offset);
+	s_RawFunctions[(int)fn] = (void*)result;
 }
 
 void HookManager::IngameStateChanged(bool inGame)
@@ -301,11 +310,16 @@ HookManager::HookManager()
 
 	InitGlobalHook<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>();
 
+	InitGlobalHook<HookFunc::CAccountPanel_OnAccountValueChanged>();
+	InitGlobalHook<HookFunc::CAccountPanel_Paint>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>();
+	InitGlobalHook<HookFunc::CDamageAccountPanel_ShouldDraw>();
 
 	InitGlobalHook<HookFunc::Global_CreateEntityByName>();
-	InitGlobalHook<HookFunc::Global_GetLocalPlayerIndex>();
-	InitGlobalHook<HookFunc::Global_UTILComputeEntityFade>();
 	InitGlobalHook<HookFunc::Global_DrawOpaqueRenderable>();
 	InitGlobalHook<HookFunc::Global_DrawTranslucentRenderable>();
+	InitGlobalHook<HookFunc::Global_GetLocalPlayerIndex>();
+	InitGlobalHook<HookFunc::Global_GetVectorInScreenSpace>();
+	InitGlobalHook<HookFunc::Global_UTILComputeEntityFade>();
+	InitGlobalHook<HookFunc::Global_UTIL_TraceLine>();
 }

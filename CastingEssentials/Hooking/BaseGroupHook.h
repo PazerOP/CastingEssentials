@@ -22,6 +22,7 @@ namespace Hooking
 		typedef SelfType BaseGroupHookType;
 
 		virtual void SetState(HookAction action) override;
+		virtual bool IsInHook() const override { return s_HookResults; }
 
 		virtual int AddHook(const Functional& newHook);
 		virtual bool RemoveHook(int hookID, const char* funcName) override;
@@ -42,9 +43,8 @@ namespace Hooking
 			{
 				std::lock_guard<std::recursive_mutex> lock(This()->m_HooksTableMutex);
 
-				std::stack<HookAction>* oldHookResults = s_HookResults;
 				std::stack<HookAction> newHookResults;
-				s_HookResults = &newHookResults;
+				auto hookResultsPusher = CreateVariablePusher(s_HookResults, &newHookResults);
 				{
 					const auto outerStartDepth = s_HookResults->size();
 					bool callOriginal = true;
@@ -79,7 +79,6 @@ namespace Hooking
 					if (callOriginal)
 						This()->GetOriginal()(args...);
 				}
-				s_HookResults = oldHookResults;
 			}
 		};
 
