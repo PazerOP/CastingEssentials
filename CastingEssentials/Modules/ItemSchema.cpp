@@ -602,7 +602,7 @@ void ItemSchema::LoadOverrides(const std::forward_list<ItemEntry>& items)
 
 		m_Remaps.emplace_back(std::move(newRemap));
 
-	} while (remap = remap->GetNextValue());
+	} while ((remap = remap->GetNextValue()) != nullptr);
 }
 
 unsigned int ItemSchema::UniqueItemEntry::GetLowestID() const

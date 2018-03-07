@@ -14,18 +14,25 @@ public:
 
 	static bool CheckDependencies() { return true; }
 
-private:
-	friend class ModuleManager;
+protected:
+	static bool IsInGame() { return s_InGame; }
 
 	virtual void OnTick(bool inGame) { }
 	virtual void LevelInit() { }
 	virtual void LevelShutdown() { }
+
+private:
+	friend class ModuleManager;
+
+	static bool s_InGame;
 };
 
 template<class T>
-class Module : IBaseModule
+class Module : public IBaseModule
 {
 public:
+	virtual ~Module() = default;
+
 	static __forceinline T * GetModule() { return s_Module; }
 	static __forceinline const char* GetModuleName() { return Modules().GetModuleName<T>().c_str(); }
 

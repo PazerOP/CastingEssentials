@@ -27,28 +27,26 @@ protected:
 	void FireGameEvent(IGameEvent* event) override;
 
 	void LevelInit() override;
+	void LevelShutdown() override;
 
 private:
 	std::vector<IGameEvent*> m_EventsToIgnore;
 
 	void AddEventListener();
+
 	void UpdateEnabledState();
+	void Enable();
+	void Disable();
 
 	void DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool unknown);
 
 	bool m_OverrideUTILTraceline;
 	void UTILTracelineOverride(const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, const IHandleEntity* ignore, int collisionGroup, trace_t* ptr);
 
-	void* OnAccountValueChangedOverride(CAccountPanel* pThis, int unknown, int healthDelta, int deltaType);
-
-	void AccountPanelPaintOverride(CAccountPanel* pThis);
-
 	bool DamageAccountPanelShouldDrawOverride(CDamageAccountPanel* pThis);
 
 	int m_DisplayDamageFeedbackHook;
 	int m_UTILTracelineHook;
-	int m_OnAccountValueChangedHook;
-	int m_AccountPanelPaintHook;
 	int m_DamageAccountPanelShouldDrawHook;
 
 	CAccountPanel* m_LastDamageAccount;

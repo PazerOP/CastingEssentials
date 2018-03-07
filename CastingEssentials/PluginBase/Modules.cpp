@@ -8,12 +8,17 @@
 static ModuleManager s_ModuleManager;
 ModuleManager& Modules() { return s_ModuleManager; }
 
+bool IBaseModule::s_InGame;
+
 class ModuleManager::Panel final : public vgui::StubPanel
 {
 public:
 	void OnTick() override;
 
 private:
+	void LevelInitAllModules();
+	void LevelShutdownAllModules();
+
 	std::string m_LastLevelName;
 };
 
@@ -26,13 +31,28 @@ void ModuleManager::UnloadAllModules()
 {
 	for (auto iterator = modules.rbegin(); iterator != modules.rend(); iterator++)
 	{
-		iterator->second.m_Module.reset();		// Delete the module
-		*iterator->second.m_Pointer = nullptr;	// Zero out the static pointer to self
+		iterator->second.m_Module.reset();				// Delete the module
+		*iterator->second.m_Pointer = nullptr;			// Zero out the static pointer to self
 		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", iterator->second.m_Name.c_str());
 	}
 
 	modules.clear();
 	m_Panel.reset();
+}
+
+void ModuleManager::Panel::LevelInitAllModules()
+{
+	IBaseModule::s_InGame = true;
+
+	for (const auto& pair : Modules().modules)
+		pair.second.m_Module->LevelInit();
+}
+void ModuleManager::Panel::LevelShutdownAllModules()
+{
+	IBaseModule::s_InGame = false;
+
+	for (const auto& pair : Modules().modules)
+		pair.second.m_Module->LevelShutdown();
 }
 
 void ModuleManager::Panel::OnTick()
@@ -47,21 +67,16 @@ void ModuleManager::Panel::OnTick()
 		if (stricmp(m_LastLevelName.c_str(), levelName))
 		{
 			if (!m_LastLevelName.empty())
-			{
-				for (const auto& pair : Modules().modules)
-					pair.second.m_Module->LevelShutdown();
-			}
+				LevelShutdownAllModules();
 
 			m_LastLevelName = levelName;
 
-			for (const auto& pair : Modules().modules)
-				pair.second.m_Module->LevelInit();
+			LevelInitAllModules();
 		}
 	}
 	else if (!m_LastLevelName.empty())
 	{
-		for (const auto& pair : Modules().modules)
-			pair.second.m_Module->LevelShutdown();
+		LevelShutdownAllModules();
 
 		m_LastLevelName.clear();
 	}

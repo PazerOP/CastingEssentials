@@ -14,15 +14,13 @@
 HitEvents::HitEvents() :
 	ce_hitevents_enabled("ce_hitevents_enabled", "0", FCVAR_NONE, "Enables hitsounds and damage numbers in STVs.",
 		[](IConVar* var, const char* oldValue, float fOldValue) { GetModule()->UpdateEnabledState(); }),
-	ce_hitevents_dmgnumbers_los("ce_hitevents_dmgnumbers_los", "0", FCVAR_NONE, "Should we require LOS to the target before showing a damage number? For a \"normal\" TF2 experience, this would be set to 1."),
+	ce_hitevents_dmgnumbers_los("ce_hitevents_dmgnumbers_los", "1", FCVAR_NONE, "Should we require LOS to the target before showing a damage number? For a \"normal\" TF2 experience, this would be set to 1.", [](IConVar*, const char*, float) { GetModule()->UpdateEnabledState(); }),
 	ce_hitevents_debug("ce_hitevents_debug", "0")
 {
 	m_OverrideUTILTraceline = false;
 
 	m_DisplayDamageFeedbackHook = 0;
 	m_UTILTracelineHook = 0;
-	m_OnAccountValueChangedHook = 0;
-	m_AccountPanelPaintHook = 0;
 	m_DamageAccountPanelShouldDrawHook = 0;
 
 	m_LastDamageAccount = nullptr;
@@ -313,7 +311,6 @@ void HitEvents::FireGameEvent(IGameEvent* event)
 
 	m_EventsToIgnore.push_back(newEvent);
 
-
 	//VariablePusher<C_BasePlayer*> localPlayerPusher(Interfaces::GetLocalPlayer(), );
 	gameeventmanager->FireEventClientSide(newEvent);
 }
@@ -329,51 +326,53 @@ void HitEvents::LevelInit()
 	UpdateEnabledState();
 }
 
+void HitEvents::LevelShutdown()
+{
+	UpdateEnabledState();
+}
+
+void HitEvents::Enable()
+{
+	if (!gameeventmanager->FindListener(this, "player_hurt"))
+		gameeventmanager->AddListener(this, "player_hurt", false);
+
+	if (!m_DisplayDamageFeedbackHook)
+	{
+		m_DisplayDamageFeedbackHook = GetHooks()->AddHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(std::bind(&HitEvents::DisplayDamageFeedbackOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+	}
+	if (!m_UTILTracelineHook)
+	{
+		m_UTILTracelineHook = GetHooks()->AddHook<HookFunc::Global_UTIL_TraceLine>(std::bind(&HitEvents::UTILTracelineOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
+	}
+	if (!m_DamageAccountPanelShouldDrawHook)
+	{
+		m_DamageAccountPanelShouldDrawHook = GetHooks()->AddHook<HookFunc::CDamageAccountPanel_ShouldDraw>(std::bind(&HitEvents::DamageAccountPanelShouldDrawOverride, this, std::placeholders::_1));
+	}
+}
+
+void HitEvents::Disable()
+{
+	if (m_DisplayDamageFeedbackHook && GetHooks()->RemoveHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(m_DisplayDamageFeedbackHook, __FUNCSIG__))
+		m_DisplayDamageFeedbackHook = 0;
+
+	if (m_UTILTracelineHook && GetHooks()->RemoveHook<HookFunc::Global_UTIL_TraceLine>(m_UTILTracelineHook, __FUNCSIG__))
+		m_UTILTracelineHook = 0;
+
+	if (m_DamageAccountPanelShouldDrawHook && GetHooks()->RemoveHook<HookFunc::CDamageAccountPanel_ShouldDraw>(m_DamageAccountPanelShouldDrawHook, __FUNCSIG__))
+		m_DamageAccountPanelShouldDrawHook = 0;
+
+	gameeventmanager->RemoveListener(this);
+}
+
 void HitEvents::UpdateEnabledState()
 {
-	if (ce_hitevents_enabled.GetBool())
+	if (ce_hitevents_enabled.GetBool() && IsInGame())
 	{
-		if (!gameeventmanager->FindListener(this, "player_hurt"))
-			gameeventmanager->AddListener(this, "player_hurt", false);
-
-		if (!m_DisplayDamageFeedbackHook)
-		{
-			m_DisplayDamageFeedbackHook = GetHooks()->AddHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(std::bind(&HitEvents::DisplayDamageFeedbackOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
-		}
-		if (!m_UTILTracelineHook)
-		{
-			m_UTILTracelineHook = GetHooks()->AddHook<HookFunc::Global_UTIL_TraceLine>(std::bind(&HitEvents::UTILTracelineOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
-		}
-		if (!m_OnAccountValueChangedHook)
-		{
-			m_OnAccountValueChangedHook = GetHooks()->AddHook<HookFunc::CAccountPanel_OnAccountValueChanged>(std::bind(&HitEvents::OnAccountValueChangedOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-		}
-		if (!m_AccountPanelPaintHook)
-		{
-			m_AccountPanelPaintHook = GetHooks()->AddHook<HookFunc::CAccountPanel_Paint>(std::bind(&HitEvents::AccountPanelPaintOverride, this, std::placeholders::_1));
-		}
-		if (!m_DamageAccountPanelShouldDrawHook)
-		{
-			m_DamageAccountPanelShouldDrawHook = GetHooks()->AddHook<HookFunc::CDamageAccountPanel_ShouldDraw>(std::bind(&HitEvents::DamageAccountPanelShouldDrawOverride, this, std::placeholders::_1));
-		}
+		Enable();
 	}
 	else
 	{
-		gameeventmanager->RemoveListener(this);
-
-		if (m_DisplayDamageFeedbackHook && GetHooks()->RemoveHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(m_DisplayDamageFeedbackHook, __FUNCSIG__))
-			m_DisplayDamageFeedbackHook = 0;
-
-		if (m_UTILTracelineHook && GetHooks()->RemoveHook<HookFunc::Global_UTIL_TraceLine>(m_UTILTracelineHook, __FUNCSIG__))
-			m_UTILTracelineHook = 0;
-
-		if (m_OnAccountValueChangedHook && GetHooks()->RemoveHook<HookFunc::CAccountPanel_OnAccountValueChanged>(m_OnAccountValueChangedHook, __FUNCSIG__))
-
-		if (m_AccountPanelPaintHook && GetHooks()->RemoveHook<HookFunc::CAccountPanel_Paint>(m_AccountPanelPaintHook, __FUNCSIG__))
-			m_AccountPanelPaintHook = 0;
-
-		if (m_DamageAccountPanelShouldDrawHook && GetHooks()->RemoveHook<HookFunc::CDamageAccountPanel_ShouldDraw>(m_DamageAccountPanelShouldDrawHook, __FUNCSIG__))
-			m_DamageAccountPanelShouldDrawHook = 0;
+		Disable();
 	}
 }
 
@@ -403,41 +402,19 @@ void HitEvents::DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPl
 
 void HitEvents::UTILTracelineOverride(const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, const IHandleEntity* ignore, int collisionGroup, trace_t* ptr)
 {
-	if (m_OverrideUTILTraceline)
+	if (m_OverrideUTILTraceline && ce_hitevents_dmgnumbers_los.GetBool())
 	{
 		ptr->fraction = 1.0;
-		ptr->startpos = vecAbsStart;
-		ptr->endpos = vecAbsEnd;
-
 		GetHooks()->SetState<HookFunc::Global_UTIL_TraceLine>(Hooking::HookAction::SUPERCEDE);
 	}
-}
-
-void* HitEvents::OnAccountValueChangedOverride(CAccountPanel* pThis, int unknown, int healthDelta, int deltaType)
-{
-	CAccountPanel::Event* newEvent = (CAccountPanel::Event*)GetHooks()->GetOriginal<HookFunc::CAccountPanel_OnAccountValueChanged>()(pThis, unknown, healthDelta, deltaType);
-
-	m_LastDamageAccount = pThis;
-
-	GetHooks()->SetState<HookFunc::CAccountPanel_OnAccountValueChanged>(Hooking::HookAction::SUPERCEDE);
-
-	return newEvent;
-}
-
-void HitEvents::AccountPanelPaintOverride(CAccountPanel* pThis)
-{
-	if (pThis != m_LastDamageAccount)
-		return;
-
-	GetHooks()->GetOriginal<HookFunc::CAccountPanel_Paint>()(pThis);
-
-	if (GetHooks()->IsInHook<HookFunc::CAccountPanel_Paint>())
-		GetHooks()->SetState<HookFunc::CAccountPanel_Paint>(Hooking::HookAction::SUPERCEDE);
 }
 
 bool HitEvents::DamageAccountPanelShouldDrawOverride(CDamageAccountPanel* pThis)
 {
 	GetHooks()->SetState<HookFunc::CDamageAccountPanel_ShouldDraw>(Hooking::HookAction::SUPERCEDE);
+
+	CDamageAccountPanel* questionable = (CDamageAccountPanel*)((std::byte*)pThis + 44);
+	engine->Con_NPrintf(5, "account panel entries: %i", questionable->m_Events.Count());
 
 	return true;
 }
