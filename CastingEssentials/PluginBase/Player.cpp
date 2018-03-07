@@ -24,13 +24,26 @@ bool Player::s_UserIDRetrievalAvailable = false;
 
 std::unique_ptr<Player> Player::s_Players[ABSOLUTE_PLAYER_LIMIT];
 
+int Player::s_UserInfoChangedCallbackHook;
+
 Player::Player(CHandle<IClientEntity> handle, int userID) : m_PlayerEntity(handle), m_UserID(userID)
 {
 	m_CachedPlayerEntity = nullptr;
 }
 
+void Player::Load()
+{
+	if (!s_UserInfoChangedCallbackHook)
+	{
+		s_UserInfoChangedCallbackHook = GetHooks()->AddHook<HookFunc::Global_UserInfoChangedCallback>(std::bind(&Player::UserInfoChangedCallbackOverride, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
+	}
+}
+
 void Player::Unload()
 {
+	if (s_UserInfoChangedCallbackHook && GetHooks()->RemoveHook<HookFunc::Global_UserInfoChangedCallback>(s_UserInfoChangedCallbackHook, __FUNCSIG__))
+		s_UserInfoChangedCallbackHook = 0;
+
 	for (size_t i = 0; i < arraysize(s_Players); i++)
 		s_Players[i].reset();
 }
@@ -330,20 +343,11 @@ int Player::GetMaxOverheal() const
 
 bool Player::IsValid() const
 {
+	if (!IsValidIndex(entindex()))
+		return false;
+
 	if (!GetEntity())
 		return false;
-
-	if (entindex() < 1 || entindex() > Interfaces::GetEngineTool()->GetMaxClients())
-		return false;
-
-	{
-		player_info_t info;
-		if (!GetHooks()->GetOriginal<HookFunc::IVEngineClient_GetPlayerInfo>()(entindex(), &info))
-			return false;
-
-		if (info.userID != m_UserID)
-			return false;
-	}
 
 	return true;
 }
@@ -374,6 +378,13 @@ bool Player::CheckCache() const
 	}
 
 	return false;
+}
+
+void Player::UserInfoChangedCallbackOverride(void*, INetworkStringTable* stringTable, int stringNumber, const char* newString, const void* newData)
+{
+	// If there's any changes, force a recreation of the Player instance
+	Assert(stringNumber >= 0 && stringNumber < std::size(s_Players));
+	s_Players[stringNumber].reset();
 }
 
 Player::Iterator Player::end()

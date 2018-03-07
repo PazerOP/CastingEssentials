@@ -192,6 +192,7 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::Global_DrawTranslucentRenderable>("\x55\x8B\xEC\x83\xEC\x0C\x53\x8B\x5D\x08\x8B\xCB\x8B\x03\xFF\x50\x34", "xxxxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::Global_GetLocalPlayerIndex>("\xE8????\x85\xC0\x74\x08\x8D\x48\x08\x8B\x01\xFF\x60\x24\x33\xC0\xC3", "x????xxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::Global_GetVectorInScreenSpace>("\x55\x8B\xEC\x8B\x45\x1C\x83\xEC\x10", "xxxxxxxxx");
+	FindFunc<HookFunc::Global_UserInfoChangedCallback>("\x55\x8B\xEC\x53\x8B\x5D\x18\x85\xDB\x0F\x84????\x56", "xxxxxxxxxxx????x", 0, "engine");
 	FindFunc<HookFunc::Global_UTILComputeEntityFade>("\x55\x8B\xEC\x83\xEC\x40\x80\x3D", "xxxxxxxx");
 	FindFunc<HookFunc::Global_UTIL_TraceLine>("\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x83\xEC\x6C\x8D\x4D\xA0\x56\xFF\x73\x0C", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
@@ -323,6 +324,7 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::Global_DrawTranslucentRenderable>();
 	InitGlobalHook<HookFunc::Global_GetLocalPlayerIndex>();
 	InitGlobalHook<HookFunc::Global_GetVectorInScreenSpace>();
+	InitGlobalHook<HookFunc::Global_UserInfoChangedCallback>();
 	InitGlobalHook<HookFunc::Global_UTILComputeEntityFade>();
 	InitGlobalHook<HookFunc::Global_UTIL_TraceLine>();
 }

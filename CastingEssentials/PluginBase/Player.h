@@ -12,15 +12,17 @@ enum class TFClassType;
 enum class TFTeam;
 enum class TFMedigun;
 
-class IClientEntity;
 class C_BaseEntity;
 class C_BaseCombatWeapon;
 class C_BaseAnimating;
 class C_BasePlayer;
+class IClientEntity;
+class INetworkStringTable;
 
 class Player final
 {
 public:
+	static void Load();
 	static void Unload();
 	static Player* AsPlayer(IClientEntity* entity);
 	static Player* GetPlayer(int entIndex, const char* functionName = nullptr);
@@ -125,6 +127,9 @@ private:
 	int m_LastHurtHealth;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
+
+	static int s_UserInfoChangedCallbackHook;
+	static void UserInfoChangedCallbackOverride(void*, INetworkStringTable* stringTable, int stringNumber, const char* newString, const void* newData);
 
 public:
 	static Iterator begin() { return Iterator(); }

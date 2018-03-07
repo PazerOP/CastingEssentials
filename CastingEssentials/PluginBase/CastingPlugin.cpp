@@ -62,6 +62,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 
 	Interfaces::Load(interfaceFactory);
 	HookManager::Load();
+	Player::Load();
 	Modules().Init();
 
 	Modules().RegisterAndLoadModule<HUDHacking>("Evil HUD Modifications");

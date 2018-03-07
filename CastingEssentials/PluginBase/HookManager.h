@@ -14,6 +14,7 @@ class CAccountPanel;
 class CAutoGameSystemPerFrame;
 class CDamageAccountPanel;
 class IGameSystem;
+class INetworkStringTable;
 using trace_t = class CGameTrace;
 enum ERenderDepthMode : int;
 enum OverrideType_t : int;
@@ -60,6 +61,7 @@ enum class HookFunc
 	Global_DrawTranslucentRenderable,
 	Global_GetLocalPlayerIndex,
 	Global_GetVectorInScreenSpace,
+	Global_UserInfoChangedCallback,
 	Global_UTILComputeEntityFade,
 	Global_UTIL_TraceLine,
 
@@ -434,6 +436,11 @@ class HookManager final
 	{
 		typedef IClientNetworkable*(__cdecl *Raw)(int entNum, int serialNum);
 		typedef GlobalHook<HookFunc::Global_CreateTFGlowObject, false, IClientNetworkable*, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_UserInfoChangedCallback>
+	{
+		typedef void(__cdecl* Raw)(void*, INetworkStringTable* stringTable, int stringNumber, const char* newString, const void* newData);
+		typedef GlobalHook<HookFunc::Global_UserInfoChangedCallback, false, void, void*, INetworkStringTable*, int, const char*, const void*> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::Global_UTILComputeEntityFade>
 	{
