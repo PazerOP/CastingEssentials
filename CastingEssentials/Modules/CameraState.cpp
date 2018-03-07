@@ -138,7 +138,7 @@ void CameraState::OnTick(bool inGame)
 	}
 }
 
-void CameraState::LevelInitPreEntity()
+void CameraState::LevelInit()
 {
 	InitViews();
 }

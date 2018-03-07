@@ -396,3 +396,12 @@ short *CBoneCache::CachedToStudio()
 {
 	return (short *)((char *)(this + 1) + m_cachedToStudioOffset);
 }
+
+IGameSystem::~IGameSystem()
+{
+	HookManager::GetRawFunc<HookFunc::IGameSystem_Remove>()(this);
+}
+IGameSystemPerFrame::~IGameSystemPerFrame()
+{
+	HookManager::GetRawFunc<HookFunc::IGameSystem_Remove>()(this);
+}

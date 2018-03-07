@@ -162,7 +162,7 @@ void AutoCameras::OnTick(bool ingame)
 	}
 }
 
-void AutoCameras::LevelInitPreEntity()
+void AutoCameras::LevelInit()
 {
 	LoadConfig();
 }

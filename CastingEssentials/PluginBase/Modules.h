@@ -18,7 +18,8 @@ private:
 	friend class ModuleManager;
 
 	virtual void OnTick(bool inGame) { }
-	virtual void LevelInitPreEntity() { }
+	virtual void LevelInit() { }
+	virtual void LevelShutdown() { }
 };
 
 template<class T>

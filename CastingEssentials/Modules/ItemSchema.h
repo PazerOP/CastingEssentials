@@ -31,7 +31,7 @@ private:
 
 	void PrintAliases();
 
-	void LevelInitPreEntity() override;
+	void LevelInit() override;
 	void LoadItemSchema();
 
 	static void GetFirstPrefabType(const char* prefabsGroup, char* prefabOut, size_t maxOutSize);

@@ -31,7 +31,7 @@ private:
 	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov);
 
 	void OnTick(bool inGame) override;
-	void LevelInitPreEntity() override;
+	void LevelInit() override;
 
 	struct View
 	{

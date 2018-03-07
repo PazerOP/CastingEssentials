@@ -18,7 +18,7 @@ public:
 	void OnTick(bool ingame) override;
 
 private:
-	void LevelInitPreEntity() override;
+	void LevelInit() override;
 
 	struct StoryboardElement;
 	struct Trigger;

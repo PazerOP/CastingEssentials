@@ -164,6 +164,11 @@ bool MedigunInfo::CheckDependencies()
 	return ready;
 }
 
+void MedigunInfo::LevelShutdown()
+{
+	m_MainPanel.reset();
+}
+
 void MedigunInfo::CollectMedigunData()
 {
 	m_MedigunPanelData.clear();

@@ -21,6 +21,9 @@ public:
 
 	static bool CheckDependencies();
 
+protected:
+	void LevelShutdown() override;
+
 private:
 	struct Data
 	{

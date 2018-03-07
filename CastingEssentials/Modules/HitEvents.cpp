@@ -13,20 +13,24 @@
 
 HitEvents::HitEvents() :
 	ce_hitevents_enabled("ce_hitevents_enabled", "0", FCVAR_NONE, "Enables hitsounds and damage numbers in STVs.",
-		[](IConVar* var, const char* oldValue, float fOldValue) { GetModule()->EnableToggle(); }),
+		[](IConVar* var, const char* oldValue, float fOldValue) { GetModule()->UpdateEnabledState(); }),
+	ce_hitevents_dmgnumbers_los("ce_hitevents_dmgnumbers_los", "0", FCVAR_NONE, "Should we require LOS to the target before showing a damage number? For a \"normal\" TF2 experience, this would be set to 1."),
 	ce_hitevents_debug("ce_hitevents_debug", "0")
 {
 	m_OverrideUTILTraceline = false;
-	m_OverrideGetVectorInScreenSpace = false;
 
 	m_DisplayDamageFeedbackHook = 0;
 	m_UTILTracelineHook = 0;
 	m_OnAccountValueChangedHook = 0;
-	m_GetVectorInScreenSpaceHook = 0;
 	m_AccountPanelPaintHook = 0;
 	m_DamageAccountPanelShouldDrawHook = 0;
 
 	m_LastDamageAccount = nullptr;
+}
+
+HitEvents::~HitEvents()
+{
+	ce_hitevents_enabled.SetValue(false);
 }
 
 IGameEvent* HitEvents::TriggerPlayerHurt(int playerEntIndex, int damage)
@@ -117,13 +121,14 @@ private:
 public:
 
 	uint32_t : 32;
-	Event* m_Events;
+	CUtlVector<Event> m_Events;
+	//Event* m_Events;
 
-	uint64_t : 64;
-	int m_EventCount;					// 412
+	//uint64_t : 64;
+	//int m_EventCount;					// 412
 	//CUtlVector<Event> m_Events;
 
-	PADDING(12);
+	PADDING(8);
 	float m_flDeltaItemStartPos;		// 428
 	uint32_t : 32;
 	float m_flDeltaItemEndPos;			// 436
@@ -164,9 +169,9 @@ public:
 	vgui::HFont m_hDeltaItemFontBig;	// 532
 };
 
-static constexpr auto test = offsetof(CAccountPanel, m_flDeltaLifetime);
+static constexpr auto test = offsetof(CAccountPanel, m_flDeltaItemStartPos);
 static_assert(offsetof(CAccountPanel, m_Events) == 400);
-static_assert(offsetof(CAccountPanel, m_EventCount) == 412);
+//static_assert(offsetof(CAccountPanel, m_EventCount) == 412);
 
 static_assert(offsetof(CAccountPanel, m_flDeltaItemStartPos) == 428);
 static_assert(offsetof(CAccountPanel, m_flDeltaItemEndPos) == 436);
@@ -200,11 +205,15 @@ struct PaddingStruct
 	uint32_t : 32;
 };
 
-class CDamageAccountPanel : PaddingStruct, public CAccountPanel
+class CDamageAccountPanel : public CAccountPanel
 {
 public:
 	virtual ~CDamageAccountPanel() = default;
+
+	int garbo;
 };
+
+static_assert(offsetof(CDamageAccountPanel, garbo) > offsetof(CAccountPanel, m_hDeltaItemFontBig));
 
 void HitEvents::FireGameEvent(IGameEvent* event)
 {
@@ -309,10 +318,24 @@ void HitEvents::FireGameEvent(IGameEvent* event)
 	gameeventmanager->FireEventClientSide(newEvent);
 }
 
-void HitEvents::EnableToggle()
+void HitEvents::AddEventListener()
+{
+	if (!gameeventmanager->FindListener(this, "player_hurt"))
+		gameeventmanager->AddListener(this, "player_hurt", false);
+}
+
+void HitEvents::LevelInit()
+{
+	UpdateEnabledState();
+}
+
+void HitEvents::UpdateEnabledState()
 {
 	if (ce_hitevents_enabled.GetBool())
 	{
+		if (!gameeventmanager->FindListener(this, "player_hurt"))
+			gameeventmanager->AddListener(this, "player_hurt", false);
+
 		if (!m_DisplayDamageFeedbackHook)
 		{
 			m_DisplayDamageFeedbackHook = GetHooks()->AddHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(std::bind(&HitEvents::DisplayDamageFeedbackOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
@@ -325,10 +348,6 @@ void HitEvents::EnableToggle()
 		{
 			m_OnAccountValueChangedHook = GetHooks()->AddHook<HookFunc::CAccountPanel_OnAccountValueChanged>(std::bind(&HitEvents::OnAccountValueChangedOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 		}
-		if (!m_GetVectorInScreenSpaceHook)
-		{
-			m_GetVectorInScreenSpaceHook = GetHooks()->AddHook<HookFunc::Global_GetVectorInScreenSpace>(std::bind(&HitEvents::GetVectorInScreenSpaceOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-		}
 		if (!m_AccountPanelPaintHook)
 		{
 			m_AccountPanelPaintHook = GetHooks()->AddHook<HookFunc::CAccountPanel_Paint>(std::bind(&HitEvents::AccountPanelPaintOverride, this, std::placeholders::_1));
@@ -340,6 +359,8 @@ void HitEvents::EnableToggle()
 	}
 	else
 	{
+		gameeventmanager->RemoveListener(this);
+
 		if (m_DisplayDamageFeedbackHook && GetHooks()->RemoveHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(m_DisplayDamageFeedbackHook, __FUNCSIG__))
 			m_DisplayDamageFeedbackHook = 0;
 
@@ -347,10 +368,6 @@ void HitEvents::EnableToggle()
 			m_UTILTracelineHook = 0;
 
 		if (m_OnAccountValueChangedHook && GetHooks()->RemoveHook<HookFunc::CAccountPanel_OnAccountValueChanged>(m_OnAccountValueChangedHook, __FUNCSIG__))
-			m_OnAccountValueChangedHook = 0;
-
-		if (m_GetVectorInScreenSpaceHook && GetHooks()->RemoveHook<HookFunc::Global_GetVectorInScreenSpace>(m_GetVectorInScreenSpaceHook, __FUNCSIG__))
-			m_GetVectorInScreenSpaceHook = 0;
 
 		if (m_AccountPanelPaintHook && GetHooks()->RemoveHook<HookFunc::CAccountPanel_Paint>(m_AccountPanelPaintHook, __FUNCSIG__))
 			m_AccountPanelPaintHook = 0;
@@ -375,13 +392,11 @@ void HitEvents::DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPl
 	if (localEntindex != otherLocalEntindex)
 		return;
 
-	static auto isPlayerOffset = Hooking::VTableOffset(&C_BasePlayer::IsPlayer);
-
 	const auto lifeStatePusher = CreateVariablePusher<char>(localPlayer->m_lifeState, LIFE_ALIVE);
 	const auto tracelineOverridePusher = CreateVariablePusher(m_OverrideUTILTraceline, true);
 
 	auto DisplayDamageFeedback = GetHooks()->GetOriginal<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>();
-	DisplayDamageFeedback(pThis, pAttacker, pVictim, iDamageAmount, iHealth, bigFont);
+	DisplayDamageFeedback(pThis, (C_TFPlayer*)localPlayer, pVictim, iDamageAmount, iHealth, bigFont);
 	GetHooks()->SetState<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(Hooking::HookAction::SUPERCEDE);
 	Assert(true);
 }
@@ -409,25 +424,10 @@ void* HitEvents::OnAccountValueChangedOverride(CAccountPanel* pThis, int unknown
 	return newEvent;
 }
 
-bool HitEvents::GetVectorInScreenSpaceOverride(Vector pos, int& x, int& y, Vector* vecOffset)
-{
-	if (!m_OverrideGetVectorInScreenSpace)
-		return false;
-
-	bool retVal = GetHooks()->GetOriginal<HookFunc::Global_GetVectorInScreenSpace>()(pos, x, y, vecOffset);
-
-	if (GetHooks()->IsInHook<HookFunc::Global_GetVectorInScreenSpace>())
-		GetHooks()->SetState<HookFunc::Global_GetVectorInScreenSpace>(Hooking::HookAction::SUPERCEDE);
-
-	return retVal;
-}
-
 void HitEvents::AccountPanelPaintOverride(CAccountPanel* pThis)
 {
 	if (pThis != m_LastDamageAccount)
 		return;
-
-	auto gvissOverride = CreateVariablePusher(m_OverrideGetVectorInScreenSpace, true);
 
 	GetHooks()->GetOriginal<HookFunc::CAccountPanel_Paint>()(pThis);
 
@@ -440,13 +440,4 @@ bool HitEvents::DamageAccountPanelShouldDrawOverride(CDamageAccountPanel* pThis)
 	GetHooks()->SetState<HookFunc::CDamageAccountPanel_ShouldDraw>(Hooking::HookAction::SUPERCEDE);
 
 	return true;
-}
-
-void HitEvents::OnTick(bool bInGame)
-{
-	if (bInGame && ce_hitevents_enabled.GetBool() && !gameeventmanager->FindListener(this, "player_hurt"))
-		gameeventmanager->AddListener(this, "player_hurt", false);
-
-	if (bInGame && m_LastDamageAccount)
-		AccountPanelPaintOverride(m_LastDamageAccount);
 }

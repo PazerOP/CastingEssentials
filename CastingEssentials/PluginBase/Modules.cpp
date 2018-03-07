@@ -39,25 +39,34 @@ void ModuleManager::Panel::OnTick()
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
-	static const std::type_index test = typeid(*this);
-
 	const bool inGame = Interfaces::GetEngineClient()->IsInGame();
-	Modules().TickAllModules(inGame);
 
 	if (inGame)
 	{
 		const char* const levelName = Interfaces::GetEngineClient()->GetLevelName();
 		if (stricmp(m_LastLevelName.c_str(), levelName))
 		{
+			if (!m_LastLevelName.empty())
+			{
+				for (const auto& pair : Modules().modules)
+					pair.second.m_Module->LevelShutdown();
+			}
+
 			m_LastLevelName = levelName;
+
 			for (const auto& pair : Modules().modules)
-				pair.second.m_Module->LevelInitPreEntity();
+				pair.second.m_Module->LevelInit();
 		}
 	}
-	else
+	else if (!m_LastLevelName.empty())
 	{
+		for (const auto& pair : Modules().modules)
+			pair.second.m_Module->LevelShutdown();
+
 		m_LastLevelName.clear();
 	}
+
+	Modules().TickAllModules(inGame);
 }
 
 void ModuleManager::TickAllModules(bool inGame)

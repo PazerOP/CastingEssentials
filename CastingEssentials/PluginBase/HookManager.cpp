@@ -225,6 +225,9 @@ void HookManager::InitRawFunctionsList()
 
 	FindFunc<HookFunc::CHudBaseDeathNotice_GetIcon>("\x55\x8B\xEC\x81\xEC????\x83\x7D\x0C\x00\x56", "xxxxx????xxxxx");
 
+	FindFunc<HookFunc::IGameSystem_Add>("\x55\x8B\xEC\x51\x8B\x15????\x8B\x0D", "xxxxxx????xx");
+	FindFunc<HookFunc::IGameSystem_Remove>("\x55\x8B\xEC\x51\x56\x8B\xF1\x8D\x45\xFC\x50\xB9????\x89\x75\xFC\xC7\x06????\xE8????\x6A\x00\x68????\x68????\x6A\x00\x56\xE8????\x83\xC4\x14\x85\xC0\x74\x11\x8D\x45\xFC\x89\x75\xFC\x50\xB9????\xE8????\x5E", "xxxxxxxxxxxx????xxxxx????x????xxx????x????xxxx????xxxxxxxxxxxxxxx????x????x");
+
 	FindFunc<HookFunc::vgui_EditablePanel_GetDialogVariables>("\x56\x8B\xF1\x8B\x86????\x85\xC0\x75\x2A", "xxxxx????xxxx");
 	FindFunc<HookFunc::vgui_ImagePanel_SetImage>("\x55\x8B\xEC\x53\x57\x8B\x7D\x08\x8B\xD9\x85\xFF\x74\x18", "xxxxxxxxxxxxxx");
 	FindFunc<HookFunc::vgui_ProgressBar_ApplySettings>("\x55\x8B\xEC\xD9\xEE\x53", "xxxxxx");

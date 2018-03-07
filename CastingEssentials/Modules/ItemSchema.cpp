@@ -56,7 +56,7 @@ void ItemSchema::PrintAliases()
 	}
 }
 
-void ItemSchema::LevelInitPreEntity()
+void ItemSchema::LevelInit()
 {
 	LoadItemSchema();
 }

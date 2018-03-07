@@ -12,5 +12,5 @@ public:
 private:
 	ConVar ce_mapconfigs_enabled;
 
-	void LevelInitPreEntity() override;
+	void LevelInit() override;
 };

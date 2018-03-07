@@ -8,7 +8,7 @@ MapConfigs::MapConfigs() :
 {
 }
 
-void MapConfigs::LevelInitPreEntity()
+void MapConfigs::LevelInit()
 {
 	if (!ce_mapconfigs_enabled.GetBool())
 		return;
