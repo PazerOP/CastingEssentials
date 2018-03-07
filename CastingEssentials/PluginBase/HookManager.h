@@ -463,11 +463,11 @@ public:
 	static bool Load();
 	static bool Unload();
 
-	template<HookFunc fn> typename HookFuncType<fn>::Hook::OriginalFnType GetFunc() { return GetHook<fn>()->GetOriginal(); }
-	template<HookFunc fn> typename HookFuncType<fn>::Hook* GetHook() { return static_cast<HookFuncType<fn>::Hook*>(m_Hooks[(int)fn].get()); };
-	template<HookFunc fn> static typename HookFuncType<fn>::Raw GetRawFunc() { return (HookFuncType<fn>::Raw)s_RawFunctions[(int)fn]; }
+	template<HookFunc fn> __forceinline typename HookFuncType<fn>::Hook::OriginalFnType GetFunc() { return GetHook<fn>()->GetOriginal(); }
+	template<HookFunc fn> __forceinline typename HookFuncType<fn>::Hook* GetHook() { return static_cast<HookFuncType<fn>::Hook*>(m_Hooks[(int)fn].get()); };
+	template<HookFunc fn> static __forceinline typename HookFuncType<fn>::Raw GetRawFunc() { return (HookFuncType<fn>::Raw)s_RawFunctions[(int)fn]; }
 
-	template<HookFunc fn> int AddHook(const typename HookFuncType<fn>::Hook::Functional& hook)
+	template<HookFunc fn> inline int AddHook(const typename HookFuncType<fn>::Hook::Functional& hook)
 	{
 		auto hkPtr = GetHook<fn>();
 		if (!hkPtr)
@@ -475,7 +475,7 @@ public:
 
 		return hkPtr->AddHook(hook);
 	}
-	template<HookFunc fn> bool RemoveHook(int hookID, const char* funcName)
+	template<HookFunc fn> inline bool RemoveHook(int hookID, const char* funcName)
 	{
 		auto hkPtr = GetHook<fn>();
 		if (!hkPtr)
@@ -483,7 +483,7 @@ public:
 
 		return hkPtr->RemoveHook(hookID, funcName);
 	}
-	template<HookFunc fn> typename HookFuncType<fn>::Hook::Functional GetOriginal()
+	template<HookFunc fn> inline typename HookFuncType<fn>::Hook::Functional GetOriginal()
 	{
 		auto hkPtr = GetHook<fn>();
 		if (!hkPtr)
@@ -491,7 +491,7 @@ public:
 
 		return hkPtr->GetOriginal();
 	}
-	template<HookFunc fn> void SetState(Hooking::HookAction state)
+	template<HookFunc fn> inline void SetState(Hooking::HookAction state)
 	{
 		auto hkPtr = GetHook<fn>();
 		if (!hkPtr)
@@ -499,7 +499,7 @@ public:
 
 		hkPtr->SetState(state);
 	}
-	template<HookFunc fn> bool IsInHook()
+	template<HookFunc fn> inline bool IsInHook()
 	{
 		auto hkPtr = GetHook<fn>();
 		if (!hkPtr)

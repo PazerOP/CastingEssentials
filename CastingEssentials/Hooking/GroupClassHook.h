@@ -38,6 +38,48 @@ namespace Hooking
 
 		static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
 
+		static Internal::LocalDetourFnPtr<Type, RetVal, Args...> LocalDetourFn()
+		{
+			return [](Type* pThis, void*, Args... args)
+			{
+				Assert(This()->GetInstance() == pThis);
+				return HookFunctionsInvoker<RetVal>::Invoke(args...);
+			};
+		}
+		static Internal::LocalVaArgsFnPtr<Type, RetVal, Args...> LocalVaArgsDetourFn()
+		{
+			return [](Type* pThis, Args... args, ...)
+			{
+				Assert(This()->GetInstance() == pThis);
+
+				constexpr std::size_t fmtParameter = sizeof...(Args)-1;
+				using FmtType = typename std::tuple_element<fmtParameter, std::tuple<Args...>>::type;
+				static_assert(std::is_same<FmtType, const char*>::value || std::is_same<FmtType, char*>::value, "Invalid format string type!");
+
+				// Fuck you, type system
+				const char** fmt = std::get<fmtParameter>(std::make_tuple(&args...));
+
+				va_list vaArgList;
+				va_start(vaArgList, *fmt);
+				std::string formatted = vstrprintf(*fmt, vaArgList);
+				va_end(vaArgList);
+
+				// Escape any '%' with a second %
+				for (size_t i = 0; i < formatted.size(); i++)
+				{
+					if (formatted[i] == '%')
+						formatted.insert(i++, 1, '%');
+				}
+
+				// Can't have variable arguments in std::function, overwrite the "format" parameter with
+				// the fully parsed buffer
+				*fmt = (char*)formatted.c_str();
+
+				// Now run all the hooks
+				return HookFunctionsInvoker<RetVal>::Invoke(args...);
+			};
+		}
+
 		BaseGroupClassHook(ConstructorParam1* instance, ConstructorParam2* detour) : BaseType((ConstructorParam1*)detour)
 		{
 			m_Instance = (Type*)instance;
@@ -89,7 +131,7 @@ namespace Hooking
 		GroupClassHook(Type* instance, OriginalFnType function, DetourFnType detour = nullptr) : BaseType(instance, function, detour) { }
 
 	private:
-		DetourFnType DefaultDetourFn() override { return Internal::LocalDetourFn<SelfType, Type, RetVal, Args...>(this); }
+		DetourFnType DefaultDetourFn() override { return LocalDetourFn(); }
 	};
 
 #if 0

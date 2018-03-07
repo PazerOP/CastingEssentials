@@ -74,7 +74,7 @@ namespace Hooking
 		GroupVirtualHook() = delete;
 		GroupVirtualHook(const SelfType& other) = delete;
 
-		DetourFnType DefaultDetourFn() override { return Internal::LocalDetourFn<SelfType, Type, RetVal, Args...>(this); }
+		DetourFnType DefaultDetourFn() override { return LocalDetourFn(); }
 	};
 
 	// Variable arguments version
@@ -94,6 +94,6 @@ namespace Hooking
 		GroupVirtualHook() = delete;
 		GroupVirtualHook(const SelfType& other) = delete;
 
-		DetourFnType DefaultDetourFn() override { return Internal::LocalVaArgsDetourFn<SelfType, Type, RetVal, Args...>(this); }
+		DetourFnType DefaultDetourFn() override { return LocalVaArgsDetourFn(); }
 	};
 }

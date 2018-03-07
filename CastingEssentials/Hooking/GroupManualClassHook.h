@@ -24,6 +24,15 @@ namespace Hooking
 	protected:
 		static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
 
+		static Internal::LocalDetourFnPtr<Type, RetVal, Args...> SharedLocalDetourFn()
+		{
+			return [](Type* pThis, void*, Args... args)
+			{
+				Assert(This()->GetType() == HookType::GlobalClass || This()->GetType() == HookType::VirtualGlobal);
+				return HookFunctionsInvoker<RetVal>::Invoke(pThis, args...);
+			};
+		}
+
 		template<std::size_t... Is> Functional GetOriginalImpl(std::index_sequence<Is...>)
 		{
 			Assert(GetType() == HookType::GlobalClass || GetType() == HookType::VirtualGlobal);
@@ -71,7 +80,7 @@ namespace Hooking
 		GroupManualClassHook(const SelfType& other) = delete;
 
 	protected:
-		DetourFnType DefaultDetourFn() { return Internal::SharedLocalDetourFn<SelfType, Type, RetVal, Args...>(this); }
+		DetourFnType DefaultDetourFn() { return SharedLocalDetourFn(); }
 	};
 
 #if 0

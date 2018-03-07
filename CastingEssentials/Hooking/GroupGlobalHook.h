@@ -27,6 +27,11 @@ namespace Hooking
 	protected:
 		static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
 
+		static Internal::GlobalDetourFnPtr<RetVal, Args...> GlobalDetourFn()
+		{
+			return &HookFunctionsInvoker<RetVal>::Invoke;
+		}
+
 		DetourFnType m_DetourFunction;
 
 		virtual DetourFnType DefaultDetourFn() = 0;
@@ -104,16 +109,7 @@ namespace Hooking
 		virtual Functional GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
 
 	private:
-		DetourFnType DefaultDetourFn() override
-		{
-			Assert(GetType() == HookType::Global);
-
-			DetourFnType detourFn = [](Args... args)
-			{
-				return Stupid<RetVal>::InvokeHookFunctions(args...);
-			};
-			return detourFn;
-		}
+		DetourFnType DefaultDetourFn() override { return GlobalDetourFn(); }
 
 		GroupGlobalHook() = delete;
 		GroupGlobalHook(const SelfType& other) = delete;

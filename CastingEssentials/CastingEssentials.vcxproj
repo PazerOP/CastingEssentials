@@ -145,7 +145,6 @@
     <ClInclude Include="Hooking\GroupGlobalHook.h" />
     <ClInclude Include="Hooking\GroupManualClassHook.h" />
     <ClInclude Include="Hooking\GroupVirtualHook.h" />
-    <ClInclude Include="Hooking\HookFunctionsInvoker.h" />
     <ClInclude Include="Hooking\IBaseHook.h" />
     <ClInclude Include="Hooking\IGroupHook.h" />
     <ClInclude Include="Hooking\TemplateTypedefs.h" />

@@ -3,6 +3,7 @@
 #include "TemplateFunctions.h"
 
 #include <map>
+#include <shared_mutex>
 #include <stack>
 
 namespace Hooking
@@ -32,59 +33,57 @@ namespace Hooking
 		BaseGroupHook();
 		virtual ~BaseGroupHook();
 
-		std::recursive_mutex m_HooksTableMutex;		// Mutex for m_HooksTable
+		std::shared_mutex m_HooksTableMutex;		// Mutex for m_HooksTable
 		std::map<uint64, Functional> m_HooksTable;	// Map of hook indices to std::function callbacks
 		static thread_local std::stack<HookAction>* s_HookResults;
 
-		template<class _RetVal> struct Stupid { static _RetVal InvokeHookFunctions(Args... args); };
-		template<> struct Stupid<void>
+		static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
+		static IGroupHook* BaseThis() { return s_This; }
+
+		template<class _RetVal> struct HookFunctionsInvoker { static _RetVal Invoke(Args... args); };
+		template<> struct HookFunctionsInvoker<void>
 		{
-			static void InvokeHookFunctions(Args... args)
+			static void Invoke(Args... args)
 			{
-				std::lock_guard<std::recursive_mutex> lock(This()->m_HooksTableMutex);
+				std::shared_lock<std::shared_mutex> lock(This()->m_HooksTableMutex);
 
 				std::stack<HookAction> newHookResults;
 				auto hookResultsPusher = CreateVariablePusher(s_HookResults, &newHookResults);
+
+				const auto outerStartDepth = newHookResults.size();
+				bool callOriginal = true;
+				for (auto& currentHook : This()->m_HooksTable)
 				{
-					const auto outerStartDepth = s_HookResults->size();
-					bool callOriginal = true;
-					auto& hooksTable = This()->m_HooksTable;
-					for (auto hook : hooksTable)
+					const auto startDepth = newHookResults.size();
+
+					currentHook.second(args...);
+
+					if (startDepth == newHookResults.size())
+						newHookResults.push(HookAction::IGNORE);
+
+					Assert(newHookResults.size());
+					switch (newHookResults.top())
 					{
-						const auto startDepth = s_HookResults->size();
-
-						hook.second(args...);
-
-						if (startDepth == s_HookResults->size())
-							s_HookResults->push(HookAction::IGNORE);
-
-						Assert(s_HookResults->size());
-						switch (s_HookResults->top())
+						case HookAction::IGNORE:	break;
+						case HookAction::SUPERCEDE:
 						{
-							case HookAction::IGNORE:	break;
-							case HookAction::SUPERCEDE:
-							{
-								callOriginal = false;
-								break;
-							}
-							default:	Assert(!"Invalid HookAction?");
+							callOriginal = false;
+							break;
 						}
-
-						s_HookResults->pop();
+						default:	Assert(!"Invalid HookAction?");
 					}
 
-					if (outerStartDepth != s_HookResults->size())
-						Assert(!"Broken behavior: Someone called SetState too many times!");
-
-					if (callOriginal)
-						This()->GetOriginal()(args...);
+					newHookResults.pop();
 				}
+
+				if (outerStartDepth != newHookResults.size())
+					Assert(!"Broken behavior: Someone called SetState too many times!");
+
+				if (callOriginal)
+					This()->GetOriginal()(args...);
 			}
 		};
 
-		static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
-		static IGroupHook* BaseThis() { return s_This; }
-		friend RetVal Internal::HookFunctionsInvoker<SelfType, RetVal, Args...>::Invoke(SelfType* hook, Args... args);
 
 	private:
 		static IGroupHook* s_This;
@@ -114,7 +113,7 @@ namespace Hooking
 
 		// Now add the new hook
 		{
-			std::lock_guard<std::recursive_mutex> lock(m_HooksTableMutex);
+			std::unique_lock<std::shared_mutex> lock(m_HooksTableMutex);
 			m_HooksTable.insert(std::make_pair(newIndex, newHook));
 		}
 
@@ -124,7 +123,7 @@ namespace Hooking
 	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
 	inline bool BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::RemoveHook(int hookID, const char* funcName)
 	{
-		std::lock_guard<std::recursive_mutex> lock(m_HooksTableMutex);
+		std::unique_lock<std::shared_mutex> lock(m_HooksTableMutex);
 
 		auto found = m_HooksTable.find(hookID);
 		if (found == m_HooksTable.end())
@@ -154,58 +153,51 @@ namespace Hooking
 
 	template<class FuncEnumType, FuncEnumType hookID, class FunctionalType, class RetVal, class... Args>
 	template<class _RetVal>
-	inline _RetVal BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::Stupid<_RetVal>::InvokeHookFunctions(Args... args)
+	inline _RetVal BaseGroupHook<FuncEnumType, hookID, FunctionalType, RetVal, Args...>::HookFunctionsInvoker<_RetVal>::Invoke(Args... args)
 	{
 		// Run all the hooks
-		std::lock_guard<std::recursive_mutex> locker(This()->m_HooksTableMutex);
+		std::shared_lock<std::shared_mutex> lock(This()->m_HooksTableMutex);
 
-		std::stack<HookAction>* oldHookResults = s_HookResults;
 		std::stack<HookAction> newHookResults;
-		s_HookResults = &newHookResults;
+		auto hookResultsPusher = CreateVariablePusher(s_HookResults, &newHookResults);
+
+		const auto outerStartDepth = newHookResults.size();
+		int index = 0;
+		int retValIndex = -1;
+		RetVal retVal = RetVal();
+		for (auto& currentHook : This()->m_HooksTable)
 		{
-			const auto outerStartDepth = s_HookResults->size();
-			int index = 0;
-			int retValIndex = -1;
-			_RetVal retVal = _RetVal();
-			auto& hooksTable = This()->m_HooksTable;
-			for (auto hook : hooksTable)
+			const auto startDepth = newHookResults.size();
+			const auto& temp = std::move(currentHook.second(args...));
+
+			if (startDepth == newHookResults.size())
+				newHookResults.push(HookAction::IGNORE);
+
+			switch (newHookResults.top())
 			{
-				const auto startDepth = s_HookResults->size();
-				const auto& temp = hook.second(args...);
-
-				if (startDepth == s_HookResults->size())
-					s_HookResults->push(HookAction::IGNORE);
-
-				switch (s_HookResults->top())
+				case HookAction::IGNORE:	break;
+				case HookAction::SUPERCEDE:
 				{
-					case HookAction::IGNORE:	break;
-					case HookAction::SUPERCEDE:
-					{
-						if (retValIndex != -1)
-							Assert(!"Someone else already used HookAction::SUPERCEDE this hook!");
+					if (retValIndex != -1)
+						AssertMsg(temp == retVal, "Someone else already used HookAction::SUPERCEDE this hook with a different return value!");
 
-						retVal = temp;
-						retValIndex = index;
-						break;
-					}
-					default:	Assert(!"Invalid HookAction?");
+					retVal = temp;
+					retValIndex = index;
+					break;
 				}
-
-				s_HookResults->pop();
-				index++;
+				default:	Assert(!"Invalid HookAction?");
 			}
 
-			if (retValIndex >= 0)
-			{
-				s_HookResults = oldHookResults;
-				return retVal;
-			}
-
-			if (outerStartDepth != s_HookResults->size())
-				Assert(!"Broken behavior: Someone called SetState too many times!");
-
-			s_HookResults = oldHookResults;
-			return This()->GetOriginal()(args...);
+			newHookResults.pop();
+			index++;
 		}
+
+		if (retValIndex >= 0)
+			return retVal;
+
+		if (outerStartDepth != newHookResults.size())
+			Assert(!"Broken behavior: Someone called SetState too many times!");
+
+		return This()->GetOriginal()(args...);
 	}
 }
