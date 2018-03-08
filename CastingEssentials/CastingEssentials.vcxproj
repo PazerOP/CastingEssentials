@@ -97,6 +97,7 @@
     <ClCompile Include="Misc\DebugOverlay.cpp" />
     <ClCompile Include="Misc\OffsetChecking.cpp" />
     <ClCompile Include="Modules\ClientTools.cpp" />
+    <ClCompile Include="Modules\ContentLoading.cpp" />
     <ClCompile Include="Modules\HitEvents.cpp" />
     <ClCompile Include="Modules\HUDHacking.cpp" />
     <ClCompile Include="Misc\MissingDefinitions.cpp" />
@@ -154,6 +155,7 @@
     <ClInclude Include="Misc\Extras\VPlane.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
     <ClInclude Include="Modules\ClientTools.h" />
+    <ClInclude Include="Modules\ContentLoading.h" />
     <ClInclude Include="Modules\HitEvents.h" />
     <ClInclude Include="Modules\HUDHacking.h" />
     <ClInclude Include="Modules\Antifreeze.h" />

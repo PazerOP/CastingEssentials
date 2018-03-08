@@ -13,8 +13,12 @@ class C_HLTVCamera;
 class CAccountPanel;
 class CAutoGameSystemPerFrame;
 class CDamageAccountPanel;
+class CModelLoader;
+class CTextureManager;
 class IGameSystem;
 class INetworkStringTable;
+class ITextureInternal;
+enum REFERENCETYPE;
 using trace_t = class CGameTrace;
 enum ERenderDepthMode : int;
 enum OverrideType_t : int;
@@ -120,6 +124,13 @@ enum class HookFunc
 	vgui_EditablePanel_GetDialogVariables,
 	vgui_ImagePanel_SetImage,
 	vgui_ProgressBar_ApplySettings,
+
+	// TF2PERF - Begin
+	CModelLoader_Map_LoadModel,
+	Global_Map_CheckForHDR,
+	Global_EnableHDR,
+	CTextureManager_LoadTexture,
+	// TF2PERF - End
 
 	Count,
 };
@@ -462,6 +473,27 @@ class HookManager final
 		typedef void(__cdecl *Raw)(IClientRenderable* pEnt, bool bTwoPass, bool bShadowDepth, bool bIgnoreDepth);
 		typedef GlobalHook<HookFunc::Global_DrawTranslucentRenderable, false, void, IClientRenderable*, bool, bool, bool> Hook;
 	};
+
+	template<> struct HookFuncType<HookFunc::CModelLoader_Map_LoadModel>
+	{
+		typedef void(__thiscall* Raw)(CModelLoader* pThis, model_t* mod);
+		typedef GlobalClassHook<HookFunc::CModelLoader_Map_LoadModel, false, CModelLoader, void, model_t*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_Map_CheckForHDR>
+	{
+		typedef bool(__cdecl* Raw)(model_t* pModel, const char* pLoadName);
+		typedef GlobalHook<HookFunc::Global_Map_CheckForHDR, false, bool, model_t*, const char*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_EnableHDR>
+	{
+		typedef void(__cdecl* Raw)(bool bEnable);
+		typedef GlobalHook<HookFunc::Global_EnableHDR, false, void, bool> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::CTextureManager_LoadTexture>
+	{
+		typedef ITextureInternal*(__thiscall* Raw)(CTextureManager* pThis, const char* pTextureName, const char* pTextureGroupName, int, bool);
+		typedef GlobalClassHook<HookFunc::CTextureManager_LoadTexture, false, CTextureManager, ITextureInternal*, const char*, const char*, int, bool> Hook;
+	};
 #pragma endregion HookFuncType
 
 public:
@@ -523,7 +555,7 @@ private:
 
 	static void* s_RawFunctions[(int)HookFunc::Count];
 	static void InitRawFunctionsList();
-	template<HookFunc fn> static void FindFunc(const char* signature, const char* mask, int offset = 0, const char* module = "client");
+	template<HookFunc fn> static void FindFunc(const char* signature, const char* mask, const char* module = "client", int offset = 0);
 	static void FindFunc_C_BasePlayer_GetLocalPlayer();
 
 	void IngameStateChanged(bool inGame);

@@ -12,6 +12,7 @@
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
 #include "Modules/ConsoleTools.h"
+#include "Modules/ContentLoading.h"
 #include "Modules/FOVOverride.h"
 #include "Modules/FreezeInfo.h"
 #include "Modules/Graphics.h"
@@ -93,6 +94,9 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<SteamTools>("Steam Tools");
 	Modules().RegisterAndLoadModule<TeamNames>("Team Names");
 	Modules().RegisterAndLoadModule<ClientTools>("Client Tools");
+
+	// Experimental
+	Modules().RegisterAndLoadModule<ContentLoading>("TF2PERF - Content Loading");
 
 	ConVar_Register();
 

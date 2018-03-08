@@ -192,7 +192,7 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::Global_DrawTranslucentRenderable>("\x55\x8B\xEC\x83\xEC\x0C\x53\x8B\x5D\x08\x8B\xCB\x8B\x03\xFF\x50\x34", "xxxxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::Global_GetLocalPlayerIndex>("\xE8????\x85\xC0\x74\x08\x8D\x48\x08\x8B\x01\xFF\x60\x24\x33\xC0\xC3", "x????xxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::Global_GetVectorInScreenSpace>("\x55\x8B\xEC\x8B\x45\x1C\x83\xEC\x10", "xxxxxxxxx");
-	FindFunc<HookFunc::Global_UserInfoChangedCallback>("\x55\x8B\xEC\x53\x8B\x5D\x18\x85\xDB\x0F\x84????\x56", "xxxxxxxxxxx????x", 0, "engine");
+	FindFunc<HookFunc::Global_UserInfoChangedCallback>("\x55\x8B\xEC\x53\x8B\x5D\x18\x85\xDB\x0F\x84????\x56", "xxxxxxxxxxx????x", "engine");
 	FindFunc<HookFunc::Global_UTILComputeEntityFade>("\x55\x8B\xEC\x83\xEC\x40\x80\x3D", "xxxxxxxx");
 	FindFunc<HookFunc::Global_UTIL_TraceLine>("\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x83\xEC\x6C\x8D\x4D\xA0\x56\xFF\x73\x0C", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
@@ -233,10 +233,15 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::vgui_ImagePanel_SetImage>("\x55\x8B\xEC\x53\x57\x8B\x7D\x08\x8B\xD9\x85\xFF\x74\x18", "xxxxxxxxxxxxxx");
 	FindFunc<HookFunc::vgui_ProgressBar_ApplySettings>("\x55\x8B\xEC\xD9\xEE\x53", "xxxxxx");
 
+	FindFunc<HookFunc::CModelLoader_Map_LoadModel>("\x55\x8B\xEC\x81\xEC????\xFF\x05", "xxxxx????xx", "engine");
+	FindFunc<HookFunc::Global_Map_CheckForHDR>("\x55\x8B\xEC\x51\xFF\x75\x0C", "xxxxxxx", "engine");
+	FindFunc<HookFunc::Global_EnableHDR>("\x55\x8B\xEC\x8B\x0D????\x8B\x01\x8B\x80????\xFF\xD0\x8B\x55\x08", "xxxxx????xxxx????xxxxx", "engine");
+	FindFunc<HookFunc::CTextureManager_LoadTexture>("\x55\x8B\xEC\x83\xEC\x0C\x53\x56\x57\xFF\x75\x0C", "xxxxxxxxxxxx", "materialsystem");
+
 	FindFunc_C_BasePlayer_GetLocalPlayer();
 }
 
-template<HookFunc fn> void HookManager::FindFunc(const char* signature, const char* mask, int offset, const char* module)
+template<HookFunc fn> void HookManager::FindFunc(const char* signature, const char* mask, const char* module, int offset)
 {
 	std::byte* result = (std::byte*)SignatureScan(module, signature, mask);
 	if (result)
@@ -327,4 +332,9 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::Global_UserInfoChangedCallback>();
 	InitGlobalHook<HookFunc::Global_UTILComputeEntityFade>();
 	InitGlobalHook<HookFunc::Global_UTIL_TraceLine>();
+
+	InitGlobalHook<HookFunc::CModelLoader_Map_LoadModel>();
+	InitGlobalHook<HookFunc::Global_Map_CheckForHDR>();
+	InitGlobalHook<HookFunc::Global_EnableHDR>();
+	InitGlobalHook<HookFunc::CTextureManager_LoadTexture>();
 }
