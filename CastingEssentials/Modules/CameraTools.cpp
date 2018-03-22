@@ -335,7 +335,7 @@ void CameraTools::SpecClass(const CCommand& command)
 		playerClass = TFClassType::Pyro;
 	else if (!strnicmp(command.Arg(2), "demo", 4))
 		playerClass = TFClassType::DemoMan;
-	else if (!strnicmp(command.Arg(2), "heavy", 5) || !stricmp(command.Arg(2), "hoovy"))
+	else if (!strnicmp(command.Arg(2), "heavy", 5) || !stricmp(command.Arg(2), "hoovy") || !stricmp(command.Arg(2), "pootis"))
 		playerClass = TFClassType::Heavy;
 	else if (!stricmp(command.Arg(2), "engineer") || !stricmp(command.Arg(2), "engie"))
 		playerClass = TFClassType::Engineer;
