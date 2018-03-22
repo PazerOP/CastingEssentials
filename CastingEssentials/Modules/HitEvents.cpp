@@ -413,8 +413,11 @@ bool HitEvents::DamageAccountPanelShouldDrawOverride(CDamageAccountPanel* pThis)
 {
 	GetHooks()->SetState<HookFunc::CDamageAccountPanel_ShouldDraw>(Hooking::HookAction::SUPERCEDE);
 
+	// Not too sure why this offset is required, maybe i'm just an idiot
 	CDamageAccountPanel* questionable = (CDamageAccountPanel*)((std::byte*)pThis + 44);
-	engine->Con_NPrintf(5, "account panel entries: %i", questionable->m_Events.Count());
 
-	return true;
+	if (ce_hitevents_debug.GetBool())
+		engine->Con_NPrintf(5, "account panel entries: %i", questionable->m_Events.Count());
+
+	return questionable->m_Events.Count() > 0;
 }
