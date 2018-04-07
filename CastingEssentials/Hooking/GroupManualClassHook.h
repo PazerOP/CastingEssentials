@@ -9,7 +9,7 @@ namespace Hooking
 	public:
 		typedef BaseGroupManualClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, Type, RetVal, Args...> BaseGroupManualClassHookType;
 		typedef BaseGroupManualClassHookType SelfType;
-		typedef BaseGroupGlobalHookType BaseType;
+		using BaseType = BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, RetVal, Type*, Args...>;
 
 		virtual HookType GetType() const override { return HookType::GlobalClass; }
 		virtual int GetUniqueHookID() const override { return (int)hookID; }
@@ -19,7 +19,7 @@ namespace Hooking
 		BaseGroupManualClassHook() = delete;
 		BaseGroupManualClassHook(const SelfType& other) = delete;
 
-		virtual Functional GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
+		virtual typename BaseType::Functional GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
 
 	protected:
 		static SelfType* This() { return assert_cast<SelfType*>(BaseThis()); }
@@ -33,7 +33,7 @@ namespace Hooking
 			};
 		}
 
-		template<std::size_t... Is> Functional GetOriginalImpl(std::index_sequence<Is...>)
+		template<std::size_t... Is> typename SelfType::Functional GetOriginalImpl(std::index_sequence<Is...>)
 		{
 			Assert(GetType() == HookType::GlobalClass || GetType() == HookType::VirtualGlobal);
 
@@ -71,16 +71,16 @@ namespace Hooking
 	{
 	public:
 		typedef GroupManualClassHook<FuncEnumType, hookID, false, Type, RetVal, Args...> GroupManualClassHookType;
+		using BaseType = BaseGroupManualClassHook<FuncEnumType, hookID, false, Internal::LocalFnPtr<Type, RetVal, Args...>, Internal::LocalDetourFnPtr<Type, RetVal, Args...>, Internal::LocalFunctionalType<Type, RetVal, Args...>, Type, RetVal, Args...>;
 		typedef GroupManualClassHookType SelfType;
-		typedef BaseGroupManualClassHookType BaseType;
 
-		GroupManualClassHook(OriginalFnType fn, DetourFnType detour = nullptr) : BaseType(fn, detour) { }
+		GroupManualClassHook(typename SelfType::OriginalFnType fn, typename SelfType::DetourFnType detour = nullptr) : BaseType(fn, detour) { }
 
 		GroupManualClassHook() = delete;
 		GroupManualClassHook(const SelfType& other) = delete;
 
 	protected:
-		DetourFnType DefaultDetourFn() { return SharedLocalDetourFn(); }
+		typename SelfType::DetourFnType DefaultDetourFn() { return SharedLocalDetourFn(); }
 	};
 
 #if 0

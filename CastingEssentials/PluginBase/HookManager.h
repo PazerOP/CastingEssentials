@@ -130,6 +130,7 @@ class HookManager final
 	template<class HookType, class... Args> class HookShim final :
 		public Hooking::BaseGroupHook<ShimType, (ShimType)HookType::HOOK_ID, typename HookType::Functional, typename HookType::RetVal, Args...>
 	{
+		using Functional = typename HookType::Functional;
 	public:
 		~HookShim()
 		{

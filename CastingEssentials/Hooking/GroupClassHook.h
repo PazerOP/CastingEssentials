@@ -14,9 +14,9 @@ namespace Hooking
 	class BaseGroupClassHook : public BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, RetVal, Args...>, public IGroupClassHook<Type>
 	{
 	public:
-		typedef BaseGroupClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, Type, RetVal, Args...> BaseGroupClassHookType;
-		typedef BaseGroupClassHookType SelfType;
-		typedef BaseGroupGlobalHookType BaseType;
+		using BaseGroupClassHookType = BaseGroupClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, Type, RetVal, Args...>;
+		using BaseType = BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, RetVal, Args...>;
+		using SelfType = BaseGroupClassHookType;
 
 		BaseGroupClassHook(Type* instance, OriginalFnType fn, DetourFnType detour = nullptr) : BaseType(fn, detour)
 		{
@@ -24,7 +24,7 @@ namespace Hooking
 			Assert(m_Instance);
 		}
 
-		virtual Functional GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
+		virtual FunctionalType GetOriginal() override { return GetOriginalImpl(std::index_sequence_for<Args...>{}); }
 		virtual HookType GetType() const override { return HookType::Class; }
 		virtual int GetUniqueHookID() const override { return (int)hookID; }
 
@@ -80,7 +80,7 @@ namespace Hooking
 			};
 		}
 
-		BaseGroupClassHook(ConstructorParam1* instance, ConstructorParam2* detour) : BaseType((ConstructorParam1*)detour)
+		BaseGroupClassHook(typename BaseType::ConstructorParam1* instance, typename BaseType::ConstructorParam2* detour) : BaseType((typename BaseType::ConstructorParam1*)detour)
 		{
 			m_Instance = (Type*)instance;
 			Assert(m_Instance);
@@ -97,7 +97,7 @@ namespace Hooking
 			m_PatchFunction = std::bind(patchFn, std::placeholders::_1, m_Instance, std::placeholders::_2);
 		}
 
-		template<std::size_t... Is> Functional GetOriginalImpl(std::index_sequence<Is...>)
+		template<std::size_t... Is> FunctionalType GetOriginalImpl(std::index_sequence<Is...>)
 		{
 			Assert(GetType() == HookType::Class || GetType() == HookType::Virtual);
 
@@ -126,12 +126,12 @@ namespace Hooking
 		public BaseGroupClassHook<FuncEnumType, hookID, false, Internal::LocalFnPtr<Type, RetVal, Args...>, Internal::LocalDetourFnPtr<Type, RetVal, Args...>, Internal::GlobalFunctionalType<RetVal, Args...>, Type, RetVal, Args...>
 	{
 	public:
-		typedef BaseGroupClassHookType BaseType;
+		using BaseType = BaseGroupClassHook<FuncEnumType, hookID, false, Internal::LocalFnPtr<Type, RetVal, Args...>, Internal::LocalDetourFnPtr<Type, RetVal, Args...>, Internal::GlobalFunctionalType<RetVal, Args...>, Type, RetVal, Args...>;
 
-		GroupClassHook(Type* instance, OriginalFnType function, DetourFnType detour = nullptr) : BaseType(instance, function, detour) { }
+		GroupClassHook(Type* instance, typename BaseType::OriginalFnType function, typename BaseType::DetourFnType detour = nullptr) : BaseType(instance, function, detour) { }
 
 	private:
-		DetourFnType DefaultDetourFn() override { return LocalDetourFn(); }
+		typename BaseType::DetourFnType DefaultDetourFn() override { return LocalDetourFn(); }
 	};
 
 #if 0
