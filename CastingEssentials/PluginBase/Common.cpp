@@ -99,13 +99,13 @@ Vector GetViewOrigin()
 	auto const clientDLL = Interfaces::GetClientDLL();
 	Assert(clientDLL);
 	if (!clientDLL)
-		return Vector();
+		return vec3_origin;
 
 	CViewSetup view;
 	const bool retVal = clientDLL->GetPlayerView(view);
 	Assert(retVal);
 	if (!retVal)
-		return Vector();
+		return vec3_origin;
 
 	return view.origin;
 }

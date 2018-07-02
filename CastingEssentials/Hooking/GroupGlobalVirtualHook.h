@@ -7,9 +7,9 @@ namespace Hooking
 	class BaseGroupGlobalVirtualHook : public BaseGroupManualClassHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, Type, RetVal, Args...>
 	{
 	public:
-		typedef BaseGroupGlobalVirtualHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, MemFnType, FunctionalType, Type, RetVal, Args...> BaseGroupGlobalVirtualHookType;
-		typedef BaseGroupGlobalVirtualHookType SelfType;
-		typedef BaseGroupManualClassHookType BaseType;
+		using BaseGroupGlobalVirtualHookType = BaseGroupGlobalVirtualHook;
+		using SelfType = BaseGroupGlobalVirtualHookType;
+		using BaseType = BaseGroupManualClassHook;
 		typedef MemFnType MemFnType;
 
 		BaseGroupGlobalVirtualHook(Type* instance, MemFnType memFn, DetourFnType detour = nullptr) : BaseType(nullptr, detour)
@@ -62,7 +62,10 @@ namespace Hooking
 		public BaseGroupGlobalVirtualHook<FuncEnumType, hookID, false, Internal::LocalFnPtr<Type, RetVal, Args...>, Internal::LocalDetourFnPtr<Type, RetVal, Args...>, Internal::MemberFnPtr<Type, RetVal, Args...>, Internal::LocalFunctionalType<Type, RetVal, Args...>, Type, RetVal, Args...>
 	{
 	public:
-		typedef BaseGroupGlobalVirtualHookType BaseType;
+		using SelfType = GroupGlobalVirtualHook;
+		using BaseType = BaseGroupGlobalVirtualHook;
+		using MemFnType = typename BaseType::MemFnType;
+		using DetourFnType = typename BaseType::DetourFnType;
 
 		GroupGlobalVirtualHook(Type* instance, MemFnType fn, DetourFnType detour = nullptr) : BaseType(instance, fn, detour) { }
 		GroupGlobalVirtualHook(Type* instance, RetVal(Type::*fn)(Args...) const, DetourFnType detour = nullptr) :

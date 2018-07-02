@@ -18,7 +18,7 @@ extern const char* const PLUGIN_FULL_VERSION;
 // Oddly specific
 static constexpr float NDEBUG_PERSIST_TILL_NEXT_FRAME = -1.738f;
 #else
-static constexpr auto NDEBUG_PERSIST_TILL_NEXT_FRAME = 0; // NDEBUG_PERSIST_TILL_NEXT_SERVER
+static constexpr float NDEBUG_PERSIST_TILL_NEXT_FRAME = 0; // NDEBUG_PERSIST_TILL_NEXT_SERVER
 #endif
 
 #define VPROF_BUDGETGROUP_CE _T("CastingEssentials")
@@ -62,7 +62,7 @@ template<class... Parameters> __forceinline void PluginMsg(const char* fmt, Para
 	ConColorMsg(Color(0, 153, 153, 255), "[%s] ", PLUGIN_NAME);
 	Msg(fmt, param...);
 }
-template<class... Parameters> __forceinline void PluginWarning(const char* fmt, Parameters... param)
+template<class... Parameters> __forceinline void PluginWarning(const char* fmt, const Parameters&... param)
 {
 	ConColorMsg(Color(0, 153, 153, 255), "[%s] ", PLUGIN_NAME);
 	Warning(fmt, param...);

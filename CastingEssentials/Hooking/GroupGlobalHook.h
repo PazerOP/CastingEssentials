@@ -10,7 +10,7 @@ namespace Hooking
 	{
 		static_assert(!vaArgs || (sizeof...(Args) >= 1), "Must have at least 1 concrete argument defined for a variable-argument function");
 	public:
-		using BaseGroupGlobalHookType = BaseGroupGlobalHook<FuncEnumType, hookID, vaArgs, OriginalFnType, DetourFnType, FunctionalType, RetVal, Args...>;
+		using BaseGroupGlobalHookType = BaseGroupGlobalHook;
 		using SelfType = BaseGroupGlobalHookType;
 		typedef OriginalFnType OriginalFnType;
 		typedef DetourFnType DetourFnType;
