@@ -126,7 +126,7 @@ bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 	{
 		auto camTools = CameraTools::GetModule();
 
-		switch (CameraState::GetObserverMode())
+		switch (CameraState::GetLocalObserverMode())
 		{
 			case OBS_MODE_IN_EYE:
 			{
@@ -134,7 +134,7 @@ bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 				if (newFov == 0)
 					return false;
 
-				auto target = Player::GetLocalObserverTarget();
+				auto target = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 				if (!target || target->CheckCondition(TFCond_Zoomed))
 					return false;
 
@@ -180,50 +180,6 @@ bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 				return false;
 		}
 	}
-
-#if 0
-	if (Interfaces::GetEngineClient()->IsHLTV())
-	{
-		const auto target = Interfaces::GetHLTVCamera()->m_iTraget1;
-		if (!Player::IsValidIndex(target))
-			return false;
-
-		Player* const targetPlayer = Player::GetPlayer(target, __FUNCSIG__);
-		if (targetPlayer)
-		{
-			if (auto basePlayer = targetPlayer->GetBasePlayer())
-			{
-				//basePlayer->m_iDefaultFOV = std::lroundf(ce_fovoverride_fov.GetFloat());
-				engine->Con_NPrintf(0, "GetFOV(): %f", GetHooks()->GetRawFunc_C_BasePlayer_GetFOV()(basePlayer));
-				engine->Con_NPrintf(1, "m_iFOV: %i", basePlayer->m_iFOV);
-				engine->Con_NPrintf(2, "m_iFOVStart: %i", basePlayer->m_iFOVStart);
-				engine->Con_NPrintf(3, "m_flFOVTime: %f", basePlayer->m_flFOVTime);
-				engine->Con_NPrintf(4, "m_iDefaultFOV: %i", basePlayer->m_iDefaultFOV);
-				engine->Con_NPrintf(5, "hltv fov: %f", Interfaces::GetHLTVCamera()->m_flFOV);
-				return false;
-			}
-		}
-
-		if (Interfaces::GetHLTVCamera()->GetMode() == OBS_MODE_IN_EYE && targetPlayer && targetPlayer->CheckCondition(TFCond_Zoomed))
-			return false;
-	}
-	else
-	{
-		Player* const localPlayer = Player::GetPlayer(Interfaces::GetEngineClient()->GetLocalPlayer(), __FUNCSIG__);
-		if (localPlayer)
-		{
-			if (localPlayer->CheckCondition(TFCond_Zoomed))
-				return false;
-			else if (localPlayer->GetObserverMode() == OBS_MODE_IN_EYE)
-			{
-				Player* targetPlayer = Player::AsPlayer(localPlayer->GetObserverTarget());
-
-				if (targetPlayer && targetPlayer->CheckCondition(TFCond_Zoomed))
-					return false;
-			}
-		}
-	}
-#endif
 
 	//fov = ce_fovoverride_fov.GetFloat();
 	GetHooks()->SetState<HookFunc::IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);

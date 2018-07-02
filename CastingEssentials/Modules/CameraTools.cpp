@@ -384,15 +384,12 @@ void CameraTools::SpecClass(TFTeam team, TFClassType playerClass, int classIndex
 	// If classIndex was not specified, cycle through the available options
 	if (classIndex < 0)
 	{
-		Player* localPlayer = Player::GetPlayer(Interfaces::GetEngineClient()->GetLocalPlayer(), __FUNCSIG__);
-		if (!localPlayer)
-			return;
-
-		if (localPlayer->GetObserverMode() == OBS_MODE_FIXED ||
-			localPlayer->GetObserverMode() == OBS_MODE_IN_EYE ||
-			localPlayer->GetObserverMode() == OBS_MODE_CHASE)
+		auto localMode = CameraState::GetLocalObserverMode();
+		if (localMode == OBS_MODE_FIXED ||
+			localMode == OBS_MODE_IN_EYE ||
+			localMode == OBS_MODE_CHASE)
 		{
-			Player* spectatingPlayer = Player::AsPlayer(localPlayer->GetObserverTarget());
+			Player* spectatingPlayer = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 			int currentIndex = -1;
 			for (int i = 0; i < validPlayersCount; i++)
 			{

@@ -1,4 +1,5 @@
 #include "LocalPlayer.h"
+#include "Modules/CameraState.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
@@ -103,21 +104,18 @@ void LocalPlayer::ToggleEnabled(IConVar *var, const char *pOldValue, float flOld
 
 void LocalPlayer::SetToCurrentTarget()
 {
-	Player* localPlayer = Player::GetPlayer(Interfaces::GetEngineClient()->GetLocalPlayer(), __FUNCSIG__);
+	auto localMode = CameraState::GetLocalObserverMode();
 
-	if (localPlayer)
+	if (localMode == OBS_MODE_FIXED ||
+		localMode == OBS_MODE_IN_EYE ||
+		localMode == OBS_MODE_CHASE)
 	{
-		if (localPlayer->GetObserverMode() == OBS_MODE_FIXED ||
-			localPlayer->GetObserverMode() == OBS_MODE_IN_EYE ||
-			localPlayer->GetObserverMode() == OBS_MODE_CHASE)
-		{
-			Player* targetPlayer = Player::AsPlayer(localPlayer->GetObserverTarget());
+		Player* targetPlayer = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 
-			if (targetPlayer)
-			{
-				ce_localplayer_player.SetValue(targetPlayer->GetEntity()->entindex());
-				return;
-			}
+		if (targetPlayer)
+		{
+			ce_localplayer_player.SetValue(targetPlayer->GetEntity()->entindex());
+			return;
 		}
 	}
 

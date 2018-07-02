@@ -1,4 +1,5 @@
 #include "HitEvents.h"
+#include "Modules/CameraState.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
@@ -232,14 +233,7 @@ void HitEvents::FireGameEvent(IGameEvent* event)
 	if (!localPlayer)
 		return;
 
-	if (auto actualLocalPlayer = Interfaces::GetLocalPlayer())
-	{
-		auto entindex1 = localPlayer->entindex();
-		auto entindex2 = actualLocalPlayer->entindex();
-		Assert(entindex1 == entindex2);
-	}
-
-	auto specTarget = Player::AsPlayer(localPlayer->GetObserverTarget());
+	auto specTarget = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 	if (!specTarget || specTarget->GetUserID() != event->GetInt("attacker"))
 		return;
 

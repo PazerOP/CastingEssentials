@@ -30,7 +30,6 @@ public:
 	static Player* GetPlayerFromName(const char* exactName);
 	static bool IsValidIndex(int entIndex);
 	static Player* GetLocalPlayer();
-	static Player* GetLocalObserverTarget();
 
 	static bool CheckDependencies();
 	static bool IsNameRetrievalAvailable() { return s_NameRetrievalAvailable; }

@@ -21,7 +21,8 @@ public:
 	void GetThisFrameEngineView(Vector& origin, QAngle& angles, float* fov = nullptr) const;
 	void GetThisFramePluginView(Vector& origin, QAngle& angles, float* fov = nullptr) const;
 
-	static ObserverMode GetObserverMode();
+	static ObserverMode GetLocalObserverMode();
+	static C_BaseEntity* GetLocalObserverTarget();
 
 	C_BaseEntity* GetLastSpecTarget() const;
 

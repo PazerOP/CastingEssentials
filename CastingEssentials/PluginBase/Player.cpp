@@ -3,6 +3,7 @@
 #include "Entities.h"
 #include "TFDefinitions.h"
 #include "HookManager.h"
+#include "Misc/HLTVCameraHack.h"
 #include "Modules/ItemSchema.h"
 #include <cdll_int.h>
 #include <icliententity.h>
@@ -446,15 +447,6 @@ Player* Player::GetLocalPlayer()
 	return GetPlayer(localPlayerIndex, __FUNCSIG__);
 }
 
-Player* Player::GetLocalObserverTarget()
-{
-	const Player* const localPlayer = GetLocalPlayer();
-	if (!localPlayer)
-		return nullptr;
-
-	return Player::AsPlayer(localPlayer->GetObserverTarget());
-}
-
 Player* Player::GetPlayer(int entIndex, const char* functionName)
 {
 	if (!IsValidIndex(entIndex))
@@ -699,40 +691,10 @@ ObserverMode Player::GetObserverMode() const
 	return OBS_MODE_NONE;
 }
 
-class HLTVCameraOverride final : public C_HLTVCamera
-{
-public:
-	static C_BaseEntity* GetPrimaryTargetReimplementation()
-	{
-		HLTVCameraOverride* hltvCamera = (HLTVCameraOverride*)Interfaces::GetHLTVCamera();
-		if (!hltvCamera)
-			return nullptr;
-
-		if (hltvCamera->m_iCameraMan > 0)
-		{
-			Player *pCameraMan = Player::GetPlayer(hltvCamera->m_iCameraMan, __FUNCSIG__);
-			if (pCameraMan)
-				return pCameraMan->GetObserverTarget();
-		}
-
-		if (hltvCamera->m_iTraget1 <= 0)
-			return nullptr;
-
-		IClientEntity* target = Interfaces::GetClientEntityList()->GetClientEntity(hltvCamera->m_iTraget1);
-		return target ? target->GetBaseEntity() : nullptr;
-	}
-
-	using C_HLTVCamera::m_iCameraMan;
-	using C_HLTVCamera::m_iTraget1;
-};
-
 C_BaseEntity *Player::GetObserverTarget() const
 {
 	if (IsValid())
 	{
-		if (Interfaces::GetEngineClient()->IsHLTV())
-			return HLTVCameraOverride::GetPrimaryTargetReimplementation();
-
 		if (CheckCache() || !m_CachedObserverTarget)
 			m_CachedObserverTarget = Entities::GetEntityProp<EHANDLE*>(GetEntity(), { "m_hObserverTarget" });
 

@@ -110,17 +110,10 @@ void CameraAutoSwitch::OnPlayerDeath(IGameEvent* event)
 	if (!Player::IsValidIndex(targetUserID))
 		return;
 
-	Player* const localPlayer = Player::GetLocalPlayer();
-	if (!localPlayer)
+	if (CameraState::GetLocalObserverMode() == OBS_MODE_ROAMING)
 		return;
 
-	if (const auto cameraState = CameraState::GetModule(); cameraState)
-	{
-		if (cameraState->GetObserverMode() == OBS_MODE_ROAMING)
-			return;
-	}
-
-	Player* const targetPlayer = Player::AsPlayer(localPlayer->GetObserverTarget());
+	Player* const targetPlayer = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 	if (!targetPlayer)
 		return;
 
@@ -177,7 +170,7 @@ void CameraAutoSwitch::OnTick(bool inGame)
 	if (ce_cameraautoswitch_enabled.GetBool() && m_AutoSwitchQueued && Interfaces::GetEngineTool()->HostTime() >= m_AutoSwitchTime)
 	{
 		m_AutoSwitchQueued = false;
-		Player* const localObserverTarget = Player::GetLocalObserverTarget();
+		Player* const localObserverTarget = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 		if (localObserverTarget)
 		{
 			const int localObserverTargetIndex = localObserverTarget->entindex();

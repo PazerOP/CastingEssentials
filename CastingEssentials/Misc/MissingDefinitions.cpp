@@ -1,6 +1,7 @@
 #include "Misc/HLTVCameraHack.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/HookManager.h"
+#include "PluginBase/Player.h"
 
 #include <bone_setup.h>
 #include <client/c_baseentity.h>
@@ -311,6 +312,21 @@ bool C_HLTVCamera::IsPVSLocked()
 {
 	static ConVarRef tv_transmitall("tv_transmitall");
 	return !tv_transmitall.GetBool();
+}
+C_BaseEntity* C_HLTVCamera::GetPrimaryTarget()
+{
+	if (m_iCameraMan > 0)
+	{
+		Player *pCameraMan = Player::GetPlayer(m_iCameraMan, __FUNCSIG__);
+		if (pCameraMan)
+			return pCameraMan->GetObserverTarget();
+	}
+
+	if (m_iTraget1 <= 0)
+		return nullptr;
+
+	IClientEntity* target = Interfaces::GetClientEntityList()->GetClientEntity(m_iTraget1);
+	return target ? target->GetBaseEntity() : nullptr;
 }
 void C_HLTVCamera::SetPrimaryTarget(int entIndex)
 {

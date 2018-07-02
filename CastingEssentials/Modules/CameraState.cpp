@@ -23,7 +23,7 @@ CameraState::CameraState()
 	m_LastSpecTarget = 0;
 }
 
-ObserverMode CameraState::GetObserverMode()
+ObserverMode CameraState::GetLocalObserverMode()
 {
 	if (auto engineClient = Interfaces::GetEngineClient(); engineClient && engineClient->IsHLTV())
 	{
@@ -36,6 +36,23 @@ ObserverMode CameraState::GetObserverMode()
 
 	Assert(!"Unable to determine current observer mode");
 	return OBS_MODE_NONE;
+}
+
+C_BaseEntity* CameraState::GetLocalObserverTarget()
+{
+	if (auto client = Interfaces::GetEngineClient(); client && client->IsHLTV())
+	{
+		if (auto hltvcamera = Interfaces::GetHLTVCamera())
+			return hltvcamera->GetPrimaryTarget();
+	}
+	else
+	{
+		Player* local = Player::GetLocalPlayer();
+		if (local)
+			return local->GetObserverTarget();
+	}
+
+	return nullptr;
 }
 
 C_BaseEntity* CameraState::GetLastSpecTarget() const

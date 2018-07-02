@@ -911,7 +911,7 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 	}
 
 #if 0
-	if (auto currentMode = CameraState::GetObserverMode(); currentMode != OBS_MODE_CHASE && currentMode != OBS_MODE_IN_EYE)
+	if (auto currentMode = CameraState::GetLocalObserverMode(); currentMode != OBS_MODE_CHASE && currentMode != OBS_MODE_IN_EYE)
 	{
 		PluginWarning("%s: Not currently spectating a player in firstperson or thirdperson\n", args.Arg(0));
 		return;
@@ -935,7 +935,7 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 
 	C_BaseEntity* observeTarget;
 	{
-		if (auto playerTarget = Player::GetLocalObserverTarget())
+		if (auto playerTarget = CameraState::GetLocalObserverTarget())
 			observeTarget = playerTarget->GetBaseEntity();
 		else if (auto lastTarget = camState->GetLastSpecTarget())
 			observeTarget = lastTarget;
