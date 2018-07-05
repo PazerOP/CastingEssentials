@@ -901,6 +901,12 @@ void Graphics::BuildMoveChildLists()
 		if (!child || !child->ShouldDraw())
 			continue;
 
+		if (auto childAnimating = child->GetBaseAnimating())
+		{
+			if (childAnimating->IsViewModel() || !strcmp("CTFViewModel", child->GetClientClass()->GetName()))
+				continue;
+		}
+
 		EHANDLE* moveparent = Entities::GetEntityProp<EHANDLE*>(child, "moveparent");
 		if (!moveparent || !moveparent->IsValid())
 			continue;
@@ -911,28 +917,54 @@ void Graphics::BuildMoveChildLists()
 	}
 }
 
+static Vector GetColorModulation()
+{
+	Vector color;
+	render->GetColorModulation(color.Base());
+	return color;
+}
+
 void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 {
 	C_BaseEntity* const ent = m_hEntity.Get();
 	if (ent)
 	{
 		const auto& extra = Graphics::GetModule()->FindExtraGlowData(m_hEntity.GetEntryIndex());
+		if (!extra)
+		{
+			PluginWarning("Unable to find extra glow data for entity %i", m_hEntity.GetEntryIndex());
+			return;
+		}
+
+		extra->ApplyGlowColor();
+		const auto initialColor = GetColorModulation();
 
 		// Draw ourselves
 		ent->DrawModel(STUDIO_RENDER);
+		AssertMsg(initialColor == GetColorModulation(), "Color mismatch after drawing %s", ent->GetClientClass()->GetName());
 
 		// Draw all move children
 		for (auto moveChild : extra->m_MoveChildren)
+		{
 			moveChild->DrawModel(STUDIO_RENDER);
+			AssertMsg(initialColor == GetColorModulation(), "Color mismatch after drawing %s", moveChild->GetClientClass()->GetName());
+		}
 
 		C_BaseEntity *pAttachment = ent->FirstMoveChild();
 		while (pAttachment != NULL)
 		{
 			if (pAttachment->ShouldDraw())
+			{
+				//extra->ApplyGlowColor();
 				pAttachment->DrawModel(STUDIO_RENDER);
+				AssertMsg(initialColor == GetColorModulation(), "Color mismatch after drawing %s", pAttachment->GetClientClass()->GetName());
+			}
 
 			pAttachment = pAttachment->NextMovePeer();
 		}
+
+		// Did Valve "break" something?
+		Assert(initialColor == GetColorModulation());
 	}
 }
 
@@ -955,17 +987,6 @@ void Graphics::DrawGlowAlways(int nSplitScreenSlot, CMatRenderContextPtr& pRende
 	{
 		if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || !current.m_Base->m_bRenderWhenOccluded || !current.m_Base->m_bRenderWhenUnoccluded)
 			continue;
-
-		if (current.m_ShouldOverrideGlowColor)
-		{
-			Assert(current.m_GlowColorOverride.x >= 0 && current.m_GlowColorOverride.y >= 0 && current.m_GlowColorOverride.z >= 0);
-			render->SetColorModulation(current.m_GlowColorOverride.Base());
-		}
-		else
-		{
-			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
-			render->SetColorModulation(vGlowColor.Base());
-		}
 
 		if (current.AnyInfillsActive())
 		{
@@ -1067,17 +1088,6 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 		if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || !current.m_Base->m_bRenderWhenOccluded || current.m_Base->m_bRenderWhenUnoccluded)
 			continue;
 
-		if (current.m_ShouldOverrideGlowColor)
-		{
-			Assert(current.m_GlowColorOverride.x >= 0 && current.m_GlowColorOverride.y >= 0 && current.m_GlowColorOverride.z >= 0);
-			render->SetColorModulation(current.m_GlowColorOverride.Base());
-		}
-		else
-		{
-			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
-			render->SetColorModulation(vGlowColor.Base());
-		}
-
 		if (current.AnyInfillsActive())
 		{
 			pRenderContext->SetStencilWriteMask(0xFFFFFFFF);
@@ -1109,17 +1119,6 @@ void Graphics::DrawGlowVisible(int nSplitScreenSlot, CMatRenderContextPtr& pRend
 	{
 		if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || current.m_Base->m_bRenderWhenOccluded || !current.m_Base->m_bRenderWhenUnoccluded)
 			continue;
-
-		if (current.m_ShouldOverrideGlowColor)
-		{
-			Assert(current.m_GlowColorOverride.x >= 0 && current.m_GlowColorOverride.y >= 0 && current.m_GlowColorOverride.z >= 0);
-			render->SetColorModulation(current.m_GlowColorOverride.Base());
-		}
-		else
-		{
-			const Vector vGlowColor = current.m_Base->m_vGlowColor * (current.m_Base->m_flGlowAlpha * ce_graphics_glow_intensity.GetFloat());
-			render->SetColorModulation(vGlowColor.Base());
-		}
 
 		if (current.AnyInfillsActive())
 		{
@@ -1477,11 +1476,25 @@ Graphics::ExtraGlowData::ExtraGlowData(CGlowObjectManager::GlowObjectDefinition_
 
 bool Graphics::ExtraGlowData::AnyInfillsActive() const
 {
-	for (const auto& infill : m_Infills)
-	{
-		if (infill.m_Active)
-			return true;
-	}
+	Assert(m_Infills.size() == 2);
 
-	return false;
+	return m_Infills[0].m_Active || m_Infills[1].m_Active;
+}
+
+void Graphics::ExtraGlowData::ApplyGlowColor() const
+{
+	if (m_ShouldOverrideGlowColor)
+	{
+		Assert(m_GlowColorOverride.x >= 0 && m_GlowColorOverride.y >= 0 && m_GlowColorOverride.z >= 0);
+		Assert(m_GlowColorOverride.x < 1 || m_GlowColorOverride.y < 1 || m_GlowColorOverride.z < 1);
+
+		render->SetColorModulation(m_GlowColorOverride.Base());
+	}
+	else
+	{
+		const Vector vGlowColor = m_Base->m_vGlowColor * (m_Base->m_flGlowAlpha * GetModule()->ce_graphics_glow_intensity.GetFloat());
+		Assert(vGlowColor.x < 1 || vGlowColor.y < 1 || vGlowColor.z < 1);
+
+		render->SetColorModulation(vGlowColor.Base());
+	}
 }

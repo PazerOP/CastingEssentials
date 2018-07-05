@@ -113,6 +113,9 @@ private:
 
 		bool AnyInfillsActive() const;
 
+		// Applies the glow color settings to the rendering system
+		void ApplyGlowColor() const;
+
 		std::array<Infill, (size_t)InfillType::Count> m_Infills;
 
 		// This list is refreshed every frame and only used within a single "entry"
