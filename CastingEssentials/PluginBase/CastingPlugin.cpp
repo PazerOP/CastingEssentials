@@ -31,7 +31,7 @@
 #include "Modules/TeamNames.h"
 #include "Modules/ClientTools.h"
 
-const char* const PLUGIN_VERSION_ID = "r19";
+const char* const PLUGIN_VERSION_ID = "r20 beta";
 const char* const PLUGIN_FULL_VERSION = strdup(strprintf("%s %s", PLUGIN_NAME, PLUGIN_VERSION_ID).c_str());
 
 class CastingPlugin final : public Plugin
