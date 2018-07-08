@@ -68,7 +68,7 @@ private:
 
 	static bool IsDefaultParam(const char* paramName);
 	static void DumpShaderParams(const CCommand& cmd);
-	static int DumpShaderParamsAutocomplete(const char *partial, char commands[64][64]);
+	static int DumpShaderParamsAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
 
 	int m_ComputeEntityFadeHook;
 	unsigned char ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale);

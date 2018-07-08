@@ -38,6 +38,8 @@ private:
 	void ListFilters(const CCommand& command);
 	void ToggleFilterEnabled(IConVar* var, const char* oldValue, float fOldValue);
 
+	static int FlagModifyAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
+
 	void AddFlags(const CCommand& command);
 	void RemoveFlags(const CCommand& command);
 
