@@ -1,9 +1,14 @@
 #include "ConsoleTools.h"
+
+#include "Misc/CmdAlias.h"
 #include "PluginBase/HookManager.h"
+#include "PluginBase/Interfaces.h"
 
 #include <vprof.h>
 
 #include <regex>
+
+#undef min
 
 class ConsoleTools::PauseFilter final
 {
@@ -39,7 +44,10 @@ ConsoleTools::ConsoleTools() :
 	ce_consoletools_flags_add("ce_consoletools_flags_add", [](const CCommand& cmd) { GetModule()->AddFlags(cmd); },
 		"Adds a flag to a cvar.", FCVAR_NONE, FlagModifyAutocomplete),
 	ce_consoletools_flags_remove("ce_consoletools_flags_remove", [](const CCommand& cmd) { GetModule()->RemoveFlags(cmd); },
-		"Removes a flag from a cvar.", FCVAR_NONE, FlagModifyAutocomplete)
+		"Removes a flag from a cvar.", FCVAR_NONE, FlagModifyAutocomplete),
+
+	ce_consoletools_alias_remove("ce_consoletools_alias_remove", RemoveAlias,
+		"Removes an existing alias created with the \"alias\" command.", FCVAR_NONE, RemoveAliasAutocomplete)
 {
 	m_FilterPaused = false;
 	m_ConsoleColorPrintfHook = 0;
@@ -333,6 +341,89 @@ void ConsoleTools::RemoveFlags(const CCommand &command)
 	}
 	else
 		PluginWarning("Usage: %s <name> <flag1> [flag2 ...]\n", command.Arg(0));
+}
+
+void ConsoleTools::RemoveAlias(const CCommand& command)
+{
+	if (command.ArgC() != 2)
+	{
+		Warning("Usage: %s <alias>", command[0]);
+		return;
+	}
+
+	auto aliases = Interfaces::GetCmdAliases();
+	if (!*aliases)
+	{
+		Warning("%s: No current registered aliases.\n", command[0]);
+		return;
+	}
+
+	cmdalias_t** previous = aliases;
+	for (auto alias = *aliases; alias; previous = &alias->next, alias = alias->next)
+	{
+		if (stricmp(alias->name, command[1]))
+			continue;
+
+		*previous = alias->next;
+		delete alias;
+
+		Msg("%s: Removed alias \"%s\".\n", command[0], command[1]);
+		return;
+	}
+
+	Warning("%s: Unable to find alias named \"%s\"\n", command[0], command[1]);
+}
+
+int ConsoleTools::RemoveAliasAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
+{
+	// Save original pointer
+	const char* const flagModifyCmdName = partial;
+
+	// Skip any leading whitespace
+	while (*partial && isspace(*partial))
+		partial++;
+
+	// Determine length of command, including first space
+	while (*partial)
+	{
+		partial++;
+
+		if (isspace(*partial))
+		{
+			partial++;
+			break;
+		}
+	}
+
+	// Record command length
+	const size_t cmdLengthWithSpace = partial - flagModifyCmdName;
+
+	// Skip any extra whitespace between command and first argument
+	while (*partial && isspace(*partial))
+		partial++;
+
+	// Number of characters after command name + 1 whitespace
+	const auto partialLength = strlen(partial);
+
+	std::vector<const char*> aliases;
+	for (auto alias = *Interfaces::GetCmdAliases(); alias; alias = alias->next)
+	{
+		if (strnicmp(alias->name, partial, partialLength))
+			continue;
+
+		aliases.push_back(alias->name);
+	}
+
+	std::sort(aliases.begin(), aliases.end(), [](const char* a, const char* b) { return stricmp(a, b) < 0; });
+
+	const size_t count = std::min<size_t>(COMMAND_COMPLETION_MAXITEMS, aliases.size());
+	for (size_t i = 0; i < count; i++)
+	{
+		strncpy_s(commands[i], flagModifyCmdName, cmdLengthWithSpace);
+		strncat(commands[i], aliases[i], COMMAND_COMPLETION_ITEM_LENGTH - cmdLengthWithSpace - 1);
+	}
+
+	return count;
 }
 
 void ConsoleTools::AddFlags(const CCommand &command)

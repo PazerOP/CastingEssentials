@@ -149,6 +149,7 @@
     <ClInclude Include="Hooking\IGroupHook.h" />
     <ClInclude Include="Hooking\TemplateTypedefs.h" />
     <ClInclude Include="Hooking\VariablePusher.h" />
+    <ClInclude Include="Misc\CmdAlias.h" />
     <ClInclude Include="Misc\CRefPtrFix.h" />
     <ClInclude Include="Misc\DebugOverlay.h" />
     <ClInclude Include="Misc\Extras\VPlane.h" />

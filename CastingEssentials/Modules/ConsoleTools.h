@@ -35,6 +35,8 @@ private:
 	ConCommand ce_consoletools_flags_add;
 	ConCommand ce_consoletools_flags_remove;
 
+	ConCommand ce_consoletools_alias_remove;
+
 	void AddFilter(const CCommand& command);
 	void RemoveFilter(const CCommand& command);
 	void ListFilters(const CCommand& command);
@@ -44,6 +46,9 @@ private:
 
 	void AddFlags(const CCommand& command);
 	void RemoveFlags(const CCommand& command);
+
+	static void RemoveAlias(const CCommand& command);
+	static int RemoveAliasAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
 
 	void DisableHooks();
 

@@ -326,5 +326,8 @@
     <ClInclude Include="Hooking\ModuleSegments.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Misc\CmdAlias.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

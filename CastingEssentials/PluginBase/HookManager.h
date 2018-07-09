@@ -57,6 +57,7 @@ namespace vgui
 
 enum class HookFunc
 {
+	Global_Cmd_Shutdown,
 	Global_CreateEntityByName,
 	Global_CreateTFGlowObject,
 	Global_DrawOpaqueRenderable,
@@ -244,6 +245,10 @@ class HookManager final
 #pragma region HookFuncType
 	template<HookFunc fn> struct HookFuncType { };
 
+	template<> struct HookFuncType<HookFunc::Global_Cmd_Shutdown>
+	{
+		typedef void(__cdecl* Raw)();
+	};
 	template<> struct HookFuncType<HookFunc::ICvar_ConsoleColorPrintf>
 	{
 		typedef VirtualHook<HookFunc::ICvar_ConsoleColorPrintf, true, ICvar, void, const Color&, const char*> Hook;

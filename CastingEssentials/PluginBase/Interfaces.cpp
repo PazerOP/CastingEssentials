@@ -205,3 +205,18 @@ C_BasePlayer*& Interfaces::GetLocalPlayer()
 
 	return *s_LocalPlayer;
 }
+
+cmdalias_t** Interfaces::GetCmdAliases()
+{
+	static cmdalias_t** s_CmdAliases = nullptr;
+	if (!s_CmdAliases)
+	{
+		auto cmdShutdownFn = HookManager::GetRawFunc<HookFunc::Global_Cmd_Shutdown>();
+
+		auto location = *(intptr_t*)((std::byte*)cmdShutdownFn + 1);
+
+		s_CmdAliases = (cmdalias_t**)location;
+	}
+
+	return s_CmdAliases;
+}

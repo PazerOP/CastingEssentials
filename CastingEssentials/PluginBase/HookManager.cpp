@@ -186,6 +186,7 @@ void HookManager::FindFunc_C_BasePlayer_GetLocalPlayer()
 
 void HookManager::InitRawFunctionsList()
 {
+	FindFunc<HookFunc::Global_Cmd_Shutdown>("\xA1????\x85\xC0\x74\x2F", "x????xxxx", 0, "engine");
 	FindFunc<HookFunc::Global_CreateEntityByName>("\x55\x8B\xEC\xE8????\xFF\x75\x08\x8B\xC8\x8B\x10\xFF??\x85\xC0\x75\x13\xFF\x75\x08\x68????\xFF?????\x83\xC4\x08\x33\xC0\x5D\xC3", "xxxx????xxxxxxxx??xxxxxxxx????x?????xxxxxxx");
 	FindFunc<HookFunc::Global_CreateTFGlowObject>("\x55\x8B\xEC\x57\x68????\xE8????\x8B\xF8\x83\xC4\x04\x85\xFF\x74\x5F\x56\x8B\xCF\xE8????\xFF\x75\x0C\xC7\x07", "xxxxx????x????xxxxxxxxxxxxx????xxxxx");
 	FindFunc<HookFunc::Global_DrawOpaqueRenderable>("\x55\x8B\xEC\x83\xEC\x20\x8B\x0D????\x53\x56\x33\xF6", "xxxxxxxx????xxxx");

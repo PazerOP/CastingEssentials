@@ -4,6 +4,7 @@
 
 class C_BasePlayer;
 class C_HLTVCamera;
+struct cmdalias_t;
 class HLTVCameraOverride;
 class CSteamAPIContext;
 class IBaseClientDLL;
@@ -92,6 +93,9 @@ public:
 
 	// #include <clientleafsystem.h>
 	static IClientLeafSystem* GetClientLeafSystem() { return s_ClientLeafSystem; }
+
+	// #include "Misc/CmdAlias.h"
+	static cmdalias_t** GetCmdAliases();
 
 private:
 	static IBaseClientDLL *pClientDLL;
