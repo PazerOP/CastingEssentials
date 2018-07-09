@@ -16,7 +16,7 @@ public:
 
 		module->m_FilterPaused++;
 	}
-	virtual ~PauseFilter()
+	~PauseFilter()
 	{
 		ConsoleTools* module = GetModule();
 		if (!module)
@@ -84,14 +84,13 @@ void ConsoleTools::AddFilter(const CCommand &command)
 {
 	if (command.ArgC() >= 2)
 	{
-		const std::string filter = command.Arg(1);
+		const auto& insertionResult = m_Filters.emplace(std::make_pair(command[1],
+			std::regex(command[1], std::regex_constants::ECMAScript | std::regex_constants::optimize)));
 
-		if (!m_Filters.count(filter))
-			m_Filters.insert(filter);
-		else
+		if (!insertionResult.second)
 		{
 			PauseFilter pause;
-			PluginWarning("Filter %s is already present.\n", command.Arg(1));
+			PluginWarning("Filter %s is already present.\n", command[1]);
 		}
 	}
 	else
@@ -241,9 +240,9 @@ void ConsoleTools::ConsolePrintfHook(const char *message)
 bool ConsoleTools::CheckFilters(const char* message) const
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	for (std::string filter : m_Filters)
+	for (const auto& filter : m_Filters)
 	{
-		if (std::regex_search(message, std::regex(filter)))
+		if (std::regex_search(message, filter.second))
 			return true;
 	}
 
@@ -254,11 +253,7 @@ void ConsoleTools::RemoveFilter(const CCommand &command)
 {
 	if (command.ArgC() == 2)
 	{
-		const std::string filter = command.Arg(1);
-
-		if (m_Filters.count(filter))
-			m_Filters.erase(filter);
-		else
+		if (!m_Filters.erase(command[1]))
 			PluginWarning("Filter %s is not already present.\n", command.Arg(1));
 	}
 	else
@@ -372,7 +367,7 @@ void ConsoleTools::ListFilters(const CCommand& command)
 	std::stringstream ss;
 	ss << m_Filters.size() << " console filters:\n";
 	for (auto filter : m_Filters)
-		ss << "     " << filter << '\n';
+		ss << "     " << filter.first << '\n';
 
 	{
 		PauseFilter pause;

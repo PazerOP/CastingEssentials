@@ -3,7 +3,8 @@
 
 #include <convar.h>
 
-#include <unordered_set>
+#include <regex>
+#include <unordered_map>
 
 class ConsoleTools final : public Module<ConsoleTools>
 {
@@ -23,7 +24,8 @@ private:
 	int m_ConsoleColorPrintfHook;
 	int m_ConsoleDPrintfHook;
 	int m_ConsolePrintfHook;
-	std::unordered_set<std::string> m_Filters;
+
+	std::unordered_map<std::string, std::regex> m_Filters;
 
 	ConVar ce_consoletools_filter_enabled;
 	ConCommand ce_consoletools_filter_add;
