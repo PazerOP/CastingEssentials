@@ -510,7 +510,7 @@ Player* Player::AsPlayer(IClientEntity* entity)
 
 	const int entIndex = entity->entindex();
 	if (entIndex >= 1 && entIndex <= Interfaces::GetEngineTool()->GetMaxClients())
-		return GetPlayer(entity->entindex());
+		return GetPlayer(entIndex);
 
 	return nullptr;
 }

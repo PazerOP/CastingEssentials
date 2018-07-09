@@ -52,6 +52,8 @@ private:
 	ConVar ce_cameratools_force_valid_target;
 	ConVar ce_cameratools_spec_player_alive;
 
+	ConVar ce_cameratools_taunt_thirdperson;
+
 	ConVar ce_tplock_enable;
 	ConVar ce_tplock_xoffset;
 	ConVar ce_tplock_yoffset;
@@ -92,19 +94,34 @@ private:
 	void SpecIndex(const CCommand& command);
 	void SpecEntIndex(const CCommand& command);
 
+	bool m_IsTaunting;
+	void UpdateIsTaunting();
+
 	void SpecPlayer(int playerIndex);
 
 	void OnTick(bool inGame) override;
 
-	Vector CalcPosForAngle(const Vector& orbitCenter, const QAngle& angle);
+	struct TPLockRuleset
+	{
+		Vector m_PosOffset;
+		QAngle m_AngOffset;
+		Vector m_DPSLimit;    // Degrees per second
+		const char* m_Bone;
+	};
 
-	bool InToolModeOverride() const override { return m_ViewOverride; }
-	bool IsThirdPersonCameraOverride() const override { return m_ViewOverride; }
+	Vector CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& orbitCenter, const QAngle& angle) const;
+
+	bool InToolModeOverride() const override;
+	bool IsThirdPersonCameraOverride() const override { return m_IsTaunting; }
 	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov) override;
-	int GetDefaultFOVOverride() const;
-	bool m_ViewOverride;
 	QAngle m_LastFrameAngle;
 	Player* m_LastTargetPlayer;
+
+	static constexpr float TPLOCK_IGNORE = -INFINITY;
+	static float TPLockReadFloat(const ConVar& cvar);
+
+	void LoadDefaultRuleset(TPLockRuleset& ruleset) const;
+	bool PerformTPLock(const TPLockRuleset& ruleset, Vector& origin, QAngle& angles, float& fov);
 
 	void AttachHooks(bool attach);
 

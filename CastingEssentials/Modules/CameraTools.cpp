@@ -35,6 +35,8 @@ CameraTools::CameraTools() :
 		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); }),
 	ce_cameratools_spec_player_alive("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players."),
 
+	ce_cameratools_taunt_thirdperson("ce_cameratools_taunt_thirdperson", "0", FCVAR_NONE, "Force the camera into thirdperson when taunting."),
+
 	ce_tplock_enable("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player."),
 	ce_tplock_xoffset("ce_tplock_xoffset", "18"),
 	ce_tplock_yoffset("ce_tplock_yoffset", "20"),
@@ -72,7 +74,7 @@ CameraTools::CameraTools() :
 	m_SpecGUISettings = new KeyValues("Resource/UI/SpectatorTournament.res");
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
 
-	m_ViewOverride = false;
+	m_IsTaunting = false;
 }
 
 bool CameraTools::CheckDependencies()
@@ -506,7 +508,26 @@ void CameraTools::OnTick(bool inGame)
 					target, target == 0 ? " (Unspecified)" : (strprintf(" (%s)", playerName.c_str())).c_str());
 			}
 		}
+
+		UpdateIsTaunting();
 	}
+}
+
+void CameraTools::UpdateIsTaunting()
+{
+	m_IsTaunting = false;
+
+	if (!ce_cameratools_taunt_thirdperson.GetBool())
+		return;
+
+	if (CameraState::GetLocalObserverMode() != ObserverMode::OBS_MODE_IN_EYE)
+		return;
+
+	auto player = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+	if (!player)
+		return;
+
+	m_IsTaunting = player->CheckCondition(TFCond::TFCond_Taunting);
 }
 
 void CameraTools::AttachHooks(bool attach)
@@ -525,14 +546,14 @@ void CameraTools::AttachHooks(bool attach)
 	}
 }
 
-Vector CameraTools::CalcPosForAngle(const Vector& orbitCenter, const QAngle& angle)
+Vector CameraTools::CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& orbitCenter, const QAngle& angle) const
 {
 	Vector forward, right, up;
 	AngleVectors(angle, &forward, &right, &up);
 
-	Vector idealPos = orbitCenter + forward * ce_tplock_zoffset.GetFloat();
-	idealPos += right * ce_tplock_xoffset.GetFloat();
-	idealPos += up * ce_tplock_yoffset.GetFloat();
+	Vector idealPos = orbitCenter + forward * ruleset.m_PosOffset.z;
+	idealPos += right * ruleset.m_PosOffset.x;
+	idealPos += up * ruleset.m_PosOffset.y;
 
 	const Vector camDir = (idealPos - orbitCenter).Normalized();
 	const float dist = orbitCenter.DistTo(idealPos);
@@ -548,18 +569,59 @@ Vector CameraTools::CalcPosForAngle(const Vector& orbitCenter, const QAngle& ang
 	return orbitCenter + camDir * wallDist;;
 }
 
+bool CameraTools::InToolModeOverride() const
+{
+	if (ce_tplock_enable.GetBool() && CameraState::GetLocalObserverMode() == ObserverMode::OBS_MODE_CHASE)
+		return true;
+
+	if (m_IsTaunting)
+		return true;
+
+	return false;
+}
+
+float CameraTools::TPLockReadFloat(const ConVar& cvar)
+{
+	return IsStringEmpty(cvar.GetString()) ? TPLOCK_IGNORE : cvar.GetFloat();
+}
+
+void CameraTools::LoadDefaultRuleset(TPLockRuleset& ruleset) const
+{
+	ruleset.m_PosOffset.x = TPLockReadFloat(ce_tplock_xoffset);
+	ruleset.m_PosOffset.y = TPLockReadFloat(ce_tplock_yoffset);
+	ruleset.m_PosOffset.z = TPLockReadFloat(ce_tplock_zoffset);
+
+	ruleset.m_AngOffset.x = TPLockReadFloat(ce_tplock_force_pitch);
+	ruleset.m_AngOffset.y = TPLockReadFloat(ce_tplock_force_yaw);
+	ruleset.m_AngOffset.z = TPLockReadFloat(ce_tplock_force_roll);
+
+	ruleset.m_DPSLimit.x = TPLockReadFloat(ce_tplock_dps_pitch);
+	ruleset.m_DPSLimit.y = TPLockReadFloat(ce_tplock_dps_yaw);
+	ruleset.m_DPSLimit.z = TPLockReadFloat(ce_tplock_dps_roll);
+
+	ruleset.m_Bone = ce_tplock_bone.GetString();
+}
+
 bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	m_ViewOverride = false;
-	if (!Interfaces::GetEngineClient()->IsHLTV())
-		return false;
 
-	HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
-	if (!hltvcamera)
-		return false;
+	// Normal tplock only activates when we're in thirdperson of our own
+	// free will
+	if (m_IsTaunting || (ce_tplock_enable.GetBool() && CameraState::GetLocalObserverMode() == ObserverMode::OBS_MODE_CHASE))
+	{
+		TPLockRuleset defaultRuleset;
+		LoadDefaultRuleset(defaultRuleset);
 
-	Player* const targetPlayer = Player::IsValidIndex(hltvcamera->m_iTraget1) ? Player::GetPlayer(hltvcamera->m_iTraget1, __FUNCSIG__) : nullptr;
+		return PerformTPLock(defaultRuleset, origin, angles, fov);
+	}
+
+	return false;
+}
+
+bool CameraTools::PerformTPLock(const TPLockRuleset& ruleset, Vector& origin, QAngle& angles, float& fov)
+{
+	auto const targetPlayer = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 	if (!targetPlayer)
 	{
 		m_LastTargetPlayer = nullptr;
@@ -570,52 +632,45 @@ bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 	if (!baseAnimating)
 		return false;
 
-	const Vector targetPos;
-	const int targetBone = baseAnimating->LookupBone(ce_tplock_bone.GetString());
+	Vector targetPos;
+	const int targetBone = baseAnimating->LookupBone(ruleset.m_Bone);
 	if (targetBone < 0)
 	{
-		DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", ce_tplock_bone.GetString());
+		DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", ruleset.m_Bone);
 		const_cast<Vector&>(targetPos) = targetPlayer->GetEyePosition();
 	}
 	else
 	{
 		QAngle dummy;
-		baseAnimating->GetBonePosition(targetBone, const_cast<Vector&>(targetPos), dummy);
+		baseAnimating->GetBonePosition(targetBone, targetPos, dummy);
 	}
 
 	QAngle idealAngles = targetPlayer->GetEyeAngles();
 
-	if (!IsStringEmpty(ce_tplock_force_pitch.GetString()))
-		idealAngles.x = ce_tplock_force_pitch.GetFloat();
-	if (!IsStringEmpty(ce_tplock_force_yaw.GetString()))
-		idealAngles.y = ce_tplock_force_yaw.GetFloat();
-	if (!IsStringEmpty(ce_tplock_force_roll.GetString()))
-		idealAngles.z = ce_tplock_force_roll.GetFloat();
+	if (ruleset.m_AngOffset.x != TPLOCK_IGNORE)
+		idealAngles.x = ruleset.m_AngOffset.x;
+	if (ruleset.m_AngOffset.y != TPLOCK_IGNORE)
+		idealAngles.y = ruleset.m_AngOffset.y;
+	if (ruleset.m_AngOffset.z != TPLOCK_IGNORE)
+		idealAngles.z = ruleset.m_AngOffset.z;
 
 	if (m_LastTargetPlayer == targetPlayer)
 	{
 		const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
 
-		if (ce_tplock_dps_pitch.GetFloat() >= 0)
-			idealAngles.x = ApproachAngle(idealAngles.x, m_LastFrameAngle.x, ce_tplock_dps_pitch.GetFloat() * frametime);
-		if (ce_tplock_dps_yaw.GetFloat() >= 0)
-			idealAngles.y = ApproachAngle(idealAngles.y, m_LastFrameAngle.y, ce_tplock_dps_yaw.GetFloat() * frametime);
-		if (ce_tplock_dps_roll.GetFloat() >= 0)
-			idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, ce_tplock_dps_roll.GetFloat() * frametime);
+		if (ruleset.m_DPSLimit.x >= 0)
+			idealAngles.x = ApproachAngle(idealAngles.x, m_LastFrameAngle.x, ruleset.m_DPSLimit.x * frametime);
+		if (ruleset.m_DPSLimit.y >= 0)
+			idealAngles.y = ApproachAngle(idealAngles.y, m_LastFrameAngle.y, ruleset.m_DPSLimit.y * frametime);
+		if (ruleset.m_DPSLimit.z >= 0)
+			idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, ruleset.m_DPSLimit.z * frametime);
 	}
 
-	const Vector idealPos = CalcPosForAngle(targetPos, idealAngles);
+	const Vector idealPos = CalcPosForAngle(ruleset, targetPos, idealAngles);
 
 	m_LastFrameAngle = idealAngles;
 	m_LastTargetPlayer = targetPlayer;
 
-	if (hltvcamera->GetMode() != OBS_MODE_CHASE)
-		return false;
-
-	if (!ce_tplock_enable.GetBool())
-		return false;
-
-	m_ViewOverride = true;
 	angles = idealAngles;
 	origin = idealPos;
 
