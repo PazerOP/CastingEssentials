@@ -13,6 +13,8 @@ class C_HLTVCamera;
 class CAccountPanel;
 class CAutoGameSystemPerFrame;
 class CDamageAccountPanel;
+class CNewParticleEffect;
+class CParticleProperty;
 class IGameSystem;
 class INetworkStringTable;
 using trace_t = class CGameTrace;
@@ -92,6 +94,10 @@ enum class HookFunc
 	CAutoGameSystemPerFrame_CAutoGameSystemPerFrame,
 	CDamageAccountPanel_DisplayDamageFeedback,
 	CDamageAccountPanel_ShouldDraw,
+
+	CParticleProperty_DebugPrintEffects,
+	CNewParticleEffect_StopEmission,
+	CNewParticleEffect_SetDormant,
 
 	CGlowObjectManager_ApplyEntityGlowEffects,
 
@@ -417,6 +423,18 @@ class HookManager final
 	{
 		typedef bool(__thiscall *Raw)(CDamageAccountPanel* pThis);
 		typedef GlobalClassHook<HookFunc::CDamageAccountPanel_ShouldDraw, false, CDamageAccountPanel, bool> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::CParticleProperty_DebugPrintEffects>
+	{
+		typedef void(__thiscall *Raw)(CParticleProperty* pThis);
+	};
+	template<> struct HookFuncType<HookFunc::CNewParticleEffect_StopEmission>
+	{
+		typedef void(__thiscall *Raw)(CNewParticleEffect* pThis, bool bInfiniteOnly, bool bRemoveAllParticles, bool bWakeOnStop);
+	};
+	template<> struct HookFuncType<HookFunc::CNewParticleEffect_SetDormant>
+	{
+		typedef void(__thiscall *Raw)(CNewParticleEffect* pThis, bool bDormant);
 	};
 	template<> struct HookFuncType<HookFunc::Global_CreateEntityByName>
 	{

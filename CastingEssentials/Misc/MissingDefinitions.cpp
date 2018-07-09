@@ -421,3 +421,17 @@ IGameSystemPerFrame::~IGameSystemPerFrame()
 {
 	HookManager::GetRawFunc<HookFunc::IGameSystem_Remove>()(this);
 }
+
+void CParticleProperty::DebugPrintEffects()
+{
+	return HookManager::GetRawFunc<HookFunc::CParticleProperty_DebugPrintEffects>()(this);
+}
+
+void CNewParticleEffect::StopEmission(bool bInfiniteOnly, bool bRemoveAllParticles, bool bWakeOnStop)
+{
+	return HookManager::GetRawFunc<HookFunc::CNewParticleEffect_StopEmission>()(this, bInfiniteOnly, bRemoveAllParticles, bWakeOnStop);
+}
+void CNewParticleEffect::SetDormant(bool dormant)
+{
+	return HookManager::GetRawFunc<HookFunc::CNewParticleEffect_SetDormant>()(this, dormant);
+}

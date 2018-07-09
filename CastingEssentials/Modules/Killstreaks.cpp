@@ -17,6 +17,8 @@
 
 #include <PolyHook.hpp>
 
+#include "Modules/CameraState.h"
+
 #include "PluginBase/entities.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -46,7 +48,10 @@ private:
 };
 
 Killstreaks::Killstreaks() :
-	ce_killstreaks_enabled("ce_killstreaks_enabled", "0", FCVAR_NONE, "Show killstreak counts on the hud for all weapons, not just killstreak weapons.")
+	ce_killstreaks_enabled("ce_killstreaks_enabled", "0", FCVAR_NONE, "Show killstreak counts on the hud for all weapons, not just killstreak weapons."),
+
+	ce_killstreaks_hide_firstperson_effects("ce_killstreaks_hide_firstperson_effects", "0", FCVAR_NONE,
+		"Don't show professional killstreak eye effects in the middle of the screen for the person we're spectating when in firstperson camera mode.")
 {
 	panel.reset(new Panel());
 }
@@ -140,6 +145,35 @@ bool Killstreaks::CheckDependencies()
 	}
 
 	return ready;
+}
+
+void Killstreaks::OnTick(bool inGame)
+{
+	if (!inGame)
+		return;
+
+	if (!ce_killstreaks_hide_firstperson_effects.GetBool())
+		return;
+
+	for (Player* player : Player::Iterable())
+	{
+		const bool shouldHideKS =
+			player == Player::AsPlayer(CameraState::GetLocalObserverTarget()) &&
+			CameraState::GetLocalObserverMode() == ObserverMode::OBS_MODE_IN_EYE;
+
+		auto entParticles = player->GetBaseEntity()->ParticleProp();
+		for (int i = 0; i < entParticles->GetParticleEffectCount(); i++)
+		{
+			auto effect = entParticles->GetParticleEffectFromIdx(i);
+
+			static constexpr const char KILLSTREAK_PREFIX[] = "killstreak_";
+			const char* name = effect->GetEffectName();
+			if (strncmp(KILLSTREAK_PREFIX, name, std::size(KILLSTREAK_PREFIX) - 1))
+				continue;	// This isn't a killstreak particle effect
+
+			effect->SetDormant(shouldHideKS);
+		}
+	}
 }
 
 void Killstreaks::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)

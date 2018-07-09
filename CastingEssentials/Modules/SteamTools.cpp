@@ -25,7 +25,7 @@ SteamTools::SteamTools() :
 	static_assert(std::size(RICH_PRESENCE_STATES) == (size_t)RichPresenceState::COUNT);
 	static_assert(std::size(MATCH_GROUPS) == (size_t)MatchGroup::COUNT);
 
-	m_LastRPUpdateTime = 0;
+	m_LastRPUpdateTime = -1;
 }
 
 bool SteamTools::CheckDependencies()
@@ -48,7 +48,7 @@ bool SteamTools::CheckDependencies()
 
 void SteamTools::OnTick(bool inGame)
 {
-	if (Interfaces::GetEngineTool()->GetRealTime() - m_LastRPUpdateTime > RP_UPDATE_INTERVAL)
+	if (m_LastRPUpdateTime <= 0 || Interfaces::GetEngineTool()->GetRealTime() - m_LastRPUpdateTime > RP_UPDATE_INTERVAL)
 		UpdateRichPresence();
 }
 

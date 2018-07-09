@@ -222,6 +222,10 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>("\x55\x8B\xEC\x81\xEC????\x83\x7D\x10\x00\x53\x8B\xD9\x0F\x8E", "xxxxx????xxxxxxxxx");
 	FindFunc<HookFunc::CDamageAccountPanel_ShouldDraw>("\x56\x8B\xF1\xE8????\x8B\xC8\x85\xC9\x74\x0E", "xxxx????xxxxxx");
 
+	FindFunc<HookFunc::CParticleProperty_DebugPrintEffects>("\x55\x8B\xEC\x51\x8B\xC1\x53\x56\x33\xF6\x89\x45\xFC\x8B\x58\x14", "xxxxxxxxxxxxxxxx");
+	FindFunc<HookFunc::CNewParticleEffect_StopEmission>("\x55\x8B\xEC\x53\x8B\x5D\x08\x56\x8B\xF1\x83\xBE?????", "xxxxxxxxxxxx?????");
+	FindFunc<HookFunc::CNewParticleEffect_SetDormant>("\x55\x8B\xEC\x83\xC1\x10\x5D\xE9????\xCC\xCC\xCC\xCC\x55\x8B\xEC\x8A\x91", "xxxxxxxx????xxxxxxxxx");
+
 	FindFunc<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>("\x55\x8B\xEC\x83\xEC\x3C\x53\x56\x57\x8B\xD9\x8B\x0D", "xxxxxxxxxxxxx");
 
 	FindFunc<HookFunc::CHudBaseDeathNotice_GetIcon>("\x55\x8B\xEC\x81\xEC????\x83\x7D\x0C\x00\x56", "xxxxx????xxxxx");

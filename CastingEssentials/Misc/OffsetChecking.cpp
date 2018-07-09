@@ -1,5 +1,6 @@
 #include <client/c_baseanimating.h>
 #include <client/c_baseplayer.h>
+#include <client/c_fire_smoke.h>
 #include <vgui_controls/ImagePanel.h>
 #include <vgui_controls/ProgressBar.h>
 
@@ -16,10 +17,14 @@ class OffsetChecking
 	OFFSET_CHECK(C_BaseAnimating, m_pStudioHdr, 2192);
 
 	OFFSET_CHECK(C_BaseEntity, m_lifeState, 165);
+	OFFSET_CHECK(C_BaseEntity, m_bDormant, 426);
+	OFFSET_CHECK(C_BaseEntity, m_Particles, 596);
 
 	OFFSET_CHECK(C_BasePlayer, m_iFOVStart, 4152);
 	OFFSET_CHECK(C_BasePlayer, m_iDefaultFOV, 4160);
 	OFFSET_CHECK(C_BasePlayer, m_hVehicle, 4300);
+
+	OFFSET_CHECK(C_EntityFlame, m_hEffect, 1360);
 
 	OFFSET_CHECK(vgui::ContinuousProgressBar, _unknown0, 388);
 	OFFSET_CHECK(vgui::ContinuousProgressBar, _unknown1, 392);
