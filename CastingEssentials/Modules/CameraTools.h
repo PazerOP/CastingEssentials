@@ -6,6 +6,8 @@
 #include <mathlib/vector.h>
 #include <shareddefs.h>
 
+#include <array>
+
 enum class TFTeam;
 enum class TFClassType;
 
@@ -55,17 +57,14 @@ private:
 	ConVar ce_cameratools_taunt_thirdperson;
 
 	ConVar ce_tplock_enable;
-	ConVar ce_tplock_xoffset;
-	ConVar ce_tplock_yoffset;
-	ConVar ce_tplock_zoffset;
 
-	ConVar ce_tplock_force_pitch;
-	ConVar ce_tplock_force_yaw;
-	ConVar ce_tplock_force_roll;
+	ConVar ce_tplock_default_pos;
+	ConVar ce_tplock_default_angle;
+	ConVar ce_tplock_default_dps;
 
-	ConVar ce_tplock_dps_pitch;
-	ConVar ce_tplock_dps_yaw;
-	ConVar ce_tplock_dps_roll;
+	ConVar ce_tplock_taunt_pos;
+	ConVar ce_tplock_taunt_angle;
+	ConVar ce_tplock_taunt_dps;
 
 	ConVar ce_tplock_bone;
 
@@ -88,6 +87,38 @@ private:
 	void SpecPosition(const CCommand &command);
 	void SpecPositionDelta(const CCommand& command);
 
+	struct TPLockValue
+	{
+		enum class Mode
+		{
+			Set,
+			Add,
+			Scale,
+			ScaleAdd,
+		};
+
+		Mode m_Mode;
+		float m_Value;
+		float m_Base;
+
+		float GetValue(float input) const;
+	};
+	static bool ParseTPLockValues(const CCommand& valuesIn, std::array<TPLockValue, 3>& valuesOut);
+	static void ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<TPLockValue, 3>& values);
+	static void ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<float, 3>& values);
+	void TPLockBoneUpdated(ConVar* cvar);
+
+	struct TPLockRuleset
+	{
+		std::array<float, 3> m_Pos;
+		std::array<TPLockValue, 3> m_Angle;
+		std::array<float, 3> m_DPS;
+		std::string m_Bone;
+	};
+
+	TPLockRuleset m_TPLockDefault;
+	TPLockRuleset m_TPLockTaunt;
+
 	void SpecClass(const CCommand& command);
 	void SpecClass(TFTeam team, TFClassType playerClass, int classIndex);
 	void SpecSteamID(const CCommand& command);
@@ -101,14 +132,6 @@ private:
 
 	void OnTick(bool inGame) override;
 
-	struct TPLockRuleset
-	{
-		Vector m_PosOffset;
-		QAngle m_AngOffset;
-		Vector m_DPSLimit;    // Degrees per second
-		const char* m_Bone;
-	};
-
 	Vector CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& orbitCenter, const QAngle& angle) const;
 
 	bool InToolModeOverride() const override;
@@ -117,10 +140,6 @@ private:
 	QAngle m_LastFrameAngle;
 	Player* m_LastTargetPlayer;
 
-	static constexpr float TPLOCK_IGNORE = -INFINITY;
-	static float TPLockReadFloat(const ConVar& cvar);
-
-	void LoadDefaultRuleset(TPLockRuleset& ruleset) const;
 	bool PerformTPLock(const TPLockRuleset& ruleset, Vector& origin, QAngle& angles, float& fov);
 
 	void AttachHooks(bool attach);

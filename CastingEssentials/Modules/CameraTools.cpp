@@ -38,19 +38,23 @@ CameraTools::CameraTools() :
 	ce_cameratools_taunt_thirdperson("ce_cameratools_taunt_thirdperson", "0", FCVAR_NONE, "Force the camera into thirdperson when taunting."),
 
 	ce_tplock_enable("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player."),
-	ce_tplock_xoffset("ce_tplock_xoffset", "18"),
-	ce_tplock_yoffset("ce_tplock_yoffset", "20"),
-	ce_tplock_zoffset("ce_tplock_zoffset", "-80"),
 
-	ce_tplock_force_pitch("ce_tplock_force_pitch", "0", FCVAR_NONE, "Value to force pitch to. Blank to follow player's eye angles."),
-	ce_tplock_force_yaw("ce_tplock_force_yaw", "", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles."),
-	ce_tplock_force_roll("ce_tplock_force_roll", "0", FCVAR_NONE, "Value to force yaw to. Blank to follow player's eye angles."),
+	ce_tplock_default_pos("ce_tplock_default_pos", "+18 -80 +20", FCVAR_NONE, "",
+		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockDefault.m_Pos); }),
+	ce_tplock_default_angle("ce_tplock_default_angle", "0 ? 0", FCVAR_NONE, "",
+		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockDefault.m_Angle); }),
+	ce_tplock_default_dps("ce_tplock_default_dps", "-1 -1 -1", FCVAR_NONE, "Max degrees per second for angle. Set < 0 to uncap.",
+		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockDefault.m_DPS); }),
 
-	ce_tplock_dps_pitch("ce_tplock_dps_pitch", "-1", FCVAR_NONE, "Max degrees per second for pitch. Set < 0 to uncap."),
-	ce_tplock_dps_yaw("ce_tplock_dps_yaw", "-1", FCVAR_NONE, "Max degrees per second for yaw. Set < 0 to uncap."),
-	ce_tplock_dps_roll("ce_tplock_dps_roll", "-1", FCVAR_NONE, "Max degrees per second for roll. Set < 0 to uncap."),
+	ce_tplock_taunt_pos("ce_tplock_taunt_pos", "+18 -80 +20", FCVAR_NONE, "",
+		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockTaunt.m_Pos); }),
+	ce_tplock_taunt_angle("ce_tplock_taunt_angle", "0 -180 0", FCVAR_NONE, "",
+		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockTaunt.m_Angle); }),
+	ce_tplock_taunt_dps("ce_tplock_taunt_dps", "-1 -1 -1", FCVAR_NONE, "Max degrees per second for angle. Set < 0 to uncap.",
+		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockTaunt.m_DPS); }),
 
-	ce_tplock_bone("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings."),
+	ce_tplock_bone("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings.",
+		[](IConVar* var, const char*, float) { GetModule()->TPLockBoneUpdated(static_cast<ConVar*>(var)); }),
 
 	ce_cameratools_spec_entindex("ce_cameratools_spec_entindex", [](const CCommand& args) { GetModule()->SpecEntIndex(args); },
 		"Spectates a player by entindex"),
@@ -75,6 +79,16 @@ CameraTools::CameraTools() :
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
 
 	m_IsTaunting = false;
+
+	// Parse the default values
+	ParseTPLockValuesInto(&ce_tplock_default_pos, ce_tplock_default_pos.GetDefault(), m_TPLockDefault.m_Pos);
+	ParseTPLockValuesInto(&ce_tplock_default_angle, ce_tplock_default_angle.GetDefault(), m_TPLockDefault.m_Angle);
+	ParseTPLockValuesInto(&ce_tplock_default_dps, ce_tplock_default_dps.GetDefault(), m_TPLockDefault.m_DPS);
+
+	ParseTPLockValuesInto(&ce_tplock_taunt_pos, ce_tplock_taunt_pos.GetDefault(), m_TPLockTaunt.m_Pos);
+	ParseTPLockValuesInto(&ce_tplock_taunt_angle, ce_tplock_taunt_angle.GetDefault(), m_TPLockTaunt.m_Angle);
+	ParseTPLockValuesInto(&ce_tplock_taunt_dps, ce_tplock_taunt_dps.GetDefault(), m_TPLockTaunt.m_DPS);
+	m_TPLockTaunt.m_Bone = m_TPLockDefault.m_Bone = ce_tplock_bone.GetString();
 }
 
 bool CameraTools::CheckDependencies()
@@ -308,6 +322,92 @@ void CameraTools::ShowUsers(const CCommand& command)
 		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s (%s)\n", i, ce_cameratools_spec_steamid.GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName(), TF_CLASS_NAMES[(int)blu[i]->GetClass()]);
 }
 
+bool CameraTools::ParseTPLockValues(const CCommand& valuesIn, std::array<TPLockValue, 3>& valuesOut)
+{
+	if (valuesIn.ArgC() != valuesOut.size())
+		return false;
+
+	for (uint_fast8_t i = 0; i < valuesOut.size(); i++)
+	{
+		const char* valIn = valuesIn[i];
+		auto& valOut = valuesOut[i];
+
+		if (valIn[0] == '*')
+		{
+			valOut.m_Mode = TPLockValue::Mode::Scale;
+
+			char* endVal;
+			valOut.m_Value = strtof(&valIn[1], &endVal);
+
+			valIn = endVal;
+			if (valIn[i] == '+' || valIn[i] == '-')
+			{
+				valOut.m_Mode = TPLockValue::Mode::ScaleAdd;
+				valOut.m_Base = strtof(valIn, nullptr);
+			}
+		}
+		else if (valIn[0] == '=')
+		{
+			valOut.m_Mode = TPLockValue::Mode::Set;
+			valOut.m_Value = strtof(&valIn[1], nullptr);
+		}
+		else if (valIn[0] == '?')
+		{
+			valOut.m_Mode = TPLockValue::Mode::Add;
+			valOut.m_Value = 0;
+		}
+		else
+		{
+			valOut.m_Mode = TPLockValue::Mode::Add;
+			valOut.m_Value = strtof(valIn, nullptr);
+		}
+	}
+
+	return true;
+}
+
+void CameraTools::ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<TPLockValue, 3>& values)
+{
+	CCommand cmd;
+	cmd.Tokenize(cvar->GetString());
+
+	if (!ParseTPLockValues(cmd, values))
+	{
+		Warning("%s: Failed to parse tplock values\n", cvar->GetName());
+		cvar->SetValue(oldVal);
+	}
+}
+
+void CameraTools::ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<float, 3>& values)
+{
+	CCommand cmd;
+	cmd.Tokenize(cvar->GetString());
+
+	if (cmd.ArgC() != values.size())
+		goto ParseFailed;
+
+	for (uint_fast8_t i = 0; i < values.size(); i++)
+	{
+		char* endPtr;
+		values[i] = strtof(cmd[i], &endPtr);
+
+		if (endPtr == cmd[i])
+			goto ParseFailed;
+	}
+
+	return;
+
+ParseFailed:
+	Warning("%s: Failed to parse 3 float values\n", cvar->GetName());
+	cvar->SetValue(oldVal);
+}
+
+void CameraTools::TPLockBoneUpdated(ConVar* cvar)
+{
+	// For the time being, bone is shared between all rulesets
+	m_TPLockDefault.m_Bone = m_TPLockTaunt.m_Bone = cvar->GetString();
+}
+
 void CameraTools::SpecClass(const CCommand& command)
 {
 	// Usage: <team> <class> [classIndex]
@@ -520,8 +620,11 @@ void CameraTools::UpdateIsTaunting()
 	if (!ce_cameratools_taunt_thirdperson.GetBool())
 		return;
 
-	if (CameraState::GetLocalObserverMode() != ObserverMode::OBS_MODE_IN_EYE)
+	if (auto mode = CameraState::GetLocalObserverMode();
+		mode != ObserverMode::OBS_MODE_IN_EYE && mode != ObserverMode::OBS_MODE_CHASE)
+	{
 		return;
+	}
 
 	auto player = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 	if (!player)
@@ -551,9 +654,9 @@ Vector CameraTools::CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& 
 	Vector forward, right, up;
 	AngleVectors(angle, &forward, &right, &up);
 
-	Vector idealPos = orbitCenter + forward * ruleset.m_PosOffset.z;
-	idealPos += right * ruleset.m_PosOffset.x;
-	idealPos += up * ruleset.m_PosOffset.y;
+	Vector idealPos = orbitCenter + forward * ruleset.m_Pos[1];
+	idealPos += right * ruleset.m_Pos[0];
+	idealPos += up * ruleset.m_Pos[2];
 
 	const Vector camDir = (idealPos - orbitCenter).Normalized();
 	const float dist = orbitCenter.DistTo(idealPos);
@@ -580,41 +683,16 @@ bool CameraTools::InToolModeOverride() const
 	return false;
 }
 
-float CameraTools::TPLockReadFloat(const ConVar& cvar)
-{
-	return IsStringEmpty(cvar.GetString()) ? TPLOCK_IGNORE : cvar.GetFloat();
-}
-
-void CameraTools::LoadDefaultRuleset(TPLockRuleset& ruleset) const
-{
-	ruleset.m_PosOffset.x = TPLockReadFloat(ce_tplock_xoffset);
-	ruleset.m_PosOffset.y = TPLockReadFloat(ce_tplock_yoffset);
-	ruleset.m_PosOffset.z = TPLockReadFloat(ce_tplock_zoffset);
-
-	ruleset.m_AngOffset.x = TPLockReadFloat(ce_tplock_force_pitch);
-	ruleset.m_AngOffset.y = TPLockReadFloat(ce_tplock_force_yaw);
-	ruleset.m_AngOffset.z = TPLockReadFloat(ce_tplock_force_roll);
-
-	ruleset.m_DPSLimit.x = TPLockReadFloat(ce_tplock_dps_pitch);
-	ruleset.m_DPSLimit.y = TPLockReadFloat(ce_tplock_dps_yaw);
-	ruleset.m_DPSLimit.z = TPLockReadFloat(ce_tplock_dps_roll);
-
-	ruleset.m_Bone = ce_tplock_bone.GetString();
-}
-
 bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
 	// Normal tplock only activates when we're in thirdperson of our own
 	// free will
-	if (m_IsTaunting || (ce_tplock_enable.GetBool() && CameraState::GetLocalObserverMode() == ObserverMode::OBS_MODE_CHASE))
-	{
-		TPLockRuleset defaultRuleset;
-		LoadDefaultRuleset(defaultRuleset);
-
-		return PerformTPLock(defaultRuleset, origin, angles, fov);
-	}
+	if (m_IsTaunting)
+		return PerformTPLock(m_TPLockTaunt, origin, angles, fov);
+	if (ce_tplock_enable.GetBool() && CameraState::GetLocalObserverMode() == ObserverMode::OBS_MODE_CHASE)
+		return PerformTPLock(m_TPLockDefault, origin, angles, fov);
 
 	return false;
 }
@@ -633,10 +711,10 @@ bool CameraTools::PerformTPLock(const TPLockRuleset& ruleset, Vector& origin, QA
 		return false;
 
 	Vector targetPos;
-	const int targetBone = baseAnimating->LookupBone(ruleset.m_Bone);
+	const int targetBone = baseAnimating->LookupBone(ruleset.m_Bone.c_str());
 	if (targetBone < 0)
 	{
-		DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", ruleset.m_Bone);
+		DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", ruleset.m_Bone.c_str());
 		const_cast<Vector&>(targetPos) = targetPlayer->GetEyePosition();
 	}
 	else
@@ -646,24 +724,18 @@ bool CameraTools::PerformTPLock(const TPLockRuleset& ruleset, Vector& origin, QA
 	}
 
 	QAngle idealAngles = targetPlayer->GetEyeAngles();
-
-	if (ruleset.m_AngOffset.x != TPLOCK_IGNORE)
-		idealAngles.x = ruleset.m_AngOffset.x;
-	if (ruleset.m_AngOffset.y != TPLOCK_IGNORE)
-		idealAngles.y = ruleset.m_AngOffset.y;
-	if (ruleset.m_AngOffset.z != TPLOCK_IGNORE)
-		idealAngles.z = ruleset.m_AngOffset.z;
+	for (uint_fast8_t i = 0; i < 3; i++)
+		idealAngles[i] = AngleNormalize(ruleset.m_Angle[i].GetValue(idealAngles[i]));
 
 	if (m_LastTargetPlayer == targetPlayer)
 	{
 		const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
 
-		if (ruleset.m_DPSLimit.x >= 0)
-			idealAngles.x = ApproachAngle(idealAngles.x, m_LastFrameAngle.x, ruleset.m_DPSLimit.x * frametime);
-		if (ruleset.m_DPSLimit.y >= 0)
-			idealAngles.y = ApproachAngle(idealAngles.y, m_LastFrameAngle.y, ruleset.m_DPSLimit.y * frametime);
-		if (ruleset.m_DPSLimit.z >= 0)
-			idealAngles.z = ApproachAngle(idealAngles.z, m_LastFrameAngle.z, ruleset.m_DPSLimit.z * frametime);
+		for (uint_fast8_t i = 0; i < 3; i++)
+		{
+			if (ruleset.m_DPS[i] >= 0)
+				idealAngles[i] = ApproachAngle(idealAngles[i], m_LastFrameAngle[i], ruleset.m_DPS[i] * frametime);
+		}
 	}
 
 	const Vector idealPos = CalcPosForAngle(ruleset, targetPos, idealAngles);
@@ -982,4 +1054,22 @@ void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, fl
 			Assert(!m_SetPrimaryTargetHook);
 		}
 	}
+}
+
+float CameraTools::TPLockValue::GetValue(float input) const
+{
+	switch (m_Mode)
+	{
+		case Mode::Set:
+			return m_Value;
+		case Mode::Add:
+			return input + m_Value;
+		case Mode::Scale:
+			return input * m_Value;
+		case Mode::ScaleAdd:
+			return input * m_Value + m_Base;
+	}
+
+	Assert(!"Should never get here...");
+	return NAN;
 }
