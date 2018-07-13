@@ -80,6 +80,11 @@ bool PassServerEntityFilter(const IHandleEntity *pTouch, const IHandleEntity *pP
 	return true;
 }
 
+const char* GetSequenceName(CStudioHdr* studiohdr, int sequence)
+{
+	return HookManager::GetRawFunc<HookFunc::Global_GetSequenceName>()(studiohdr, sequence);
+}
+
 CTraceFilterSimple::CTraceFilterSimple(const IHandleEntity *passentity, int collisionGroup, ShouldHitFunc_t pExtraShouldHitFunc)
 {
 	m_pPassEnt = passentity;
@@ -298,6 +303,10 @@ bool C_BaseAnimating::ComputeHitboxSurroundingBox(Vector *pVecWorldMins, Vector 
 {
 	return HookManager::GetRawFunc<HookFunc::C_BaseAnimating_ComputeHitboxSurroundingBox>()(this, pVecWorldMins, pVecWorldMaxs);
 }
+const char* C_BaseAnimating::GetSequenceActivityName(int iSequence)
+{
+	return HookManager::GetRawFunc<HookFunc::C_BaseAnimating_GetSequenceActivityName>()(this, iSequence);
+}
 
 CBasePlayer *UTIL_PlayerByIndex(int entindex)
 {
@@ -434,4 +443,13 @@ void CNewParticleEffect::StopEmission(bool bInfiniteOnly, bool bRemoveAllParticl
 void CNewParticleEffect::SetDormant(bool dormant)
 {
 	return HookManager::GetRawFunc<HookFunc::CNewParticleEffect_SetDormant>()(this, dormant);
+}
+
+int CStudioHdr::GetNumSeq() const
+{
+	return HookManager::GetRawFunc<HookFunc::CStudioHdr_GetNumSeq>()(this);
+}
+mstudioseqdesc_t& CStudioHdr::pSeqdesc(int iSequence)
+{
+	return HookManager::GetRawFunc<HookFunc::CStudioHdr_pSeqdesc>()(this, iSequence);
 }

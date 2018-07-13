@@ -71,7 +71,7 @@ int LoadoutIcons::GetWeaponDefinitionIndex(IClientNetworkable* networkable)
 	if (!networkable)
 		return -1;
 
-	auto definitionIndex = Entities::GetEntityProp<int*>(networkable, "m_iItemDefinitionIndex");
+	auto definitionIndex = Entities::GetEntityProp<int>(networkable, "m_iItemDefinitionIndex");
 	Assert(definitionIndex);
 	if (!definitionIndex)
 		return -1;
@@ -86,7 +86,7 @@ void LoadoutIcons::GatherWeapons()
 	{
 		const auto playerIndex = player->entindex() - 1;
 
-		auto activeWeapon = Entities::GetEntityProp<EHANDLE*>(player->GetEntity(), "m_hActiveWeapon");
+		auto activeWeapon = Entities::GetEntityProp<EHANDLE>(player->GetEntity(), "m_hActiveWeapon");
 		m_Weapons[playerIndex][IDX_ACTIVE] = activeWeapon ? ItemSchema::GetModule()->GetBaseItemID(GetWeaponDefinitionIndex(activeWeapon->Get())) : -1;
 
 		for (int weaponIndex = 0; weaponIndex < 5; weaponIndex++)

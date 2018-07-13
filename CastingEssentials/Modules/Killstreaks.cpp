@@ -226,7 +226,7 @@ Killstreaks::Panel::~Panel()
 				char buffer[32];
 				Entities::PropIndex(buffer, "m_iStreaks", i);
 
-				int *killstreakGlobal = Entities::GetEntityProp<int *>(entity, buffer);
+				int *killstreakGlobal = Entities::GetEntityProp<int>(entity, buffer);
 				*killstreakGlobal = 0;
 			}
 
@@ -245,10 +245,10 @@ Killstreaks::Panel::~Panel()
 		if (!playerEntity)
 			continue;
 
-		int *killstreakPrimary = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.000");
-		int *killstreakSecondary = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.001");
-		int *killstreakMelee = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.002");
-		int *killstreakPDA = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.003");
+		int *killstreakPrimary = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.000");
+		int *killstreakSecondary = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.001");
+		int *killstreakMelee = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.002");
+		int *killstreakPDA = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.003");
 
 		*killstreakPrimary = 0;
 		*killstreakSecondary = 0;
@@ -285,10 +285,10 @@ void Killstreaks::Panel::OnTick()
 			if (!playerEntity)
 				continue;
 
-			int* const killstreakPrimary = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.000");
-			int* const killstreakSecondary = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.001");
-			int* const killstreakMelee = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.002");
-			int* const killstreakPDA = Entities::GetEntityProp<int *>(playerEntity, "m_nStreaks.003");
+			int* const killstreakPrimary = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.000");
+			int* const killstreakSecondary = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.001");
+			int* const killstreakMelee = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.002");
+			int* const killstreakPDA = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.003");
 
 			const int userid = player->GetUserID();
 			int* const killstreakGlobal = TFPlayerResource::GetPlayerResource()->GetKillstreak(player->entindex());
@@ -396,14 +396,14 @@ bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 					char buffer[32];
 					Entities::PropIndex(buffer, "m_hMyWeapons", i);
 
-					IClientEntity *weapon = Entities::GetEntityProp<EHANDLE *>(assister->GetEntity(), buffer)->Get();
+					IClientEntity *weapon = Entities::GetEntityProp<EHANDLE>(assister->GetEntity(), buffer)->Get();
 					if (!weapon || !Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
 						continue;
 
 					bool healing = *Entities::GetEntityProp<bool *>(weapon, { "m_bHealing" });
 					if (healing)
 					{
-						int healingTarget = Entities::GetEntityProp<EHANDLE *>(weapon, { "m_hHealingTarget" })->GetEntryIndex();
+						int healingTarget = Entities::GetEntityProp<EHANDLE>(weapon, { "m_hHealingTarget" })->GetEntryIndex();
 
 						if (healingTarget == Interfaces::GetEngineClient()->GetPlayerForUserID(attackerUserID))
 						{

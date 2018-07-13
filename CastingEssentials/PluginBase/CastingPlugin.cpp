@@ -30,6 +30,7 @@
 #include "Modules/SteamTools.h"
 #include "Modules/TeamNames.h"
 #include "Modules/ClientTools.h"
+#include "Modules/WeaponTools.h"
 
 const char* const PLUGIN_VERSION_ID = "r20 beta";
 const char* const PLUGIN_FULL_VERSION = strdup(strprintf("%s %s", PLUGIN_NAME, PLUGIN_VERSION_ID).c_str());
@@ -93,6 +94,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<SteamTools>("Steam Tools");
 	Modules().RegisterAndLoadModule<TeamNames>("Team Names");
 	Modules().RegisterAndLoadModule<ClientTools>("Client Tools");
+	Modules().RegisterAndLoadModule<WeaponTools>("Weapon Tools");
 
 	ConVar_Register();
 

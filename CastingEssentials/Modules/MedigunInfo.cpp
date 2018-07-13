@@ -191,11 +191,11 @@ void MedigunInfo::CollectMedigunData()
 				continue;
 			}
 
-			medigunData.m_Charge = *Entities::GetEntityProp<float *>(medigun, "m_flChargeLevel");
-			medigunData.m_Popped = *Entities::GetEntityProp<bool *>(medigun, "m_bChargeRelease");
+			medigunData.m_Charge = *Entities::GetEntityProp<float>(medigun, "m_flChargeLevel");
+			medigunData.m_Popped = *Entities::GetEntityProp<bool>(medigun, "m_bChargeRelease");
 
 			if (medigunData.m_Type == TFMedigun::Vaccinator)
-				medigunData.m_ResistType = *Entities::GetEntityProp<TFResistType*>(medigun, { "m_nChargeResistType" });
+				medigunData.m_ResistType = *Entities::GetEntityProp<TFResistType>(medigun, { "m_nChargeResistType" });
 		}
 	}
 }

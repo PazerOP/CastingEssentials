@@ -10,7 +10,7 @@
 
 #include <sstream>
 
-std::unordered_map<const char*, std::unordered_map<const char*, int>> Entities::s_ClassPropOffsets;
+std::map<std::string, std::map<std::string, int, Entities::ci_less>, Entities::ci_less> Entities::s_ClassPropOffsets;
 
 bool Entities::CheckEntityBaseclass(IClientNetworkable* entity, const char* baseclass)
 {
@@ -52,14 +52,14 @@ bool Entities::CheckTableBaseclass(RecvTable* sTable, const char* baseclass)
 	return false;
 }
 
-std::string Entities::ConvertTreeToString(const std::vector<const char*>& tree)
+std::string Entities::ConvertTreeToString(const std::vector<std::string_view>& tree)
 {
 	Assert(tree.size() > 0);
 	if (tree.size() < 1)
 		return std::string();
 
 	if (tree.size() < 2)
-		return tree[0];
+		return std::string(tree[0]);
 
 	std::stringstream ss;
 	ss << tree[0];
@@ -69,28 +69,22 @@ std::string Entities::ConvertTreeToString(const std::vector<const char*>& tree)
 	return ss.str();
 }
 
-std::vector<std::string> Entities::ConvertStringToTree(const char* str)
+std::vector<std::string_view> Entities::ConvertStringToTree(const std::string_view& str)
 {
-	std::vector<std::string> retVal;
+	std::vector<std::string_view> retVal;
 
-	std::string buffer;
-	while (*str != '\0')
+	auto lastElement = str.begin();
+	for (auto iter = str.begin(); iter < str.end(); ++iter)
 	{
-		if (*str == '.')
+		if (*iter == '.')
 		{
-			retVal.push_back(buffer);
-			buffer.clear();
+			retVal.push_back(std::string_view(&*lastElement, iter - lastElement));
+			lastElement = ++iter;
 		}
-		else
-		{
-			buffer.push_back(*str);
-		}
-
-		str++;
 	}
 
-	if (buffer.size() > 0)
-		retVal.push_back(buffer);
+	if (lastElement < str.end())
+		retVal.push_back(std::string_view(&*lastElement, str.end() - lastElement));
 
 	return retVal;
 }
@@ -109,22 +103,41 @@ ClientClass* Entities::GetClientClass(const char* className)
 	return nullptr;
 }
 
-int Entities::FindExistingPropOffset(const char* className, const char* propertyString, bool bThrow)
+RecvProp* Entities::FindRecvProp(const char* className, const char* propName, bool recursive)
 {
-	for (const auto& pair1 : s_ClassPropOffsets)
+	auto cc = GetClientClass(className);
+	if (!cc)
+		return nullptr;
+
+	return FindRecvProp(cc->m_pRecvTable, propName, recursive);
+}
+
+RecvProp* Entities::FindRecvProp(RecvTable* table, const char* propName, bool recursive)
+{
+	for (int i = 0; i < table->m_nProps; i++)
 	{
-		if (strcmp(pair1.first, className))
-			continue;
+		auto& prop = table->m_pProps[i];
+		if (!strcmp(prop.m_pVarName, propName))
+			return &prop;
 
-		for (const auto& pair2 : pair1.second)
+		if (prop.m_RecvType == SendPropType::DPT_DataTable)
 		{
-			if (strcmp(pair2.first, propertyString))
-				continue;
-
-			return pair2.second;
+			if (auto found = FindRecvProp(prop.m_pDataTable, propName))
+				return found;
 		}
+	}
 
-		break;
+	return nullptr;
+}
+
+int Entities::FindExistingPropOffset(const std::string_view& className, const std::string_view& propertyString, bool bThrow)
+{
+	if (auto found = s_ClassPropOffsets.find(className); found != s_ClassPropOffsets.end())
+	{
+		if (auto found2 = found->second.find(propertyString); found2 != found->second.end())
+		{
+			return found2->second;
+		}
 	}
 
 	if (bThrow)
@@ -133,95 +146,71 @@ int Entities::FindExistingPropOffset(const char* className, const char* property
 		return -1;
 }
 
-void Entities::AddPropOffset(const char* className, const char* propertyString, int offset)
+void Entities::AddPropOffset(const std::string_view& className, const std::string_view& propertyString, int offset)
 {
 	bool added = false;
 
-	for (const auto& pair1 : s_ClassPropOffsets)
+	if (auto found = s_ClassPropOffsets.find(className); found != s_ClassPropOffsets.end())
 	{
-		if (strcmp(pair1.first, className))
-			continue;
-
-		className = pair1.first;
-
-		for (const auto& pair2 : pair1.second)
-		{
-			const bool match = !strcmp(pair2.first, propertyString);
-			Assert(!match);
-			if (match)
-				return;
-		}
-
-		propertyString = strdup(propertyString);
-		s_ClassPropOffsets[className][propertyString] = offset;
-		return;
+		found->second[std::string(propertyString)] = offset;
 	}
-
-	if (!added)
-	{
-		className = strdup(className);
-		propertyString = strdup(propertyString);
-		s_ClassPropOffsets[className][propertyString] = offset;
-	}
+	else
+		s_ClassPropOffsets[std::string(className)][std::string(propertyString)] = offset;
 }
 
-int Entities::RetrieveClassPropOffset(const char* className, const char* propertyString)
+int Entities::RetrieveClassPropOffset(const std::string_view& className, const std::string_view& propertyString)
 {
 	const auto existing = FindExistingPropOffset(className, propertyString, false);
 	if (existing >= 0)
 		return existing;
 
-	ClientClass *cc = Interfaces::GetClientDLL()->GetAllClasses();
+	const std::vector<std::string_view>& propertyTree = ConvertStringToTree(propertyString);
 
-	const std::vector<std::string>& propertyTree = ConvertStringToTree(propertyString);
-
-	while (cc)
+	for (auto cc = Interfaces::GetClientDLL()->GetAllClasses(); cc; cc = cc->m_pNext)
 	{
-		if (!strcmp(className, cc->GetName()))
+		if (className != cc->GetName())
+			continue;
+
+		RecvTable *table = cc->m_pRecvTable;
+		if (!table)
+			break;
+
+		int offset = -1;
+		RecvProp *prop = nullptr;
+
+		for (const auto& propertyName : propertyTree)
 		{
-			RecvTable *table = cc->m_pRecvTable;
+			int subOffset = 0;
 
-			int offset = -1;
-			RecvProp *prop = nullptr;
+			if (prop && prop->GetType() == DPT_DataTable)
+				table = prop->GetDataTable();
 
-			if (table)
+			if (!table)
+				return -1;
+
+			if (GetSubProp(table, propertyName, prop, subOffset))
 			{
-				for (const auto& propertyName : propertyTree)
-				{
-					int subOffset = 0;
+				Assert(subOffset >= 0);
+				if (offset < 0)
+					offset = 0;
 
-					if (prop && prop->GetType() == DPT_DataTable)
-						table = prop->GetDataTable();
-
-					if (!table)
-						return false;
-
-					if (GetSubProp(table, propertyName.c_str(), prop, subOffset))
-					{
-						Assert(subOffset >= 0);
-						if (offset < 0)
-							offset = 0;
-
-						offset += subOffset;
-					}
-					else
-						return false;
-
-					table = nullptr;
-				}
-
-				Assert(offset >= 0);
-				AddPropOffset(className, propertyString, offset);
-				return offset;
+				offset += subOffset;
 			}
+			else
+				return -1;
+
+			table = nullptr;
 		}
-		cc = cc->m_pNext;
+
+		Assert(offset > 0);
+		AddPropOffset(className, propertyString, offset);
+		return offset;
 	}
 
 	return -1;
 }
 
-bool Entities::GetSubProp(RecvTable* table, const char* propName, RecvProp*& prop, int& offset)
+bool Entities::GetSubProp(RecvTable* table, const std::string_view& propName, RecvProp*& prop, int& offset)
 {
 	for (int i = 0; i < table->GetNumProps(); i++)
 	{
@@ -229,7 +218,7 @@ bool Entities::GetSubProp(RecvTable* table, const char* propName, RecvProp*& pro
 
 		RecvProp *currentProp = table->GetProp(i);
 
-		if (strcmp(currentProp->GetName(), propName) == 0)
+		if (propName == currentProp->GetName())
 		{
 			prop = currentProp;
 			offset = currentProp->GetOffset();
@@ -249,14 +238,19 @@ bool Entities::GetSubProp(RecvTable* table, const char* propName, RecvProp*& pro
 	return false;
 }
 
-void* Entities::GetEntityProp(IClientNetworkable* entity, const char* propertyString)
+void* Entities::GetEntityProp(IClientNetworkable* entity, const char* propertyString, bool throwifMissing)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	auto const className = entity->GetClientClass()->GetName();
 
 	int offset = RetrieveClassPropOffset(className, propertyString);
 	if (offset < 0)
-		throw invalid_class_prop(entity->GetClientClass()->GetName());
+	{
+		if (throwifMissing)
+			throw invalid_class_prop(entity->GetClientClass()->GetName());
+		else
+			return nullptr;
+	}
 
 	return (void *)(size_t(entity->GetDataTableBasePtr()) + size_t(offset));
 }

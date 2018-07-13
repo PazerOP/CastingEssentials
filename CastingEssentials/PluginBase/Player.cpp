@@ -29,6 +29,7 @@ int Player::s_UserInfoChangedCallbackHook;
 
 Player::Player(CHandle<IClientEntity> handle, int userID) : m_PlayerEntity(handle), m_UserID(userID)
 {
+	Assert(dynamic_cast<C_BaseEntity*>(handle.Get()));
 	m_CachedPlayerEntity = nullptr;
 }
 
@@ -185,24 +186,24 @@ bool Player::CheckCondition(TFCond condition) const
 	{
 		if (condition < 32)
 		{
-			uint32_t playerCond = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "m_nPlayerCond" });
-			uint32_t condBits = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "_condition_bits" });
+			uint32_t playerCond = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCond" });
+			uint32_t condBits = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "_condition_bits" });
 
 			return (playerCond | condBits) & (1 << condition);
 		}
 		else if (condition < 64)
 		{
-			uint32_t playerCondEx = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "m_nPlayerCondEx" });
+			uint32_t playerCondEx = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx" });
 			return playerCondEx & (1 << (condition - 32));
 		}
 		else if (condition < 96)
 		{
-			uint32_t playerCondEx2 = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "m_nPlayerCondEx2" });
+			uint32_t playerCondEx2 = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx2" });
 			return playerCondEx2 & (1 << (condition - 64));
 		}
 		else if (condition < 128)
 		{
-			uint32_t playerCondEx3 = *Entities::GetEntityProp<uint32_t *>(GetEntity(), { "m_nPlayerCondEx3" });
+			uint32_t playerCondEx3 = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx3" });
 			return playerCondEx3 & (1 << (condition - 96));
 		}
 	}
@@ -224,7 +225,7 @@ TFTeam Player::GetTeam() const
 			if (!entity)
 				return TFTeam::Unassigned;
 
-			m_CachedTeam = Entities::GetEntityProp<TFTeam*>(entity, { "m_iTeamNum" });
+			m_CachedTeam = Entities::GetEntityProp<TFTeam>(entity, { "m_iTeamNum" });
 		}
 
 		if (m_CachedTeam)
@@ -268,7 +269,7 @@ TFClassType Player::GetClass() const
 	if (IsValid())
 	{
 		if (CheckCache() || !m_CachedClass)
-			m_CachedClass = Entities::GetEntityProp<TFClassType*>(GetEntity(), { "m_iClass" });
+			m_CachedClass = Entities::GetEntityProp<TFClassType>(GetEntity(), { "m_iClass" });
 
 		if (m_CachedClass)
 			return *m_CachedClass;
@@ -308,7 +309,7 @@ int Player::GetHealth() const
 	if (IsValid())
 	{
 		if (CheckCache() || !m_CachedHealth)
-			m_CachedHealth = Entities::GetEntityProp<int*>(GetEntity(), "m_iHealth");
+			m_CachedHealth = Entities::GetEntityProp<int>(GetEntity(), "m_iHealth");
 
 		Assert(m_CachedHealth);
 		if (m_CachedHealth)
@@ -588,7 +589,7 @@ C_BaseCombatWeapon* Player::GetMedigun(TFMedigun* medigunType) const
 
 		if (medigunType)
 		{
-			const auto itemdefIndex = Entities::GetEntityProp<int*>(weapon, "m_iItemDefinitionIndex");
+			const auto itemdefIndex = Entities::GetEntityProp<int>(weapon, "m_iItemDefinitionIndex");
 			if (!itemdefIndex)
 				continue;
 
@@ -682,7 +683,7 @@ ObserverMode Player::GetObserverMode() const
 	if (IsValid())
 	{
 		if (CheckCache() || !m_CachedObserverMode)
-			m_CachedObserverMode = Entities::GetEntityProp<ObserverMode*>(GetEntity(), { "m_iObserverMode" });
+			m_CachedObserverMode = Entities::GetEntityProp<ObserverMode>(GetEntity(), { "m_iObserverMode" });
 
 		if (m_CachedObserverMode)
 			return *m_CachedObserverMode;
@@ -696,7 +697,7 @@ C_BaseEntity *Player::GetObserverTarget() const
 	if (IsValid())
 	{
 		if (CheckCache() || !m_CachedObserverTarget)
-			m_CachedObserverTarget = Entities::GetEntityProp<EHANDLE*>(GetEntity(), { "m_hObserverTarget" });
+			m_CachedObserverTarget = Entities::GetEntityProp<EHANDLE>(GetEntity(), { "m_hObserverTarget" });
 
 		if (m_CachedObserverTarget)
 			return m_CachedObserverTarget->Get();
@@ -719,7 +720,7 @@ C_BaseCombatWeapon *Player::GetWeapon(int i) const
 		{
 			char buffer[32];
 			Entities::PropIndex(buffer, "m_hMyWeapons", i);
-			m_CachedWeapons[i] = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>*>(GetEntity(), buffer);
+			m_CachedWeapons[i] = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>>(GetEntity(), buffer);
 		}
 
 		if (m_CachedWeapons[i])
@@ -734,7 +735,7 @@ C_BaseCombatWeapon* Player::GetActiveWeapon() const
 	if (IsValid())
 	{
 		if (CheckCache() || !m_CachedActiveWeapon)
-			m_CachedActiveWeapon = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>*>(GetEntity(), "m_hActiveWeapon");
+			m_CachedActiveWeapon = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>>(GetEntity(), "m_hActiveWeapon");
 
 		if (m_CachedActiveWeapon)
 			return *m_CachedActiveWeapon;

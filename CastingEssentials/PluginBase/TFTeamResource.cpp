@@ -56,7 +56,7 @@ int TFTeamResource::GetTeamScore(TFTeam team)
 	const auto teamIndex = ToTeamIndex(team);
 
 	if (!m_TeamScores[teamIndex])
-		m_TeamScores[teamIndex] = Entities::GetEntityProp<int*>(m_TeamResourceEntity[teamIndex].Get(), "m_iScore");
+		m_TeamScores[teamIndex] = Entities::GetEntityProp<int>(m_TeamResourceEntity[teamIndex].Get(), "m_iScore");
 
 	if (m_TeamScores[teamIndex])
 		return *m_TeamScores[teamIndex];

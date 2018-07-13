@@ -324,7 +324,7 @@ void CameraTools::ShowUsers(const CCommand& command)
 
 bool CameraTools::ParseTPLockValues(const CCommand& valuesIn, std::array<TPLockValue, 3>& valuesOut)
 {
-	if (valuesIn.ArgC() != valuesOut.size())
+	if (valuesIn.ArgC() != (int)valuesOut.size())
 		return false;
 
 	for (uint_fast8_t i = 0; i < valuesOut.size(); i++)
@@ -383,7 +383,7 @@ void CameraTools::ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::a
 	CCommand cmd;
 	cmd.Tokenize(cvar->GetString());
 
-	if (cmd.ArgC() != values.size())
+	if (cmd.ArgC() != (int)values.size())
 		goto ParseFailed;
 
 	for (uint_fast8_t i = 0; i < values.size(); i++)
@@ -402,10 +402,10 @@ ParseFailed:
 	cvar->SetValue(oldVal);
 }
 
-void CameraTools::TPLockBoneUpdated(ConVar* cvar)
+void CameraTools::TPLockBoneUpdated(ConVar* cv)
 {
 	// For the time being, bone is shared between all rulesets
-	m_TPLockDefault.m_Bone = m_TPLockTaunt.m_Bone = cvar->GetString();
+	m_TPLockDefault.m_Bone = m_TPLockTaunt.m_Bone = cv->GetString();
 }
 
 void CameraTools::SpecClass(const CCommand& command)

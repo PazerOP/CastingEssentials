@@ -117,7 +117,7 @@ void ProjectileOutlines::OnTick(bool inGame)
 				Lerp(smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start.GetFloat(), ce_projectileoutlines_fade_end.GetFloat(), 1, 0)), 0, 255) :
 				255;
 
-			Color* glowColor = Entities::GetEntityProp<Color*>(glowEntity, "m_glowColor");
+			Color* glowColor = Entities::GetEntityProp<Color>(glowEntity, "m_glowColor");
 			if (!glowColor)
 				continue;
 
@@ -141,11 +141,11 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 
 	{
 		IClientEntity* glowEntity = ent;
-		*Entities::GetEntityProp<bool*>(glowEntity, "m_bDisabled") = false;
-		*Entities::GetEntityProp<int*>(glowEntity, "m_iMode") = ce_projectileoutlines_mode.GetInt();
-		Entities::GetEntityProp<EHANDLE*>(glowEntity, "m_hTarget")->Set(projectileEntity->GetBaseEntity());
+		*Entities::GetEntityProp<bool>(glowEntity, "m_bDisabled") = false;
+		*Entities::GetEntityProp<int>(glowEntity, "m_iMode") = ce_projectileoutlines_mode.GetInt();
+		Entities::GetEntityProp<EHANDLE>(glowEntity, "m_hTarget")->Set(projectileEntity->GetBaseEntity());
 
-		Color* color = Entities::GetEntityProp<Color*>(glowEntity, "m_glowColor");
+		Color* color = Entities::GetEntityProp<Color>(glowEntity, "m_glowColor");
 		TFTeam* team = Entities::GetEntityTeam(projectileEntity);
 		if (team && *team == TFTeam::Blue)
 			*color = m_ColorBlu;
@@ -183,7 +183,7 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 	if (!Entities::CheckEntityBaseclass(entity, "TFProjectile_Pipebomb"))
 		return;
 
-	const TFGrenadePipebombType type = *Entities::GetEntityProp<TFGrenadePipebombType*>(entity, "m_iType");
+	const TFGrenadePipebombType type = *Entities::GetEntityProp<TFGrenadePipebombType>(entity, "m_iType");
 
 	if (pills && type == TFGrenadePipebombType::Pill)
 		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));

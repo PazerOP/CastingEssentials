@@ -907,7 +907,7 @@ void Graphics::BuildMoveChildLists()
 				continue;
 		}
 
-		EHANDLE* moveparent = Entities::GetEntityProp<EHANDLE*>(child, "moveparent");
+		EHANDLE* moveparent = Entities::GetEntityProp<EHANDLE>(child, "moveparent");
 		if (!moveparent || !moveparent->IsValid())
 			continue;
 

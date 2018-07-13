@@ -1,6 +1,7 @@
 #include <client/c_baseanimating.h>
 #include <client/c_baseplayer.h>
 #include <client/c_fire_smoke.h>
+#include <shared/baseviewmodel_shared.h>
 #include <vgui_controls/ImagePanel.h>
 #include <vgui_controls/ProgressBar.h>
 
@@ -23,6 +24,12 @@ class OffsetChecking
 	OFFSET_CHECK(C_BasePlayer, m_iFOVStart, 4152);
 	OFFSET_CHECK(C_BasePlayer, m_iDefaultFOV, 4160);
 	OFFSET_CHECK(C_BasePlayer, m_hVehicle, 4300);
+	OFFSET_CHECK(C_BasePlayer, m_hViewModel, 4472);
+
+	OFFSET_CHECK(C_BaseViewModel, m_nViewModelIndex, 2232);
+	OFFSET_CHECK(C_BaseViewModel, m_nAnimationParity, 2248);
+	OFFSET_CHECK(C_BaseViewModel, m_sVMName, 2252);
+	OFFSET_CHECK(C_BaseViewModel, m_sAnimationPrefix, 2256);
 
 	OFFSET_CHECK(C_EntityFlame, m_hEffect, 1360);
 

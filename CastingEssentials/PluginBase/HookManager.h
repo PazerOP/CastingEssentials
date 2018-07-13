@@ -10,6 +10,7 @@
 class C_BaseCombatCharacter;
 class C_BasePlayer;
 class C_HLTVCamera;
+class C_TFViewModel;
 class CAccountPanel;
 class CAutoGameSystemPerFrame;
 class CDamageAccountPanel;
@@ -17,6 +18,7 @@ class CNewParticleEffect;
 class CParticleProperty;
 class IGameSystem;
 class INetworkStringTable;
+struct mstudioseqdesc_t;
 using trace_t = class CGameTrace;
 enum ERenderDepthMode : int;
 enum OverrideType_t : int;
@@ -63,6 +65,7 @@ enum class HookFunc
 	Global_DrawOpaqueRenderable,
 	Global_DrawTranslucentRenderable,
 	Global_GetLocalPlayerIndex,
+	Global_GetSequenceName,
 	Global_GetVectorInScreenSpace,
 	Global_UserInfoChangedCallback,
 	Global_UTILComputeEntityFade,
@@ -72,6 +75,7 @@ enum class HookFunc
 	C_BaseAnimating_DrawModel,
 	C_BaseAnimating_GetBoneCache,
 	C_BaseAnimating_GetBonePosition,
+	C_BaseAnimating_GetSequenceActivityName,
 	C_BaseAnimating_InternalDrawModel,
 	C_BaseAnimating_LockStudioHdr,
 	C_BaseAnimating_LookupBone,
@@ -90,6 +94,8 @@ enum class HookFunc
 
 	C_TFPlayer_DrawModel,
 
+	C_TFViewModel_CalcViewModelView,
+
 	CAccountPanel_OnAccountValueChanged,
 	CAccountPanel_Paint,
 	CAutoGameSystemPerFrame_CAutoGameSystemPerFrame,
@@ -103,6 +109,9 @@ enum class HookFunc
 	CGlowObjectManager_ApplyEntityGlowEffects,
 
 	CHudBaseDeathNotice_GetIcon,
+
+	CStudioHdr_GetNumSeq,
+	CStudioHdr_pSeqdesc,
 
 	IClientEngineTools_InToolMode,
 	IClientEngineTools_IsThirdPersonCamera,
@@ -249,6 +258,10 @@ class HookManager final
 	{
 		typedef void(__cdecl* Raw)();
 	};
+	template<> struct HookFuncType<HookFunc::Global_GetSequenceName>
+	{
+		typedef const char*(__cdecl* Raw)(CStudioHdr* studiohdr, int sequence);
+	};
 	template<> struct HookFuncType<HookFunc::ICvar_ConsoleColorPrintf>
 	{
 		typedef VirtualHook<HookFunc::ICvar_ConsoleColorPrintf, true, ICvar, void, const Color&, const char*> Hook;
@@ -321,6 +334,14 @@ class HookManager final
 		typedef CHudTexture*(__stdcall *Raw)(const char* szIcon, int eIconFormat);
 		typedef GlobalHook<HookFunc::CHudBaseDeathNotice_GetIcon, false, CHudTexture*, const char*, int> Hook;
 	};
+	template<> struct HookFuncType<HookFunc::CStudioHdr_GetNumSeq>
+	{
+		typedef int(__thiscall *Raw)(const CStudioHdr* pThis);
+	};
+	template<> struct HookFuncType<HookFunc::CStudioHdr_pSeqdesc>
+	{
+		typedef mstudioseqdesc_t&(__thiscall *Raw)(CStudioHdr* pThis, int iSequence);
+	};
 	template<> struct HookFuncType<HookFunc::C_BaseAnimating_ComputeHitboxSurroundingBox>
 	{
 		typedef bool(__thiscall *Raw)(C_BaseAnimating* pThis, Vector* pVecWorldMins, Vector* pVecWorldMaxs);
@@ -344,6 +365,10 @@ class HookManager final
 	{
 		typedef void(__thiscall *Raw)(C_BaseAnimating*, int, Vector&, QAngle&);
 		typedef GlobalClassHook<HookFunc::C_BaseAnimating_GetBonePosition, false, C_BaseAnimating, void, int, Vector&, QAngle&> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseAnimating_GetSequenceActivityName>
+	{
+		typedef const char*(__thiscall* Raw)(C_BaseAnimating* pThis, int nSequence);
 	};
 	template<> struct HookFuncType<HookFunc::C_BaseAnimating_DrawModel>
 	{
@@ -386,6 +411,11 @@ class HookManager final
 	{
 		typedef int(__thiscall *Raw)(C_TFPlayer*, int);
 		typedef GlobalClassHook<HookFunc::C_TFPlayer_DrawModel, false, C_TFPlayer, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_TFViewModel_CalcViewModelView>
+	{
+		typedef void(__thiscall *Raw)(C_TFViewModel* pThis, C_BasePlayer* player, const Vector& eyePos, const QAngle& eyeAng);
+		typedef GlobalClassHook<HookFunc::C_TFViewModel_CalcViewModelView, false, C_TFViewModel, void, C_BasePlayer*, const Vector&, const QAngle&> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::vgui_EditablePanel_GetDialogVariables>
 	{
