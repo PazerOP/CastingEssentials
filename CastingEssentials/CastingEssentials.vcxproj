@@ -123,6 +123,7 @@
     <ClCompile Include="Modules\SteamTools.cpp" />
     <ClCompile Include="Modules\TeamNames.cpp" />
     <ClCompile Include="Modules\IngameTeamScores.cpp" />
+    <ClCompile Include="Modules\WeaponTools.cpp" />
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
     <ClCompile Include="PluginBase\Common.cpp" />
     <ClCompile Include="PluginBase\Entities.cpp" />
@@ -179,6 +180,7 @@
     <ClInclude Include="Modules\SteamTools.h" />
     <ClInclude Include="Modules\TeamNames.h" />
     <ClInclude Include="Modules\IngameTeamScores.h" />
+    <ClInclude Include="Modules\WeaponTools.h" />
     <ClInclude Include="PluginBase\Common.h" />
     <ClInclude Include="PluginBase\Entities.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />
@@ -192,6 +194,10 @@
     <ClInclude Include="PluginBase\Plugin.h" />
     <ClInclude Include="PluginBase\TFPlayerResource.h" />
     <ClInclude Include="PluginBase\TFTeamResource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="Misc\NatVis\RecvProp.natvis" />
+    <Natvis Include="Misc\NatVis\RecvTable.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

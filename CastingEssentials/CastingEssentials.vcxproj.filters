@@ -330,4 +330,8 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="Misc\NatVis\RecvTable.natvis" />
+    <Natvis Include="Misc\NatVis\RecvProp.natvis" />
+  </ItemGroup>
 </Project>

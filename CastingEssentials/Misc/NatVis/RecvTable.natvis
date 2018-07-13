@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="RecvTable">
+		<DisplayString>{m_pNetTableName,sb}, {m_nProps} props</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>m_nProps</Size>
+				<ValuePointer>m_pProps</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+</AutoVisualizer>

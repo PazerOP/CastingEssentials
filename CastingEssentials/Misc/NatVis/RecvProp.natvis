@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="RecvProp">
+		<DisplayString>{m_pVarName,sb}:           {m_RecvType}</DisplayString>
+
+		<Expand>
+			<Item Condition="m_RecvType == DPT_DataTable" Name="[datatable]">m_pDataTable</Item>
+		</Expand>
+	</Type>
+</AutoVisualizer>
