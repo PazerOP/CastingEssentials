@@ -184,27 +184,38 @@ bool Player::CheckCondition(TFCond condition) const
 {
 	if (IsValid())
 	{
+		CheckCache();
+
 		if (condition < 32)
 		{
-			uint32_t playerCond = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCond" });
-			uint32_t condBits = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "_condition_bits" });
+			if (!m_CachedCondBits[0] || !m_CachedCondBits[1])
+			{
+				m_CachedCondBits[0] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCond" });
+				m_CachedCondBits[1] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "_condition_bits" });
+			}
 
-			return (playerCond | condBits) & (1 << condition);
+			return (*m_CachedCondBits[0] | *m_CachedCondBits[1]) & (1 << condition);
 		}
 		else if (condition < 64)
 		{
-			uint32_t playerCondEx = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx" });
-			return playerCondEx & (1 << (condition - 32));
+			if (!m_CachedCondBits[2])
+				m_CachedCondBits[2] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx" });
+
+			return *m_CachedCondBits[2] & (1 << (condition - 32));
 		}
 		else if (condition < 96)
 		{
-			uint32_t playerCondEx2 = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx2" });
-			return playerCondEx2 & (1 << (condition - 64));
+			if (!m_CachedCondBits[3])
+				m_CachedCondBits[3] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx" });
+
+			return *m_CachedCondBits[3] & (1 << (condition - 64));
 		}
 		else if (condition < 128)
 		{
-			uint32_t playerCondEx3 = *Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx3" });
-			return playerCondEx3 & (1 << (condition - 96));
+			if (!m_CachedCondBits[4])
+				m_CachedCondBits[4] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx3" });
+
+			return *m_CachedCondBits[4] & (1 << (condition - 96));
 		}
 	}
 
@@ -370,6 +381,7 @@ bool Player::CheckCache() const
 		m_CachedObserverMode = nullptr;
 		m_CachedObserverTarget = nullptr;
 		m_CachedActiveWeapon = nullptr;
+		m_CachedCondBits.fill(nullptr);
 
 		m_CachedPlayerInfoLastUpdateFrame = 0;
 

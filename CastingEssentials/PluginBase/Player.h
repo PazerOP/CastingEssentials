@@ -4,6 +4,7 @@
 #include <shareddefs.h>
 #include <cdll_int.h>
 
+#include <array>
 #include <string>
 #include <memory>
 
@@ -117,6 +118,7 @@ private:
 	mutable CHandle<C_BaseEntity>* m_CachedObserverTarget;
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedWeapons[MAX_WEAPONS];
 	mutable CHandle<C_BaseCombatWeapon>* m_CachedActiveWeapon;
+	mutable std::array<uint32_t*, 5> m_CachedCondBits;
 
 	mutable int m_CachedPlayerInfoLastUpdateFrame;
 	mutable player_info_t m_CachedPlayerInfo;
