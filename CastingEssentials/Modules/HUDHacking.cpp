@@ -2,10 +2,12 @@
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
+#include "PluginBase/TFDefinitions.h"
 
 #include <client/iclientmode.h>
 #include <KeyValues.h>
 #include <vgui_controls/EditablePanel.h>
+#include <vgui_controls/ImagePanel.h>
 #include <vgui_controls/Panel.h>
 #include <vgui_controls/ProgressBar.h>
 
@@ -19,7 +21,8 @@ ConVar HUDHacking::ce_hud_debug_unassociated_playerpanels("ce_hud_debug_unassoci
 
 HUDHacking::HUDHacking() :
 	ce_hud_forward_playerpanel_border("ce_hud_forward_playerpanel_border", "1", FCVAR_NONE, "Sets the border of [playerpanel]->PanelColorBG to the same value as [playerpanel]."),
-	ce_hud_player_health_progressbars("ce_hud_player_health_progressbars", "1", FCVAR_NONE, "Enables [playerpanel]->PlayerHealth[Overheal](Red/Blue) ProgressBars.")
+	ce_hud_player_health_progressbars("ce_hud_player_health_progressbars", "1", FCVAR_NONE, "Enables [playerpanel]->PlayerHealth[Overheal](Red/Blue) ProgressBars."),
+	ce_hud_player_status_effects("ce_hud_player_status_effects", "0", FCVAR_NONE, "Update status effect ImagePanel: [playerpanel]->StatusEffectIcon(Red/Blue)")
 {
 	m_ProgressBarApplySettingsHook = GetHooks()->AddHook<HookFunc::vgui_ProgressBar_ApplySettings>(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2));
 }
@@ -119,42 +122,18 @@ void HUDHacking::OnTick(bool inGame)
 	if (!inGame)
 		return;
 
-	if (ce_hud_forward_playerpanel_border.GetBool())
-		ForwardPlayerPanelBorders();
-
-	if (ce_hud_player_health_progressbars.GetBool())
-		UpdatePlayerHealths();
+	UpdatePlayerPanels();
 }
 
-void HUDHacking::ForwardPlayerPanelBorders()
+void HUDHacking::UpdatePlayerPanels()
 {
-	auto specguivpanel = GetSpecGUI();
-	if (!specguivpanel)
+	const auto forwardBorder = ce_hud_forward_playerpanel_border.GetBool();
+	const auto playerHealthProgressBars = ce_hud_player_health_progressbars.GetBool();
+	const auto statusEffects = ce_hud_player_status_effects.GetBool();
+
+	if (!forwardBorder && !playerHealthProgressBars && !statusEffects)
 		return;
 
-	const auto specguiChildCount = g_pVGuiPanel->GetChildCount(specguivpanel);
-	for (int playerPanelIndex = 0; playerPanelIndex < specguiChildCount; playerPanelIndex++)
-	{
-		vgui::VPANEL playerVPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
-		const char* playerPanelName = g_pVGuiPanel->GetName(playerVPanel);
-		if (!g_pVGuiPanel->IsVisible(playerVPanel) || strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
-			continue;
-
-		vgui::EditablePanel* player = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerVPanel, "ClientDLL"));
-		auto border = player->GetBorder();
-		if (!border)
-			continue;
-
-		auto colorBGPanel = FindChildByName(player->GetVPanel(), "PanelColorBG");
-		if (!colorBGPanel)
-			continue;
-
-		colorBGPanel->SetBorder(border);
-	}
-}
-
-void HUDHacking::UpdatePlayerHealths()
-{
 	auto specguivpanel = GetSpecGUI();
 	if (!specguivpanel)
 		return;
@@ -168,60 +147,148 @@ void HUDHacking::UpdatePlayerHealths()
 			continue;
 
 		vgui::EditablePanel* playerPanel = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerVPanel, "ClientDLL"));
+		if (!playerPanel)
+			continue;
 
 		Assert(playerPanel->IsVisible() == g_pVGuiPanel->IsVisible(playerVPanel));
 
-		auto player = GetPlayerFromPanel(playerPanel);
-		if (!player)
+		if (forwardBorder)
+			ForwardPlayerPanelBorder(playerVPanel, playerPanel);
+
+		if (auto player = GetPlayerFromPanel(playerPanel))
+		{
+			if (playerHealthProgressBars)
+				UpdatePlayerHealth(playerVPanel, playerPanel, *player);
+
+			if (statusEffects)
+				UpdateStatusEffect(playerVPanel, playerPanel, *player);
+		}
+	}
+}
+
+void HUDHacking::UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player)
+{
+	bool isRedTeam;
+	const char* team;
+	switch (player.GetTeam())
+	{
+		case TFTeam::Red:
+			team = "red";
+			isRedTeam = true;
+			break;
+		case TFTeam::Blue:
+			team = "blue";
+			isRedTeam = false;
+			break;
+
+		default:
+			return;
+	}
+
+	const char* iconBaseName = nullptr;
+	if (player.CheckCondition(TFCond::TFCond_Ubercharged) || player.CheckCondition(TFCond::TFCond_UberchargeFading))
+		iconBaseName = "../castingessentials/statuseffects/ubered_%s";
+	else if (player.CheckCondition(TFCond::TFCond_Kritzkrieged))
+		iconBaseName = "../castingessentials/statuseffects/kritzkrieged_%s";
+	else if (player.CheckCondition(TFCond::TFCond_MegaHeal))
+		iconBaseName = "../castingessentials/statuseffects/quickfixed_%s";
+	else if (player.CheckCondition(TFCond::TFCond_UberBulletResist))
+		iconBaseName = "../castingessentials/statuseffects/vaccinated_%s_bullet";
+	else if (player.CheckCondition(TFCond::TFCond_UberBlastResist))
+		iconBaseName = "../castingessentials/statuseffects/vaccinated_%s_explosive";
+	else if (player.CheckCondition(TFCond::TFCond_UberFireResist))
+		iconBaseName = "../castingessentials/statuseffects/vaccinated_%s_fire";
+	else if (player.CheckCondition(TFCond::TFCond_Buffed))
+		iconBaseName = "../castingessentials/statuseffects/buff_banner_%s";
+	else if (player.CheckCondition(TFCond::TFCond_RegenBuffed))
+		iconBaseName = "../castingessentials/statuseffects/concheror_%s";
+	else if (player.CheckCondition(TFCond::TFCond_DefenseBuffed))
+		iconBaseName = "../castingessentials/statuseffects/battalions_backup_%s";
+	else if (player.CheckCondition(TFCond::TFCond_Bleeding))
+		iconBaseName = "../castingessentials/statuseffects/bleeding_%s";
+	else if (player.CheckCondition(TFCond::TFCond_MarkedForDeath) || player.CheckCondition(TFCond::TFCond_MarkedForDeathSilent))
+		iconBaseName = "../castingessentials/statuseffects/marked_for_death_%s";
+
+	auto icon = dynamic_cast<vgui::ImagePanel*>(FindChildByName(playerVPanel, isRedTeam ? "StatusEffectIconRed" : "StatusEffectIconBlue"));
+	if (!icon)
+		return;
+
+	if (iconBaseName)
+	{
+		char buf[128];
+		sprintf_s(buf, iconBaseName, team);
+
+		icon->SetVisible(true);
+
+		HookManager::GetRawFunc<HookFunc::vgui_ImagePanel_SetImage>()(icon, buf);
+	}
+	else
+	{
+		icon->SetVisible(false);
+	}
+}
+
+void HUDHacking::ForwardPlayerPanelBorder(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel)
+{
+	auto border = playerPanel->GetBorder();
+	if (!border)
+		return;
+
+	auto colorBGPanel = FindChildByName(playerVPanel, "PanelColorBG");
+	if (!colorBGPanel)
+		return;
+
+	colorBGPanel->SetBorder(border);
+}
+
+void HUDHacking::UpdatePlayerHealth(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player)
+{
+	const auto health = player.IsAlive() ? player.GetHealth() : 0;
+	const auto maxHealth = player.GetMaxHealth();
+	const auto healthProgress = std::min<float>(1, health / (float)maxHealth);
+	const auto overhealProgress = RemapValClamped(health, maxHealth, player.GetMaxOverheal(), 0, 1);
+
+	struct ProgressBarName
+	{
+		constexpr ProgressBarName(const char* name, bool overheal, bool inverse) :
+			m_Name(name), m_Overheal(overheal), m_Inverse(inverse)
+		{
+		}
+
+		const char* m_Name;
+		bool m_Overheal;
+		bool m_Inverse;
+	};
+
+	static constexpr ProgressBarName s_ProgressBars[] =
+	{
+		ProgressBarName("PlayerHealthRed", false, false),
+		ProgressBarName("PlayerHealthInverseRed", false, true),
+		ProgressBarName("PlayerHealthBlue", false, false),
+		ProgressBarName("PlayerHealthInverseBlue", false, true),
+
+		ProgressBarName("PlayerHealthOverhealRed", true, false),
+		ProgressBarName("PlayerHealthInverseOverhealRed", true, true),
+		ProgressBarName("PlayerHealthOverhealBlue", true, false),
+		ProgressBarName("PlayerHealthInverseOverhealBlue", true, true)
+	};
+
+	// Show/hide progress bars
+	for (const auto& bar : s_ProgressBars)
+	{
+		auto progressBar = dynamic_cast<vgui::ProgressBar*>(FindChildByName(playerVPanel, bar.m_Name));
+		if (!progressBar)
 			continue;
 
-		const auto health = player->IsAlive() ? player->GetHealth() : 0;
-		const auto maxHealth = player->GetMaxHealth();
-		const auto healthProgress = std::min<float>(1, health / (float)maxHealth);
-		const auto overhealProgress = RemapValClamped(health, maxHealth, player->GetMaxOverheal(), 0, 1);
+		float progress = bar.m_Overheal ? overhealProgress : healthProgress;
+		if (bar.m_Inverse)
+			progress = 1 - progress;
 
-		struct ProgressBarName
-		{
-			constexpr ProgressBarName(const char* name, bool overheal, bool inverse) :
-				m_Name(name), m_Overheal(overheal), m_Inverse(inverse)
-			{
-			}
+		progressBar->SetVisible(health > 0);
 
-			const char* m_Name;
-			bool m_Overheal;
-			bool m_Inverse;
-		};
-
-		static constexpr ProgressBarName s_ProgressBars[] =
-		{
-			ProgressBarName("PlayerHealthRed", false, false),
-			ProgressBarName("PlayerHealthInverseRed", false, true),
-			ProgressBarName("PlayerHealthBlue", false, false),
-			ProgressBarName("PlayerHealthInverseBlue", false, true),
-
-			ProgressBarName("PlayerHealthOverhealRed", true, false),
-			ProgressBarName("PlayerHealthInverseOverhealRed", true, true),
-			ProgressBarName("PlayerHealthOverhealBlue", true, false),
-			ProgressBarName("PlayerHealthInverseOverhealBlue", true, true)
-		};
-
-		// Show/hide progress bars
-		for (const auto& bar : s_ProgressBars)
-		{
-			auto progressBar = dynamic_cast<vgui::ProgressBar*>(FindChildByName(playerVPanel, bar.m_Name));
-			if (!progressBar)
-				continue;
-
-			float progress = bar.m_Overheal ? overhealProgress : healthProgress;
-			if (bar.m_Inverse)
-				progress = 1 - progress;
-
-			progressBar->SetVisible(health > 0);
-
-			auto messageKV = new KeyValues("SetProgress");
-			messageKV->SetFloat("progress", progress);
-			progressBar->PostMessage(progressBar, messageKV);
-		}
+		auto messageKV = new KeyValues("SetProgress");
+		messageKV->SetFloat("progress", progress);
+		progressBar->PostMessage(progressBar, messageKV);
 	}
 }
 

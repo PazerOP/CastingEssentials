@@ -1,0 +1,8 @@
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/bleed_drop"
+	"$translucent" 1
+	"$ignorez" 1
+
+	$color "{79 117 144}"
+}

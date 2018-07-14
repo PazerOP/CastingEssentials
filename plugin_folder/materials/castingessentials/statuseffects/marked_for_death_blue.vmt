@@ -1,0 +1,8 @@
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/marked_for_death"
+	"$translucent" 1
+	"$ignorez" 1
+
+	$color "{79 117 144}"
+}

@@ -1,0 +1,6 @@
+"UnlitGeneric"
+{
+	"$basetexture" "effects/defense_buff_bullet_blue"
+	"$translucent" 1
+	"$ignorez" 1
+}
