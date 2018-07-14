@@ -15,6 +15,8 @@
 #undef min
 #undef max
 
+ConVar HUDHacking::ce_hud_debug_unassociated_playerpanels("ce_hud_debug_unassociated_playerpanels", "0", FCVAR_NONE, "Print debug messages to the console when a player cannot be found for a given playerpanel.");
+
 HUDHacking::HUDHacking() :
 	ce_hud_forward_playerpanel_border("ce_hud_forward_playerpanel_border", "1", FCVAR_NONE, "Sets the border of [playerpanel]->PanelColorBG to the same value as [playerpanel]."),
 	ce_hud_player_health_progressbars("ce_hud_player_health_progressbars", "1", FCVAR_NONE, "Enables [playerpanel]->PlayerHealth[Overheal](Red/Blue) ProgressBars.")
@@ -74,7 +76,7 @@ Player* HUDHacking::GetPlayerFromPanel(vgui::EditablePanel* playerPanel)
 
 	Player* foundPlayer = Player::GetPlayerFromName(playername);
 
-	if (!foundPlayer)
+	if (!foundPlayer && ce_hud_debug_unassociated_playerpanels.GetBool())
 		PluginWarning("Unable to find player %s for panel %s\n", playername, playerPanel->GetName());
 
 	return foundPlayer;

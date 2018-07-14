@@ -37,6 +37,10 @@ private:
 	ConVar ce_hud_forward_playerpanel_border;
 	ConVar ce_hud_player_health_progressbars;
 
+	// Static, because this is only used in GetPlayerFromPanel and we don't want to require
+	// that HUDHacking module was loaded successfully just to use this completely independent function.
+	static ConVar ce_hud_debug_unassociated_playerpanels;
+
 	void OnTick(bool inGame) override;
 	void ForwardPlayerPanelBorders();
 	void UpdatePlayerHealths();
