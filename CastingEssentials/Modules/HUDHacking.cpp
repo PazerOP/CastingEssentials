@@ -302,15 +302,11 @@ bool HUDHacking::GetBannerInfo(const Player& player, BannerType& type, float& ch
 	if (player.GetClass() != TFClassType::Soldier)
 		return false;
 
-	auto ccPlayer = player.GetEntity()->GetClientClass();
-
 	for (int i = 0; i < MAX_WEAPONS; i++)
 	{
 		C_BaseCombatWeapon* weapon = player.GetWeapon(i);
 		if (!weapon)
 			continue;
-
-		auto cc = weapon->GetClientClass();
 
 		// Make sure this is a banner of some type
 		const auto itemDefIndex = Entities::GetEntityProp<int>(weapon, "m_iItemDefinitionIndex");

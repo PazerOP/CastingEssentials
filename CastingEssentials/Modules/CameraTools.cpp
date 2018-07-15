@@ -366,22 +366,22 @@ bool CameraTools::ParseTPLockValues(const CCommand& valuesIn, std::array<TPLockV
 	return true;
 }
 
-void CameraTools::ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<TPLockValue, 3>& values)
+void CameraTools::ParseTPLockValuesInto(ConVar* cv, const char* oldVal, std::array<TPLockValue, 3>& values)
 {
 	CCommand cmd;
-	cmd.Tokenize(cvar->GetString());
+	cmd.Tokenize(cv->GetString());
 
 	if (!ParseTPLockValues(cmd, values))
 	{
-		Warning("%s: Failed to parse tplock values\n", cvar->GetName());
-		cvar->SetValue(oldVal);
+		Warning("%s: Failed to parse tplock values\n", cv->GetName());
+		cv->SetValue(oldVal);
 	}
 }
 
-void CameraTools::ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<float, 3>& values)
+void CameraTools::ParseTPLockValuesInto(ConVar* cv, const char* oldVal, std::array<float, 3>& values)
 {
 	CCommand cmd;
-	cmd.Tokenize(cvar->GetString());
+	cmd.Tokenize(cv->GetString());
 
 	if (cmd.ArgC() != (int)values.size())
 		goto ParseFailed;
@@ -398,8 +398,8 @@ void CameraTools::ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::a
 	return;
 
 ParseFailed:
-	Warning("%s: Failed to parse 3 float values\n", cvar->GetName());
-	cvar->SetValue(oldVal);
+	Warning("%s: Failed to parse 3 float values\n", cv->GetName());
+	cv->SetValue(oldVal);
 }
 
 void CameraTools::TPLockBoneUpdated(ConVar* cv)
