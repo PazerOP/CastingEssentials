@@ -37,11 +37,11 @@ private:
 	ConVar ce_hud_forward_playerpanel_border;
 	ConVar ce_hud_player_health_progressbars;
 	ConVar ce_hud_player_status_effects;
-	ConVar ce_hud_player_banner_status;
+	ConVar ce_hud_chargebars_enabled;
 
-	ConVar ce_hud_banner_buff_text;
-	ConVar ce_hud_banner_battalions_text;
-	ConVar ce_hud_banner_concheror_text;
+	ConVar ce_hud_chargebars_buff_banner_text;
+	ConVar ce_hud_chargebars_battalions_backup_text;
+	ConVar ce_hud_chargebars_concheror_text;
 
 	enum class BannerType
 	{
