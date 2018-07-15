@@ -37,6 +37,18 @@ private:
 	ConVar ce_hud_forward_playerpanel_border;
 	ConVar ce_hud_player_health_progressbars;
 	ConVar ce_hud_player_status_effects;
+	ConVar ce_hud_player_banner_status;
+
+	ConVar ce_hud_banner_buff_text;
+	ConVar ce_hud_banner_battalions_text;
+	ConVar ce_hud_banner_concheror_text;
+
+	enum class BannerType
+	{
+		BuffBanner = 129,
+		BattalionsBackup = 226,
+		Concheror = 354,
+	};
 
 	// Static, because this is only used in GetPlayerFromPanel and we don't want to require
 	// that HUDHacking module was loaded successfully just to use this completely independent function.
@@ -47,6 +59,9 @@ private:
 	static void ForwardPlayerPanelBorder(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel);
 	static void UpdatePlayerHealth(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
 	static void UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
+	void UpdateBanner(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
+
+	static bool GetBannerInfo(const Player& player, BannerType& type, float& charge);
 
 	int m_ProgressBarApplySettingsHook;
 	static void ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings);

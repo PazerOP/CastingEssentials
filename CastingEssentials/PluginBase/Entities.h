@@ -20,9 +20,10 @@ public:
 		return RetrieveClassPropOffset(className, ConvertTreeToString(propertyTree).c_str());
 	}
 
-	template<size_t size> static void PropIndex(char(&buffer)[size], const char* base, int index)
+	template<size_t size> static char* PropIndex(char(&buffer)[size], const char* base, int index)
 	{
 		sprintf_s(buffer, "%s.%03i", base, index);
+		return buffer;
 	}
 
 	template<typename T> __forceinline static T* GetEntityProp(IClientNetworkable* entity, const char* propertyString, bool throwifMissing = true)

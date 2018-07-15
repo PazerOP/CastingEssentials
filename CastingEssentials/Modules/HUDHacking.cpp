@@ -1,11 +1,17 @@
 #include "HUDHacking.h"
+
+#include "Modules/ItemSchema.h"
+
+#include "PluginBase/Entities.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
 
+#include <client/c_basecombatweapon.h>
 #include <client/iclientmode.h>
 #include <KeyValues.h>
+#include <vgui/ILocalize.h>
 #include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/ImagePanel.h>
 #include <vgui_controls/Panel.h>
@@ -22,7 +28,12 @@ ConVar HUDHacking::ce_hud_debug_unassociated_playerpanels("ce_hud_debug_unassoci
 HUDHacking::HUDHacking() :
 	ce_hud_forward_playerpanel_border("ce_hud_forward_playerpanel_border", "1", FCVAR_NONE, "Sets the border of [playerpanel]->PanelColorBG to the same value as [playerpanel]."),
 	ce_hud_player_health_progressbars("ce_hud_player_health_progressbars", "1", FCVAR_NONE, "Enables [playerpanel]->PlayerHealth[Overheal](Red/Blue) ProgressBars."),
-	ce_hud_player_status_effects("ce_hud_player_status_effects", "0", FCVAR_NONE, "Update status effect ImagePanel: [playerpanel]->StatusEffectIcon(Red/Blue)")
+	ce_hud_player_status_effects("ce_hud_player_status_effects", "0", FCVAR_NONE, "Update status effect ImagePanel: [playerpanel]->StatusEffectIcon(Red/Blue)"),
+	ce_hud_player_banner_status("ce_hud_player_banner_status", "0", FCVAR_NONE, "Enable showing banner charge status (progress bar + label) in playerpanels."),
+
+	ce_hud_banner_buff_text("ce_hud_banner_buff_text", "#TF_Unique_Achievement_SoldierBuff", FCVAR_NONE, "Text to use for the Buff Banner for the %banner% dialog variable on playerpanels."),
+	ce_hud_banner_battalions_text("ce_hud_banner_battalions_text", "#TF_TheBattalionsBackup", FCVAR_NONE, "Text to use for the Batallion's Backup for the %banner% dialog variable on playerpanels."),
+	ce_hud_banner_concheror_text("ce_hud_banner_conch_text", "#TF_SoldierSashimono", FCVAR_NONE, "Text to use for the Concheror for the %banner% dialog variable on playerpanels.")
 {
 	m_ProgressBarApplySettingsHook = GetHooks()->AddHook<HookFunc::vgui_ProgressBar_ApplySettings>(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2));
 }
@@ -130,8 +141,9 @@ void HUDHacking::UpdatePlayerPanels()
 	const auto forwardBorder = ce_hud_forward_playerpanel_border.GetBool();
 	const auto playerHealthProgressBars = ce_hud_player_health_progressbars.GetBool();
 	const auto statusEffects = ce_hud_player_status_effects.GetBool();
+	const auto bannerStatus = ce_hud_player_banner_status.GetBool();
 
-	if (!forwardBorder && !playerHealthProgressBars && !statusEffects)
+	if (!forwardBorder && !playerHealthProgressBars && !statusEffects && !bannerStatus)
 		return;
 
 	auto specguivpanel = GetSpecGUI();
@@ -162,6 +174,9 @@ void HUDHacking::UpdatePlayerPanels()
 
 			if (statusEffects)
 				UpdateStatusEffect(playerVPanel, playerPanel, *player);
+
+			if (bannerStatus)
+				UpdateBanner(playerVPanel, playerPanel, *player);
 		}
 	}
 }
@@ -226,6 +241,93 @@ void HUDHacking::UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePan
 	{
 		icon->SetVisible(false);
 	}
+}
+
+void HUDHacking::UpdateBanner(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player)
+{
+	bool isRedTeam;
+	const char* team;
+	bool shouldShowInfo = true;
+	switch (player.GetTeam())
+	{
+		case TFTeam::Red:
+			team = "red";
+			isRedTeam = true;
+			break;
+		case TFTeam::Blue:
+			team = "blue";
+			isRedTeam = false;
+			break;
+
+		default:
+			shouldShowInfo = false;
+			return;
+	}
+
+	BannerType type;
+	float charge;
+	if (shouldShowInfo)
+		shouldShowInfo = player.IsAlive() && GetBannerInfo(player, type, charge);
+
+	const char* bannerString = "";
+	if (shouldShowInfo)
+	{
+		switch (type)
+		{
+			case BannerType::BattalionsBackup:    bannerString = ce_hud_banner_battalions_text.GetString(); break;
+			case BannerType::BuffBanner:          bannerString = ce_hud_banner_buff_text.GetString(); break;
+			case BannerType::Concheror:           bannerString = ce_hud_banner_concheror_text.GetString(); break;
+		}
+	}
+
+	auto localized = g_pVGuiLocalize->FindAsUTF8(bannerString);
+	playerPanel->SetDialogVariable("banner", localized ? localized : bannerString);
+
+	if (shouldShowInfo)
+	{
+		char buf[32];
+		sprintf_s(buf, "%i%%", (int)charge);
+		playerPanel->SetDialogVariable("bannerchargeamount", buf);
+	}
+	else
+		playerPanel->SetDialogVariable("bannerchargeamount", "");
+
+	auto chargebar = dynamic_cast<vgui::ContinuousProgressBar*>(FindChildByName(playerVPanel, isRedTeam ? "BannerChargeRed" : "BannerChargeBlue"));
+	if (chargebar)
+		chargebar->SetVisible(shouldShowInfo);
+}
+
+bool HUDHacking::GetBannerInfo(const Player& player, BannerType& type, float& charge)
+{
+	if (player.GetClass() != TFClassType::Soldier)
+		return false;
+
+	auto ccPlayer = player.GetEntity()->GetClientClass();
+
+	for (int i = 0; i < MAX_WEAPONS; i++)
+	{
+		C_BaseCombatWeapon* weapon = player.GetWeapon(i);
+		if (!weapon)
+			continue;
+
+		auto cc = weapon->GetClientClass();
+
+		// Make sure this is a banner of some type
+		const auto itemDefIndex = Entities::GetEntityProp<int>(weapon, "m_iItemDefinitionIndex");
+
+		type = (BannerType)ItemSchema::GetModule()->GetBaseItemID(*itemDefIndex);
+
+		switch (type)
+		{
+			case BannerType::BuffBanner:
+			case BannerType::BattalionsBackup:
+			case BannerType::Concheror:
+				charge = *Entities::GetEntityProp<float>(player.GetEntity(), "m_flRageMeter");
+				return true;
+		}
+	}
+
+	return false;
 }
 
 void HUDHacking::ForwardPlayerPanelBorder(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel)
