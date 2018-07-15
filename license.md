@@ -1,6 +1,6 @@
 BSD 2-Clause License
 
-Copyright (c) 2016, PazerOP
+Copyright (c) 2018, PazerOP
 Portions copyright (c) fwdcp
 All rights reserved.
 
