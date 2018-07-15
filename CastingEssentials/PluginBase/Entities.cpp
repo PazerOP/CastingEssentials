@@ -148,12 +148,8 @@ int Entities::FindExistingPropOffset(const std::string_view& className, const st
 
 void Entities::AddPropOffset(const std::string_view& className, const std::string_view& propertyString, int offset)
 {
-	bool added = false;
-
 	if (auto found = s_ClassPropOffsets.find(className); found != s_ClassPropOffsets.end())
-	{
 		found->second[std::string(propertyString)] = offset;
-	}
 	else
 		s_ClassPropOffsets[std::string(className)][std::string(propertyString)] = offset;
 }

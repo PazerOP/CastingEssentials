@@ -372,7 +372,7 @@ void HitEvents::UpdateEnabledState()
 
 void HitEvents::DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool bigFont)
 {
-	CDamageAccountPanel* questionable = (CDamageAccountPanel*)((std::byte*)pThis + 44);
+	//CDamageAccountPanel* questionable = (CDamageAccountPanel*)((std::byte*)pThis + 44);
 
 	auto localPlayer = C_BasePlayer::GetLocalPlayer();
 
