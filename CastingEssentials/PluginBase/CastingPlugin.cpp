@@ -32,7 +32,7 @@
 #include "Modules/ClientTools.h"
 #include "Modules/WeaponTools.h"
 
-const char* const PLUGIN_VERSION_ID = "r20 beta3";
+const char* const PLUGIN_VERSION_ID = "r20";
 const char* const PLUGIN_FULL_VERSION = strdup(strprintf("%s %s", PLUGIN_NAME, PLUGIN_VERSION_ID).c_str());
 
 class CastingPlugin final : public Plugin
