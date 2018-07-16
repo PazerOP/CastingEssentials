@@ -39,6 +39,11 @@ public:
 
 	ModeSwitchReason GetModeSwitchReason() const { return m_SwitchReason; }
 
+protected:
+	bool InToolModeOverride() const override;
+	bool IsThirdPersonCameraOverride() const override { return m_IsTaunting; }
+	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov) override;
+
 private:
 	int m_SetModeHook;
 	int m_SetPrimaryTargetHook;
@@ -54,9 +59,8 @@ private:
 	ConVar ce_cameratools_force_valid_target;
 	ConVar ce_cameratools_spec_player_alive;
 
-	ConVar ce_cameratools_taunt_thirdperson;
-
 	ConVar ce_tplock_enable;
+	ConVar ce_tplock_taunt_enable;
 
 	ConVar ce_tplock_default_pos;
 	ConVar ce_tplock_default_angle;
@@ -134,9 +138,6 @@ private:
 
 	Vector CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& orbitCenter, const QAngle& angle) const;
 
-	bool InToolModeOverride() const override;
-	bool IsThirdPersonCameraOverride() const override { return m_IsTaunting; }
-	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov) override;
 	QAngle m_LastFrameAngle;
 	Player* m_LastTargetPlayer;
 

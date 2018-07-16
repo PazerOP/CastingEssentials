@@ -35,22 +35,21 @@ CameraTools::CameraTools() :
 		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); }),
 	ce_cameratools_spec_player_alive("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players."),
 
-	ce_cameratools_taunt_thirdperson("ce_cameratools_taunt_thirdperson", "0", FCVAR_NONE, "Force the camera into thirdperson when taunting."),
-
 	ce_tplock_enable("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player."),
+	ce_tplock_taunt_enable("ce_tplock_taunt_enable", "0", FCVAR_NONE, "Force the camera into thirdperson tplock when taunting. Does not require ce_tplock_enable."),
 
-	ce_tplock_default_pos("ce_tplock_default_pos", "+18 -80 +20", FCVAR_NONE, "",
+	ce_tplock_default_pos("ce_tplock_default_pos", "18 -80 20", FCVAR_NONE, "Camera x/y/z offset from ce_tplock_bone when tplock is active.",
 		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockDefault.m_Pos); }),
-	ce_tplock_default_angle("ce_tplock_default_angle", "0 ? 0", FCVAR_NONE, "",
+	ce_tplock_default_angle("ce_tplock_default_angle", "*0.5 ? =0", FCVAR_NONE, "Camera angle offset (pitch/yaw/roll) from ce_tplock_bone when tplock is active. See wiki for more information.",
 		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockDefault.m_Angle); }),
-	ce_tplock_default_dps("ce_tplock_default_dps", "-1 -1 -1", FCVAR_NONE, "Max degrees per second for angle. Set < 0 to uncap.",
+	ce_tplock_default_dps("ce_tplock_default_dps", "-1 -1 -1", FCVAR_NONE, "Max degrees per second for angle (pitch/yaw/roll) when tplock is active. Set < 0 to uncap.",
 		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockDefault.m_DPS); }),
 
-	ce_tplock_taunt_pos("ce_tplock_taunt_pos", "+18 -80 +20", FCVAR_NONE, "",
+	ce_tplock_taunt_pos("ce_tplock_taunt_pos", "0 -80 -15", FCVAR_NONE, "Camera x/y/z offset from ce_tplock_bone when taunting with taunt tplock enabled.",
 		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockTaunt.m_Pos); }),
-	ce_tplock_taunt_angle("ce_tplock_taunt_angle", "0 -180 0", FCVAR_NONE, "",
+	ce_tplock_taunt_angle("ce_tplock_taunt_angle", "=15 180 =0", FCVAR_NONE, "Camera angle offset (pitch/yaw/roll) from ce_tplock_bone when taunting with taunt tplock enabled.",
 		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockTaunt.m_Angle); }),
-	ce_tplock_taunt_dps("ce_tplock_taunt_dps", "-1 -1 -1", FCVAR_NONE, "Max degrees per second for angle. Set < 0 to uncap.",
+	ce_tplock_taunt_dps("ce_tplock_taunt_dps", "-1 -1 -1", FCVAR_NONE, "Max degrees per second for angle (pitch/yaw/roll) when taunting with taunt tplock enabled. Set < 0 to uncap.",
 		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockTaunt.m_DPS); }),
 
 	ce_tplock_bone("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings.",
@@ -617,7 +616,7 @@ void CameraTools::UpdateIsTaunting()
 {
 	m_IsTaunting = false;
 
-	if (!ce_cameratools_taunt_thirdperson.GetBool())
+	if (!ce_tplock_taunt_enable.GetBool())
 		return;
 
 	if (auto mode = CameraState::GetLocalObserverMode();
