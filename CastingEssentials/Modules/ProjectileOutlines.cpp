@@ -117,15 +117,14 @@ void ProjectileOutlines::OnTick(bool inGame)
 				Lerp(smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start.GetFloat(), ce_projectileoutlines_fade_end.GetFloat(), 1, 0)), 0, 255) :
 				255;
 
-			Color* glowColor = Entities::GetEntityProp<Color>(glowEntity, "m_glowColor");
-			if (!glowColor)
+			static const auto glowColorOffset = Entities::GetEntityProp<Color>(glowEntity, "m_glowColor");
+			Color& glowColor = glowColorOffset.GetValue(glowEntity);
+
+			Color newColor(glowColor.r(), glowColor.g(), glowColor.b(), alpha);
+			if (newColor == glowColor)
 				continue;
 
-			Color newColor(glowColor->r(), glowColor->g(), glowColor->b(), alpha);
-			if (newColor == *glowColor)
-				continue;
-
-			*glowColor = newColor;
+			glowColor = newColor;
 			glowEntity->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_DATATABLE_CHANGED);
 		}
 	}
@@ -141,18 +140,24 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 
 	{
 		IClientEntity* glowEntity = ent;
-		*Entities::GetEntityProp<bool>(glowEntity, "m_bDisabled") = false;
-		*Entities::GetEntityProp<int>(glowEntity, "m_iMode") = ce_projectileoutlines_mode.GetInt();
-		Entities::GetEntityProp<EHANDLE>(glowEntity, "m_hTarget")->Set(projectileEntity->GetBaseEntity());
 
-		Color* color = Entities::GetEntityProp<Color>(glowEntity, "m_glowColor");
-		TFTeam* team = Entities::GetEntityTeam(projectileEntity);
-		if (team && *team == TFTeam::Blue)
-			*color = m_ColorBlu;
-		else if (team && *team == TFTeam::Red)
-			*color = m_ColorRed;
+		static const auto disabledOffset = Entities::GetEntityProp<bool>(glowEntity, "m_bDisabled");
+		static const auto modeOffset = Entities::GetEntityProp<int>(glowEntity, "m_iMode");
+		static const auto targetOffset = Entities::GetEntityProp<EHANDLE>(glowEntity, "m_hTarget");
+		static const auto glowColorOffset = Entities::GetEntityProp<Color>(glowEntity, "m_glowColor");
+
+		disabledOffset.GetValue(glowEntity) = false;
+		modeOffset.GetValue(glowEntity) = ce_projectileoutlines_mode.GetInt();
+		targetOffset.GetValue(glowEntity).Set(projectileEntity->GetBaseEntity());
+
+		Color& color = glowColorOffset.GetValue(glowEntity);
+		const TFTeam team = Entities::GetEntityTeamSafe(projectileEntity);
+		if (team == TFTeam::Blue)
+			color = m_ColorBlu;
+		else if (team == TFTeam::Red)
+			color = m_ColorRed;
 		else
-			color->SetColor(0, 255, 0, 255);
+			color.SetColor(0, 255, 0, 255);
 	}
 
 	ent->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_CREATED);
@@ -183,7 +188,8 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 	if (!Entities::CheckEntityBaseclass(entity, "TFProjectile_Pipebomb"))
 		return;
 
-	const TFGrenadePipebombType type = *Entities::GetEntityProp<TFGrenadePipebombType>(entity, "m_iType");
+	static const auto typeOffset = Entities::GetEntityProp<TFGrenadePipebombType>(entity, "m_iType");
+	const TFGrenadePipebombType type = typeOffset.GetValue(entity);
 
 	if (pills && type == TFGrenadePipebombType::Pill)
 		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));

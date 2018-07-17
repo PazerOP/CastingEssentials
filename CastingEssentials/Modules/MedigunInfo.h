@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PluginBase/EntityOffset.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -56,6 +57,11 @@ private:
 	ConVar ce_mediguninfo_embedded_quickfix_text;
 	ConVar ce_mediguninfo_embedded_vaccinator_text;
 	ConVar ce_mediguninfo_embedded_dead_text;
+
+	static EntityOffset<int> s_ItemDefinitionIndex;
+	static EntityOffset<bool> s_ChargeRelease;
+	static EntityOffset<TFResistType> s_ChargeResistType;
+	static EntityOffset<float> s_ChargeLevel;
 
 	void ReloadSettings();
 

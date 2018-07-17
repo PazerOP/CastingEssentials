@@ -55,12 +55,6 @@ bool FOVOverride::CheckDependencies()
 		ready = false;
 	}
 
-	if (!Player::IsConditionsRetrievalAvailable())
-	{
-		PluginWarning("Required player condition retrieval for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
 	return ready;
 }
 

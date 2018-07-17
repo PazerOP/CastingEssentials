@@ -23,6 +23,9 @@
 #undef min
 #undef max
 
+EntityOffset<int> HUDHacking::s_ItemDefinitionIndex;
+EntityOffset<float> HUDHacking::s_RageMeter;
+
 ConVar HUDHacking::ce_hud_debug_unassociated_playerpanels("ce_hud_debug_unassociated_playerpanels", "0", FCVAR_NONE, "Print debug messages to the console when a player cannot be found for a given playerpanel.");
 
 HUDHacking::HUDHacking() :
@@ -48,6 +51,14 @@ HUDHacking::~HUDHacking()
 
 bool HUDHacking::CheckDependencies()
 {
+	{
+		const auto weaponClass = Entities::GetClientClass("CBaseCombatWeapon");
+		s_ItemDefinitionIndex = Entities::GetEntityProp<int>(weaponClass, "m_iItemDefinitionIndex");
+
+		const auto playerClass = Entities::GetClientClass("CTFPlayer");
+		s_RageMeter = Entities::GetEntityProp<float>(playerClass, "m_flRageMeter");
+	}
+
 	return true;
 }
 
@@ -308,16 +319,13 @@ bool HUDHacking::GetBannerInfo(const Player& player, BannerType& type, float& ch
 			continue;
 
 		// Make sure this is a banner of some type
-		const auto itemDefIndex = Entities::GetEntityProp<int>(weapon, "m_iItemDefinitionIndex");
-
-		type = (BannerType)ItemSchema::GetModule()->GetBaseItemID(*itemDefIndex);
-
+		type = (BannerType)ItemSchema::GetModule()->GetBaseItemID(s_ItemDefinitionIndex.GetValue(weapon));
 		switch (type)
 		{
 			case BannerType::BuffBanner:
 			case BannerType::BattalionsBackup:
 			case BannerType::Concheror:
-				charge = *Entities::GetEntityProp<float>(player.GetEntity(), "m_flRageMeter");
+				charge = s_RageMeter.GetValue(player.GetEntity());
 				return true;
 		}
 	}

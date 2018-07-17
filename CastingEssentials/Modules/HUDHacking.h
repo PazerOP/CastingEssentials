@@ -1,4 +1,5 @@
 #pragma once
+#include "PluginBase/EntityOffset.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -65,4 +66,7 @@ private:
 
 	int m_ProgressBarApplySettingsHook;
 	static void ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings);
+
+	static EntityOffset<int> s_ItemDefinitionIndex;
+	static EntityOffset<float> s_RageMeter;
 };

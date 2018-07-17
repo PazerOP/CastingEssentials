@@ -1,6 +1,10 @@
 #pragma once
 
+#include "PluginBase/EntityOffset.h"
+
+#include <algorithm>
 #include <map>
+#include <stack>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -14,11 +18,9 @@ enum class TFTeam;
 class Entities final
 {
 public:
-	static int RetrieveClassPropOffset(const std::string_view& className, const std::string_view& propertyString);
-	__forceinline static int RetrieveClassPropOffset(const std::string_view& className, const std::vector<std::string_view>& propertyTree)
-	{
-		return RetrieveClassPropOffset(className, ConvertTreeToString(propertyTree).c_str());
-	}
+	static std::pair<int, const RecvTable*> RetrieveClassPropOffset(const RecvTable* table, const std::string_view& propertyString);
+	static std::pair<int, const RecvTable*> RetrieveClassPropOffset(const ClientClass* cc, const std::string_view& propertyString);
+	static std::pair<int, const RecvTable*> RetrieveClassPropOffset(const std::string_view& className, const std::string_view& propertyString);
 
 	template<size_t size> static char* PropIndex(char(&buffer)[size], const char* base, int index)
 	{
@@ -26,18 +28,35 @@ public:
 		return buffer;
 	}
 
-	template<typename T> __forceinline static T* GetEntityProp(IClientNetworkable* entity, const char* propertyString, bool throwifMissing = true)
+	template<typename TValue> inline static EntityOffset<TValue>
+		GetEntityProp(const ClientClass* cc, const char* propertyString)
 	{
-		return reinterpret_cast<T*>(GetEntityProp(entity, propertyString, throwifMissing));
+		const auto found = RetrieveClassPropOffset(cc, propertyString);
+		if (found.first < 0)
+			throw invalid_class_prop(propertyString);
+
+		return EntityOffset<TValue>(found.second, found.first);
+	}
+	template<typename TValue> __forceinline static EntityOffset<TValue>
+		GetEntityProp(IClientNetworkable* entity, const char* propertyString)
+	{
+		return GetEntityProp<TValue>((const ClientClass*)(entity->GetClientClass()), propertyString);
+	}
+	template<typename TValue> inline static EntityOffset<TValue>
+		GetEntityProp(const char* clientClassName, const char* propertyString)
+	{
+		return GetEntityProp<TValue>(GetClientClass(clientClassName), propertyString);
 	}
 
 	static bool CheckEntityBaseclass(IClientNetworkable* entity, const char* baseclass);
+	static bool CheckTableBaseClass(const RecvTable* tableParent, const RecvTable* tableBase);
 
 	static ClientClass* GetClientClass(const char* className);
 	static RecvProp* FindRecvProp(const char* className, const char* propName, bool recursive = true);
 	static RecvProp* FindRecvProp(RecvTable* table, const char* propName, bool recursive = true);
 
-	__forceinline static TFTeam* GetEntityTeam(IClientNetworkable* entity) { return GetEntityProp<TFTeam>(entity, "m_iTeamNum"); }
+	static const TFTeam* TryGetEntityTeam(const IClientNetworkable* entity);
+	static TFTeam GetEntityTeamSafe(const IClientNetworkable* entity);
 
 private:
 	Entities() = delete;
@@ -46,10 +65,13 @@ private:
 	static bool CheckClassBaseclass(ClientClass *clientClass, const char* baseclass);
 	static bool CheckTableBaseclass(RecvTable *sTable, const char* baseclass);
 
+	static std::pair<int, const RecvTable*> RetrieveClassPropOffset(const RecvTable* table, const std::vector<std::string_view>& refPropertyTree,
+		std::vector<std::string_view>& currentPropertyTree);
+
 	static std::string ConvertTreeToString(const std::vector<std::string_view>& tree);
 	static std::vector<std::string_view> ConvertStringToTree(const std::string_view& str);
 
-	static bool GetSubProp(RecvTable* table, const std::string_view& propName, RecvProp*& prop, int& offset);
+	static bool GetSubProp(const RecvTable* table, const std::string_view& propName, const RecvProp*& prop, int& offset);
 	static void* GetEntityProp(IClientNetworkable* entity, const char* propertyString, bool throwifMissing = true);
 
 	struct ci_less
@@ -73,7 +95,7 @@ private:
 
 		template<typename T1, typename T2> inline constexpr bool operator()(const T1& a, const T2& b) const
 		{
-			const auto min = min(a.size(), b.size());
+			const auto min = std::min(a.size(), b.size());
 			for (size_t i = 0; i < min; i++)
 			{
 				const auto c_a = FAST_TOUPPER[a[i]];
@@ -91,8 +113,4 @@ private:
 				return false;	// Both strings are equal
 		}
 	};
-
-	static std::map<std::string, std::map<std::string, int, ci_less>, ci_less> s_ClassPropOffsets;
-	static int FindExistingPropOffset(const std::string_view& className, const std::string_view& propertyString, bool bThrow = true);
-	static void AddPropOffset(const std::string_view& className, const std::string_view& propertyString, int offset);
 };

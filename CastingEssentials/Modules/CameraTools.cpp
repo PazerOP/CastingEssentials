@@ -154,12 +154,6 @@ bool CameraTools::CheckDependencies()
 		ready = false;
 	}
 
-	if (!Player::IsNameRetrievalAvailable())
-	{
-		PluginWarning("Required player name retrieval for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
 	try
 	{
 		Interfaces::GetClientMode();

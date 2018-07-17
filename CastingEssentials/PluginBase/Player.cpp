@@ -16,12 +16,15 @@
 
 #undef min
 
-bool Player::s_ClassRetrievalAvailable = false;
-bool Player::s_ComparisonAvailable = false;
-bool Player::s_ConditionsRetrievalAvailable = false;
-bool Player::s_NameRetrievalAvailable = false;
-bool Player::s_SteamIDRetrievalAvailable = false;
-bool Player::s_UserIDRetrievalAvailable = false;
+EntityOffset<TFTeam> Player::s_TeamOffset;
+EntityOffset<TFClassType> Player::s_ClassOffset;
+EntityOffset<int> Player::s_HealthOffset;
+EntityOffset<int> Player::s_MaxHealthOffset;
+EntityOffset<ObserverMode> Player::s_ObserverModeOffset;
+EntityOffset<CHandle<C_BaseEntity>> Player::s_ObserverTargetOffset;
+std::array<EntityOffset<CHandle<C_BaseCombatWeapon>>, MAX_WEAPONS> Player::s_WeaponOffsets;
+EntityOffset<CHandle<C_BaseCombatWeapon>> Player::s_ActiveWeaponOffset;
+std::array<EntityOffset<uint32_t>, 5> Player::s_PlayerCondBitOffsets;
 
 std::unique_ptr<Player> Player::s_Players[ABSOLUTE_PLAYER_LIMIT];
 
@@ -66,21 +69,8 @@ bool Player::CheckDependencies()
 		ready = false;
 	}
 
-	s_ClassRetrievalAvailable = true;
-	s_ComparisonAvailable = true;
-	s_ConditionsRetrievalAvailable = true;
-	s_NameRetrievalAvailable = true;
-	s_SteamIDRetrievalAvailable = true;
-	s_UserIDRetrievalAvailable = true;
-
 	if (!Interfaces::GetEngineClient())
-	{
 		PluginWarning("Interface IVEngineClient for player helper class not available (required for retrieving certain info)!\n");
-
-		s_NameRetrievalAvailable = false;
-		s_SteamIDRetrievalAvailable = false;
-		s_UserIDRetrievalAvailable = false;
-	}
 
 	if (!Interfaces::GetHLTVCamera())
 	{
@@ -91,42 +81,34 @@ bool Player::CheckDependencies()
 	if (!Interfaces::AreSteamLibrariesAvailable())
 		PluginWarning("Steam libraries for player helper class not available (required for accuracy in retrieving Steam IDs)!\n");
 
-	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_nPlayerCond") < 0)
+	//try
 	{
-		PluginWarning("Required property m_nPlayerCond for CTFPlayer for player helper class not available!\n");
-		s_ConditionsRetrievalAvailable = false;
-	}
+		const auto playerClass = Entities::GetClientClass("CTFPlayer");
 
-	if (Entities::RetrieveClassPropOffset("CTFPlayer", "_condition_bits") < 0)
-	{
-		PluginWarning("Required property _condition_bits for CTFPlayer for player helper class not available!\n");
-		s_ConditionsRetrievalAvailable = false;
-	}
+		s_PlayerCondBitOffsets[0] = Entities::GetEntityProp<uint32_t>(playerClass, "_condition_bits");
+		s_PlayerCondBitOffsets[1] = Entities::GetEntityProp<uint32_t>(playerClass, "m_nPlayerCond");
+		s_PlayerCondBitOffsets[2] = Entities::GetEntityProp<uint32_t>(playerClass, "m_nPlayerCondEx");
+		s_PlayerCondBitOffsets[3] = Entities::GetEntityProp<uint32_t>(playerClass, "m_nPlayerCondEx2");
+		s_PlayerCondBitOffsets[4] = Entities::GetEntityProp<uint32_t>(playerClass, "m_nPlayerCondEx3");
 
-	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_nPlayerCondEx") < 0)
-	{
-		PluginWarning("Required property m_nPlayerCondEx for CTFPlayer for player helper class not available!\n");
-		s_ConditionsRetrievalAvailable = false;
-	}
+		s_ClassOffset = Entities::GetEntityProp<TFClassType>(playerClass, "m_iClass");
+		s_TeamOffset = Entities::GetEntityProp<TFTeam>(playerClass, "m_iTeamNum");
 
-	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_nPlayerCondEx2") < 0)
-	{
-		PluginWarning("Required property m_nPlayerCondEx2 for CTFPlayer for player helper class not available!\n");
-		s_ConditionsRetrievalAvailable = false;
-	}
+		char buffer[32];
+		for (size_t i = 0; i < s_WeaponOffsets.size(); i++)
+			s_WeaponOffsets[i] = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>>(playerClass, Entities::PropIndex(buffer, "m_hMyWeapons", i));
 
-	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_nPlayerCondEx3") < 0)
-	{
-		PluginWarning("Required property m_nPlayerCondEx3 for CTFPlayer for player helper class not available!\n");
-		s_ConditionsRetrievalAvailable = false;
-	}
+		s_HealthOffset = Entities::GetEntityProp<int>(playerClass, "m_iHealth");
 
-	if (Entities::RetrieveClassPropOffset("CTFPlayer", "m_iClass") < 0)
-	{
-		PluginWarning("Required property m_iClass for CTFPlayer for player helper class not available!\n");
-		s_ClassRetrievalAvailable = false;
-		s_ComparisonAvailable = false;
+		s_ObserverModeOffset = Entities::GetEntityProp<ObserverMode>(playerClass, "m_iObserverMode");
+		s_ObserverTargetOffset = Entities::GetEntityProp<EHANDLE>(playerClass, "m_hObserverTarget");
+
+		s_ActiveWeaponOffset = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>>(playerClass, "m_hActiveWeapon");
 	}
+	//catch (const invalid_class_prop& ex)
+	//{
+	//	PluginWarning(ex.what());
+	//}
 
 	return ready;
 }
@@ -186,37 +168,16 @@ bool Player::CheckCondition(TFCond condition) const
 	{
 		CheckCache();
 
+		auto ent = GetEntity();
+
 		if (condition < 32)
-		{
-			if (!m_CachedCondBits[0] || !m_CachedCondBits[1])
-			{
-				m_CachedCondBits[0] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCond" });
-				m_CachedCondBits[1] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "_condition_bits" });
-			}
-
-			return (*m_CachedCondBits[0] | *m_CachedCondBits[1]) & (1 << condition);
-		}
+			return (s_PlayerCondBitOffsets[0].GetValue(ent) | s_PlayerCondBitOffsets[1].GetValue(ent)) & (1 << condition);
 		else if (condition < 64)
-		{
-			if (!m_CachedCondBits[2])
-				m_CachedCondBits[2] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx" });
-
-			return *m_CachedCondBits[2] & (1 << (condition - 32));
-		}
+			return s_PlayerCondBitOffsets[2].GetValue(ent) & (1 << (condition - 32));
 		else if (condition < 96)
-		{
-			if (!m_CachedCondBits[3])
-				m_CachedCondBits[3] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx" });
-
-			return *m_CachedCondBits[3] & (1 << (condition - 64));
-		}
+			return s_PlayerCondBitOffsets[3].GetValue(ent) & (1 << (condition - 64));
 		else if (condition < 128)
-		{
-			if (!m_CachedCondBits[4])
-				m_CachedCondBits[4] = Entities::GetEntityProp<uint32_t>(GetEntity(), { "m_nPlayerCondEx3" });
-
-			return *m_CachedCondBits[4] & (1 << (condition - 96));
-		}
+			return s_PlayerCondBitOffsets[4].GetValue(ent) & (1 << (condition - 96));
 	}
 
 	return false;
@@ -226,21 +187,8 @@ TFTeam Player::GetTeam() const
 {
 	if (IsValid())
 	{
-		if (CheckCache() || !m_CachedTeam)
-		{
-			IClientEntity* clientEnt = GetEntity();
-			if (!clientEnt)
-				return TFTeam::Unassigned;
-
-			C_BaseEntity* entity = clientEnt->GetBaseEntity();
-			if (!entity)
-				return TFTeam::Unassigned;
-
-			m_CachedTeam = Entities::GetEntityProp<TFTeam>(entity, { "m_iTeamNum" });
-		}
-
-		if (m_CachedTeam)
-			return *m_CachedTeam;
+		if (auto ent = GetEntity())
+			return s_TeamOffset.GetValue(ent);
 	}
 
 	return TFTeam::Unassigned;
@@ -279,11 +227,8 @@ TFClassType Player::GetClass() const
 {
 	if (IsValid())
 	{
-		if (CheckCache() || !m_CachedClass)
-			m_CachedClass = Entities::GetEntityProp<TFClassType>(GetEntity(), { "m_iClass" });
-
-		if (m_CachedClass)
-			return *m_CachedClass;
+		CheckCache();
+		return s_ClassOffset.GetValue(m_CachedPlayerEntity);
 	}
 
 	return TFClassType::Unknown;
@@ -319,12 +264,8 @@ int Player::GetHealth() const
 {
 	if (IsValid())
 	{
-		if (CheckCache() || !m_CachedHealth)
-			m_CachedHealth = Entities::GetEntityProp<int>(GetEntity(), "m_iHealth");
-
-		Assert(m_CachedHealth);
-		if (m_CachedHealth)
-			return *m_CachedHealth;
+		CheckCache();
+		return s_HealthOffset.GetValue(m_CachedPlayerEntity);
 	}
 
 	Assert(!"Called " __FUNCTION__ "() on an invalid player!");
@@ -369,24 +310,12 @@ bool Player::CheckCache() const
 {
 	Assert(IsValid());
 
-	void* current = m_PlayerEntity.Get();
-	if (current != m_CachedPlayerEntity)
+	auto currentPlayerEntity = m_PlayerEntity.Get();
+	if (currentPlayerEntity != m_CachedPlayerEntity)
 	{
-		m_CachedPlayerEntity = current;
-
-		m_CachedTeam = nullptr;
-		m_CachedClass = nullptr;
-		m_CachedHealth = nullptr;
-		m_CachedMaxHealth = nullptr;
-		m_CachedObserverMode = nullptr;
-		m_CachedObserverTarget = nullptr;
-		m_CachedActiveWeapon = nullptr;
-		m_CachedCondBits.fill(nullptr);
+		m_CachedPlayerEntity = currentPlayerEntity;
 
 		m_CachedPlayerInfoLastUpdateFrame = 0;
-
-		for (auto& wpn : m_CachedWeapons)
-			wpn = nullptr;
 
 		return true;
 	}
@@ -601,11 +530,10 @@ C_BaseCombatWeapon* Player::GetMedigun(TFMedigun* medigunType) const
 
 		if (medigunType)
 		{
-			const auto itemdefIndex = Entities::GetEntityProp<int>(weapon, "m_iItemDefinitionIndex");
-			if (!itemdefIndex)
-				continue;
+			static const auto itemdefIndexOffset = Entities::GetEntityProp<int>(weapon, "m_iItemDefinitionIndex");
+			const auto itemdefIndex = itemdefIndexOffset.GetValue(weapon);
 
-			const auto baseID = ItemSchema::GetModule()->GetBaseItemID(*itemdefIndex);
+			const auto baseID = ItemSchema::GetModule()->GetBaseItemID(itemdefIndex);
 
 			switch (baseID)
 			{
@@ -694,11 +622,8 @@ ObserverMode Player::GetObserverMode() const
 {
 	if (IsValid())
 	{
-		if (CheckCache() || !m_CachedObserverMode)
-			m_CachedObserverMode = Entities::GetEntityProp<ObserverMode>(GetEntity(), { "m_iObserverMode" });
-
-		if (m_CachedObserverMode)
-			return *m_CachedObserverMode;
+		CheckCache();
+		return s_ObserverModeOffset.GetValue(m_CachedPlayerEntity);
 	}
 
 	return OBS_MODE_NONE;
@@ -708,11 +633,8 @@ C_BaseEntity *Player::GetObserverTarget() const
 {
 	if (IsValid())
 	{
-		if (CheckCache() || !m_CachedObserverTarget)
-			m_CachedObserverTarget = Entities::GetEntityProp<EHANDLE>(GetEntity(), { "m_hObserverTarget" });
-
-		if (m_CachedObserverTarget)
-			return m_CachedObserverTarget->Get();
+		CheckCache();
+		return s_ObserverTargetOffset.GetValue(m_CachedPlayerEntity);
 	}
 
 	return GetEntity() ? GetEntity()->GetBaseEntity() : nullptr;
@@ -728,15 +650,8 @@ C_BaseCombatWeapon *Player::GetWeapon(int i) const
 
 	if (IsValid())
 	{
-		if (CheckCache() || !m_CachedWeapons[i])
-		{
-			char buffer[32];
-			Entities::PropIndex(buffer, "m_hMyWeapons", i);
-			m_CachedWeapons[i] = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>>(GetEntity(), buffer);
-		}
-
-		if (m_CachedWeapons[i])
-			return m_CachedWeapons[i]->Get();
+		CheckCache();
+		return s_WeaponOffsets[i].GetValue(m_CachedPlayerEntity);
 	}
 
 	return nullptr;
@@ -746,11 +661,8 @@ C_BaseCombatWeapon* Player::GetActiveWeapon() const
 {
 	if (IsValid())
 	{
-		if (CheckCache() || !m_CachedActiveWeapon)
-			m_CachedActiveWeapon = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>>(GetEntity(), "m_hActiveWeapon");
-
-		if (m_CachedActiveWeapon)
-			return *m_CachedActiveWeapon;
+		CheckCache();
+		return s_ActiveWeaponOffset.GetValue(m_CachedPlayerEntity);
 	}
 
 	return nullptr;

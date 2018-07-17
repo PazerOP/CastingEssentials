@@ -32,6 +32,11 @@
 
 #include <memdbgon.h>
 
+EntityOffset<int> MedigunInfo::s_ItemDefinitionIndex;
+EntityOffset<bool> MedigunInfo::s_ChargeRelease;
+EntityOffset<TFResistType> MedigunInfo::s_ChargeResistType;
+EntityOffset<float> MedigunInfo::s_ChargeLevel;
+
 class MedigunInfo::MainPanel : public vgui::EditablePanel
 {
 	DECLARE_CLASS_SIMPLE(MainPanel, vgui::EditablePanel);
@@ -121,28 +126,13 @@ bool MedigunInfo::CheckDependencies()
 		ready = false;
 	}
 
-	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_iItemDefinitionIndex") < 0)
 	{
-		PluginWarning("Required property m_iItemDefinitionIndex for CWeaponMedigun for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
+		const auto medigunClass = Entities::GetClientClass("CWeaponMedigun");
 
-	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_bChargeRelease") < 0)
-	{
-		PluginWarning("Required property m_bChargeRelease for CWeaponMedigun for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_nChargeResistType") < 0)
-	{
-		PluginWarning("Required property m_nChargeResistType for CWeaponMedigun for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_flChargeLevel") < 0)
-	{
-		PluginWarning("Required property m_flChargeLevel for CWeaponMedigun for module %s not available!\n", GetModuleName());
-		ready = false;
+		s_ItemDefinitionIndex = Entities::GetEntityProp<int>(medigunClass, "m_iItemDefinitionIndex");
+		s_ChargeRelease = Entities::GetEntityProp<bool>(medigunClass, "m_bChargeRelease");
+		s_ChargeResistType = Entities::GetEntityProp<TFResistType>(medigunClass, "m_nChargeResistType");
+		s_ChargeLevel = Entities::GetEntityProp<float>(medigunClass, "m_flChargeLevel");
 	}
 
 	if (!Player::CheckDependencies())
@@ -191,11 +181,11 @@ void MedigunInfo::CollectMedigunData()
 				continue;
 			}
 
-			medigunData.m_Charge = *Entities::GetEntityProp<float>(medigun, "m_flChargeLevel");
-			medigunData.m_Popped = *Entities::GetEntityProp<bool>(medigun, "m_bChargeRelease");
+			medigunData.m_Charge = s_ChargeLevel.GetValue(medigun);
+			medigunData.m_Popped = s_ChargeRelease.GetValue(medigun);
 
 			if (medigunData.m_Type == TFMedigun::Vaccinator)
-				medigunData.m_ResistType = *Entities::GetEntityProp<TFResistType>(medigun, { "m_nChargeResistType" });
+				medigunData.m_ResistType = s_ChargeResistType.GetValue(medigun);
 		}
 	}
 }

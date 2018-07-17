@@ -28,6 +28,23 @@ inline const char *invalid_class_prop::what() const noexcept
 	return s.c_str();
 }
 
+class mismatching_entity_offset final : public std::runtime_error
+{
+public:
+	mismatching_entity_offset(const char* expected, const char* actual) noexcept :
+		std::runtime_error(BuildMessage(expected, actual).c_str())
+	{
+	}
+
+private:
+	static std::string BuildMessage(const char* expected, const char* actual)
+	{
+		std::stringstream ss;
+		ss << "Attempted to use an EntityOffset intended for " << expected << " on " << actual;
+		return ss.str();
+	}
+};
+
 class module_not_loaded : public std::exception
 {
 public:

@@ -184,6 +184,7 @@
     <ClInclude Include="Modules\WeaponTools.h" />
     <ClInclude Include="PluginBase\Common.h" />
     <ClInclude Include="PluginBase\Entities.h" />
+    <ClInclude Include="PluginBase\EntityOffset.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />
     <ClInclude Include="PluginBase\HookManager.h" />
     <ClInclude Include="PluginBase\ICameraOverride.h" />

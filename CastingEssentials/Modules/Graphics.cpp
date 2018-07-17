@@ -28,6 +28,8 @@
 #undef min
 #undef max
 
+EntityOffset<EHANDLE> Graphics::s_MoveParent;
+
 static constexpr auto STENCIL_INDEX_MASK = 0xFC;
 
 // Should we use a hook to disable IStudioRender::ForcedMaterialOverride?
@@ -907,7 +909,7 @@ void Graphics::BuildMoveChildLists()
 				continue;
 		}
 
-		EHANDLE* moveparent = Entities::GetEntityProp<EHANDLE>(child, "moveparent");
+		const auto& moveparent = s_MoveParent.TryGetValue(child);
 		if (!moveparent || !moveparent->IsValid())
 			continue;
 
@@ -1435,6 +1437,16 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 	}
 
 	pRenderContext->PopRenderTargetAndViewport();
+}
+
+bool Graphics::CheckDependencies()
+{
+	{
+		const auto baseEntityClass = Entities::GetClientClass("CBaseEntity");
+		s_MoveParent = Entities::GetEntityProp<EHANDLE>(baseEntityClass, "moveparent");
+	}
+
+	return true;
 }
 
 void Graphics::OnTick(bool inGame)

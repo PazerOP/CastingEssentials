@@ -38,7 +38,7 @@ std::shared_ptr<TFTeamResource> TFTeamResource::GetTeamResource()
 		if (!s_TeamResource)
 			s_TeamResource.reset(new TFTeamResource());
 
-		TFTeam team = *Entities::GetEntityTeam(networkable);
+		TFTeam team = Entities::GetEntityTeamSafe(networkable);
 		if (team == TFTeam::Red)
 			s_TeamResource->m_TeamResourceEntity[0] = unknownEnt->GetBaseEntity();
 		else if (team == TFTeam::Blue)
@@ -55,11 +55,11 @@ int TFTeamResource::GetTeamScore(TFTeam team)
 {
 	const auto teamIndex = ToTeamIndex(team);
 
-	if (!m_TeamScores[teamIndex])
+	if (!m_TeamScores[teamIndex].IsInit())
 		m_TeamScores[teamIndex] = Entities::GetEntityProp<int>(m_TeamResourceEntity[teamIndex].Get(), "m_iScore");
 
-	if (m_TeamScores[teamIndex])
-		return *m_TeamScores[teamIndex];
+	if (m_TeamScores[teamIndex].IsInit())
+		return m_TeamScores[teamIndex].GetValue(m_TeamResourceEntity[teamIndex]);
 	else
 	{
 		Assert(!"Failed to get team score variable!");

@@ -43,13 +43,7 @@ bool PlayerAliases::CheckDependencies()
 		PluginWarning("Required player helper class for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
-
-	if (!Player::IsSteamIDRetrievalAvailable())
-	{
-		PluginWarning("Required player Steam ID retrieval for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
+	
 	if (!GetHooks()->GetHook<HookFunc::IVEngineClient_GetPlayerInfo>())
 	{
 		PluginWarning("Required hook IVEngineClient::GetPlayerInfo for module %s not available!\n", GetModuleName());

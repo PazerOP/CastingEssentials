@@ -256,21 +256,18 @@ void WeaponTools::OnTick(bool inGame)
 					basePlayer->m_hViewModel[1].Get()
 				};
 
-				const auto inspectAnimTime = Entities::GetEntityProp<float>(weapon, "m_flInspectAnimEndTime", false);
-				const auto inspectStage = Entities::GetEntityProp<InspectStage>(weapon, "m_nInspectStage", false);
+				static const auto inspectAnimTimeOffset = Entities::GetEntityProp<float>(weapon, "m_flInspectAnimEndTime");
+				static const auto inspectStageOffset = Entities::GetEntityProp<InspectStage>(weapon, "m_nInspectStage");
+
+				const auto inspectAnimTime = inspectAnimTimeOffset.GetValue(weapon);
+				const auto inspectStage = inspectStageOffset.GetValue(weapon);
 				auto& inspectInterp = GetInspectInterp();
 
 				int i = 0;
 
-				if (inspectAnimTime)
-					engine->Con_NPrintf(i++, "m_flInspectAnimEndTime: %1.2f", *inspectAnimTime);
-				else
-					engine->Con_NPrintf(i++, "m_flInspectAnimEndTime: NULL");
+				engine->Con_NPrintf(i++, "m_flInspectAnimEndTime: %1.2f", inspectAnimTime);
 
-				if (inspectStage)
-					engine->Con_NPrintf(i++, "m_nInspectStage: %i", *inspectStage);
-				else
-					engine->Con_NPrintf(i++, "m_nInspectStage: NULL");
+				engine->Con_NPrintf(i++, "m_nInspectStage: %i", inspectStage);
 
 				engine->Con_NPrintf(i++, "s_inspectInterp: %1.2f", inspectInterp);
 
@@ -286,7 +283,8 @@ void WeaponTools::OnTick(bool inGame)
 					if (!vm)
 						continue;
 
-					auto sequence = *Entities::GetEntityProp<int>(vm, "m_nSequence");
+					static const auto sequenceOffset = Entities::GetEntityProp<int>(vm, "m_nSequence");
+					auto sequence = sequenceOffset.GetValue(vm);
 					engine->Con_NPrintf(i++, "vm[%i]: m_Sequence: %i", vmIndex, sequence);
 
 					engine->Con_NPrintf(i++, "vm[%i]: sequence name: %s",

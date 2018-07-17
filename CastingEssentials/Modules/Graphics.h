@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Misc/CRefPtrFix.h"
+#include "PluginBase/EntityOffset.h"
 #include "PluginBase/Modules.h"
 
 #define GLOWS_ENABLE
@@ -26,6 +27,8 @@ public:
 	~Graphics();
 
 	const ConVar& GetDebugGlowConVar() const { return ce_graphics_debug_glow; }
+
+	static bool CheckDependencies();
 
 protected:
 	void OnTick(bool inGame) override;
@@ -144,4 +147,6 @@ private:
 
 	float ApplyInfillTimeEffects(float lastHurtTime);
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);
+
+	static EntityOffset<CHandle<C_BaseEntity>> s_MoveParent;
 };

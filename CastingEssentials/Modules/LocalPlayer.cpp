@@ -43,12 +43,6 @@ bool LocalPlayer::CheckDependencies()
 		ready = false;
 	}
 
-	if (!Player::IsConditionsRetrievalAvailable())
-	{
-		PluginWarning("Required player condition retrieval for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
 	if (!Interfaces::GetHLTVCamera())
 	{
 		PluginWarning("Required interface C_HLTVCamera for module %s not available!\n", GetModuleName());

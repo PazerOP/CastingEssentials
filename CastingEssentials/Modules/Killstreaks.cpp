@@ -13,6 +13,7 @@
 #include <client/c_baseentity.h>
 #include <igameevents.h>
 #include <shareddefs.h>
+#include <toolframework/ienginetool.h>
 #include <vprof.h>
 
 #include <PolyHook.hpp>
@@ -27,6 +28,10 @@
 #include "PluginBase/TFPlayerResource.h"
 
 #include "Controls/StubPanel.h"
+
+std::array<EntityOffset<int>, 4> Killstreaks::s_PlayerStreaks;
+EntityOffset<bool> Killstreaks::s_MedigunHealing;
+EntityOffset<EHANDLE> Killstreaks::s_MedigunHealingTarget;
 
 class Killstreaks::Panel final : public vgui::StubPanel {
 public:
@@ -91,57 +96,19 @@ bool Killstreaks::CheckDependencies()
 		ready = false;
 	}
 
-	for (int i = 0; i < MAX_WEAPONS; i++)
 	{
-		char buffer[32];
-		Entities::PropIndex(buffer, "m_hMyWeapons", i);
+		const auto playerClass = Entities::GetClientClass("CTFPlayer");
 
-		if (Entities::RetrieveClassPropOffset("CTFPlayer", buffer) < 0)
+		for (size_t i = 0; i < s_PlayerStreaks.size(); i++)
 		{
-			PluginWarning("Required property table m_hMyWeapons for CTFPlayer for module %s not available!\n", GetModuleName());
-
-			ready = false;
-
-			break;
+			char buf[32];
+			s_PlayerStreaks[i] = Entities::GetEntityProp<int>(playerClass,
+				Entities::PropIndex(buf, "m_nStreaks", i));
 		}
-	}
 
-	for (int i = 0; i < 4; i++)
-	{
-		char buffer[32];
-		Entities::PropIndex(buffer, "m_nStreaks", i);
-
-		if (Entities::RetrieveClassPropOffset("CTFPlayer", buffer) < 0)
-		{
-			PluginWarning("Required property table %s for CTFPlayer for module %s not available!\n", buffer, GetModuleName());
-			ready = false;
-			break;
-		}
-	}
-
-	for (int i = 0; i <= MAX_PLAYERS; i++)
-	{
-		char buffer[32];
-		Entities::PropIndex(buffer, "m_iStreaks", i);
-
-		if (Entities::RetrieveClassPropOffset("CTFPlayerResource", buffer) < 0)
-		{
-			PluginWarning("Required property table %s for CTFPlayerResource for module %s not available!\n", buffer, GetModuleName());
-			ready = false;
-			break;
-		}
-	}
-
-	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_bHealing") < 0)
-	{
-		PluginWarning("Required property m_bHealing for CWeaponMedigun for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	if (Entities::RetrieveClassPropOffset("CWeaponMedigun", "m_hHealingTarget") < 0)
-	{
-		PluginWarning("Required property m_hHealingTarget for CWeaponMedigun for module %s not available!\n", GetModuleName());
-		ready = false;
+		const auto medigunClass = Entities::GetClientClass("CWeaponMedigun");
+		s_MedigunHealing = Entities::GetEntityProp<bool>(medigunClass, "m_bHealing");
+		s_MedigunHealingTarget = Entities::GetEntityProp<EHANDLE>(medigunClass, "m_hHealingTarget");
 	}
 
 	return ready;
@@ -211,28 +178,8 @@ Killstreaks::Panel::~Panel()
 
 	Assert(!m_FireEventClientSideHook);
 
-	int maxEntity = Interfaces::GetClientEntityList()->GetHighestEntityIndex();
-
-	for (int e = 1; e <= maxEntity; e++)
-	{
-		IClientEntity *entity = Interfaces::GetClientEntityList()->GetClientEntity(e);
-		if (!entity)
-			continue;
-
-		if (Entities::CheckEntityBaseclass(entity, "TFPlayerResource"))
-		{
-			for (int i = 1; i <= MAX_PLAYERS; i++)
-			{
-				char buffer[32];
-				Entities::PropIndex(buffer, "m_iStreaks", i);
-
-				int *killstreakGlobal = Entities::GetEntityProp<int>(entity, buffer);
-				*killstreakGlobal = 0;
-			}
-
-			break;
-		}
-	}
+	for (int i = 1; i <= Interfaces::GetEngineTool()->GetMaxClients(); i++)
+		*TFPlayerResource::GetPlayerResource()->GetKillstreak(i) = 0;
 
 	for (Player* player : Player::Iterable())
 	{
@@ -245,15 +192,8 @@ Killstreaks::Panel::~Panel()
 		if (!playerEntity)
 			continue;
 
-		int *killstreakPrimary = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.000");
-		int *killstreakSecondary = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.001");
-		int *killstreakMelee = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.002");
-		int *killstreakPDA = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.003");
-
-		*killstreakPrimary = 0;
-		*killstreakSecondary = 0;
-		*killstreakMelee = 0;
-		*killstreakPDA = 0;
+		for (auto& streak : s_PlayerStreaks)
+			streak.GetValue(playerEntity) = 0;
 	}
 }
 
@@ -285,28 +225,20 @@ void Killstreaks::Panel::OnTick()
 			if (!playerEntity)
 				continue;
 
-			int* const killstreakPrimary = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.000");
-			int* const killstreakSecondary = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.001");
-			int* const killstreakMelee = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.002");
-			int* const killstreakPDA = Entities::GetEntityProp<int>(playerEntity, "m_nStreaks.003");
-
 			const int userid = player->GetUserID();
 			int* const killstreakGlobal = TFPlayerResource::GetPlayerResource()->GetKillstreak(player->entindex());
 
-			if (currentKillstreaks.find(userid) != currentKillstreaks.end())
+			if (auto found = currentKillstreaks.find(userid); found != currentKillstreaks.end())
 			{
-				*killstreakPrimary = currentKillstreaks[userid];
-				*killstreakSecondary = currentKillstreaks[userid];
-				*killstreakMelee = currentKillstreaks[userid];
-				*killstreakPDA = currentKillstreaks[userid];
+				for (auto& streak : s_PlayerStreaks)
+					streak.GetValue(playerEntity) = found->second;
+
 				*killstreakGlobal = currentKillstreaks[userid];
 			}
 			else
 			{
-				*killstreakPrimary = 0;
-				*killstreakSecondary = 0;
-				*killstreakMelee = 0;
-				*killstreakPDA = 0;
+				for (auto& streak : s_PlayerStreaks)
+					streak.GetValue(playerEntity) = 0;
 
 				if (killstreakGlobal)
 					*killstreakGlobal = 0;
@@ -396,14 +328,15 @@ bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 					char buffer[32];
 					Entities::PropIndex(buffer, "m_hMyWeapons", i);
 
-					IClientEntity *weapon = Entities::GetEntityProp<EHANDLE>(assister->GetEntity(), buffer)->Get();
+					IClientEntity *weapon = Entities::GetEntityProp<EHANDLE>(assister->GetEntity(), buffer).GetValue(assister->GetEntity()).Get();
 					if (!weapon || !Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
 						continue;
 
-					bool healing = *Entities::GetEntityProp<bool *>(weapon, { "m_bHealing" });
-					if (healing)
+					static const auto bHealingOffset = Entities::GetEntityProp<bool *>(weapon, { "m_bHealing" });
+					if (bHealingOffset.GetValue(weapon))
 					{
-						int healingTarget = Entities::GetEntityProp<EHANDLE>(weapon, { "m_hHealingTarget" })->GetEntryIndex();
+						static const auto healingTargetOffset = Entities::GetEntityProp<EHANDLE>(weapon, { "m_hHealingTarget" });
+						int healingTarget = healingTargetOffset.GetValue(weapon).GetEntryIndex();
 
 						if (healingTarget == Interfaces::GetEngineClient()->GetPlayerForUserID(attackerUserID))
 						{

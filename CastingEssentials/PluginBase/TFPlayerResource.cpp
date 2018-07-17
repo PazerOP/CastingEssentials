@@ -15,7 +15,7 @@ std::shared_ptr<TFPlayerResource> TFPlayerResource::GetPlayerResource()
 {
 	if (m_PlayerResource && m_PlayerResource->m_PlayerResourceEntity.Get())
 		return m_PlayerResource;
-	
+
 	const auto count = Interfaces::GetClientEntityList()->GetHighestEntityIndex();
 	for (int i = 0; i < count; i++)
 	{
@@ -39,48 +39,50 @@ std::shared_ptr<TFPlayerResource> TFPlayerResource::GetPlayerResource()
 	return nullptr;
 }
 
+TFPlayerResource::TFPlayerResource()
+{
+	auto cc = Entities::GetClientClass("CTFPlayerResource");
+
+	char buf[32];
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		m_AliveOffsets[i] = Entities::GetEntityProp<bool>(cc, Entities::PropIndex(buf, "m_bAlive", i));
+		m_StreakOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iStreaks", i));
+		m_DamageOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iDamage", i));
+		m_MaxHealthOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iMaxHealth", i));
+	}
+}
+
 bool TFPlayerResource::IsAlive(int playerEntIndex)
 {
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
 		return false;
 
-	char buffer[32];
-	Entities::PropIndex(buffer, "m_bAlive", playerEntIndex);
-
-	return *Entities::GetEntityProp<bool>(dynamic_cast<C_BaseEntity *>(m_PlayerResourceEntity.Get()), buffer);
+	return m_AliveOffsets[playerEntIndex].GetValue(m_PlayerResourceEntity.Get());
 }
 
 int* TFPlayerResource::GetKillstreak(int playerEntIndex)
 {
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
-		return false;
+		return nullptr;
 
-	char buffer[32];
-	Entities::PropIndex(buffer, "m_iStreaks", playerEntIndex);
-
-	return Entities::GetEntityProp<int>(dynamic_cast<C_BaseEntity *>(m_PlayerResourceEntity.Get()), buffer);
+	return &m_StreakOffsets[playerEntIndex].GetValue(m_PlayerResourceEntity.Get());
 }
 
 int TFPlayerResource::GetDamage(int playerEntIndex)
 {
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
-		return false;
+		return std::numeric_limits<int>::min();
 
-	char buffer[32];
-	Entities::PropIndex(buffer, "m_iDamage", playerEntIndex);
-
-	return *Entities::GetEntityProp<int>(m_PlayerResourceEntity.Get(), buffer);
+	return m_DamageOffsets[playerEntIndex].GetValue(m_PlayerResourceEntity.Get());
 }
 
 int TFPlayerResource::GetMaxHealth(int playerEntIndex)
 {
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
-		return false;
+		return std::numeric_limits<int>::min();
 
-	char buffer[32];
-	Entities::PropIndex(buffer, "m_iMaxHealth", playerEntIndex);
-
-	return *Entities::GetEntityProp<int>(dynamic_cast<C_BaseEntity*>(m_PlayerResourceEntity.Get()), buffer);
+	return m_MaxHealthOffsets[playerEntIndex].GetValue(m_PlayerResourceEntity.Get());
 }
 
 bool TFPlayerResource::CheckEntIndex(int playerEntIndex, const char* functionName)
