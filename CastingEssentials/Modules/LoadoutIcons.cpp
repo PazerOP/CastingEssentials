@@ -73,10 +73,9 @@ void LoadoutIcons::GatherWeapons()
 	{
 		const auto playerIndex = player->entindex() - 1;
 
-		static const auto activeWeaponOffset = Entities::GetEntityProp<EHANDLE>(player->GetEntity(), "m_hActiveWeapon");
-		const auto& activeWeapon = activeWeaponOffset.GetValue(player->GetEntity());
+		const auto& activeWeapon = player->GetActiveWeapon();
 
-		m_Weapons[playerIndex][IDX_ACTIVE] = activeWeapon ? ItemSchema::GetModule()->GetBaseItemID(Entities::GetItemDefinitionIndex(activeWeapon.Get())) : -1;
+		m_Weapons[playerIndex][IDX_ACTIVE] = activeWeapon ? ItemSchema::GetModule()->GetBaseItemID(Entities::GetItemDefinitionIndex(activeWeapon)) : -1;
 
 		for (int weaponIndex = 0; weaponIndex < 5; weaponIndex++)
 		{

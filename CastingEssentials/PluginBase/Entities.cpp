@@ -10,6 +10,12 @@
 
 #include <sstream>
 
+std::map<const RecvTable*, std::set<const RecvTable*>> Entities::s_ContainingRecvTables;
+
+#ifdef DEBUG
+std::vector<const ClientClass*> Entities::s_DebugClientClasses;
+#endif
+
 bool Entities::CheckEntityBaseclass(IClientNetworkable* entity, const char* baseclass)
 {
 	ClientClass *clientClass = entity->GetClientClass();
@@ -146,23 +152,36 @@ RecvProp* Entities::FindRecvProp(RecvTable* table, const char* propName, bool re
 	return nullptr;
 }
 
-std::pair<int, const RecvTable*> Entities::RetrieveClassPropOffset(const std::string_view& className, const std::string_view& propertyString)
+Entities::PropOffsetPair Entities::RetrieveClassPropOffset(const std::string_view& className, const std::string_view& propertyString)
 {
 	return RetrieveClassPropOffset(GetClientClass(className.data()), propertyString);
 }
 
-std::pair<int, const RecvTable*> Entities::RetrieveClassPropOffset(const ClientClass* cc, const std::string_view& propertyString)
+Entities::PropOffsetPair Entities::RetrieveClassPropOffset(const ClientClass* cc, const std::string_view& propertyString)
 {
 	if (!cc)
-		return std::make_pair(-1, nullptr);
+		return PropOffsetPair(-1, PropOffsetPair::second_type());
 
 	return RetrieveClassPropOffset(cc->m_pRecvTable, propertyString);
 }
 
-std::pair<int, const RecvTable*> Entities::RetrieveClassPropOffset(const RecvTable* table, const std::string_view& propertyString)
+void Entities::Load()
+{
+#ifdef DEBUG
+	for (auto cc = Interfaces::GetClientDLL()->GetAllClasses(); cc; cc = cc->m_pNext)
+		s_DebugClientClasses.push_back(cc);
+
+	std::sort(s_DebugClientClasses.begin(), s_DebugClientClasses.end(),
+		[](const ClientClass* a, const ClientClass* b) { return strcmp(a->GetName(), b->GetName()) < 0; });
+#endif
+
+	BuildContainingRecvTablesMap();
+}
+
+Entities::PropOffsetPair Entities::RetrieveClassPropOffset(const RecvTable* table, const std::string_view& propertyString)
 {
 	if (!table)
-		return std::make_pair(-1, nullptr);
+		return PropOffsetPair(-1, PropOffsetPair::second_type());
 
 	std::vector<std::string_view> refPropertyTree;
 
@@ -180,11 +199,11 @@ std::pair<int, const RecvTable*> Entities::RetrieveClassPropOffset(const RecvTab
 	return Entities::RetrieveClassPropOffset(table, refPropertyTree, currentPropertyTree);
 }
 
-std::pair<int, const RecvTable*> Entities::RetrieveClassPropOffset(const RecvTable* table,
+Entities::PropOffsetPair Entities::RetrieveClassPropOffset(const RecvTable* table,
 	const std::vector<std::string_view>& refPropertyTree, std::vector<std::string_view>& currentPropertyTree)
 {
 	if (!table)
-		return std::make_pair(-1, nullptr);
+		return PropOffsetPair(-1, nullptr);
 
 	for (int i = 0; i < table->m_nProps; i++)
 	{
@@ -195,7 +214,7 @@ std::pair<int, const RecvTable*> Entities::RetrieveClassPropOffset(const RecvTab
 			currentPropertyTree.push_back(prop->GetName());
 
 			if (auto found = RetrieveClassPropOffset(prop->m_pDataTable, refPropertyTree, currentPropertyTree); found.first != -1)
-				return std::make_pair(prop->GetOffset() + found.first, found.second);
+				return PropOffsetPair(prop->GetOffset() + found.first, std::move(found.second));
 
 			currentPropertyTree.pop_back();
 		}
@@ -224,12 +243,12 @@ std::pair<int, const RecvTable*> Entities::RetrieveClassPropOffset(const RecvTab
 			if (!match)
 				continue;
 
-			Assert(prop->GetType() != DPT_DataTable);
-			return std::make_pair(prop->GetOffset(), table);
+			const auto& set = s_ContainingRecvTables.at(table);
+			return PropOffsetPair(prop->GetOffset(), &s_ContainingRecvTables.at(table));
 		}
 	}
 
-	return std::make_pair(-1, nullptr);
+	return PropOffsetPair(-1, nullptr);
 }
 
 const TFTeam* Entities::TryGetEntityTeam(const IClientNetworkable* entity)
@@ -253,34 +272,6 @@ int Entities::GetItemDefinitionIndex(const IClientNetworkable* entity)
 	return itemdefIndexOffset.GetValue(entity);
 }
 
-bool Entities::GetSubProp(const RecvTable* table, const std::string_view& propName, const RecvProp*& prop, int& offset)
-{
-	for (int i = 0; i < table->m_nProps; i++)
-	{
-		offset = 0;
-
-		const RecvProp *currentProp = &table->m_pProps[i];
-
-		if (propName == currentProp->GetName())
-		{
-			prop = currentProp;
-			offset = currentProp->GetOffset();
-			return true;
-		}
-
-		if (currentProp->GetType() == DPT_DataTable)
-		{
-			if (GetSubProp(currentProp->GetDataTable(), propName, prop, offset))
-			{
-				offset += currentProp->GetOffset();
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
 void* Entities::GetEntityProp(IClientNetworkable* entity, const char* propertyString, bool throwifMissing)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
@@ -296,4 +287,43 @@ void* Entities::GetEntityProp(IClientNetworkable* entity, const char* propertySt
 	}
 
 	return (void *)(size_t(entity->GetDataTableBasePtr()) + size_t(offset.first));
+}
+
+void Entities::AddChildTables(const RecvTable* parent, std::vector<const RecvTable*>& stack)
+{
+	stack.push_back(parent);
+
+	for (int i = 0; i < parent->m_nProps; i++)
+	{
+		const auto& prop = parent->m_pProps[i];
+		if (prop.m_RecvType != DPT_DataTable)
+			continue;
+
+		const auto table = prop.m_pDataTable;
+
+		auto& set = s_ContainingRecvTables[table];
+		set.insert(table);	// We must always contain ourselves
+
+		for (const auto& parentTable : stack)
+			set.insert(parentTable);
+
+		AddChildTables(table, stack);
+	}
+
+	stack.pop_back();
+}
+
+void Entities::BuildContainingRecvTablesMap()
+{
+	Assert(s_ContainingRecvTables.empty());
+	//std::set<const RecvTable*> allTables;
+
+	std::vector<const RecvTable*> stack;
+	for (auto cc = Interfaces::GetClientDLL()->GetAllClasses(); cc; cc = cc->m_pNext)
+	{
+		stack.clear();
+
+		s_ContainingRecvTables[cc->m_pRecvTable].insert(cc->m_pRecvTable);
+		AddChildTables(cc->m_pRecvTable, stack);
+	}
 }

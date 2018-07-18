@@ -40,7 +40,6 @@ class CastingPlugin final : public Plugin
 public:
 	CastingPlugin();
 
-
 	bool Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory) override;
 	void Unload() override;
 	const char* GetPluginDescription() override { return PLUGIN_FULL_VERSION; }
@@ -71,7 +70,9 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 
 	Interfaces::Load(interfaceFactory);
 	HookManager::Load();
+	Entities::Load();
 	Player::Load();
+
 	Modules().Init();
 
 	Modules().RegisterAndLoadModule<HUDHacking>("Evil HUD Modifications");

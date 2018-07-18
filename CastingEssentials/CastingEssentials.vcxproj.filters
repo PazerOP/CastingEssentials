@@ -342,5 +342,6 @@
   <ItemGroup>
     <Natvis Include="Misc\NatVis\RecvTable.natvis" />
     <Natvis Include="Misc\NatVis\RecvProp.natvis" />
+    <Natvis Include="Misc\NatVis\ClientClass.natvis" />
   </ItemGroup>
 </Project>

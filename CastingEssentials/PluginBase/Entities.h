@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
 #include <stack>
 #include <string>
 #include <string_view>
@@ -17,10 +18,14 @@ enum class TFTeam;
 
 class Entities final
 {
+	using PropOffsetPair = std::pair<int, const std::set<const RecvTable*>*>;
+
 public:
-	static std::pair<int, const RecvTable*> RetrieveClassPropOffset(const RecvTable* table, const std::string_view& propertyString);
-	static std::pair<int, const RecvTable*> RetrieveClassPropOffset(const ClientClass* cc, const std::string_view& propertyString);
-	static std::pair<int, const RecvTable*> RetrieveClassPropOffset(const std::string_view& className, const std::string_view& propertyString);
+	static void Load();
+
+	static PropOffsetPair RetrieveClassPropOffset(const RecvTable* table, const std::string_view& propertyString);
+	static PropOffsetPair RetrieveClassPropOffset(const ClientClass* cc, const std::string_view& propertyString);
+	static PropOffsetPair RetrieveClassPropOffset(const std::string_view& className, const std::string_view& propertyString);
 
 	template<size_t size> static char* PropIndex(char(&buffer)[size], const char* base, int index)
 	{
@@ -31,11 +36,11 @@ public:
 	template<typename TValue> inline static EntityOffset<TValue>
 		GetEntityProp(const ClientClass* cc, const char* propertyString)
 	{
-		const auto found = RetrieveClassPropOffset(cc, propertyString);
+		auto found = RetrieveClassPropOffset(cc, propertyString);
 		if (found.first < 0)
 			throw invalid_class_prop(propertyString);
 
-		return EntityOffset<TValue>(found.second, found.first);
+		return EntityOffset<TValue>(*found.second, found.first);
 	}
 	template<typename TValue> __forceinline static EntityOffset<TValue>
 		GetEntityProp(IClientNetworkable* entity, const char* propertyString)
@@ -67,12 +72,19 @@ private:
 	static bool CheckClassBaseclass(ClientClass *clientClass, const char* baseclass);
 	static bool CheckTableBaseclass(RecvTable *sTable, const char* baseclass);
 
-	static std::pair<int, const RecvTable*> RetrieveClassPropOffset(const RecvTable* table, const std::vector<std::string_view>& refPropertyTree,
-		std::vector<std::string_view>& currentPropertyTree);
+	static PropOffsetPair RetrieveClassPropOffset(const RecvTable* table,
+		const std::vector<std::string_view>& refPropertyTree, std::vector<std::string_view>& currentPropertyTree);
 
 	static std::string ConvertTreeToString(const std::vector<std::string_view>& tree);
 	static std::vector<std::string_view> ConvertStringToTree(const std::string_view& str);
 
-	static bool GetSubProp(const RecvTable* table, const std::string_view& propName, const RecvProp*& prop, int& offset);
 	static void* GetEntityProp(IClientNetworkable* entity, const char* propertyString, bool throwifMissing = true);
+
+	static std::map<const RecvTable*, std::set<const RecvTable*>> s_ContainingRecvTables;
+	static void BuildContainingRecvTablesMap();
+	static void AddChildTables(const RecvTable* parent, std::vector<const RecvTable*>& stack);
+
+#ifdef DEBUG
+	static std::vector<const ClientClass*> s_DebugClientClasses;
+#endif
 };

@@ -11,6 +11,13 @@
 // smh windows
 #undef IGNORE
 
+EntityOffset<bool> ProjectileOutlines::s_GlowDisabledOffset;
+EntityOffset<int> ProjectileOutlines::s_GlowModeOffset;
+EntityOffset<EHANDLE> ProjectileOutlines::s_GlowTargetOffset;
+EntityOffset<Color> ProjectileOutlines::s_GlowColorOffset;
+
+EntityOffset<TFGrenadePipebombType> ProjectileOutlines::s_PipeTypeOffset;
+
 ProjectileOutlines::ProjectileOutlines() :
 	ce_projectileoutlines_rockets("ce_projectileoutlines_rockets", "0", FCVAR_NONE, "Enable projectile outlines for rockets."),
 	ce_projectileoutlines_pills("ce_projectileoutlines_pills", "0", FCVAR_NONE, "Enable projectile outlines for pills."),
@@ -41,6 +48,28 @@ ProjectileOutlines::~ProjectileOutlines()
 		m_BaseEntityInitHook = 0;
 
 	Assert(!m_BaseEntityInitHook);
+}
+
+bool ProjectileOutlines::CheckDependencies()
+{
+	// CTFGlow
+	{
+		const auto ccGlow = Entities::GetClientClass("CTFGlow");
+
+		s_GlowDisabledOffset = Entities::GetEntityProp<bool>(ccGlow, "m_bDisabled");
+		s_GlowModeOffset = Entities::GetEntityProp<int>(ccGlow, "m_iMode");
+		s_GlowTargetOffset = Entities::GetEntityProp<CHandle<C_BaseEntity>>(ccGlow, "m_hTarget");
+		s_GlowColorOffset = Entities::GetEntityProp<Color>(ccGlow, "m_glowColor");
+	}
+
+	// CTFProjectile_Pipebomb
+	{
+		const auto ccPipe = Entities::GetClientClass("CTFGrenadePipebombProjectile");
+
+		s_PipeTypeOffset = Entities::GetEntityProp<TFGrenadePipebombType>(ccPipe, "m_iType");
+	}
+
+	return true;
 }
 
 void ProjectileOutlines::OnTick(bool inGame)
@@ -117,8 +146,7 @@ void ProjectileOutlines::OnTick(bool inGame)
 				Lerp(smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start.GetFloat(), ce_projectileoutlines_fade_end.GetFloat(), 1, 0)), 0, 255) :
 				255;
 
-			static const auto glowColorOffset = Entities::GetEntityProp<Color>(glowEntity, "m_glowColor");
-			Color& glowColor = glowColorOffset.GetValue(glowEntity);
+			Color& glowColor = s_GlowColorOffset.GetValue(glowEntity);
 
 			Color newColor(glowColor.r(), glowColor.g(), glowColor.b(), alpha);
 			if (newColor == glowColor)
@@ -141,16 +169,11 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 	{
 		IClientEntity* glowEntity = ent;
 
-		static const auto disabledOffset = Entities::GetEntityProp<bool>(glowEntity, "m_bDisabled");
-		static const auto modeOffset = Entities::GetEntityProp<int>(glowEntity, "m_iMode");
-		static const auto targetOffset = Entities::GetEntityProp<EHANDLE>(glowEntity, "m_hTarget");
-		static const auto glowColorOffset = Entities::GetEntityProp<Color>(glowEntity, "m_glowColor");
+		s_GlowDisabledOffset.GetValue(glowEntity) = false;
+		s_GlowModeOffset.GetValue(glowEntity) = ce_projectileoutlines_mode.GetInt();
+		s_GlowTargetOffset.GetValue(glowEntity).Set(projectileEntity->GetBaseEntity());
 
-		disabledOffset.GetValue(glowEntity) = false;
-		modeOffset.GetValue(glowEntity) = ce_projectileoutlines_mode.GetInt();
-		targetOffset.GetValue(glowEntity).Set(projectileEntity->GetBaseEntity());
-
-		Color& color = glowColorOffset.GetValue(glowEntity);
+		Color& color = s_GlowColorOffset.GetValue(glowEntity);
 		const TFTeam team = Entities::GetEntityTeamSafe(projectileEntity);
 		if (team == TFTeam::Blue)
 			color = m_ColorBlu;
@@ -171,6 +194,7 @@ void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 	if (!ce_projectileoutlines_rockets.GetBool())
 		return;
 
+	auto cc = entity->GetClientClass();
 	if (!Entities::CheckEntityBaseclass(entity, "TFProjectile_Rocket"))
 		return;
 
@@ -185,11 +209,11 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 	if (!pills && !stickies)
 		return;
 
-	if (!Entities::CheckEntityBaseclass(entity, "TFProjectile_Pipebomb"))
+	TFGrenadePipebombType type;
+	if (auto tryType = s_PipeTypeOffset.TryGetValue(entity))
+		type = *tryType;
+	else
 		return;
-
-	static const auto typeOffset = Entities::GetEntityProp<TFGrenadePipebombType>(entity, "m_iType");
-	const TFGrenadePipebombType type = typeOffset.GetValue(entity);
 
 	if (pills && type == TFGrenadePipebombType::Pill)
 		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));

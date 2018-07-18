@@ -332,12 +332,9 @@ bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 					if (!weapon || !Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
 						continue;
 
-					static const auto bHealingOffset = Entities::GetEntityProp<bool *>(weapon, { "m_bHealing" });
-					if (bHealingOffset.GetValue(weapon))
+					if (s_MedigunHealing.GetValue(weapon))
 					{
-						static const auto healingTargetOffset = Entities::GetEntityProp<EHANDLE>(weapon, { "m_hHealingTarget" });
-						int healingTarget = healingTargetOffset.GetValue(weapon).GetEntryIndex();
-
+						int healingTarget = s_MedigunHealingTarget.GetValue(weapon).GetEntryIndex();
 						if (healingTarget == Interfaces::GetEngineClient()->GetPlayerForUserID(attackerUserID))
 						{
 							currentKillstreaks[assisterUserID]++;

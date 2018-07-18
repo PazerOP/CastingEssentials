@@ -1,4 +1,5 @@
 #pragma once
+#include "PluginBase/EntityOffset.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -10,12 +11,15 @@
 class C_BaseEntity;
 class IClientEntity;
 class IConVar;
+enum class TFGrenadePipebombType;
 
 class ProjectileOutlines final : public Module<ProjectileOutlines>
 {
 public:
 	ProjectileOutlines();
 	~ProjectileOutlines();
+
+	static bool CheckDependencies();
 
 private:
 	ConVar ce_projectileoutlines_rockets;
@@ -53,4 +57,11 @@ private:
 	static void ColorChanged(IConVar* var, const char* oldValue, float flOldValue);
 	Color m_ColorRed;
 	Color m_ColorBlu;
+
+	static EntityOffset<bool> s_GlowDisabledOffset;
+	static EntityOffset<int> s_GlowModeOffset;
+	static EntityOffset<CHandle<C_BaseEntity>> s_GlowTargetOffset;
+	static EntityOffset<Color> s_GlowColorOffset;
+
+	static EntityOffset<TFGrenadePipebombType> s_PipeTypeOffset;
 };
