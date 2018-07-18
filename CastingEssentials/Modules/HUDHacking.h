@@ -67,6 +67,5 @@ private:
 	int m_ProgressBarApplySettingsHook;
 	static void ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings);
 
-	static EntityOffset<int> s_ItemDefinitionIndex;
 	static EntityOffset<float> s_RageMeter;
 };

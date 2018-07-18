@@ -246,6 +246,13 @@ TFTeam Entities::GetEntityTeamSafe(const IClientNetworkable* entity)
 		return TFTeam::Unassigned;
 }
 
+int Entities::GetItemDefinitionIndex(const IClientNetworkable* entity)
+{
+	static const auto itemdefIndexOffset = Entities::GetEntityProp<int>("CBaseCombatWeapon", "m_iItemDefinitionIndex");
+
+	return itemdefIndexOffset.GetValue(entity);
+}
+
 bool Entities::GetSubProp(const RecvTable* table, const std::string_view& propName, const RecvProp*& prop, int& offset)
 {
 	for (int i = 0; i < table->m_nProps; i++)

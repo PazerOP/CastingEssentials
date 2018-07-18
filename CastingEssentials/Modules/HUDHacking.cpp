@@ -23,7 +23,6 @@
 #undef min
 #undef max
 
-EntityOffset<int> HUDHacking::s_ItemDefinitionIndex;
 EntityOffset<float> HUDHacking::s_RageMeter;
 
 ConVar HUDHacking::ce_hud_debug_unassociated_playerpanels("ce_hud_debug_unassociated_playerpanels", "0", FCVAR_NONE, "Print debug messages to the console when a player cannot be found for a given playerpanel.");
@@ -52,9 +51,6 @@ HUDHacking::~HUDHacking()
 bool HUDHacking::CheckDependencies()
 {
 	{
-		const auto weaponClass = Entities::GetClientClass("CBaseCombatWeapon");
-		s_ItemDefinitionIndex = Entities::GetEntityProp<int>(weaponClass, "m_iItemDefinitionIndex");
-
 		const auto playerClass = Entities::GetClientClass("CTFPlayer");
 		s_RageMeter = Entities::GetEntityProp<float>(playerClass, "m_flRageMeter");
 	}
@@ -319,7 +315,7 @@ bool HUDHacking::GetBannerInfo(const Player& player, BannerType& type, float& ch
 			continue;
 
 		// Make sure this is a banner of some type
-		type = (BannerType)ItemSchema::GetModule()->GetBaseItemID(s_ItemDefinitionIndex.GetValue(weapon));
+		type = (BannerType)ItemSchema::GetModule()->GetBaseItemID(Entities::GetItemDefinitionIndex(weapon));
 		switch (type)
 		{
 			case BannerType::BuffBanner:

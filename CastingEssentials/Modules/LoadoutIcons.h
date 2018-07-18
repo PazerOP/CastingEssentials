@@ -31,8 +31,6 @@ private:
 
 	static int GetPlayerIndex(vgui::EditablePanel* playerPanel);
 
-	static int GetWeaponDefinitionIndex(IClientNetworkable* networkable);
-
 	ConVar ce_loadout_enabled;
 	ConVar ce_loadout_filter_active_red;
 	ConVar ce_loadout_filter_active_blu;

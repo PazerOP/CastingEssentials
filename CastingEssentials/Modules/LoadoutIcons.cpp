@@ -66,19 +66,6 @@ void LoadoutIcons::OnTick(bool ingame)
 	}
 }
 
-int LoadoutIcons::GetWeaponDefinitionIndex(IClientNetworkable* networkable)
-{
-	if (!networkable)
-		return -1;
-
-	static const auto definitionIndex = Entities::GetEntityProp<int>(networkable, "m_iItemDefinitionIndex");
-	Assert(definitionIndex);
-	if (!definitionIndex)
-		return -1;
-
-	return definitionIndex.GetValue(networkable);
-}
-
 void LoadoutIcons::GatherWeapons()
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
@@ -89,7 +76,7 @@ void LoadoutIcons::GatherWeapons()
 		static const auto activeWeaponOffset = Entities::GetEntityProp<EHANDLE>(player->GetEntity(), "m_hActiveWeapon");
 		const auto& activeWeapon = activeWeaponOffset.GetValue(player->GetEntity());
 
-		m_Weapons[playerIndex][IDX_ACTIVE] = activeWeapon ? ItemSchema::GetModule()->GetBaseItemID(GetWeaponDefinitionIndex(activeWeapon.Get())) : -1;
+		m_Weapons[playerIndex][IDX_ACTIVE] = activeWeapon ? ItemSchema::GetModule()->GetBaseItemID(Entities::GetItemDefinitionIndex(activeWeapon.Get())) : -1;
 
 		for (int weaponIndex = 0; weaponIndex < 5; weaponIndex++)
 		{
@@ -97,7 +84,7 @@ void LoadoutIcons::GatherWeapons()
 			if (!weapon)
 				continue;
 
-			auto currentID = ItemSchema::GetModule()->GetBaseItemID(GetWeaponDefinitionIndex(weapon));
+			auto currentID = ItemSchema::GetModule()->GetBaseItemID(Entities::GetItemDefinitionIndex(weapon));
 			if (currentID == m_Weapons[playerIndex][IDX_ACTIVE])
 				m_ActiveWeaponIndices[playerIndex] = weaponIndex;
 

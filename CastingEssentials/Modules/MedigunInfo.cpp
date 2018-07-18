@@ -32,7 +32,6 @@
 
 #include <memdbgon.h>
 
-EntityOffset<int> MedigunInfo::s_ItemDefinitionIndex;
 EntityOffset<bool> MedigunInfo::s_ChargeRelease;
 EntityOffset<TFResistType> MedigunInfo::s_ChargeResistType;
 EntityOffset<float> MedigunInfo::s_ChargeLevel;
@@ -129,7 +128,6 @@ bool MedigunInfo::CheckDependencies()
 	{
 		const auto medigunClass = Entities::GetClientClass("CWeaponMedigun");
 
-		s_ItemDefinitionIndex = Entities::GetEntityProp<int>(medigunClass, "m_iItemDefinitionIndex");
 		s_ChargeRelease = Entities::GetEntityProp<bool>(medigunClass, "m_bChargeRelease");
 		s_ChargeResistType = Entities::GetEntityProp<TFResistType>(medigunClass, "m_nChargeResistType");
 		s_ChargeLevel = Entities::GetEntityProp<float>(medigunClass, "m_flChargeLevel");

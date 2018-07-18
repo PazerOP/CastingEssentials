@@ -530,8 +530,7 @@ C_BaseCombatWeapon* Player::GetMedigun(TFMedigun* medigunType) const
 
 		if (medigunType)
 		{
-			static const auto itemdefIndexOffset = Entities::GetEntityProp<int>(weapon, "m_iItemDefinitionIndex");
-			const auto itemdefIndex = itemdefIndexOffset.GetValue(weapon);
+			const auto itemdefIndex = Entities::GetItemDefinitionIndex(weapon);
 
 			const auto baseID = ItemSchema::GetModule()->GetBaseItemID(itemdefIndex);
 
