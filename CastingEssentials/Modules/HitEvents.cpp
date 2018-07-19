@@ -71,8 +71,7 @@ public:
 
 		bool m_BigFont;				// 4
 
-		uint16_t : 16;
-		uint8_t : 8;
+		PADDING(3);
 
 		int deltaType;				// 8
 
@@ -194,16 +193,6 @@ static_assert(offsetof(CAccountPanel, m_flDeltaLifetime) == 516);
 static_assert(offsetof(CAccountPanel, m_hDeltaItemFont) == 524);
 static_assert(offsetof(CAccountPanel, m_hDeltaItemFontBig) == 532);
 
-struct PaddingStruct
-{
-	uint64_t : 64;
-	uint64_t : 64;
-	uint64_t : 64;
-	uint64_t : 64;
-	uint64_t : 64;
-	uint32_t : 32;
-};
-
 class CDamageAccountPanel : public CAccountPanel
 {
 public:
@@ -233,16 +222,15 @@ void HitEvents::FireGameEvent(IGameEvent* event)
 	if (!localPlayer)
 		return;
 
+	if (auto mode = CameraState::GetLocalObserverMode();
+		mode != ObserverMode::OBS_MODE_CHASE && mode != ObserverMode::OBS_MODE_IN_EYE)
+	{
+		return;
+	}
+
 	auto specTarget = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 	if (!specTarget || specTarget->GetUserID() != event->GetInt("attacker"))
 		return;
-
-	/*{
-		auto newEvent = TriggerPlayerHurt(specTarget->entindex(), 123);
-		m_EventsToIgnore.push_back(newEvent);
-		gameeventmanager->FireEventClientSide(newEvent);
-		return;
-	}*/
 
 	if (ce_hitevents_debug.GetBool())
 	{
@@ -289,13 +277,6 @@ void HitEvents::FireGameEvent(IGameEvent* event)
 
 	// Override attacker
 	newEvent->SetInt("attacker", localPlayer->GetUserID());
-	/*Player* localPlayer = Player::GetLocalPlayer();
-	if (localPlayer)
-	{
-		auto attacker = Player::AsPlayer(localPlayer->GetObserverTarget());
-		if (attacker && attacker->GetUserID() == newEvent->GetInt("attacker"))
-			newEvent->SetInt("attacker", localPlayer->GetUserID());
-	}*/
 
 	if (ce_hitevents_debug.GetInt())
 	{
@@ -305,7 +286,6 @@ void HitEvents::FireGameEvent(IGameEvent* event)
 
 	m_EventsToIgnore.push_back(newEvent);
 
-	//VariablePusher<C_BasePlayer*> localPlayerPusher(Interfaces::GetLocalPlayer(), );
 	gameeventmanager->FireEventClientSide(newEvent);
 }
 
@@ -372,8 +352,6 @@ void HitEvents::UpdateEnabledState()
 
 void HitEvents::DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool bigFont)
 {
-	//CDamageAccountPanel* questionable = (CDamageAccountPanel*)((std::byte*)pThis + 44);
-
 	auto localPlayer = C_BasePlayer::GetLocalPlayer();
 
 	Assert(localPlayer->IsPlayer());

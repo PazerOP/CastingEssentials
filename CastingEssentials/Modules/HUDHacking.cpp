@@ -119,22 +119,6 @@ vgui::Panel* HUDHacking::FindChildByName(vgui::VPANEL rootPanel, const char* nam
 
 	return nullptr;
 }
-
-Color* HUDHacking::GetFillColor(vgui::ImagePanel* imgPanel)
-{
-	return imgPanel ? (Color*)(((DWORD*)imgPanel) + 94) : nullptr;
-}
-
-Color* HUDHacking::GetDrawColor(vgui::ImagePanel* imgPanel)
-{
-	return imgPanel ? (Color*)(((DWORD*)imgPanel) + 95) : nullptr;
-}
-
-int* HUDHacking::GetProgressDirection(vgui::ProgressBar* progressBar)
-{
-	return progressBar ? (int*)(((DWORD*)progressBar) + 88) : nullptr;
-}
-
 void HUDHacking::OnTick(bool inGame)
 {
 	if (!inGame)
@@ -396,16 +380,15 @@ void HUDHacking::UpdatePlayerHealth(vgui::VPANEL playerVPanel, vgui::EditablePan
 void HUDHacking::ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings)
 {
 	const char* dirStr = pSettings->GetString("direction", "east");
-	int& dirVar = *GetProgressDirection(pThis);
 
 	if (!stricmp(dirStr, "north"))
-		dirVar = vgui::ProgressBar::PROGRESS_NORTH;
+		pThis->SetProgressDirection(vgui::ProgressBar::PROGRESS_NORTH);
 	else if (!stricmp(dirStr, "south"))
-		dirVar = vgui::ProgressBar::PROGRESS_SOUTH;
+		pThis->SetProgressDirection(vgui::ProgressBar::PROGRESS_SOUTH);
 	else if (!stricmp(dirStr, "west"))
-		dirVar = vgui::ProgressBar::PROGRESS_WEST;
+		pThis->SetProgressDirection(vgui::ProgressBar::PROGRESS_WEST);
 	else	// east is default
-		dirVar = vgui::ProgressBar::PROGRESS_EAST;
+		pThis->SetProgressDirection(vgui::ProgressBar::PROGRESS_EAST);
 
 	// Always execute the real function after we run this hook
 	GetHooks()->SetState<HookFunc::vgui_ProgressBar_ApplySettings>(Hooking::HookAction::IGNORE);

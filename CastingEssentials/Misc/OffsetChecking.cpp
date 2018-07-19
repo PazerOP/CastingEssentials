@@ -58,6 +58,8 @@ class OffsetChecking
 
 	OFFSET_CHECK(vgui::ImagePanel, m_pImage, 348);
 	OFFSET_CHECK(vgui::ImagePanel, m_pszImageName, 352);
+	OFFSET_CHECK(vgui::ImagePanel, m_FillColor, 376);
+	OFFSET_CHECK(vgui::ImagePanel, m_DrawColor, 380);
 
 	OFFSET_CHECK(vgui::ProgressBar, m_iProgressDirection, 352);
 	OFFSET_CHECK(vgui::ProgressBar, _progress, 356);

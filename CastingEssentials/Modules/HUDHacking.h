@@ -29,11 +29,6 @@ public:
 	// Like normal FindChildByName, but doesn't care about the fact we're in a different module.
 	static vgui::Panel* FindChildByName(vgui::VPANEL rootPanel, const char* name, bool recursive = false);
 
-	static Color* GetFillColor(vgui::ImagePanel* imgPanel);
-	static Color* GetDrawColor(vgui::ImagePanel* imgPanel);
-
-	static int* GetProgressDirection(vgui::ProgressBar* progressBar);
-
 private:
 	ConVar ce_hud_forward_playerpanel_border;
 	ConVar ce_hud_player_health_progressbars;
