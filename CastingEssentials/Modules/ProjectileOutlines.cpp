@@ -194,7 +194,6 @@ void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 	if (!ce_projectileoutlines_rockets.GetBool())
 		return;
 
-	auto cc = entity->GetClientClass();
 	if (!Entities::CheckEntityBaseclass(entity, "TFProjectile_Rocket"))
 		return;
 

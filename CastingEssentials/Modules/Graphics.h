@@ -49,6 +49,7 @@ private:
 	ConVar ce_outlines_debug;
 	ConVar ce_outlines_spy_visibility;
 	ConVar ce_outlines_cull_frustum;
+	ConVar ce_outlines_pvs_optimizations;
 
 	ConCommand ce_infills_test;
 	ConVar ce_infills_enable;
@@ -95,6 +96,14 @@ private:
 		Count
 	};
 
+	enum class GlowMode
+	{
+		Never,
+		Occluded = (1 << 0),
+		Unoccluded = (1 << 1),
+		Always = (Occluded | Unoccluded)
+	};
+
 	struct Infill
 	{
 		bool m_Active = false;
@@ -115,6 +124,8 @@ private:
 
 		uint8_t m_StencilIndex;
 
+		GlowMode m_Mode;
+
 		bool AnyInfillsActive() const;
 
 		// Applies the glow color settings to the rendering system
@@ -133,7 +144,7 @@ private:
 
 	void BuildMoveChildLists();
 	ExtraGlowData* FindExtraGlowData(int entindex);
-	void BuildExtraGlowData(CGlowObjectManager* glowMgr);
+	void BuildExtraGlowData(CGlowObjectManager* glowMgr, bool& anyAlways, bool& anyOccluded, bool& anyUnoccluded);
 	void EnforceSpyVisibility(Player& player, CGlowObjectManager::GlowObjectDefinition_t& outline) const;
 
 	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);

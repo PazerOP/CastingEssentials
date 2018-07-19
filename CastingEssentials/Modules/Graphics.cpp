@@ -55,6 +55,7 @@ Graphics::Graphics() :
 	ce_outlines_spy_visibility("ce_outlines_spy_visibility", "1", FCVAR_NONE,
 		"If set to 1, always show outlines around cloaked spies (as opposed to only when they are behind walls)."),
 	ce_outlines_cull_frustum("ce_outlines_cull_frustum", "1", FCVAR_HIDDEN, "Enable frustum culling for outlines/infills."),
+	ce_outlines_pvs_optimizations("ce_outlines_pvs_optimizations", "1", FCVAR_HIDDEN, "Simplifies glow when occluded/unoccluded outlines for entities based on PVS."),
 
 	ce_infills_enable("ce_infills_enable", "0", FCVAR_NONE, "Enables player infills."),
 	ce_infills_additive("ce_infills_additive", "0", FCVAR_NONE, "Enables additive rendering of player infills."),
@@ -548,9 +549,12 @@ void Graphics::EnforceSpyVisibility(Player& player, CGlowObjectManager::GlowObje
 }
 
 #include <client/view_scene.h>
-void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
+void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr, bool& anyAlways, bool& anyOccluded, bool& anyUnoccluded)
 {
 	m_ExtraGlowData.clear();
+	anyAlways = false;
+	anyOccluded = false;
+	anyUnoccluded = false;
 
 	bool hasRedOverride, hasBlueOverride;
 	Vector redOverride = ColorToVector(ColorFromConVar(ce_outlines_players_override_red, &hasRedOverride)) * ce_graphics_glow_intensity.GetFloat();
@@ -579,9 +583,11 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 		if (current.IsUnused())
 			continue;
 
+		auto const ent = current.m_hEntity.Get();
+
+		// Frustum culling
 		if (ce_outlines_cull_frustum.GetBool())
 		{
-			auto ent = current.m_hEntity.Get();
 			Vector renderMins, renderMaxs;
 			ent->GetRenderBoundsWorldspace(renderMins, renderMaxs);
 
@@ -595,6 +601,51 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 
 		m_ExtraGlowData.emplace_back(&current);
 		auto& currentExtra = m_ExtraGlowData.back();
+
+		// Glow mode
+		{
+			// Simplify glow mode if statements later on
+			currentExtra.m_Mode = GlowMode::Never;
+			if (currentExtra.m_Base->m_bRenderWhenOccluded)
+				*(std::underlying_type_t<GlowMode>*)(&currentExtra.m_Mode) |= (int)GlowMode::Occluded;
+			if (currentExtra.m_Base->m_bRenderWhenUnoccluded)
+				*(std::underlying_type_t<GlowMode>*)(&currentExtra.m_Mode) |= (int)GlowMode::Unoccluded;
+
+			// Check PVS (if we would benefit from it)
+			if (ce_outlines_pvs_optimizations.GetBool() &&
+				currentExtra.m_Mode != GlowMode::Always &&
+				!ClientLeafSystem()->IsRenderableInPVS(ent))
+			{
+				if (currentExtra.m_Mode == GlowMode::Occluded)
+				{
+					currentExtra.m_Mode = GlowMode::Always;
+					currentExtra.m_ShouldOverrideGlowColor = true;
+					currentExtra.m_GlowColorOverride = Vector(0, 1, 0);
+				}
+				else if (currentExtra.m_Mode == GlowMode::Unoccluded)
+				{
+					// Kind of a waste since we emplace on then pop off, but this is the slightly
+					// less common path, and so we save on (usually) not having to copy the struct
+					// into the vector.
+					m_ExtraGlowData.pop_back();
+					continue;
+				}
+			}
+
+			// Update glow bucket status
+			switch (currentExtra.m_Mode)
+			{
+				case GlowMode::Always:
+					anyAlways = true;
+					break;
+				case GlowMode::Occluded:
+					anyOccluded = true;
+					break;
+				case GlowMode::Unoccluded:
+					anyUnoccluded = true;
+					break;
+			}
+		}
 
 		if (Player::IsValidIndex(current.m_hEntity.GetEntryIndex()))
 		{
@@ -981,7 +1032,7 @@ void Graphics::DrawGlowAlways(int nSplitScreenSlot, CMatRenderContextPtr& pRende
 	render->SetBlend(1);
 	for (const auto& current : m_ExtraGlowData)
 	{
-		if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || !current.m_Base->m_bRenderWhenOccluded || !current.m_Base->m_bRenderWhenUnoccluded)
+		if (current.m_Mode != GlowMode::Always || current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot))
 			continue;
 
 		if (current.AnyInfillsActive())
@@ -1054,7 +1105,7 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 
 		for (const auto& current : m_ExtraGlowData)
 		{
-			if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || !current.m_Base->m_bRenderWhenOccluded || current.m_Base->m_bRenderWhenUnoccluded)
+			if (current.m_Mode != GlowMode::Occluded || current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot))
 				continue;
 
 			pRenderContext->OverrideDepthEnable(true, false);
@@ -1081,7 +1132,7 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 	render->SetBlend(1);
 	for (const auto& current : m_ExtraGlowData)
 	{
-		if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || !current.m_Base->m_bRenderWhenOccluded || current.m_Base->m_bRenderWhenUnoccluded)
+		if (current.m_Mode != GlowMode::Occluded || current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot))
 			continue;
 
 		if (current.AnyInfillsActive())
@@ -1113,7 +1164,7 @@ void Graphics::DrawGlowVisible(int nSplitScreenSlot, CMatRenderContextPtr& pRend
 	render->SetBlend(1);
 	for (const auto& current : m_ExtraGlowData)
 	{
-		if (current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot) || current.m_Base->m_bRenderWhenOccluded || !current.m_Base->m_bRenderWhenUnoccluded)
+		if (current.m_Mode != GlowMode::Unoccluded || current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot))
 			continue;
 
 		if (current.AnyInfillsActive())
@@ -1163,7 +1214,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 	// Collect extra glow data we'll use in multiple upcoming loops -- This used to be right
 	// before it would get used, but with NDEBUG_PER_FRAME_SUPPORT it needs to be before we
 	// change a bunch of rendering settings.
-	graphicsModule->BuildExtraGlowData(this);
+	graphicsModule->BuildExtraGlowData(this, anyGlowAlways, anyGlowOccluded, anyGlowVisible);
 
 	ITexture* const pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
 	ITexture* const pRtFullFrameFB1 = materials->FindTexture("_rt_FullFrameFB1", TEXTURE_GROUP_RENDER_TARGET);

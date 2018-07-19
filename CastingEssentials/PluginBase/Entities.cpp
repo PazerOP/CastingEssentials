@@ -243,7 +243,6 @@ Entities::PropOffsetPair Entities::RetrieveClassPropOffset(const RecvTable* tabl
 			if (!match)
 				continue;
 
-			const auto& set = s_ContainingRecvTables.at(table);
 			return PropOffsetPair(prop->GetOffset(), &s_ContainingRecvTables.at(table));
 		}
 	}
