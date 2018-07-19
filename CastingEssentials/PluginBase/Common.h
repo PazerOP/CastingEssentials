@@ -4,8 +4,9 @@
 #include <string>
 #include <mathlib/mathlib.h>
 
-#pragma warning(disable : 4592)		// 'x': symbol will be dynamically initialized (implementation limitation)
-#pragma warning(disable : 4533)		// initialization of 'x' is skipped by 'instruction' -- should only be a warning, but is promoted error for some reason?
+#pragma warning(disable : 4355)    // 'this': used in base member initializer list
+#pragma warning(disable : 4592)    // 'x': symbol will be dynamically initialized (implementation limitation)
+#pragma warning(disable : 4533)    // initialization of 'x' is skipped by 'instruction' -- should only be a warning, but is promoted error for some reason?
 
 //#define PLUGIN_VERSION "r7b1"
 
