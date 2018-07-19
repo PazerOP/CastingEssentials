@@ -48,6 +48,7 @@ private:
 	ConVar ce_outlines_additive;
 	ConVar ce_outlines_debug;
 	ConVar ce_outlines_spy_visibility;
+	ConVar ce_outlines_cull_frustum;
 
 	ConCommand ce_infills_test;
 	ConVar ce_infills_enable;
@@ -143,7 +144,7 @@ private:
 	static void GetAABBCorner(const Vector& mins, const Vector& maxs, uint_fast8_t cornerIndex, Vector& corner);
 	static void GetRotatedBBCorners(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Vector corners[8]);
 
-	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector2D& screenMins, Vector2D& screenMaxs);
+	bool Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, const Frustum_t& viewFrustum, const VMatrix& worldToScreen, Vector2D& screenMins, Vector2D& screenMaxs);
 
 	float ApplyInfillTimeEffects(float lastHurtTime);
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);

@@ -54,6 +54,7 @@ Graphics::Graphics() :
 	ce_outlines_debug("ce_outlines_debug", "0", FCVAR_NONE),
 	ce_outlines_spy_visibility("ce_outlines_spy_visibility", "1", FCVAR_NONE,
 		"If set to 1, always show outlines around cloaked spies (as opposed to only when they are behind walls)."),
+	ce_outlines_cull_frustum("ce_outlines_cull_frustum", "1", FCVAR_HIDDEN, "Enable frustum culling for outlines/infills."),
 
 	ce_infills_enable("ce_infills_enable", "0", FCVAR_NONE, "Enables player infills."),
 	ce_infills_additive("ce_infills_additive", "0", FCVAR_NONE, "Enables additive rendering of player infills."),
@@ -400,7 +401,8 @@ static void RotateVectorAroundVector(const Vector& toRotate, const Vector& rotat
 	out = cosf(rads) * toRotate + sinf(rads) * rotationAxis.Cross(toRotate) + (1 - cosf(rads)) * rotationAxis.Dot(toRotate) * rotationAxis;
 }
 
-bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector2D& screenMins, Vector2D& screenMaxs)
+bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, const Frustum_t& viewFrustum,
+	const VMatrix& worldToScreen, Vector2D& screenMins, Vector2D& screenMaxs)
 {
 	CStudioHdr *pStudioHdr = animating->GetModelPtr();
 	if (!pStudioHdr)
@@ -419,12 +421,6 @@ bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, Vector2D&
 
 	Vector minsBB0, minsBB1, minsOrigin, minsCorner, maxsBB0, maxsBB1, maxsOrigin, maxsCorner;
 	QAngle minsAngles, maxsAngles;
-
-	VMatrix worldToScreen;
-	Interfaces::GetEngineTool()->GetWorldToScreenMatrixForView(*m_View, &worldToScreen);
-
-	Frustum_t viewFrustum;
-	GeneratePerspectiveFrustum(m_View->origin, m_View->angles, m_View->zNear, m_View->zFar, m_View->fov, m_View->m_flAspectRatio, viewFrustum);
 
 	Vector forward, right, up;
 	AngleVectors(m_View->angles, &forward, &right, &up);
@@ -570,6 +566,9 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 	const Color redInfillBuffed = ColorFromConVar(ce_infills_buffed_red);
 	const Color blueInfillBuffed = ColorFromConVar(ce_infills_buffed_blue);
 
+	Frustum_t viewFrustum;
+	GeneratePerspectiveFrustum(m_View->origin, m_View->angles, m_View->zNear, m_View->zFar, m_View->fov, m_View->m_flAspectRatio, viewFrustum);
+
 	VMatrix worldToScreen;
 	if (infillsEnable)
 		Interfaces::GetEngineTool()->GetWorldToScreenMatrixForView(*m_View, &worldToScreen);
@@ -579,6 +578,20 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 		auto& current = glowMgr->m_GlowObjectDefinitions[i];
 		if (current.IsUnused())
 			continue;
+
+		if (ce_outlines_cull_frustum.GetBool())
+		{
+			auto ent = current.m_hEntity.Get();
+			Vector renderMins, renderMaxs;
+			ent->GetRenderBoundsWorldspace(renderMins, renderMaxs);
+
+			static constexpr Vector BLOAT(16);
+			renderMins -= BLOAT;
+			renderMaxs += BLOAT;
+
+			if (R_CullBox(renderMins, renderMaxs, viewFrustum))
+				continue;    // Failed frustum cull
+		}
 
 		m_ExtraGlowData.emplace_back(&current);
 		auto& currentExtra = m_ExtraGlowData.back();
@@ -601,7 +614,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr)
 						Vector worldMins, worldMaxs;
 						Vector2D screenMins, screenMaxs;
 
-						if (Test_PlaneHitboxesIntersect(player->GetBaseAnimating(), screenMins, screenMaxs))
+						if (Test_PlaneHitboxesIntersect(player->GetBaseAnimating(), viewFrustum, worldToScreen, screenMins, screenMaxs))
 						{
 							auto& hurtInfill = currentExtra.m_Infills[(size_t)InfillType::Hurt];
 							auto& buffedInfill = currentExtra.m_Infills[(size_t)InfillType::Buffed];
@@ -820,24 +833,6 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 		stencilState.SetStencilState(pRenderContext);
 
 		//const auto& avg = VectorAvg(currentExtra.m_InfillMaxsWorld - currentExtra.m_InfillMinsWorld);
-
-#if DRAW_INFILL_VGUI
-		if (currentExtra.m_HurtInfillActive)
-		{
-			g_pVGuiSurface->DrawSetColor(currentExtra.m_HurtInfillColor);
-			g_pVGuiSurface->DrawFilledRect(
-				currentExtra.m_HurtInfillRectMin.x, m_View->height - currentExtra.m_HurtInfillRectMin.y,
-				currentExtra.m_HurtInfillRectMax.x, m_View->height - currentExtra.m_HurtInfillRectMax.y);
-		}
-
-		if (currentExtra.m_BuffedInfillActive)
-		{
-			g_pVGuiSurface->DrawSetColor(currentExtra.m_BuffedInfillColor);
-			g_pVGuiSurface->DrawFilledRect(
-				currentExtra.m_BuffedInfillRectMin.x, m_View->height - currentExtra.m_BuffedInfillRectMin.y,
-				currentExtra.m_BuffedInfillRectMax.x, m_View->height - currentExtra.m_BuffedInfillRectMax.y);
-		}
-#else
 		auto mesh = pRenderContext->GetDynamicMesh(true, nullptr, nullptr, infillMaterial);
 
 		meshBuilder.Begin(mesh, MATERIAL_QUADS, currentExtra.m_Infills.size());
@@ -875,7 +870,6 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 
 		meshBuilder.End();
 		mesh->Draw();
-#endif
 	}
 
 	pRenderContext->MatrixMode(MATERIAL_PROJECTION);
