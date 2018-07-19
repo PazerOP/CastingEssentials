@@ -26,6 +26,8 @@ std::array<EntityOffset<CHandle<C_BaseCombatWeapon>>, MAX_WEAPONS> Player::s_Wea
 EntityOffset<CHandle<C_BaseCombatWeapon>> Player::s_ActiveWeaponOffset;
 std::array<EntityOffset<uint32_t>, 5> Player::s_PlayerCondBitOffsets;
 
+EntityTypeChecker Player::s_MedigunType;
+
 std::unique_ptr<Player> Player::s_Players[ABSOLUTE_PLAYER_LIMIT];
 
 int Player::s_UserInfoChangedCallbackHook;
@@ -104,6 +106,8 @@ bool Player::CheckDependencies()
 		s_ObserverTargetOffset = Entities::GetEntityProp<EHANDLE>(playerClass, "m_hObserverTarget");
 
 		s_ActiveWeaponOffset = Entities::GetEntityProp<CHandle<C_BaseCombatWeapon>>(playerClass, "m_hActiveWeapon");
+
+		s_MedigunType = Entities::GetTypeChecker("CWeaponMedigun");
 	}
 	//catch (const invalid_class_prop& ex)
 	//{
@@ -525,7 +529,7 @@ C_BaseCombatWeapon* Player::GetMedigun(TFMedigun* medigunType) const
 	for (int i = 0; i < MAX_WEAPONS; i++)
 	{
 		C_BaseCombatWeapon* weapon = GetWeapon(i);
-		if (!weapon || !Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
+		if (!weapon || !s_MedigunType.Match(weapon))
 			continue;
 
 		if (medigunType)

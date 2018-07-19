@@ -33,4 +33,5 @@ private:
 	static std::array<EntityOffset<int>, 4> s_PlayerStreaks;
 	static EntityOffset<bool> s_MedigunHealing;
 	static EntityOffset<CHandle<C_BaseEntity>> s_MedigunHealingTarget;
+	static EntityTypeChecker s_MedigunType;
 };

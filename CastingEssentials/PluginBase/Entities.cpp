@@ -16,62 +16,17 @@ std::map<const RecvTable*, std::set<const RecvTable*>> Entities::s_ContainingRec
 std::vector<const ClientClass*> Entities::s_DebugClientClasses;
 #endif
 
-bool Entities::CheckEntityBaseclass(IClientNetworkable* entity, const char* baseclass)
+EntityTypeChecker Entities::GetTypeChecker(const char* type)
 {
-	ClientClass *clientClass = entity->GetClientClass();
-	if (clientClass)
-		return CheckClassBaseclass(clientClass, baseclass);
-
-	return false;
+	return GetTypeChecker(GetClientClass(type));
 }
-
-bool Entities::CheckTableBaseClass(const RecvTable* tableParent, const RecvTable* tableBase)
+EntityTypeChecker Entities::GetTypeChecker(const ClientClass* cc)
 {
-	if (tableParent == tableBase)
-		return true;
-
-	Assert(tableParent);
-	Assert(tableBase);
-
-	if (tableParent->m_nProps < 1)
-		return false;
-
-	const RecvProp* baseProp = &tableParent->m_pProps[0];
-	if (baseProp->m_RecvType != DPT_DataTable || strcmp(baseProp->m_pVarName, "baseclass"))
-		return false;
-
-	return CheckTableBaseClass(baseProp->m_pDataTable, tableBase);
+	return GetTypeChecker(cc->m_pRecvTable);
 }
-
-bool Entities::CheckClassBaseclass(ClientClass* clientClass, const char* baseclass)
+EntityTypeChecker Entities::GetTypeChecker(const RecvTable* table)
 {
-	RecvTable *sTable = clientClass->m_pRecvTable;
-	if (sTable)
-		return CheckTableBaseclass(sTable, baseclass);
-
-	return false;
-}
-
-bool Entities::CheckTableBaseclass(RecvTable* sTable, const char* baseclass)
-{
-	const char* tName = sTable->GetName();
-
-	// We're operating on the assumption that network table classes will start with "DT_"
-	if (tName && tName[0] && tName[1] && tName[2] && !strcmp(tName + 3, baseclass))
-		return true;
-
-	for (int i = 0; i < sTable->GetNumProps(); i++)
-	{
-		const RecvProp& sProp = sTable->m_pProps[i];
-
-		RecvTable* sChildTable = sProp.GetDataTable();
-		if (!sChildTable || strcmp(sProp.GetName(), "baseclass"))
-			continue;
-
-		return CheckTableBaseclass(sChildTable, baseclass);
-	}
-
-	return false;
+	return EntityTypeChecker(s_ContainingRecvTables.at(table));
 }
 
 std::string Entities::ConvertTreeToString(const std::vector<std::string_view>& tree)

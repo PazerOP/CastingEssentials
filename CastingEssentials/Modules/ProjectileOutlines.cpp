@@ -17,6 +17,7 @@ EntityOffset<EHANDLE> ProjectileOutlines::s_GlowTargetOffset;
 EntityOffset<Color> ProjectileOutlines::s_GlowColorOffset;
 
 EntityOffset<TFGrenadePipebombType> ProjectileOutlines::s_PipeTypeOffset;
+const ClientClass* ProjectileOutlines::s_RocketType;
 
 ProjectileOutlines::ProjectileOutlines() :
 	ce_projectileoutlines_rockets("ce_projectileoutlines_rockets", "0", FCVAR_NONE, "Enable projectile outlines for rockets."),
@@ -62,12 +63,15 @@ bool ProjectileOutlines::CheckDependencies()
 		s_GlowColorOffset = Entities::GetEntityProp<Color>(ccGlow, "m_glowColor");
 	}
 
-	// CTFProjectile_Pipebomb
+	// CTFGrenadePipebombProjectile
 	{
 		const auto ccPipe = Entities::GetClientClass("CTFGrenadePipebombProjectile");
 
 		s_PipeTypeOffset = Entities::GetEntityProp<TFGrenadePipebombType>(ccPipe, "m_iType");
 	}
+
+	// CTFRocket
+	s_RocketType = Entities::GetClientClass("CTFProjectile_Rocket");
 
 	return true;
 }
@@ -194,7 +198,9 @@ void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 	if (!ce_projectileoutlines_rockets.GetBool())
 		return;
 
-	if (!Entities::CheckEntityBaseclass(entity, "TFProjectile_Rocket"))
+	// Only exact matches, we don't want to match anything that derives from rockets
+	// (sentry rockets, dragon's fury, etc)
+	if (entity->GetClientClass() != s_RocketType)
 		return;
 
 	m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));

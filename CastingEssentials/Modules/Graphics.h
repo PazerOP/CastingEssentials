@@ -149,9 +149,6 @@ private:
 
 	bool WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen);
 
-	// Returns the number of intersecting points between a plane and an AABB.
-	static int PlaneAABBIntersection(const VPlane& plane, const Vector& mins, const Vector& maxs, Vector intersections[6]);
-
 	static void GetAABBCorner(const Vector& mins, const Vector& maxs, uint_fast8_t cornerIndex, Vector& corner);
 	static void GetRotatedBBCorners(const Vector& origin, const QAngle& angles, const Vector& mins, const Vector& maxs, Vector corners[8]);
 
@@ -161,4 +158,5 @@ private:
 	void DrawInfills(CMatRenderContextPtr& pRenderContext);
 
 	static EntityOffset<CHandle<C_BaseEntity>> s_MoveParent;
+	static EntityTypeChecker s_TFViewModelType;
 };

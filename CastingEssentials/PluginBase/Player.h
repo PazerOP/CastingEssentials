@@ -112,6 +112,8 @@ private:
 	static EntityOffset<CHandle<C_BaseCombatWeapon>> s_ActiveWeaponOffset;
 	static std::array<EntityOffset<uint32_t>, 5> s_PlayerCondBitOffsets;
 
+	static EntityTypeChecker s_MedigunType;
+
 	mutable int m_CachedPlayerInfoLastUpdateFrame;
 	mutable player_info_t m_CachedPlayerInfo;
 

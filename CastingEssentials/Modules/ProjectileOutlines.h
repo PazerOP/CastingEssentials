@@ -64,4 +64,5 @@ private:
 	static EntityOffset<Color> s_GlowColorOffset;
 
 	static EntityOffset<TFGrenadePipebombType> s_PipeTypeOffset;
+	static const ClientClass* s_RocketType;
 };

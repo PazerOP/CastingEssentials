@@ -29,6 +29,7 @@
 #undef max
 
 EntityOffset<EHANDLE> Graphics::s_MoveParent;
+EntityTypeChecker Graphics::s_TFViewModelType;
 
 static constexpr auto STENCIL_INDEX_MASK = 0xFC;
 
@@ -339,43 +340,6 @@ void Graphics::GetRotatedBBCorners(const Vector& origin, const QAngle& angles, c
 	}
 }
 
-int Graphics::PlaneAABBIntersection(const VPlane& plane, const Vector& mins, const Vector& maxs, Vector intersections[6])
-{
-	Vector lineSegments[12][2] =
-	{
-		// Horizontals 1
-		{ Vector(mins.x, mins.y, mins.z), Vector(maxs.x, mins.y, mins.z) },
-		{ Vector(mins.x, maxs.y, mins.z), Vector(maxs.x, maxs.y, mins.z) },
-		{ Vector(mins.x, mins.y, maxs.z), Vector(maxs.x, mins.y, maxs.z) },
-		{ Vector(mins.x, maxs.y, maxs.z), Vector(maxs.x, maxs.y, maxs.z) },
-
-		// Horizontals 2
-		{ Vector(mins.x, mins.y, mins.z), Vector(mins.x, maxs.y, mins.z) },
-		{ Vector(maxs.x, mins.y, mins.z), Vector(maxs.x, maxs.y, mins.z) },
-		{ Vector(mins.x, mins.y, maxs.z), Vector(mins.x, maxs.y, maxs.z) },
-		{ Vector(maxs.x, mins.y, maxs.z), Vector(maxs.x, maxs.y, maxs.z) },
-
-		// Verticals
-		{ Vector(mins.x, mins.y, mins.z), Vector(mins.x, mins.y, maxs.z) },
-		{ Vector(maxs.x, mins.y, mins.z), Vector(maxs.x, mins.y, maxs.z) },
-		{ Vector(mins.x, maxs.y, mins.z), Vector(mins.x, maxs.y, maxs.z) },
-		{ Vector(maxs.x, maxs.y, mins.z), Vector(maxs.x, maxs.y, maxs.z) },
-	};
-
-	int intersectionCount = 0;
-	for (uint_fast8_t i = 0; i < 12; i++)
-	{
-		Vector intersection;
-		if (!VPlaneIntersectLine(plane, lineSegments[i][0], lineSegments[i][1], &intersection))
-			continue;
-
-		intersections[intersectionCount++] = intersection;
-		Assert(intersectionCount <= 6);
-	}
-
-	return intersectionCount;
-}
-
 bool Graphics::WorldToScreenMat(const VMatrix& worldToScreen, const Vector& world, Vector2D& screen)
 {
 	float w = worldToScreen[3][0] * world[0] + worldToScreen[3][1] * world[1] + worldToScreen[3][2] * world[2] + worldToScreen[3][3];
@@ -393,13 +357,6 @@ bool Graphics::WorldToScreenMat(const VMatrix& worldToScreen, const Vector& worl
 	screen.y = 0.5f * (screen.y + 1) * m_View->height + m_View->y;
 
 	return true;
-}
-
-static void RotateVectorAroundVector(const Vector& toRotate, const Vector& rotationAxis, float degrees, Vector& out)
-{
-	const float rads = Deg2Rad(degrees);
-
-	out = cosf(rads) * toRotate + sinf(rads) * rotationAxis.Cross(toRotate) + (1 - cosf(rads)) * rotationAxis.Dot(toRotate) * rotationAxis;
 }
 
 bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, const Frustum_t& viewFrustum,
@@ -944,13 +901,17 @@ void Graphics::BuildMoveChildLists()
 	IClientEntityList* const entityList = Interfaces::GetClientEntityList();
 	for (int i = 0; i < entityList->GetHighestEntityIndex(); i++)
 	{
-		C_BaseEntity* child = dynamic_cast<C_BaseEntity*>(entityList->GetClientEntity(i));
+		IClientEntity* clientEnt = entityList->GetClientEntity(i);
+		if (!clientEnt)
+			continue;
+
+		C_BaseEntity* child = clientEnt->GetBaseEntity();
 		if (!child || !child->ShouldDraw())
 			continue;
 
 		if (auto childAnimating = child->GetBaseAnimating())
 		{
-			if (childAnimating->IsViewModel() || !strcmp("CTFViewModel", child->GetClientClass()->GetName()))
+			if (childAnimating->IsViewModel() || s_TFViewModelType.Match(childAnimating))
 				continue;
 		}
 
@@ -1490,6 +1451,8 @@ bool Graphics::CheckDependencies()
 		const auto baseEntityClass = Entities::GetClientClass("CBaseEntity");
 		s_MoveParent = Entities::GetEntityProp<EHANDLE>(baseEntityClass, "moveparent");
 	}
+
+	s_TFViewModelType = Entities::GetTypeChecker("CTFViewModel");
 
 	return true;
 }

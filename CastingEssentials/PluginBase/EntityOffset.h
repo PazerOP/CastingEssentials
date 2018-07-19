@@ -2,7 +2,9 @@
 
 #include "PluginBase/Exceptions.h"
 
+#include <client_class.h>
 #include <dt_recv.h>
+#include <iclientnetworkable.h>
 
 #include <limits>
 #include <memory>
@@ -13,21 +15,18 @@ class IClientNetworkable;
 
 #undef min
 
-class EntityOffsetBase
+class EntityTypeChecker final
 {
 public:
+	EntityTypeChecker() = default;
+
 	__forceinline bool IsInit() const { return !m_ValidRecvTables.empty(); }
 
-protected:
-	inline EntityOffsetBase() {}
-	inline EntityOffsetBase(const std::set<const RecvTable*>& validRecvTables) :
-		m_ValidRecvTables(validRecvTables.begin(), validRecvTables.end())
+	__forceinline bool Match(const IClientNetworkable* ent) const { Assert(ent); return Match(ent->GetClientClass()); }
+	__forceinline bool Match(const ClientClass* cc) const { Assert(cc); return Match(cc->m_pRecvTable); }
+	bool Match(const RecvTable* table) const
 	{
-
-	}
-
-	bool CheckForRecvTable(const RecvTable* table) const
-	{
+		Assert(table);
 		const auto& end = m_ValidRecvTables.data() + m_ValidRecvTables.size();
 		for (auto iter = m_ValidRecvTables.data(); iter < end; iter++)
 		{
@@ -44,11 +43,17 @@ protected:
 	}
 
 private:
+	inline EntityTypeChecker(const std::set<const RecvTable*>& validRecvTables) :
+		m_ValidRecvTables(validRecvTables.begin(), validRecvTables.end())
+	{
+	}
+
+	friend class Entities;
 	mutable std::vector<const RecvTable*> m_ValidRecvTables;
 };
 
 template<typename TValue>
-class EntityOffset : EntityOffsetBase
+class EntityOffset final
 {
 public:
 	inline constexpr EntityOffset() : m_Offset(std::numeric_limits<ptrdiff_t>::min())
@@ -57,8 +62,8 @@ public:
 
 	inline const TValue& GetValue(const IClientNetworkable* entity) const
 	{
-		if (auto table = entity->GetClientClass()->m_pRecvTable; !CheckForRecvTable(table))
-			throw mismatching_entity_offset("FIXME", table->GetName());
+		if (!m_ValidTypes.Match(entity))
+			throw mismatching_entity_offset("FIXME", "FIXME2");
 
 		return *(TValue*)(((std::byte*)entity->GetDataTableBasePtr()) + m_Offset);
 	}
@@ -69,7 +74,7 @@ public:
 
 	inline const TValue* TryGetValue(const IClientNetworkable* entity) const
 	{
-		if (auto table = entity->GetClientClass()->m_pRecvTable; !CheckForRecvTable(table))
+		if (!m_ValidTypes.Match(entity))
 			return nullptr;
 
 		return (TValue*)(((std::byte*)entity->GetDataTableBasePtr()) + m_Offset);
@@ -79,16 +84,16 @@ public:
 		return const_cast<TValue*>(TryGetValue((const IClientNetworkable*)entity));
 	}
 
-	using EntityOffsetBase::IsInit;
-	__forceinline constexpr operator bool() const { return IsInit(); }
+	__forceinline bool IsInit() const { return m_ValidTypes.IsInit(); }
 
 private:
-	inline constexpr EntityOffset(const std::set<const RecvTable*>& validRecvTables, ptrdiff_t offset) :
-		m_Offset(offset), EntityOffsetBase(validRecvTables)
+	inline constexpr EntityOffset(EntityTypeChecker&& validRecvTables, ptrdiff_t offset) :
+		m_Offset(offset), m_ValidTypes(std::move(validRecvTables))
 	{
 	}
 
 	friend class Entities;
 
 	ptrdiff_t m_Offset;
+	EntityTypeChecker m_ValidTypes;
 };

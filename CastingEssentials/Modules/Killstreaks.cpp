@@ -32,6 +32,7 @@
 std::array<EntityOffset<int>, 4> Killstreaks::s_PlayerStreaks;
 EntityOffset<bool> Killstreaks::s_MedigunHealing;
 EntityOffset<EHANDLE> Killstreaks::s_MedigunHealingTarget;
+EntityTypeChecker Killstreaks::s_MedigunType;
 
 class Killstreaks::Panel final : public vgui::StubPanel {
 public:
@@ -109,6 +110,7 @@ bool Killstreaks::CheckDependencies()
 		const auto medigunClass = Entities::GetClientClass("CWeaponMedigun");
 		s_MedigunHealing = Entities::GetEntityProp<bool>(medigunClass, "m_bHealing");
 		s_MedigunHealingTarget = Entities::GetEntityProp<EHANDLE>(medigunClass, "m_hHealingTarget");
+		s_MedigunType = Entities::GetTypeChecker(medigunClass);
 	}
 
 	return ready;
@@ -329,7 +331,7 @@ bool Killstreaks::Panel::FireEventClientSideOverride(IGameEvent *event)
 					Entities::PropIndex(buffer, "m_hMyWeapons", i);
 
 					IClientEntity *weapon = Entities::GetEntityProp<EHANDLE>(assister->GetEntity(), buffer).GetValue(assister->GetEntity()).Get();
-					if (!weapon || !Entities::CheckEntityBaseclass(weapon, "WeaponMedigun"))
+					if (!weapon || !s_MedigunType.Match(weapon))
 						continue;
 
 					if (s_MedigunHealing.GetValue(weapon))

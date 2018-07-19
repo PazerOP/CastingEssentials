@@ -34,7 +34,7 @@ public:
 	}
 
 	template<typename TValue> inline static EntityOffset<TValue>
-		GetEntityProp(const ClientClass* cc, const char* propertyString)
+	GetEntityProp(const ClientClass* cc, const char* propertyString)
 	{
 		auto found = RetrieveClassPropOffset(cc, propertyString);
 		if (found.first < 0)
@@ -43,18 +43,22 @@ public:
 		return EntityOffset<TValue>(*found.second, found.first);
 	}
 	template<typename TValue> __forceinline static EntityOffset<TValue>
-		GetEntityProp(IClientNetworkable* entity, const char* propertyString)
+	GetEntityProp(IClientNetworkable* entity, const char* propertyString)
 	{
 		return GetEntityProp<TValue>((const ClientClass*)(entity->GetClientClass()), propertyString);
 	}
-	template<typename TValue> inline static EntityOffset<TValue>
-		GetEntityProp(const char* clientClassName, const char* propertyString)
+	template<typename TValue> __forceinline static EntityOffset<TValue>
+	GetEntityProp(const char* clientClassName, const char* propertyString)
 	{
 		return GetEntityProp<TValue>(GetClientClass(clientClassName), propertyString);
 	}
 
-	static bool CheckEntityBaseclass(IClientNetworkable* entity, const char* baseclass);
-	static bool CheckTableBaseClass(const RecvTable* tableParent, const RecvTable* tableBase);
+	static EntityTypeChecker GetTypeChecker(const char* type);
+	static EntityTypeChecker GetTypeChecker(const ClientClass* cc);
+	static EntityTypeChecker GetTypeChecker(const RecvTable* cc);
+
+	//static bool CheckEntityBaseclass(IClientNetworkable* entity, const char* baseclass);
+	//static bool CheckTableBaseClass(const RecvTable* tableParent, const RecvTable* tableBase);
 
 	static ClientClass* GetClientClass(const char* className);
 	static RecvProp* FindRecvProp(const char* className, const char* propName, bool recursive = true);
@@ -69,8 +73,8 @@ private:
 	Entities() = delete;
 	~Entities() = delete;
 
-	static bool CheckClassBaseclass(ClientClass *clientClass, const char* baseclass);
-	static bool CheckTableBaseclass(RecvTable *sTable, const char* baseclass);
+	//static bool CheckClassBaseclass(ClientClass *clientClass, const char* baseclass);
+	//static bool CheckTableBaseclass(RecvTable *sTable, const char* baseclass);
 
 	static PropOffsetPair RetrieveClassPropOffset(const RecvTable* table,
 		const std::vector<std::string_view>& refPropertyTree, std::vector<std::string_view>& currentPropertyTree);
