@@ -58,7 +58,7 @@ bool TFPlayerResource::IsAlive(int playerEntIndex)
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
 		return false;
 
-	return m_AliveOffsets[playerEntIndex].GetValue(m_PlayerResourceEntity.Get());
+	return m_AliveOffsets[playerEntIndex - 1].GetValue(m_PlayerResourceEntity.Get());
 }
 
 int* TFPlayerResource::GetKillstreak(int playerEntIndex)
@@ -66,7 +66,7 @@ int* TFPlayerResource::GetKillstreak(int playerEntIndex)
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
 		return nullptr;
 
-	return &m_StreakOffsets[playerEntIndex].GetValue(m_PlayerResourceEntity.Get());
+	return &m_StreakOffsets[playerEntIndex - 1].GetValue(m_PlayerResourceEntity.Get());
 }
 
 int TFPlayerResource::GetDamage(int playerEntIndex)
@@ -74,7 +74,7 @@ int TFPlayerResource::GetDamage(int playerEntIndex)
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
 		return std::numeric_limits<int>::min();
 
-	return m_DamageOffsets[playerEntIndex].GetValue(m_PlayerResourceEntity.Get());
+	return m_DamageOffsets[playerEntIndex - 1].GetValue(m_PlayerResourceEntity.Get());
 }
 
 int TFPlayerResource::GetMaxHealth(int playerEntIndex)
@@ -82,7 +82,7 @@ int TFPlayerResource::GetMaxHealth(int playerEntIndex)
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
 		return std::numeric_limits<int>::min();
 
-	return m_MaxHealthOffsets[playerEntIndex].GetValue(m_PlayerResourceEntity.Get());
+	return m_MaxHealthOffsets[playerEntIndex - 1].GetValue(m_PlayerResourceEntity.Get());
 }
 
 bool TFPlayerResource::CheckEntIndex(int playerEntIndex, const char* functionName)

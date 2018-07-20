@@ -230,8 +230,8 @@ public:
 	VariablePusher(const VariablePusher<T>& other) = delete;
 	VariablePusher(VariablePusher<T>&& other)
 	{
-		other.m_IsPushed = false;
 		m_Variable = std::move(other.m_Variable);
+		other.m_Variable = nullptr;
 		m_OldValue = std::move(other.m_OldValue);
 	}
 	VariablePusher(T& variable, const T& newValue) : m_Variable(&variable)
@@ -246,7 +246,7 @@ public:
 	}
 	~VariablePusher()
 	{
-		if (m_IsPushed)
+		if (m_Variable)
 			*m_Variable = std::move(m_OldValue);
 	}
 
@@ -254,7 +254,6 @@ public:
 	const T& GetOldValue() const { return m_OldValue; }
 
 private:
-	bool m_IsPushed = true;
 	T* const m_Variable;
 	T m_OldValue;
 };

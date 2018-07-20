@@ -3,6 +3,7 @@
 #include "interface.h"
 
 class C_BasePlayer;
+class C_GameRules;
 class C_HLTVCamera;
 struct cmdalias_t;
 class HLTVCameraOverride;
@@ -96,6 +97,9 @@ public:
 
 	// #include "Misc/CmdAlias.h"
 	static cmdalias_t** GetCmdAliases();
+
+	// #include <shared/gamerules.h>
+	static C_GameRules* GetGameRules();
 
 private:
 	static IBaseClientDLL *pClientDLL;

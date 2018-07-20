@@ -66,6 +66,9 @@ public:
 	Vector GetEyePosition() const;
 	QAngle GetEyeAngles() const;
 
+	static const Vector& GetEyeOffset(TFClassType cls);
+	const Vector& GetEyeOffset() const;
+
 	bool IsValid() const;
 
 	void UpdateLastHurtTime();

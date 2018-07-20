@@ -1,4 +1,5 @@
 #pragma once
+#include "PluginBase/EntityOffset.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/ICameraOverride.h"
 #include "PluginBase/Modules.h"
@@ -8,6 +9,7 @@
 #include <shareddefs.h>
 
 #include <array>
+#include <optional>
 
 enum class TFTeam;
 enum class TFClassType;
@@ -58,6 +60,7 @@ private:
 	ConVar ce_cameratools_force_target;
 	ConVar ce_cameratools_force_valid_target;
 	ConVar ce_cameratools_spec_player_alive;
+	ConVar ce_cameratools_fix_view_heights;
 
 	ConVar ce_tplock_enable;
 	ConVar ce_tplock_taunt_enable;
@@ -135,6 +138,11 @@ private:
 	void SpecPlayer(int playerIndex);
 
 	void OnTick(bool inGame) override;
+
+	std::optional<VariablePusher<Vector>> m_OldViewHeight;
+	std::optional<VariablePusher<Vector>> m_OldDuckViewHeight;
+	static EntityOffset<float> s_ViewOffsetZOffset;
+	bool FixViewHeights();
 
 	Vector CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& orbitCenter, const QAngle& angle) const;
 

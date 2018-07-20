@@ -587,22 +587,7 @@ Vector Player::GetEyePosition() const
 	if (!IsValid())
 		return vec3_origin;
 
-	static const Vector VIEW_OFFSETS[] =
-	{
-		Vector(0, 0, 72),		// TF_CLASS_UNDEFINED
-
-		Vector(0, 0, 65),		// TF_CLASS_SCOUT,			// TF_FIRST_NORMAL_CLASS
-		Vector(0, 0, 75),		// TF_CLASS_SNIPER,
-		Vector(0, 0, 68),		// TF_CLASS_SOLDIER,
-		Vector(0, 0, 68),		// TF_CLASS_DEMOMAN,
-		Vector(0, 0, 75),		// TF_CLASS_MEDIC,
-		Vector(0, 0, 75),		// TF_CLASS_HEAVYWEAPONS,
-		Vector(0, 0, 68),		// TF_CLASS_PYRO,
-		Vector(0, 0, 75),		// TF_CLASS_SPY,
-		Vector(0, 0, 68),		// TF_CLASS_ENGINEER,		// TF_LAST_NORMAL_CLASS
-	};
-
-	return GetAbsOrigin() + VIEW_OFFSETS[(int)GetClass()];
+	return GetAbsOrigin() + GetEyeOffset();
 }
 
 QAngle Player::GetEyeAngles() const
@@ -619,6 +604,34 @@ QAngle Player::GetEyeAngles() const
 		return vec3_angle;
 
 	return baseEntity->EyeAngles();
+}
+
+const Vector& Player::GetEyeOffset(TFClassType cls)
+{
+	static constexpr Vector VIEW_OFFSETS[] =
+	{
+		Vector(0, 0, 72),		// TF_CLASS_UNDEFINED
+
+		Vector(0, 0, 65),		// TF_CLASS_SCOUT,			// TF_FIRST_NORMAL_CLASS
+		Vector(0, 0, 75),		// TF_CLASS_SNIPER,
+		Vector(0, 0, 68),		// TF_CLASS_SOLDIER,
+		Vector(0, 0, 68),		// TF_CLASS_DEMOMAN,
+		Vector(0, 0, 75),		// TF_CLASS_MEDIC,
+		Vector(0, 0, 75),		// TF_CLASS_HEAVYWEAPONS,
+		Vector(0, 0, 68),		// TF_CLASS_PYRO,
+		Vector(0, 0, 75),		// TF_CLASS_SPY,
+		Vector(0, 0, 68),		// TF_CLASS_ENGINEER,		// TF_LAST_NORMAL_CLASS
+	};
+
+	return VIEW_OFFSETS[(int)cls];
+}
+
+const Vector& Player::GetEyeOffset() const
+{
+	if (!IsValid())
+		return vec3_origin;
+
+	return GetEyeOffset(GetClass());
 }
 
 ObserverMode Player::GetObserverMode() const

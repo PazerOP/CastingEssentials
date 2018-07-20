@@ -226,3 +226,21 @@ cmdalias_t** Interfaces::GetCmdAliases()
 
 	return s_CmdAliases;
 }
+
+C_GameRules* Interfaces::GetGameRules()
+{
+	static C_GameRules** s_GameRules = nullptr;
+	if (!s_GameRules)
+	{
+		constexpr const char* SIG = "\x8B\x0D????\x8B\x01\x8B\x80????\xFF\xD0\x84\xC0\x74\x1E";
+		constexpr const char* MASK = "xx????xxxx????xxxxxx";
+		constexpr auto OFFSET = 2;
+
+		if (auto gr = (std::byte*)SignatureScan("client", SIG, MASK))
+			s_GameRules = *(C_GameRules***)(gr + OFFSET);
+		else
+			throw bad_pointer("C_GameRules");
+	}
+
+	return *s_GameRules;
+}

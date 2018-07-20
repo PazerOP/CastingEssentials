@@ -3,12 +3,15 @@
 #include "Modules/CameraSmooths.h"
 #include "Modules/CameraState.h"
 #include "Modules/FOVOverride.h"
+#include "PluginBase/Entities.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
 
+#include <client/c_baseplayer.h>
 #include <filesystem.h>
+#include <shared/gamerules.h>
 #include <tier1/KeyValues.h>
 #include <tier3/tier3.h>
 #include <cdll_int.h>
@@ -22,7 +25,8 @@
 #include <vprof.h>
 
 #include <algorithm>
-#include <optional>
+
+EntityOffset<float> CameraTools::s_ViewOffsetZOffset;
 
 CameraTools::CameraTools() :
 	ce_cameratools_show_mode("ce_cameratools_show_mode", "0", FCVAR_NONE, "Displays the current spec_mode in the top right corner of the screen."),
@@ -34,6 +38,7 @@ CameraTools::CameraTools() :
 	ce_cameratools_force_valid_target("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.",
 		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); }),
 	ce_cameratools_spec_player_alive("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players."),
+	ce_cameratools_fix_view_heights("ce_cameratools_fix_view_heights", "0", FCVAR_NONE, "Corrects HLTV view height to match that of spectated classes."),
 
 	ce_tplock_enable("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player."),
 	ce_tplock_taunt_enable("ce_tplock_taunt_enable", "0", FCVAR_NONE, "Force the camera into thirdperson tplock when taunting. Does not require ce_tplock_enable."),
@@ -172,6 +177,8 @@ bool CameraTools::CheckDependencies()
 	{
 		PluginWarning("Module %s requires C_HLTVCamera, which cannot be verified at this time!\n", GetModuleName());
 	}
+
+	s_ViewOffsetZOffset = Entities::GetEntityProp<float>("CTFPlayer", "m_vecViewOffset[2]");
 
 	return ready;
 }
@@ -603,8 +610,55 @@ void CameraTools::OnTick(bool inGame)
 			}
 		}
 
+		if (!ce_cameratools_fix_view_heights.GetBool() || !FixViewHeights())
+		{
+			m_OldViewHeight.reset();
+			m_OldDuckViewHeight.reset();
+		}
+
 		UpdateIsTaunting();
 	}
+}
+
+bool CameraTools::FixViewHeights()
+{
+	if (CameraState::GetLocalObserverMode() != ObserverMode::OBS_MODE_IN_EYE)
+		return false;
+
+	auto cameraPlayer = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+	if (!cameraPlayer)
+		return false;
+
+	auto gamerules = Interfaces::GetGameRules();
+	if (!gamerules)
+		return false;
+
+	auto viewVecs = const_cast<CViewVectors*>(gamerules->GetViewVectors());
+	if (!viewVecs)
+		return false;
+
+	auto ent = cameraPlayer->GetEntity();
+	if (!ent)
+		return false;
+
+	auto basePlayer = dynamic_cast<C_BasePlayer*>(ent->GetBaseEntity()->GetBaseAnimating());
+	if (!basePlayer)
+		return false;
+
+	// We can sometimes end up reading m_vecViewOffset[2] before the entity
+	// has had a chance to update its interpolated vars. Force the interpolation
+	// now.
+	auto& viewOffsetVar = basePlayer->m_iv_vecViewOffset;
+	viewOffsetVar.Interpolate(Interfaces::GetEngineTool()->ClientTime());
+
+	const Vector viewOffset(0, 0, s_ViewOffsetZOffset.GetValue(ent));
+	if (viewVecs->m_vView != viewOffset)
+	{
+		m_OldViewHeight.emplace(viewVecs->m_vView, viewOffset);
+		m_OldDuckViewHeight.emplace(viewVecs->m_vDuckView, viewOffset);
+	}
+
+	return true;
 }
 
 void CameraTools::UpdateIsTaunting()
