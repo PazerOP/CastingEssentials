@@ -1,5 +1,6 @@
 #pragma once
 #include "PluginBase/EntityOffset.h"
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -17,7 +18,6 @@ class ProjectileOutlines final : public Module<ProjectileOutlines>
 {
 public:
 	ProjectileOutlines();
-	~ProjectileOutlines();
 
 	static bool CheckDependencies();
 
@@ -46,7 +46,7 @@ private:
 	static constexpr int MAGIC_ENTNUM = 0x141BCF9B;
 	static constexpr int MAGIC_SERIALNUM = 0x0FCAD8B9;
 
-	int m_BaseEntityInitHook;
+	Hook<HookFunc::C_BaseEntity_Init> m_BaseEntityInitHook;
 	bool InitDetour(C_BaseEntity* pThis, int entnum, int iSerialNum);
 
 	// List of entities that had C_BaseEntity::Init() called on them since our last
@@ -54,9 +54,11 @@ private:
 	std::vector<int> m_NewEntities;
 
 	bool m_Init;
-	static void ColorChanged(IConVar* var, const char* oldValue, float flOldValue);
+	void ColorChanged(IConVar* var, const char* oldValue, float flOldValue);
 	Color m_ColorRed;
 	Color m_ColorBlu;
+
+	void UpdateEnabled();
 
 	static EntityOffset<bool> s_GlowDisabledOffset;
 	static EntityOffset<int> s_GlowModeOffset;

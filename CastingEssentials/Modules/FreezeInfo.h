@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -8,7 +9,6 @@ class FreezeInfo final : public Module<FreezeInfo>
 {
 public:
 	FreezeInfo();
-	~FreezeInfo();
 
 	static bool CheckDependencies();
 
@@ -19,7 +19,7 @@ private:
 	std::unique_ptr<Panel> m_Panel;
 
 	void PostEntityPacketReceivedHook();
-	int m_PostEntityPacketReceivedHook;
+	Hook<HookFunc::IPrediction_PostEntityPacketReceived> m_PostEntityPacketReceivedHook;
 
 	ConVar ce_freezeinfo_enabled;
 	ConVar ce_freezeinfo_threshold;
@@ -27,5 +27,5 @@ private:
 
 	void ChangeThreshold(IConVar *var, const char *pOldValue, float flOldValue);
 	void ReloadSettings();
-	void ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue);
+	void ToggleEnabled(const ConVar *var);
 };

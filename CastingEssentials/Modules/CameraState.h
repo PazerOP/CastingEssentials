@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Modules.h"
 
 #include <mathlib/vector.h>
@@ -61,10 +62,9 @@ private:
 
 	void Invalidate(bool& b);
 
-	bool m_HooksAttached;
-	int m_InToolModeHook;
-	int m_IsThirdPersonCameraHook;
-	int m_SetupEngineViewHook;
+	Hook<HookFunc::IClientEngineTools_InToolMode> m_InToolModeHook;
+	Hook<HookFunc::IClientEngineTools_IsThirdPersonCamera> m_IsThirdPersonCameraHook;
+	Hook<HookFunc::IClientEngineTools_SetupEngineView> m_SetupEngineViewHook;
 	void SetupHooks(bool connect);
 };
 

@@ -66,6 +66,9 @@ void Interfaces::Load(CreateInterfaceFn factory)
 	ConnectTier2Libraries(&factory, 1);
 	ConnectTier3Libraries(&factory, 1);
 
+	if (!factory)
+		Error(__FUNCTION__ ": factory was null");
+
 	vguiLibrariesAvailable = vgui::VGui_InitInterfacesList("CastingEssentials", &factory, 1);
 
 	pClientEngineTools = (IClientEngineTools *)factory(VCLIENTENGINETOOLS_INTERFACE_VERSION, nullptr);
@@ -83,6 +86,9 @@ void Interfaces::Load(CreateInterfaceFn factory)
 
 	CreateInterfaceFn gameClientFactory;
 	pEngineTool->GetClientFactory(gameClientFactory);
+
+	if (!gameClientFactory)
+		Error(__FUNCTION__ ": gameClientFactory was null");
 
 	pClientDLL = (IBaseClientDLL*)gameClientFactory(CLIENT_DLL_INTERFACE_VERSION, nullptr);
 	pClientEntityList = (IClientEntityList*)gameClientFactory(VCLIENTENTITYLIST_INTERFACE_VERSION, nullptr);

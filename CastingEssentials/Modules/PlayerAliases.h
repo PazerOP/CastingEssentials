@@ -1,4 +1,5 @@
 #pragma once
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -17,7 +18,7 @@ private:
 	bool GetPlayerInfoOverride(int ent_num, player_info_s* pInfo);
 
 	std::map<CSteamID, std::string> m_CustomAliases;
-	int m_GetPlayerInfoHook;
+	Hook<HookFunc::IVEngineClient_GetPlayerInfo> m_GetPlayerInfoHook;
 
 	static void FindAndReplaceInString(std::string& str, const std::string& find, const std::string& replace);
 
@@ -38,6 +39,5 @@ private:
 	ConCommand ce_playeraliases_remove;
 	void RemovePlayerAlias(const CCommand& command);
 
-	static void StaticToggleEnabled(IConVar* var, const char* oldValue, float fOldValue);
-	void ToggleEnabled(IConVar* var, const char* oldValue, float fOldValue);
+	void ToggleEnabled(const ConVar* var);
 };

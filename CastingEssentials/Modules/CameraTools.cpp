@@ -69,10 +69,11 @@ CameraTools::CameraTools() :
 		"Spectate a player based on their index in the tournament spectator hud."),
 
 	ce_cameratools_show_users("ce_cameratools_show_users", [](const CCommand& args) { GetModule()->ShowUsers(args); },
-		"Lists all currently connected players on the server.")
+		"Lists all currently connected players on the server."),
+
+	m_SetModeHook(std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1)),
+	m_SetPrimaryTargetHook(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1))
 {
-	m_SetModeHook = 0;
-	m_SetPrimaryTargetHook = 0;
 	m_SwitchReason = ModeSwitchReason::Unknown;
 	m_SpecGUISettings = new KeyValues("Resource/UI/SpectatorTournament.res");
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
@@ -628,18 +629,7 @@ void CameraTools::UpdateIsTaunting()
 
 void CameraTools::AttachHooks(bool attach)
 {
-	if (attach)
-	{
-		if (!m_SetModeHook)
-			m_SetModeHook = GetHooks()->AddHook<HookFunc::C_HLTVCamera_SetMode>(std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1));
-	}
-	else
-	{
-		if (m_SetModeHook && GetHooks()->RemoveHook<HookFunc::C_HLTVCamera_SetMode>(m_SetModeHook, __FUNCSIG__))
-			m_SetModeHook = 0;
-
-		Assert(!m_SetModeHook);
-	}
+	m_SetModeHook.SetEnabled(attach);
 }
 
 Vector CameraTools::CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& orbitCenter, const QAngle& angle) const
@@ -915,9 +905,7 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 
 	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
 	{
-		if (!m_SetPrimaryTargetHook)
-			m_SetPrimaryTargetHook = GetHooks()->AddHook<HookFunc::C_HLTVCamera_SetPrimaryTarget>(
-				std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1));
+		m_SetPrimaryTargetHook.Enable();
 
 		try
 		{
@@ -931,13 +919,7 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 	else
 	{
 		if (!ce_cameratools_force_valid_target.GetBool())
-		{
-			if (m_SetPrimaryTargetHook)
-			{
-				GetHooks()->RemoveHook<HookFunc::C_HLTVCamera_SetPrimaryTarget>(m_SetPrimaryTargetHook, __FUNCSIG__);
-				m_SetPrimaryTargetHook = 0;
-			}
-		}
+			m_SetPrimaryTargetHook.Disable();
 	}
 }
 
@@ -1032,21 +1014,9 @@ void CameraTools::SpecPositionDelta(const CCommand& command)
 void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, float flOldValue)
 {
 	if (ce_cameratools_force_valid_target.GetBool())
-	{
-		if (!m_SetPrimaryTargetHook)
-			m_SetPrimaryTargetHook = GetHooks()->AddHook<HookFunc::C_HLTVCamera_SetPrimaryTarget>(
-				std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1));
-	}
-	else
-	{
-		if (!Interfaces::GetClientEntityList()->GetClientEntity(ce_cameratools_force_target.GetInt()))
-		{
-			if (m_SetPrimaryTargetHook && GetHooks()->RemoveHook<HookFunc::C_HLTVCamera_SetPrimaryTarget>(m_SetPrimaryTargetHook, __FUNCSIG__))
-				m_SetPrimaryTargetHook = 0;
-
-			Assert(!m_SetPrimaryTargetHook);
-		}
-	}
+		m_SetPrimaryTargetHook.Enable();
+	else if(!Interfaces::GetClientEntityList()->GetClientEntity(ce_cameratools_force_target.GetInt()))
+		m_SetPrimaryTargetHook.Disable();
 }
 
 float CameraTools::TPLockValue::GetValue(float input) const

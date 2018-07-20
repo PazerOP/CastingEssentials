@@ -1,5 +1,6 @@
 #pragma once
 #include "PluginBase/EntityOffset.h"
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -15,11 +16,10 @@ namespace vgui
 	class ProgressBar;
 }
 
-class HUDHacking : public Module<HUDHacking>
+class HUDHacking final : public Module<HUDHacking>
 {
 public:
 	HUDHacking();
-	~HUDHacking();
 
 	static bool CheckDependencies();
 
@@ -59,7 +59,7 @@ private:
 
 	static bool GetBannerInfo(const Player& player, BannerType& type, float& charge);
 
-	int m_ProgressBarApplySettingsHook;
+	Hook<HookFunc::vgui_ProgressBar_ApplySettings> m_ApplySettingsHook;
 	static void ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings);
 
 	static EntityOffset<float> s_RageMeter;

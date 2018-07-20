@@ -9,7 +9,6 @@ class Killfeed final : public Module<Killfeed>
 {
 public:
 	Killfeed();
-	virtual ~Killfeed() { }
 
 private:
 	ConVar ce_killfeed_continuous_update;

@@ -63,11 +63,6 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 
 	Msg("Hello from %s!\n", PLUGIN_FULL_VERSION);
 
-#ifdef DEBUG
-	//PluginMsg("_CrtCheckMemory() result: %i\n", _CrtCheckMemory());
-	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF);
-#endif
-
 	Interfaces::Load(interfaceFactory);
 	HookManager::Load();
 	Entities::Load();

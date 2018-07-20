@@ -22,9 +22,6 @@ FOVOverride::FOVOverride() :
 	ce_fovoverride_test("ce_fovoverride_test", "90", FCVAR_NONE, "FOV override to apply in all cases. Only enabled if ce_fovoverride_all_enabled is nonzero. Designed to help with the placement of autocameras."),
 	ce_fovoverride_test_enabled("ce_fovoverride_test_enabled", "0", FCVAR_NONE, "Enables ce_fovoverride_test.")
 {
-	m_InToolModeHook = 0;
-	m_SetupEngineViewHook = 0;
-	m_GetDefaultFOVHook = 0;
 }
 
 bool FOVOverride::CheckDependencies()
@@ -78,33 +75,8 @@ float FOVOverride::GetBaseFOV(ObserverMode mode) const
 	return fov;
 }
 
-void FOVOverride::OnTick(bool inGame)
+bool FOVOverride::InToolModeOverride() const
 {
-	if (inGame)
-	{
-		if (!m_InToolModeHook)
-			m_InToolModeHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_InToolMode>(std::bind(&FOVOverride::InToolModeOverride, this));
-
-		if (!m_SetupEngineViewHook)
-			m_SetupEngineViewHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_SetupEngineView>(std::bind(&FOVOverride::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	}
-	else
-	{
-		if (m_InToolModeHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_InToolMode>(m_InToolModeHook, __FUNCSIG__))
-			m_InToolModeHook = 0;
-
-		Assert(!m_InToolModeHook);
-
-		if (m_SetupEngineViewHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_SetupEngineView>(m_SetupEngineViewHook, __FUNCSIG__))
-			m_SetupEngineViewHook = 0;
-
-		Assert(!m_SetupEngineViewHook);
-	}
-}
-
-bool FOVOverride::InToolModeOverride()
-{
-	GetHooks()->SetState<HookFunc::IClientEngineTools_InToolMode>(Hooking::HookAction::SUPERCEDE);
 	return true;
 }
 
@@ -176,6 +148,5 @@ bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 	}
 
 	//fov = ce_fovoverride_fov.GetFloat();
-	GetHooks()->SetState<HookFunc::IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
 	return true;
 }

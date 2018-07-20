@@ -1,10 +1,10 @@
 #include "CameraState.h"
-#include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "Misc/HLTVCameraHack.h"
 #include "Modules/CameraTools.h"
 #include "Modules/CameraSmooths.h"
+#include "Modules/FOVOverride.h"
 
 #include <cdll_int.h>
 #include <vprof.h>
@@ -12,14 +12,13 @@
 #undef min
 #undef max
 
-CameraState::CameraState()
+CameraState::CameraState() :
+	m_InToolModeHook(std::bind(&CameraState::InToolModeOverride, this)),
+	m_IsThirdPersonCameraHook(std::bind(&CameraState::IsThirdPersonCameraOverride, this)),
+	m_SetupEngineViewHook(std::bind(&CameraState::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3))
 {
 	InitViews();
 
-	m_HooksAttached = false;
-	m_InToolModeHook = 0;
-	m_IsThirdPersonCameraHook = 0;
-	m_SetupEngineViewHook = 0;
 	m_LastSpecTarget = 0;
 }
 
@@ -76,11 +75,16 @@ bool CameraState::InToolModeOverride()
 	m_ThisFrameInToolMode = false;
 
 	{
-		if (CameraTools::GetModule())
-			m_ThisFrameInToolMode = static_cast<ICameraOverride*>(CameraTools::GetModule())->InToolModeOverride() || m_ThisFrameInToolMode;
+		ICameraOverride* module;
 
-		if (CameraSmooths::GetModule())
-			m_ThisFrameInToolMode = static_cast<ICameraOverride*>(CameraSmooths::GetModule())->InToolModeOverride() || m_ThisFrameInToolMode;
+		if ((module = CameraTools::GetModule()) != nullptr)
+			m_ThisFrameInToolMode = module->InToolModeOverride();
+
+		if (!m_ThisFrameInToolMode && (module = CameraSmooths::GetModule()) != nullptr)
+			m_ThisFrameInToolMode = module->InToolModeOverride();
+
+		if (!m_ThisFrameInToolMode && (module = FOVOverride::GetModule()) != nullptr)
+			m_ThisFrameInToolMode = module->InToolModeOverride();
 	}
 
 	if (m_ThisFrameInToolMode)
@@ -97,11 +101,16 @@ bool CameraState::IsThirdPersonCameraOverride()
 	m_ThisFrameIsThirdPerson = false;
 
 	{
-		if (CameraTools::GetModule())
-			m_ThisFrameIsThirdPerson = static_cast<ICameraOverride*>(CameraTools::GetModule())->IsThirdPersonCameraOverride() || m_ThisFrameIsThirdPerson;
+		ICameraOverride* module;
 
-		if (CameraSmooths::GetModule())
-			m_ThisFrameIsThirdPerson = static_cast<ICameraOverride*>(CameraSmooths::GetModule())->IsThirdPersonCameraOverride() || m_ThisFrameIsThirdPerson;
+		if ((module = CameraTools::GetModule()) != nullptr)
+			m_ThisFrameIsThirdPerson = module->IsThirdPersonCameraOverride();
+
+		if (!m_ThisFrameIsThirdPerson && (module = CameraSmooths::GetModule()) != nullptr)
+			m_ThisFrameIsThirdPerson = module->IsThirdPersonCameraOverride();
+
+		if (!m_ThisFrameIsThirdPerson && (module = FOVOverride::GetModule()) != nullptr)
+			m_ThisFrameIsThirdPerson = module->IsThirdPersonCameraOverride();
 	}
 
 	if (m_ThisFrameIsThirdPerson)
@@ -120,15 +129,27 @@ bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 	m_ThisFramePluginView.Init();
 
 	bool retVal = false;
-	if (CameraTools::GetModule())
-		retVal = static_cast<ICameraOverride*>(CameraTools::GetModule())->SetupEngineViewOverride(origin, angles, fov) || retVal;
+	{
+		ICameraOverride* module;
 
-	m_ThisFramePluginView.Set(origin, angles, fov);
+		if ((module = CameraTools::GetModule()) != nullptr)
+		{
+			retVal = module->SetupEngineViewOverride(origin, angles, fov);
+			m_ThisFramePluginView.Set(origin, angles, fov);
+		}
 
-	if (CameraSmooths::GetModule())
-		retVal = static_cast<ICameraOverride*>(CameraSmooths::GetModule())->SetupEngineViewOverride(origin, angles, fov) || retVal;
+		if (!retVal && (module = CameraSmooths::GetModule()) != nullptr)
+		{
+			retVal = module->SetupEngineViewOverride(origin, angles, fov);
+			m_ThisFramePluginView.Set(origin, angles, fov);
+		}
 
-	m_ThisFramePluginView.Set(origin, angles, fov);
+		if (!retVal && (module = FOVOverride::GetModule()) != nullptr)
+		{
+			retVal = module->SetupEngineViewOverride(origin, angles, fov);
+			m_ThisFramePluginView.Set(origin, angles, fov);
+		}
+	}
 
 	if (retVal)
 		GetHooks()->SetState<HookFunc::IClientEngineTools_SetupEngineView>(Hooking::HookAction::SUPERCEDE);
@@ -141,8 +162,7 @@ void CameraState::OnTick(bool inGame)
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (inGame)
 	{
-		if (!m_HooksAttached)
-			SetupHooks(m_HooksAttached = true);
+		SetupHooks(true);
 
 		// Update last spec target
 		if (auto primaryTarget = Interfaces::GetHLTVCamera()->m_iTraget1; primaryTarget > 0 && primaryTarget < MAX_EDICTS)
@@ -150,8 +170,7 @@ void CameraState::OnTick(bool inGame)
 	}
 	else
 	{
-		if (m_HooksAttached)
-			SetupHooks(m_HooksAttached = false);
+		SetupHooks(false);
 	}
 }
 
@@ -182,29 +201,9 @@ void CameraState::Invalidate(bool& b)
 
 void CameraState::SetupHooks(bool connect)
 {
-	if (connect)
-	{
-		m_InToolModeHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_InToolMode>(std::bind(&CameraState::InToolModeOverride, this));
-		m_IsThirdPersonCameraHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_IsThirdPersonCamera>(std::bind(&CameraState::IsThirdPersonCameraOverride, this));
-		m_SetupEngineViewHook = GetHooks()->AddHook<HookFunc::IClientEngineTools_SetupEngineView>(std::bind(&CameraState::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	}
-	else
-	{
-		if (m_InToolModeHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_InToolMode>(m_InToolModeHook, __FUNCSIG__))
-			m_InToolModeHook = 0;
-
-		Assert(!m_InToolModeHook);
-
-		if (m_IsThirdPersonCameraHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_IsThirdPersonCamera>(m_IsThirdPersonCameraHook, __FUNCSIG__))
-			m_IsThirdPersonCameraHook = 0;
-
-		Assert(!m_IsThirdPersonCameraHook);
-
-		if (m_SetupEngineViewHook && GetHooks()->RemoveHook<HookFunc::IClientEngineTools_SetupEngineView>(m_SetupEngineViewHook, __FUNCSIG__))
-			m_SetupEngineViewHook = 0;
-
-		Assert(!m_SetupEngineViewHook);
-	}
+	m_InToolModeHook.SetEnabled(connect);
+	m_IsThirdPersonCameraHook.SetEnabled(connect);
+	m_SetupEngineViewHook.SetEnabled(connect);
 }
 
 void CameraState::View::Init()

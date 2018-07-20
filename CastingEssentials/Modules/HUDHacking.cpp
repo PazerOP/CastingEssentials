@@ -3,7 +3,6 @@
 #include "Modules/ItemSchema.h"
 
 #include "PluginBase/Entities.h"
-#include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
@@ -35,17 +34,10 @@ HUDHacking::HUDHacking() :
 
 	ce_hud_chargebars_buff_banner_text("ce_hud_chargebars_buff_banner_text", "#TF_Unique_Achievement_SoldierBuff", FCVAR_NONE, "Text to use for the Buff Banner for the %banner% dialog variable on playerpanels."),
 	ce_hud_chargebars_battalions_backup_text("ce_hud_chargebars_battalions_backup_text", "#TF_TheBattalionsBackup", FCVAR_NONE, "Text to use for the Battalion's Backup for the %banner% dialog variable on playerpanels."),
-	ce_hud_chargebars_concheror_text("ce_hud_chargebars_concheror_text", "#TF_SoldierSashimono", FCVAR_NONE, "Text to use for the Concheror for the %banner% dialog variable on playerpanels.")
-{
-	m_ProgressBarApplySettingsHook = GetHooks()->AddHook<HookFunc::vgui_ProgressBar_ApplySettings>(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2));
-}
+	ce_hud_chargebars_concheror_text("ce_hud_chargebars_concheror_text", "#TF_SoldierSashimono", FCVAR_NONE, "Text to use for the Concheror for the %banner% dialog variable on playerpanels."),
 
-HUDHacking::~HUDHacking()
+	m_ApplySettingsHook(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2), true)
 {
-	if (m_ProgressBarApplySettingsHook && GetHooks()->RemoveHook<HookFunc::vgui_ProgressBar_ApplySettings>(m_ProgressBarApplySettingsHook, __FUNCTION__))
-		m_ProgressBarApplySettingsHook = 0;
-
-	Assert(!m_ProgressBarApplySettingsHook);
 }
 
 bool HUDHacking::CheckDependencies()

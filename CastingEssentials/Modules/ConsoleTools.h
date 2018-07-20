@@ -1,4 +1,5 @@
 #pragma once
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -10,7 +11,6 @@ class ConsoleTools final : public Module<ConsoleTools>
 {
 public:
 	ConsoleTools();
-	virtual ~ConsoleTools();
 
 	static bool CheckDependencies();
 
@@ -21,9 +21,9 @@ private:
 
 	bool CheckFilters(const char* msg) const;
 
-	int m_ConsoleColorPrintfHook;
-	int m_ConsoleDPrintfHook;
-	int m_ConsolePrintfHook;
+	Hook<HookFunc::ICvar_ConsoleColorPrintf> m_ConsoleColorPrintfHook;
+	Hook<HookFunc::ICvar_ConsoleDPrintf> m_ConsoleDPrintfHook;
+	Hook<HookFunc::ICvar_ConsolePrintf> m_ConsolePrintfHook;
 
 	std::unordered_map<std::string, std::regex> m_Filters;
 
@@ -40,7 +40,7 @@ private:
 	void AddFilter(const CCommand& command);
 	void RemoveFilter(const CCommand& command);
 	void ListFilters(const CCommand& command);
-	void ToggleFilterEnabled(IConVar* var, const char* oldValue, float fOldValue);
+	void ToggleFilterEnabled(const ConVar* var);
 
 	static int FlagModifyAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
 
@@ -49,8 +49,6 @@ private:
 
 	static void RemoveAlias(const CCommand& command);
 	static int RemoveAliasAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
-
-	void DisableHooks();
 
 	class PauseFilter;
 	int m_FilterPaused;

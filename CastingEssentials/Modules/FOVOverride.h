@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PluginBase/ICameraOverride.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -8,7 +9,7 @@ enum ObserverMode;
 class QAngle;
 class Vector;
 
-class FOVOverride : public Module<FOVOverride>
+class FOVOverride : public Module<FOVOverride>, public ICameraOverride
 {
 public:
 	FOVOverride();
@@ -16,9 +17,6 @@ public:
 	static bool CheckDependencies();
 
 	float GetBaseFOV(ObserverMode mode) const;
-
-protected:
-	void OnTick(bool inGame) override;
 
 private:
 	ConVar ce_fovoverride_firstperson;
@@ -29,9 +27,7 @@ private:
 	ConVar ce_fovoverride_test;
 	ConVar ce_fovoverride_test_enabled;
 
-	int m_InToolModeHook;
-	int m_SetupEngineViewHook;
-	int m_GetDefaultFOVHook;
-	bool InToolModeOverride();
-	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov);
+	bool InToolModeOverride() const override;
+	bool IsThirdPersonCameraOverride() const override { return false; }
+	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov) override;
 };

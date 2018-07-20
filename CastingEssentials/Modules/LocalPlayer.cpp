@@ -18,13 +18,14 @@
 
 LocalPlayer::LocalPlayer() :
 	ce_localplayer_enabled("ce_localplayer_enabled", "0", FCVAR_NONE, "enable local player override",
-		[](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ToggleEnabled(var, pOldValue, flOldValue); }),
+		[](IConVar *var, const char*, float) { GetModule()->ToggleEnabled(static_cast<ConVar*>(var)); }),
 	ce_localplayer_player("ce_localplayer_player", "0", FCVAR_NONE, "player index to set as the local player"),
 	ce_localplayer_set_current_target("ce_localplayer_set_current_target", []() { GetModule()->SetToCurrentTarget(); },
 		"set the local player to the current spectator target"),
-	ce_localplayer_track_spec_target("ce_localplayer_track_spec_target", "0", FCVAR_NONE, "have the local player value track the spectator target")
+	ce_localplayer_track_spec_target("ce_localplayer_track_spec_target", "0", FCVAR_NONE, "have the local player value track the spectator target"),
+
+	m_GetLocalPlayerIndexHook(std::bind(&LocalPlayer::GetLocalPlayerIndexOverride, this))
 {
-	m_GetLocalPlayerIndexHookID = 0;
 }
 
 bool LocalPlayer::CheckDependencies()
@@ -78,22 +79,9 @@ int LocalPlayer::GetLocalPlayerIndexOverride()
 	return 0;
 }
 
-void LocalPlayer::ToggleEnabled(IConVar *var, const char *pOldValue, float flOldValue)
+void LocalPlayer::ToggleEnabled(const ConVar *var)
 {
-	if (ce_localplayer_enabled.GetBool())
-	{
-		if (!m_GetLocalPlayerIndexHookID)
-		{
-			m_GetLocalPlayerIndexHookID = GetHooks()->GetHook<HookFunc::Global_GetLocalPlayerIndex>()->AddHook(std::bind(&LocalPlayer::GetLocalPlayerIndexOverride, this));
-		}
-	}
-	else
-	{
-		if (m_GetLocalPlayerIndexHookID && GetHooks()->GetHook<HookFunc::Global_GetLocalPlayerIndex>()->RemoveHook(m_GetLocalPlayerIndexHookID, __FUNCSIG__))
-			m_GetLocalPlayerIndexHookID = 0;
-
-		Assert(!m_GetLocalPlayerIndexHookID);
-	}
+	m_GetLocalPlayerIndexHook.SetEnabled(var->GetBool());
 }
 
 void LocalPlayer::SetToCurrentTarget()

@@ -37,11 +37,13 @@ static constexpr auto STENCIL_INDEX_MASK = 0xFC;
 static bool s_DisableForcedMaterialOverride = false;
 
 Graphics::Graphics() :
-	ce_graphics_disable_prop_fades("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading."),
+	ce_graphics_disable_prop_fades("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading.",
+		[](IConVar* var, const char*, float) { GetModule()->ToggleEntityFade(static_cast<ConVar*>(var)); }),
 	ce_graphics_debug_glow("ce_graphics_debug_glow", "0", FCVAR_UNREGISTERED),
 	ce_graphics_glow_silhouettes("ce_graphics_glow_silhouettes", "0", FCVAR_NONE, "Turns outlines into silhouettes."),
 	ce_graphics_glow_intensity("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity"),
-	ce_graphics_improved_glows("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?"),
+	ce_graphics_improved_glows("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?",
+		[](IConVar* var, const char*, float) { GetModule()->ToggleImprovedGlows(static_cast<ConVar*>(var)); }),
 	ce_graphics_fix_invisible_players("ce_graphics_fix_invisible_players", "1", FCVAR_NONE,
 		"Fix a case where players are invisible if you're firstperson speccing them when the round starts."),
 
@@ -75,31 +77,15 @@ Graphics::Graphics() :
 	ce_infills_fade_after_hurt_time("ce_infills_fade_after_hurt_time", "2.0", FCVAR_NONE, "How long to fade out infills after taking damage. -1 to disable."),
 	ce_infills_fade_after_hurt_bias("ce_infills_fade_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for infill fade outs.", true, 0, true, 1),
 
-	ce_graphics_dump_shader_params("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete)
+	ce_graphics_dump_shader_params("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete),
+
+	m_ComputeEntityFadeHook(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
+
+	m_ApplyEntityGlowEffectsHook(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9)),
+
+	m_ForcedMaterialOverrideHook(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2))
 {
-	m_ComputeEntityFadeHook = GetHooks()->AddHook<HookFunc::Global_UTILComputeEntityFade>(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-
-	m_ApplyEntityGlowEffectsHook = GetHooks()->AddHook<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9));
-
-	m_ForcedMaterialOverrideHook = GetHooks()->AddHook<HookFunc::IStudioRender_ForcedMaterialOverride>(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2));
-}
-
-Graphics::~Graphics()
-{
-	if (m_ComputeEntityFadeHook && GetHooks()->RemoveHook<HookFunc::Global_UTILComputeEntityFade>(m_ComputeEntityFadeHook, __FUNCSIG__))
-		m_ComputeEntityFadeHook = 0;
-
-	Assert(!m_ComputeEntityFadeHook);
-
-	if (m_ApplyEntityGlowEffectsHook && GetHooks()->RemoveHook<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>(m_ApplyEntityGlowEffectsHook, __FUNCSIG__))
-		m_ApplyEntityGlowEffectsHook = 0;
-
-	Assert(!m_ApplyEntityGlowEffectsHook);
-
-	if (m_ForcedMaterialOverrideHook && GetHooks()->RemoveHook<HookFunc::IStudioRender_ForcedMaterialOverride>(m_ForcedMaterialOverrideHook, __FUNCSIG__))
-		m_ForcedMaterialOverrideHook = 0;
-
-	Assert(!m_ForcedMaterialOverrideHook);
+	ToggleImprovedGlows(&ce_graphics_improved_glows);
 }
 
 bool Graphics::IsDefaultParam(const char* paramName)
@@ -264,30 +250,28 @@ int Graphics::DumpShaderParamsAutocomplete(const char *partial, char commands[CO
 	return outputCount;
 }
 
+void Graphics::ToggleEntityFade(const ConVar* var)
+{
+	m_ComputeEntityFadeHook.SetEnabled(var->GetBool());
+}
+
 unsigned char Graphics::ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale)
 {
-	constexpr auto max = std::numeric_limits<unsigned char>::max();
+	GetHooks()->SetState<HookFunc::Global_UTILComputeEntityFade>(Hooking::HookAction::SUPERCEDE);
+	return std::numeric_limits<unsigned char>::max();
+}
 
-	if (ce_graphics_disable_prop_fades.GetBool())
-	{
-		GetHooks()->SetState<HookFunc::Global_UTILComputeEntityFade>(Hooking::HookAction::SUPERCEDE);
-		return max;
-	}
-
-	return 0;
+void Graphics::ToggleImprovedGlows(const ConVar* var)
+{
+	const bool enabled = var->GetBool();
+	m_ApplyEntityGlowEffectsHook.SetEnabled(enabled);
+	m_ForcedMaterialOverrideHook.SetEnabled(enabled);
 }
 
 void Graphics::ApplyEntityGlowEffectsOverride(CGlowObjectManager * pThis, const CViewSetup * pSetup, int nSplitScreenSlot, CMatRenderContextPtr & pRenderContext, float flBloomScale, int x, int y, int w, int h)
 {
-	if (ce_graphics_improved_glows.GetBool())
-	{
-		GetHooks()->SetState<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::SUPERCEDE);
-		pThis->ApplyEntityGlowEffects(pSetup, nSplitScreenSlot, pRenderContext, flBloomScale, x, y, w, h);
-	}
-	else
-	{
-		GetHooks()->SetState<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::IGNORE);
-	}
+	GetHooks()->SetState<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>(Hooking::HookAction::SUPERCEDE);
+	pThis->ApplyEntityGlowEffects(pSetup, nSplitScreenSlot, pRenderContext, flBloomScale, x, y, w, h);
 }
 
 void Graphics::ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_t overrideType)

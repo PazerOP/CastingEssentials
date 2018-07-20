@@ -34,7 +34,7 @@ public:
 
 ConsoleTools::ConsoleTools() :
 	ce_consoletools_filter_enabled("ce_consoletools_filter_enabled", "0", FCVAR_NONE, "Enables or disables console filtering.",
-		[](IConVar* var, const char* oldValue, float fOldValue) { GetModule()->ToggleFilterEnabled(var, oldValue, fOldValue); }),
+		[](IConVar* var, const char*, float) { GetModule()->ToggleFilterEnabled(static_cast<ConVar*>(var)); }),
 	ce_consoletools_filter_add("ce_consoletools_filter_add", [](const CCommand& cmd) { GetModule()->AddFilter(cmd); },
 		"Adds a new console filter. Uses regular expressions."),
 	ce_consoletools_filter_remove("ce_consoletools_filter_remove", [](const CCommand& cmd) { GetModule()->RemoveFilter(cmd); },
@@ -47,16 +47,13 @@ ConsoleTools::ConsoleTools() :
 		"Removes a flag from a cvar.", FCVAR_NONE, FlagModifyAutocomplete),
 
 	ce_consoletools_alias_remove("ce_consoletools_alias_remove", RemoveAlias,
-		"Removes an existing alias created with the \"alias\" command.", FCVAR_NONE, RemoveAliasAutocomplete)
+		"Removes an existing alias created with the \"alias\" command.", FCVAR_NONE, RemoveAliasAutocomplete),
+
+	m_ConsoleColorPrintfHook(std::bind(&ConsoleTools::ConsoleColorPrintfHook, this, std::placeholders::_1, std::placeholders::_2)),
+	m_ConsoleDPrintfHook(std::bind(&ConsoleTools::ConsoleDPrintfHook, this, std::placeholders::_1)),
+	m_ConsolePrintfHook(std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1))
 {
 	m_FilterPaused = false;
-	m_ConsoleColorPrintfHook = 0;
-	m_ConsoleDPrintfHook = 0;
-	m_ConsolePrintfHook = 0;
-}
-ConsoleTools::~ConsoleTools()
-{
-	DisableHooks();
 }
 
 bool ConsoleTools::CheckDependencies()
@@ -104,21 +101,13 @@ void ConsoleTools::AddFilter(const CCommand &command)
 	else
 		PluginWarning("Usage: %s <filter>\n", command[0]);
 }
-void ConsoleTools::ToggleFilterEnabled(IConVar *var, const char *pOldValue, float flOldValue)
+void ConsoleTools::ToggleFilterEnabled(const ConVar *var)
 {
-	if (ce_consoletools_filter_enabled.GetBool())
-	{
-		if (!m_ConsolePrintfHook)
-			m_ConsolePrintfHook = GetHooks()->AddHook<HookFunc::ICvar_ConsolePrintf>(std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1));
+	const bool enabled = var->GetBool();
 
-		if (!m_ConsoleDPrintfHook)
-			m_ConsoleDPrintfHook = GetHooks()->AddHook<HookFunc::ICvar_ConsoleDPrintf>(std::bind(&ConsoleTools::ConsoleDPrintfHook, this, std::placeholders::_1));
-
-		if (!m_ConsoleColorPrintfHook)
-			m_ConsoleColorPrintfHook = GetHooks()->AddHook<HookFunc::ICvar_ConsoleColorPrintf>(std::bind(&ConsoleTools::ConsoleColorPrintfHook, this, std::placeholders::_1, std::placeholders::_2));
-	}
-	else
-		DisableHooks();
+	m_ConsolePrintfHook.SetEnabled(enabled);
+	m_ConsoleDPrintfHook.SetEnabled(enabled);
+	m_ConsoleColorPrintfHook.SetEnabled(enabled);
 }
 
 int ConsoleTools::FlagModifyAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
@@ -206,22 +195,6 @@ int ConsoleTools::FlagModifyAutocomplete(const char* partial, char commands[COMM
 	}
 
 	return (int)suggestionsCount;
-}
-
-void ConsoleTools::DisableHooks()
-{
-	if (m_ConsoleColorPrintfHook && GetHooks()->RemoveHook<HookFunc::ICvar_ConsoleColorPrintf>(m_ConsoleColorPrintfHook, __FUNCSIG__))
-	{
-		m_ConsoleColorPrintfHook = 0;
-	}
-	if (m_ConsoleDPrintfHook && GetHooks()->RemoveHook<HookFunc::ICvar_ConsoleDPrintf>(m_ConsoleDPrintfHook, __FUNCSIG__))
-	{
-		m_ConsoleDPrintfHook = 0;
-	}
-	if (m_ConsolePrintfHook && GetHooks()->RemoveHook<HookFunc::ICvar_ConsolePrintf>(m_ConsolePrintfHook, __FUNCSIG__))
-	{
-		m_ConsolePrintfHook = 0;
-	}
 }
 
 void ConsoleTools::ConsoleColorPrintfHook(const Color &clr, const char *message)

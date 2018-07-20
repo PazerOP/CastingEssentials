@@ -2,6 +2,7 @@
 
 #include "Misc/CRefPtrFix.h"
 #include "PluginBase/EntityOffset.h"
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Modules.h"
 
 #define GLOWS_ENABLE
@@ -24,7 +25,6 @@ class Graphics final : public Module<Graphics>
 {
 public:
 	Graphics();
-	~Graphics();
 
 	const ConVar& GetDebugGlowConVar() const { return ce_graphics_debug_glow; }
 
@@ -75,13 +75,15 @@ private:
 	static void DumpShaderParams(const CCommand& cmd);
 	static int DumpShaderParamsAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
 
-	int m_ComputeEntityFadeHook;
+	Hook<HookFunc::Global_UTILComputeEntityFade> m_ComputeEntityFadeHook;
+	void ToggleEntityFade(const ConVar* var);
 	unsigned char ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale);
 
-	int m_ApplyEntityGlowEffectsHook;
+	Hook<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects> m_ApplyEntityGlowEffectsHook;
+	void ToggleImprovedGlows(const ConVar* var);
 	void ApplyEntityGlowEffectsOverride(CGlowObjectManager* pThis, const CViewSetup* pSetup, int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext, float flBloomScale, int x, int y, int w, int h);
 
-	int m_ForcedMaterialOverrideHook;
+	Hook<HookFunc::IStudioRender_ForcedMaterialOverride> m_ForcedMaterialOverrideHook;
 	void ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_t overrideType);
 
 	void DrawGlowAlways(int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;

@@ -1,5 +1,4 @@
 #include "PlayerAliases.h"
-#include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
@@ -9,7 +8,8 @@
 #include <vprof.h>
 
 PlayerAliases::PlayerAliases() :
-	ce_playeraliases_enabled("ce_playeraliases_enabled", "0", FCVAR_NONE, "Enables player aliases.", &PlayerAliases::StaticToggleEnabled),
+	ce_playeraliases_enabled("ce_playeraliases_enabled", "0", FCVAR_NONE, "Enables player aliases.",
+		[](IConVar* var, const char*, float) { GetModule()->ToggleEnabled(static_cast<ConVar*>(var)); }),
 	ce_playeraliases_format_blu("ce_playeraliases_format_blu", "%alias%", FCVAR_NONE, "Name format for BLU players."),
 	ce_playeraliases_format_red("ce_playeraliases_format_red", "%alias%", FCVAR_NONE, "Name format for RED players."),
 	ce_playeraliases_format_swap("ce_playeraliases_format_swap", []() { GetModule()->SwapTeamFormats(); },
@@ -17,9 +17,10 @@ PlayerAliases::PlayerAliases() :
 
 	ce_playeraliases_list("ce_playeraliases_list", []() { GetModule()->PrintPlayerAliases(); }, "Prints all player aliases to console."),
 	ce_playeraliases_add("ce_playeraliases_add", [](const CCommand& args) { GetModule()->AddPlayerAlias(args); }, "Adds a new player alias."),
-	ce_playeraliases_remove("ce_playeraliases_remove", [](const CCommand& args) { GetModule()->RemovePlayerAlias(args); }, "Removes an existing player alias.")
+	ce_playeraliases_remove("ce_playeraliases_remove", [](const CCommand& args) { GetModule()->RemovePlayerAlias(args); }, "Removes an existing player alias."),
+
+	m_GetPlayerInfoHook(std::bind(&PlayerAliases::GetPlayerInfoOverride, this, std::placeholders::_1, std::placeholders::_2))
 {
-	m_GetPlayerInfoHook = 0;
 }
 
 bool PlayerAliases::CheckDependencies()
@@ -43,7 +44,7 @@ bool PlayerAliases::CheckDependencies()
 		PluginWarning("Required player helper class for module %s not available!\n", GetModuleName());
 		ready = false;
 	}
-	
+
 	if (!GetHooks()->GetHook<HookFunc::IVEngineClient_GetPlayerInfo>())
 	{
 		PluginWarning("Required hook IVEngineClient::GetPlayerInfo for module %s not available!\n", GetModuleName());
@@ -51,18 +52,6 @@ bool PlayerAliases::CheckDependencies()
 	}
 
 	return ready;
-}
-
-void PlayerAliases::StaticToggleEnabled(IConVar* var, const char* oldValue, float fOldValue)
-{
-	PlayerAliases* module = GetModule();
-	if (!module)
-	{
-		PluginWarning("Unable to use %s: module not loaded\n", var->GetName());
-		return;
-	}
-
-	module->ToggleEnabled(var, oldValue, fOldValue);
 }
 
 bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
@@ -222,20 +211,7 @@ void PlayerAliases::FindAndReplaceInString(std::string &str, const std::string &
 	}
 }
 
-void PlayerAliases::ToggleEnabled(IConVar* var, const char* oldValue, float fOldValue)
+void PlayerAliases::ToggleEnabled(const ConVar* var)
 {
-	if (ce_playeraliases_enabled.GetBool())
-	{
-		if (!m_GetPlayerInfoHook)
-		{
-			m_GetPlayerInfoHook = GetHooks()->AddHook<HookFunc::IVEngineClient_GetPlayerInfo>(std::bind(&PlayerAliases::GetPlayerInfoOverride, this, std::placeholders::_1, std::placeholders::_2));
-		}
-	}
-	else
-	{
-		if (m_GetPlayerInfoHook && GetHooks()->RemoveHook<HookFunc::IVEngineClient_GetPlayerInfo>(m_GetPlayerInfoHook, __FUNCSIG__))
-			m_GetPlayerInfoHook = 0;
-
-		Assert(!m_GetPlayerInfoHook);
-	}
+	m_GetPlayerInfoHook.SetEnabled(var->GetBool());
 }

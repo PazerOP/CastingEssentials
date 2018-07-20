@@ -1,4 +1,5 @@
 #pragma once
+#include "PluginBase/HookManager.h"
 #include "PluginBase/ICameraOverride.h"
 #include "PluginBase/Modules.h"
 
@@ -45,9 +46,8 @@ protected:
 	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov) override;
 
 private:
-	int m_SetModeHook;
-	int m_SetPrimaryTargetHook;
-	int m_GetDefaultFOVHook;
+	Hook<HookFunc::C_HLTVCamera_SetMode> m_SetModeHook;
+	Hook<HookFunc::C_HLTVCamera_SetPrimaryTarget> m_SetPrimaryTargetHook;
 	KeyValues* m_SpecGUISettings;
 
 	void SetModeOverride(int iMode);

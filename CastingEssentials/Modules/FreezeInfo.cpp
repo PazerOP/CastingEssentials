@@ -27,21 +27,14 @@ private:
 };
 
 FreezeInfo::FreezeInfo() :
-	ce_freezeinfo_enabled("ce_freezeinfo_enabled", "0", FCVAR_NONE, "enables display of an info panel when a freeze is detected"),
+	ce_freezeinfo_enabled("ce_freezeinfo_enabled", "0", FCVAR_NONE, "enables display of an info panel when a freeze is detected", [](IConVar* var, const char*, float) { GetModule()->ToggleEnabled(static_cast<ConVar*>(var)); }),
 	ce_freezeinfo_threshold("ce_freezeinfo_threshold", "1", FCVAR_NONE, "the time of a freeze (in seconds) before the info panel is displayed",
 		[](IConVar *var, const char *pOldValue, float flOldValue) { GetModule()->ChangeThreshold(var, pOldValue, flOldValue); }),
 	ce_freezeinfo_reload_settings("ce_freezeinfo_reload_settings", []() { GetModule()->ReloadSettings(); },
-		"reload settings for the freeze info panel from the resource file", FCVAR_NONE)
-{
-	m_PostEntityPacketReceivedHook = GetHooks()->AddHook<HookFunc::IPrediction_PostEntityPacketReceived>(std::bind(&FreezeInfo::PostEntityPacketReceivedHook, this));
-}
+		"reload settings for the freeze info panel from the resource file", FCVAR_NONE),
 
-FreezeInfo::~FreezeInfo()
+	m_PostEntityPacketReceivedHook(std::bind(&FreezeInfo::PostEntityPacketReceivedHook, this))
 {
-	if (m_PostEntityPacketReceivedHook && GetHooks()->RemoveHook<HookFunc::IPrediction_PostEntityPacketReceived>(m_PostEntityPacketReceivedHook, __FUNCSIG__))
-		m_PostEntityPacketReceivedHook = 0;
-
-	Assert(!m_PostEntityPacketReceivedHook);
 }
 
 bool FreezeInfo::CheckDependencies()
@@ -143,6 +136,11 @@ void FreezeInfo::ReloadSettings()
 {
 	if (m_Panel)
 		m_Panel->LoadControlSettings("Resource/UI/FreezeInfo.res");
+}
+
+void FreezeInfo::ToggleEnabled(const ConVar* var)
+{
+	m_PostEntityPacketReceivedHook.SetEnabled(var->GetBool());
 }
 
 FreezeInfo::Panel::Panel(vgui::Panel *parent, const char *panelName) : vgui::EditablePanel(parent, panelName)
