@@ -560,8 +560,6 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr, bool& anyAlways, 
 				if (currentExtra.m_Mode == GlowMode::Occluded)
 				{
 					currentExtra.m_Mode = GlowMode::Always;
-					currentExtra.m_ShouldOverrideGlowColor = true;
-					currentExtra.m_GlowColorOverride = Vector(0, 1, 0);
 				}
 				else if (currentExtra.m_Mode == GlowMode::Unoccluded)
 				{
