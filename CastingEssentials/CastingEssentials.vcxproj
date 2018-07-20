@@ -199,6 +199,7 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Misc\NatVis\ClientClass.natvis" />
+    <Natvis Include="Misc\NatVis\CUtlVector.natvis" />
     <Natvis Include="Misc\NatVis\RecvProp.natvis" />
     <Natvis Include="Misc\NatVis\RecvTable.natvis" />
   </ItemGroup>
