@@ -138,15 +138,15 @@ bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 			m_ThisFramePluginView.Set(origin, angles, fov);
 		}
 
-		if (!retVal && (module = CameraSmooths::GetModule()) != nullptr)
+		if ((module = CameraSmooths::GetModule()) != nullptr)
 		{
-			retVal = module->SetupEngineViewOverride(origin, angles, fov);
+			retVal = module->SetupEngineViewOverride(origin, angles, fov) || retVal;
 			m_ThisFramePluginView.Set(origin, angles, fov);
 		}
 
-		if (!retVal && (module = FOVOverride::GetModule()) != nullptr)
+		if ((module = FOVOverride::GetModule()) != nullptr)
 		{
-			retVal = module->SetupEngineViewOverride(origin, angles, fov);
+			retVal = module->SetupEngineViewOverride(origin, angles, fov) || retVal;
 			m_ThisFramePluginView.Set(origin, angles, fov);
 		}
 	}
