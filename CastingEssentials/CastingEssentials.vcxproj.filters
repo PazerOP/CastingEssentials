@@ -230,9 +230,6 @@
     <ClInclude Include="Hooking\IBaseHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Hooking\VariablePusher.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Modules\MedigunInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
