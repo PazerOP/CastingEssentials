@@ -23,7 +23,7 @@ public:
 	void GetThisFramePluginView(Vector& origin, QAngle& angles, float* fov = nullptr) const;
 
 	static ObserverMode GetLocalObserverMode();
-	static C_BaseEntity* GetLocalObserverTarget();
+	static C_BaseEntity* GetLocalObserverTarget(bool attachedModesOnly = false);
 
 	C_BaseEntity* GetLastSpecTarget() const;
 

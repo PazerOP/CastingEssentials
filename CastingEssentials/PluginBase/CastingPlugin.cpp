@@ -27,6 +27,7 @@
 #include "Modules/MedigunInfo.h"
 #include "Modules/PlayerAliases.h"
 #include "Modules/ProjectileOutlines.h"
+#include "Modules/SniperLOS.h"
 #include "Modules/SteamTools.h"
 #include "Modules/TeamNames.h"
 #include "Modules/ClientTools.h"
@@ -95,6 +96,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<MedigunInfo>("Medigun Info");
 	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
 	Modules().RegisterAndLoadModule<ProjectileOutlines>("Projectile Outlines");
+	Modules().RegisterAndLoadModule<SniperLOS>("Sniper LOS Beams");
 	Modules().RegisterAndLoadModule<SteamTools>("Steam Tools");
 	Modules().RegisterAndLoadModule<TeamNames>("Team Names");
 	Modules().RegisterAndLoadModule<ClientTools>("Client Tools");

@@ -173,7 +173,9 @@ extern bool ReparseForSteamIDs(const CCommand& in, CCommand& out);
 
 extern void SwapConVars(ConVar& var1, ConVar& var2);
 
+extern bool ColorFromConVar(const ConVar& var, Color& out);
 extern Color ColorFromConVar(const ConVar& var, bool* success = nullptr);
+extern bool ColorFromString(const char* str, Color& out);
 extern Color ColorFromString(const char* str, bool* success = nullptr);
 extern Vector ColorToVector(const Color& color);
 
@@ -237,7 +239,7 @@ public:
 	VariablePusher(T& variable, const T& newValue) : m_Variable(&variable)
 	{
 		m_OldValue = std::move(*m_Variable);
-		*m_Variable = std::move(newValue);
+		*m_Variable = newValue;
 	}
 	VariablePusher(T& variable, T&& newValue) : m_Variable(&variable)
 	{

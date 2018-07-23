@@ -121,6 +121,7 @@
     <ClCompile Include="Modules\PlayerAliases.cpp" />
     <ClCompile Include="Modules\ProjectileOutlines.cpp" />
     <ClCompile Include="Modules\FreezeInfo.cpp" />
+    <ClCompile Include="Modules\SniperLOS.cpp" />
     <ClCompile Include="Modules\SteamTools.cpp" />
     <ClCompile Include="Modules\TeamNames.cpp" />
     <ClCompile Include="Modules\IngameTeamScores.cpp" />
@@ -178,6 +179,7 @@
     <ClInclude Include="Modules\MedigunInfo.h" />
     <ClInclude Include="Modules\PlayerAliases.h" />
     <ClInclude Include="Modules\ProjectileOutlines.h" />
+    <ClInclude Include="Modules\SniperLOS.h" />
     <ClInclude Include="Modules\SteamTools.h" />
     <ClInclude Include="Modules\TeamNames.h" />
     <ClInclude Include="Modules\IngameTeamScores.h" />

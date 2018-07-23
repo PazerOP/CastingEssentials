@@ -27,7 +27,6 @@ class WeaponTools final : public Module<WeaponTools>
 {
 public:
 	WeaponTools();
-	//~WeaponTools();
 
 	static bool CheckDependencies();
 
@@ -36,7 +35,6 @@ protected:
 	void LevelShutdown() override;
 
 private:
-	void ForceInspectWeapon();
 	static float& GetInspectInterp();
 
 	enum class InspectStage

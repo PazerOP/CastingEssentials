@@ -159,6 +159,9 @@
     <ClCompile Include="Modules\WeaponTools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\SniperLOS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -336,6 +339,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PluginBase\EntityOffset.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\SniperLOS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

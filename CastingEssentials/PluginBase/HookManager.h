@@ -125,7 +125,6 @@ enum class HookFunc
 
 	IGameEventManager2_FireEventClientSide,
 	IGameSystem_Add,
-	IGameSystem_Remove,
 
 	IPrediction_PostEntityPacketReceived,
 
@@ -298,10 +297,6 @@ class HookManager final
 		typedef VirtualHook<HookFunc::IGameEventManager2_FireEventClientSide, false, IGameEventManager2, bool, IGameEvent*> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::IGameSystem_Add>
-	{
-		typedef void(__cdecl* Raw)(IGameSystem* system);
-	};
-	template<> struct HookFuncType<HookFunc::IGameSystem_Remove>
 	{
 		typedef void(__cdecl* Raw)(IGameSystem* system);
 	};

@@ -244,3 +244,39 @@ C_GameRules* Interfaces::GetGameRules()
 
 	return *s_GameRules;
 }
+
+CUtlVector<IGameSystem*>* Interfaces::GetGameSystems()
+{
+	static CUtlVector<IGameSystem*>* s_GameSystems = nullptr;
+	if (!s_GameSystems)
+	{
+		constexpr const char* SIG = "\xB9????\x89\x75\xFC\xE8????\x6A\x00";
+		constexpr const char* MASK = "x????xxxx????xx";
+		constexpr auto OFFSET = 1;
+
+		if (auto p = (std::byte*)SignatureScan("client", SIG, MASK))
+			s_GameSystems = *(CUtlVector<IGameSystem*>**)(p + OFFSET);
+		else
+			throw bad_pointer("CUtlVector<IGameSystem*>");
+	}
+
+	return s_GameSystems;
+}
+
+CUtlVector<IGameSystemPerFrame*>* Interfaces::GetGameSystemsPerFrame()
+{
+	static CUtlVector<IGameSystemPerFrame*>* s_GameSystems = nullptr;
+	if (!s_GameSystems)
+	{
+		constexpr const char* SIG = "\xB9????\xE8????\x8D\x45\xFC\xC7\x06";
+		constexpr const char* MASK = "x????x????xxxxx";
+		constexpr auto OFFSET = 1;
+
+		if (auto p = (std::byte*)SignatureScan("client", SIG, MASK))
+			s_GameSystems = *(CUtlVector<IGameSystemPerFrame*>**)(p + OFFSET);
+		else
+			throw bad_pointer("CUtlVector<IGameSystemPerFrame*>");
+	}
+
+	return s_GameSystems;
+}

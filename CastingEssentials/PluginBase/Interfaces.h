@@ -1,6 +1,7 @@
 #pragma once
 
 #include "interface.h"
+#include <utlvector.h>
 
 class C_BasePlayer;
 class C_GameRules;
@@ -14,6 +15,8 @@ class IClientEntityList;
 class IClientMode;
 class IEngineTool;
 class IGameEventManager2;
+class IGameSystem;
+class IGameSystemPerFrame;
 class IPrediction;
 class IVEngineClient;
 class IVModelInfoClient;
@@ -100,6 +103,9 @@ public:
 
 	// #include <shared/gamerules.h>
 	static C_GameRules* GetGameRules();
+
+	static CUtlVector<IGameSystem*>* GetGameSystems();
+	static CUtlVector<IGameSystemPerFrame*>* GetGameSystemsPerFrame();
 
 private:
 	static IBaseClientDLL *pClientDLL;

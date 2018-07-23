@@ -57,9 +57,6 @@ public:
 	static EntityTypeChecker GetTypeChecker(const ClientClass* cc);
 	static EntityTypeChecker GetTypeChecker(const RecvTable* cc);
 
-	//static bool CheckEntityBaseclass(IClientNetworkable* entity, const char* baseclass);
-	//static bool CheckTableBaseClass(const RecvTable* tableParent, const RecvTable* tableBase);
-
 	static ClientClass* GetClientClass(const char* className);
 	static RecvProp* FindRecvProp(const char* className, const char* propName, bool recursive = true);
 	static RecvProp* FindRecvProp(RecvTable* table, const char* propName, bool recursive = true);
@@ -72,9 +69,6 @@ public:
 private:
 	Entities() = delete;
 	~Entities() = delete;
-
-	//static bool CheckClassBaseclass(ClientClass *clientClass, const char* baseclass);
-	//static bool CheckTableBaseclass(RecvTable *sTable, const char* baseclass);
 
 	static PropOffsetPair RetrieveClassPropOffset(const RecvTable* table,
 		const std::vector<std::string_view>& refPropertyTree, std::vector<std::string_view>& currentPropertyTree);

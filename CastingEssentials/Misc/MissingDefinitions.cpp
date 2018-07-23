@@ -422,13 +422,35 @@ short *CBoneCache::CachedToStudio()
 	return (short *)((char *)(this + 1) + m_cachedToStudioOffset);
 }
 
+CAutoGameSystemPerFrame::CAutoGameSystemPerFrame(char const *name) :
+	m_pszName(name)
+{
+	// If s_GameSystems hasn't been initted yet, then add ourselves to the global list
+	// because we don't know if the constructor for s_GameSystems has happened yet.
+	// Otherwise, we can add ourselves right into that list.
+	if (true)//s_bSystemsInitted)
+	{
+		Add(this);
+	}
+	else
+	{
+		Assert(false);
+		//m_pNext = s_pPerFrameSystemList;
+		//s_pPerFrameSystemList = this;
+	}
+}
+
+void IGameSystem::Add(IGameSystem* pSys)
+{
+	HookManager::GetRawFunc<HookFunc::IGameSystem_Add>()(pSys);
+}
 IGameSystem::~IGameSystem()
 {
-	HookManager::GetRawFunc<HookFunc::IGameSystem_Remove>()(this);
+	Interfaces::GetGameSystems()->FindAndRemove(this);
 }
 IGameSystemPerFrame::~IGameSystemPerFrame()
 {
-	HookManager::GetRawFunc<HookFunc::IGameSystem_Remove>()(this);
+	Interfaces::GetGameSystemsPerFrame()->FindAndRemove(this);
 }
 
 void CParticleProperty::DebugPrintEffects()

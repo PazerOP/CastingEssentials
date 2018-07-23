@@ -37,8 +37,14 @@ ObserverMode CameraState::GetLocalObserverMode()
 	return OBS_MODE_NONE;
 }
 
-C_BaseEntity* CameraState::GetLocalObserverTarget()
+C_BaseEntity* CameraState::GetLocalObserverTarget(bool attachedModesOnly)
 {
+	if (attachedModesOnly)
+	{
+		if (auto mode = GetLocalObserverMode(); mode != ObserverMode::OBS_MODE_CHASE && mode != ObserverMode::OBS_MODE_IN_EYE)
+			return nullptr;
+	}
+
 	if (auto client = Interfaces::GetEngineClient(); client && client->IsHLTV())
 	{
 		if (auto hltvcamera = Interfaces::GetHLTVCamera())

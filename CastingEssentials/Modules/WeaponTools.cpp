@@ -305,10 +305,6 @@ void WeaponTools::LevelShutdown()
 	m_ViewModelCache.clear();
 }
 
-void WeaponTools::ForceInspectWeapon()
-{
-}
-
 float& WeaponTools::GetInspectInterp()
 {
 	static float* s_inspectInterp = nullptr;

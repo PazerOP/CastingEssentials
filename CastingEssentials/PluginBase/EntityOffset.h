@@ -7,7 +7,6 @@
 #include <iclientnetworkable.h>
 
 #include <limits>
-#include <memory>
 #include <set>
 #include <vector>
 
@@ -82,6 +81,14 @@ public:
 	__forceinline TValue* TryGetValue(IClientNetworkable* entity) const
 	{
 		return const_cast<TValue*>(TryGetValue((const IClientNetworkable*)entity));
+	}
+
+	__forceinline ptrdiff_t GetOffset(const IClientNetworkable* entity) const
+	{
+		if (!m_ValidTypes.Match(entity))
+			throw mismatching_entity_offset("FIXME", "FIXME2");
+
+		return m_Offset;
 	}
 
 	__forceinline bool IsInit() const { return m_ValidTypes.IsInit(); }

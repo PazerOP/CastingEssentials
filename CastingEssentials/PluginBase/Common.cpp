@@ -39,30 +39,39 @@ void SwapConVars(ConVar& var1, ConVar& var2)
 	var2.SetValue(value1.c_str());
 }
 
+bool ColorFromConVar(const ConVar& var, Color& out)
+{
+	return ColorFromString(var.GetString(), out);
+}
+
 Color ColorFromConVar(const ConVar& var, bool* success)
 {
 	return ColorFromString(var.GetString(), success);
 }
 
-Color ColorFromString(const char* str, bool* success)
+bool ColorFromString(const char* str, Color& out)
 {
 	uint8_t r, g, b, a = 255;
 	const auto parsed = sscanf_s(str, "%hhu %hhu %hhu %hhu", &r, &g, &b, &a);
 
 	if (parsed == 3 || parsed == 4)
 	{
-		if (success)
-			*success = true;
-
-		return Color(r, g, b, a);
+		out = Color(r, g, b, a);
+		return true;
 	}
 	else
-	{
-		if (success)
-			*success = false;
+		return false;
+}
 
-		return Color(255, 255, 255, 255);
-	}
+Color ColorFromString(const char* str, bool* success)
+{
+	Color retVal;
+	bool succ = ColorFromString(str, retVal);
+
+	if (success)
+		*success = succ;
+
+	return retVal;
 }
 
 Vector ColorToVector(const Color& color)

@@ -1,0 +1,8 @@
+UnlitGeneric
+{
+	$basetexture    "Effects/beam_generic_2"
+	$translucent    1
+	$vertexcolor    1
+	$nocull         1
+	$additive       1
+}
