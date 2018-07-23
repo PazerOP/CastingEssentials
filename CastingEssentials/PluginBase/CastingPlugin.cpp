@@ -31,6 +31,7 @@
 #include "Modules/SteamTools.h"
 #include "Modules/TeamNames.h"
 #include "Modules/ClientTools.h"
+#include "Modules/ViewAngles.h"
 #include "Modules/WeaponTools.h"
 
 const char* const PLUGIN_VERSION_ID = "r21 beta1";
@@ -100,6 +101,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<SteamTools>("Steam Tools");
 	Modules().RegisterAndLoadModule<TeamNames>("Team Names");
 	Modules().RegisterAndLoadModule<ClientTools>("Client Tools");
+	Modules().RegisterAndLoadModule<ViewAngles>("High-Precision View Angles");
 	Modules().RegisterAndLoadModule<WeaponTools>("Weapon Tools");
 
 	ConVar_Register();
