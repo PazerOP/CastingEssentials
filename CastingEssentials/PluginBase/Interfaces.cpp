@@ -6,6 +6,7 @@
 
 #include <cdll_int.h>
 #include <engine/ivmodelinfo.h>
+#include <game/client/iclientrendertargets.h>
 #include <icliententitylist.h>
 #include <igameevents.h>
 #include <iprediction.h>
@@ -43,6 +44,7 @@ IVDebugOverlay* Interfaces::s_DebugOverlay = nullptr;
 IEngineTrace* Interfaces::s_EngineTrace = nullptr;
 ISpatialPartition* Interfaces::s_SpatialPartition = nullptr;
 IClientLeafSystem* Interfaces::s_ClientLeafSystem = nullptr;
+IClientRenderTargets* Interfaces::s_ClientRenderTargets = nullptr;
 
 bool Interfaces::steamLibrariesAvailable = false;
 bool Interfaces::vguiLibrariesAvailable = false;
@@ -59,6 +61,7 @@ IEngineTrace* enginetrace;
 IVEngineClient* engine;
 IVRenderView* render;
 IClientLeafSystem* g_pClientLeafSystem;
+IClientRenderTargets* g_pClientRenderTargets;
 
 void Interfaces::Load(CreateInterfaceFn factory)
 {
@@ -83,6 +86,7 @@ void Interfaces::Load(CreateInterfaceFn factory)
 	s_DebugOverlay = (IVDebugOverlay*)factory(VDEBUG_OVERLAY_INTERFACE_VERSION, nullptr);
 	s_EngineTrace = (IEngineTrace*)factory(INTERFACEVERSION_ENGINETRACE_CLIENT, nullptr);
 	s_SpatialPartition = (ISpatialPartition*)factory(INTERFACEVERSION_SPATIALPARTITION, nullptr);
+	s_ClientRenderTargets = (IClientRenderTargets*)factory(CLIENTRENDERTARGETS_INTERFACE_VERSION, nullptr);
 
 	CreateInterfaceFn gameClientFactory;
 	pEngineTool->GetClientFactory(gameClientFactory);
@@ -94,6 +98,7 @@ void Interfaces::Load(CreateInterfaceFn factory)
 	pClientEntityList = (IClientEntityList*)gameClientFactory(VCLIENTENTITYLIST_INTERFACE_VERSION, nullptr);
 	pPrediction = (IPrediction *)gameClientFactory(VCLIENT_PREDICTION_INTERFACE_VERSION, nullptr);
 	s_ClientLeafSystem = (IClientLeafSystem*)gameClientFactory(CLIENTLEAFSYSTEM_INTERFACE_VERSION, nullptr);
+	s_ClientRenderTargets = (IClientRenderTargets*)gameClientFactory(CLIENTRENDERTARGETS_INTERFACE_VERSION, nullptr);
 
 	pSteamAPIContext = new CSteamAPIContext();
 	steamLibrariesAvailable = SteamAPI_InitSafe() && pSteamAPIContext->Init();

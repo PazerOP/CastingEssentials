@@ -13,6 +13,7 @@ class IBaseClientDLL;
 class IClientEngineTools;
 class IClientEntityList;
 class IClientMode;
+class IClientRenderTargets;
 class IEngineTool;
 class IGameEventManager2;
 class IGameSystem;
@@ -104,8 +105,14 @@ public:
 	// #include <shared/gamerules.h>
 	static C_GameRules* GetGameRules();
 
+	// #include <shared/igamesystem.h>
 	static CUtlVector<IGameSystem*>* GetGameSystems();
+
+	// #include <shared/igamesystem.h>
 	static CUtlVector<IGameSystemPerFrame*>* GetGameSystemsPerFrame();
+
+	// #include <game/client/iclientrendertargets.h>
+	static IClientRenderTargets* GetClientRenderTargets() { return s_ClientRenderTargets; }
 
 private:
 	static IBaseClientDLL *pClientDLL;
@@ -125,6 +132,7 @@ private:
 	static IEngineTrace* s_EngineTrace;
 	static ISpatialPartition* s_SpatialPartition;
 	static IClientLeafSystem* s_ClientLeafSystem;
+	static IClientRenderTargets* s_ClientRenderTargets;
 
 	static bool steamLibrariesAvailable;
 	static bool vguiLibrariesAvailable;

@@ -11,6 +11,7 @@
 #include <icvar.h>
 #include <cdll_int.h>
 #include <client/hltvcamera.h>
+#include <game/client/iclientrendertargets.h>
 #include <toolframework/iclientenginetools.h>
 #include <iprediction.h>
 
@@ -236,6 +237,9 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::CStudioHdr_GetNumSeq>("\x8B\x41\x04\x85\xC0\x75\x09\x8B\x01\x8B\x80????\xC3\x8B\x40\x14", "xxxxxxxxxxx????xxxx");
 	FindFunc<HookFunc::CStudioHdr_pSeqdesc>("\x55\x8B\xEC\x56\x8B\x75\x08\x57\x8B\xF9\x85\xF6\x78\x18", "xxxxxxxxxxxxxx");
 
+	FindFunc<HookFunc::CVTFTexture_GetResourceData>("\x55\x8B\xEC\x8B\x45\x08\x56\x25", "xxxxxxxx", 0, "MaterialSystem");
+	FindFunc<HookFunc::CVTFTexture_ReadHeader>("\x55\x8B\xEC\x56\x8B\x75\x0C\x57\x6A\x50", "xxxxxxxxxx", 0, "MaterialSystem");
+
 	FindFunc<HookFunc::IGameSystem_Add>("\x55\x8B\xEC\x51\x8B\x15????\x8B\x0D", "xxxxxx????xx");
 
 	FindFunc<HookFunc::vgui_EditablePanel_GetDialogVariables>("\x56\x8B\xF1\x8B\x86????\x85\xC0\x75\x2A", "xxxxx????xxxx");
@@ -296,6 +300,8 @@ HookManager::HookManager()
 	InitHook<HookFunc::ICvar_ConsoleDPrintf>(g_pCVar, &ICvar::ConsoleDPrintf);
 	InitHook<HookFunc::ICvar_ConsolePrintf>(g_pCVar, &ICvar::ConsolePrintf);
 
+	InitHook<HookFunc::IClientRenderTargets_InitClientRenderTargets>(Interfaces::GetClientRenderTargets(), &IClientRenderTargets::InitClientRenderTargets);
+
 	InitHook<HookFunc::IClientEngineTools_InToolMode>(Interfaces::GetClientEngineTools(), &IClientEngineTools::InToolMode);
 	InitHook<HookFunc::IClientEngineTools_IsThirdPersonCamera>(Interfaces::GetClientEngineTools(), &IClientEngineTools::IsThirdPersonCamera);
 	InitHook<HookFunc::IClientEngineTools_SetupEngineView>(Interfaces::GetClientEngineTools(), &IClientEngineTools::SetupEngineView);
@@ -327,6 +333,9 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::CAccountPanel_Paint>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_ShouldDraw>();
+
+	InitGlobalHook<HookFunc::CVTFTexture_GetResourceData>();
+	InitGlobalHook<HookFunc::CVTFTexture_ReadHeader>();
 
 	InitGlobalHook<HookFunc::Global_CreateEntityByName>();
 	InitGlobalHook<HookFunc::Global_DrawOpaqueRenderable>();

@@ -16,10 +16,16 @@ class CAutoGameSystemPerFrame;
 class CDamageAccountPanel;
 class CNewParticleEffect;
 class CParticleProperty;
+class CUtlBuffer;
+class CVTFTexture;
+class IClientRenderTargets;
 class IGameSystem;
+class IMaterialSystem;
+class IMaterialSystemHardwareConfig;
 class INetworkStringTable;
 struct mstudioseqdesc_t;
 using trace_t = class CGameTrace;
+struct VTFFileHeader_t;
 enum ERenderDepthMode : int;
 enum OverrideType_t : int;
 class QAngle;
@@ -113,11 +119,15 @@ enum class HookFunc
 	CStudioHdr_GetNumSeq,
 	CStudioHdr_pSeqdesc,
 
+	CVTFTexture_GetResourceData,
+	CVTFTexture_ReadHeader,
+
 	IClientEngineTools_InToolMode,
 	IClientEngineTools_IsThirdPersonCamera,
 	IClientEngineTools_SetupEngineView,
 
 	IClientRenderable_DrawModel,
+	IClientRenderTargets_InitClientRenderTargets,
 
 	ICvar_ConsoleColorPrintf,
 	ICvar_ConsoleDPrintf,
@@ -340,6 +350,16 @@ class HookManager final
 	{
 		typedef mstudioseqdesc_t&(__thiscall *Raw)(CStudioHdr* pThis, int iSequence);
 	};
+	template<> struct HookFuncType<HookFunc::CVTFTexture_GetResourceData>
+	{
+		typedef void*(__thiscall* Raw)(CVTFTexture* pThis, uint32 type, size_t *size);
+		typedef GlobalClassHook<HookFunc::CVTFTexture_GetResourceData, false, CVTFTexture, void*, uint32, size_t*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::CVTFTexture_ReadHeader>
+	{
+		typedef bool(__thiscall* Raw)(CVTFTexture* pThis, CUtlBuffer& buf, VTFFileHeader_t& header);
+		typedef GlobalClassHook<HookFunc::CVTFTexture_ReadHeader, false, CVTFTexture, bool, CUtlBuffer&, VTFFileHeader_t&> Hook;
+	};
 	template<> struct HookFuncType<HookFunc::C_BaseAnimating_ComputeHitboxSurroundingBox>
 	{
 		typedef bool(__thiscall *Raw)(C_BaseAnimating* pThis, Vector* pVecWorldMins, Vector* pVecWorldMaxs);
@@ -347,7 +367,6 @@ class HookManager final
 	template<> struct HookFuncType<HookFunc::C_BaseAnimating_GetBoneCache>
 	{
 		typedef CBoneCache*(__thiscall *Raw)(C_BaseAnimating*, CStudioHdr*);
-		typedef GlobalClassHook<HookFunc::C_BaseAnimating_GetBoneCache, false, C_BaseAnimating, CBoneCache*, CStudioHdr*> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::C_BaseAnimating_LockStudioHdr>
 	{
@@ -446,6 +465,11 @@ class HookManager final
 	template<> struct HookFuncType<HookFunc::CAutoGameSystemPerFrame_CAutoGameSystemPerFrame>
 	{
 		typedef void(__thiscall* Raw)(CAutoGameSystemPerFrame* pThis, const char* name);
+	};
+	template<> struct HookFuncType<HookFunc::IClientRenderTargets_InitClientRenderTargets>
+	{
+		typedef void(__thiscall* Raw)(IClientRenderTargets* pThis, IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* config);
+		typedef VirtualHook<HookFunc::IClientRenderTargets_InitClientRenderTargets, false, IClientRenderTargets, void, IMaterialSystem*, IMaterialSystemHardwareConfig*> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>
 	{
@@ -643,7 +667,7 @@ public:
 		if (!IsEnabled())
 			return;
 
-		GetHooks()->SetState(action);
+		GetHooks()->SetState<fn>(action);
 	}
 
 	__forceinline auto GetOriginal() const { return GetHooks()->GetOriginal<fn>(); }

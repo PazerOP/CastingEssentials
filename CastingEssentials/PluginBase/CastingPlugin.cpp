@@ -30,11 +30,12 @@
 #include "Modules/SniperLOS.h"
 #include "Modules/SteamTools.h"
 #include "Modules/TeamNames.h"
+#include "Modules/TextureTools.h"
 #include "Modules/ClientTools.h"
 #include "Modules/ViewAngles.h"
 #include "Modules/WeaponTools.h"
 
-const char* const PLUGIN_VERSION_ID = "r21 beta1";
+const char* const PLUGIN_VERSION_ID = "r21 beta3";
 const char* const PLUGIN_FULL_VERSION = strdup(strprintf("%s %s", PLUGIN_NAME, PLUGIN_VERSION_ID).c_str());
 
 class CastingPlugin final : public Plugin
@@ -100,6 +101,7 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Modules().RegisterAndLoadModule<SniperLOS>("Sniper LOS Beams");
 	Modules().RegisterAndLoadModule<SteamTools>("Steam Tools");
 	Modules().RegisterAndLoadModule<TeamNames>("Team Names");
+	Modules().RegisterAndLoadModule<TextureTools>("Texture Tools");
 	Modules().RegisterAndLoadModule<ClientTools>("Client Tools");
 	Modules().RegisterAndLoadModule<ViewAngles>("High-Precision View Angles");
 	Modules().RegisterAndLoadModule<WeaponTools>("Weapon Tools");
