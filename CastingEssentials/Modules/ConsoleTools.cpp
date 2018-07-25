@@ -6,9 +6,11 @@
 
 #include <vprof.h>
 
+#include <optional>
 #include <regex>
 
 #undef min
+#undef max
 
 class ConsoleTools::PauseFilter final
 {
@@ -45,6 +47,8 @@ ConsoleTools::ConsoleTools() :
 		"Adds a flag to a cvar.", FCVAR_NONE, FlagModifyAutocomplete),
 	ce_consoletools_flags_remove("ce_consoletools_flags_remove", [](const CCommand& cmd) { GetModule()->RemoveFlags(cmd); },
 		"Removes a flag from a cvar.", FCVAR_NONE, FlagModifyAutocomplete),
+
+	ce_consoletools_limits_set("ce_consoletools_limits_set", SetLimits, "Sets or removes limits for a ConVar.", FCVAR_NONE, SetLimitsAutocomplete),
 
 	ce_consoletools_alias_remove("ce_consoletools_alias_remove", RemoveAlias,
 		"Removes an existing alias created with the \"alias\" command.", FCVAR_NONE, RemoveAliasAutocomplete),
@@ -108,6 +112,144 @@ void ConsoleTools::ToggleFilterEnabled(const ConVar *var)
 	m_ConsolePrintfHook.SetEnabled(enabled);
 	m_ConsoleDPrintfHook.SetEnabled(enabled);
 	m_ConsoleColorPrintfHook.SetEnabled(enabled);
+}
+
+// this is a total hijack of a friend class declared but never defined in the public SDK
+class CCvar
+{
+public:
+	static int GetFlags(ConCommandBase *base) { return base->m_nFlags; }
+	static void SetFlags(ConCommandBase *base, int flags) { base->m_nFlags = flags; }
+	static void SetMin(ConVar* var, const std::optional<float>& min)
+	{
+		if (!min.has_value())
+			var->m_bHasMin = false;
+		else
+		{
+			var->m_bHasMin = true;
+			var->m_fMinVal = min.value();
+		}
+	}
+	static void SetMax(ConVar* var, const std::optional<float>& max)
+	{
+		if (!max.has_value())
+			var->m_bHasMax = false;
+		else
+		{
+			var->m_bHasMax = true;
+			var->m_fMaxVal = max.value();
+		}
+	}
+};
+
+void ConsoleTools::SetLimits(const CCommand& command)
+{
+	if (command.ArgC() != 4)
+		goto Usage;
+
+	ConVar* var;
+	if ((var = cvar->FindVar(command[1])) == nullptr)
+	{
+		Warning("Unable to find cvar named \"%s\"\n", command[1]);
+		goto Usage;
+	}
+
+	std::optional<float> minMax[2];
+	for (int i = 0; i < 2; i++)
+	{
+		if (command[2 + i][0] == 'x' && command[2 + i][1] == '\0')
+			continue;
+		else if (command[2 + i][0] == '?' && command[2 + i][1] == '\0')
+		{
+			float val;
+			if ((i == 0 && var->GetMin(val)) || (i == 1 && var->GetMax(val)))
+				minMax[i] = val;
+		}
+		else if (float parsed; TryParseFloat(command[2 + i], parsed))
+			minMax[i] = parsed;
+		else
+			goto Usage;
+	}
+
+	CCvar::SetMin(var, minMax[0]);
+	CCvar::SetMax(var, minMax[1]);
+	return;
+
+Usage:
+	Warning("Usage: %s <cvar> <minimum/'x' for none/'?' for keep existing> <maximum/'x' for none/'?' for keep existing>\n", command[0]);
+}
+
+int ConsoleTools::SetLimitsAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
+{
+	CCommand partialParsed;
+	partialParsed.Tokenize(partial);
+
+	if (partialParsed.ArgC() < 1 || partialParsed.ArgC() > 2)
+		return 0;
+
+	const auto cmdNameLength = strlen(partialParsed[0]);
+	const auto partialCvarLength = partialParsed.ArgC() > 1 ? strlen(partialParsed[1]) : 0;
+
+	bool suggestionsSorted = false;
+	static const auto suggestionsSorter = [](const char* a, const char* b) { return stricmp(a, b) < 0; };
+	size_t suggestionsCount = 0;
+	const char* suggestions[COMMAND_COMPLETION_MAXITEMS];
+
+	for (const ConCommandBase* cmd = g_pCVar->GetCommands(); cmd; cmd = cmd->GetNext())
+	{
+		if (cmd->IsCommand())
+			continue;  // Only care about actual ConVars
+
+		const char* const cmdName = cmd->GetName();
+		if (strnicmp(cmdName, partialParsed[1], partialCvarLength))
+			continue;
+
+		if (suggestionsCount < std::size(suggestions))
+		{
+			// We have spare room, don't worry about insertion sorting
+			suggestions[suggestionsCount++] = cmdName;
+		}
+		else	// We're full, need to insertion sort, dropping off the last element
+		{
+			if (!suggestionsSorted)
+			{
+				// If we just finished filling up our array, the next command is going to need to
+				// be insertion sorted. For that to work, we need the array sorted to begin with.
+				std::sort(std::begin(suggestions), std::end(suggestions), suggestionsSorter);
+				suggestionsSorted = true;
+			}
+
+			const auto& upperBound = std::upper_bound(std::begin(suggestions), std::end(suggestions), cmdName, suggestionsSorter);
+			if (upperBound != std::end(suggestions))
+			{
+				// Shift elements afterwards to make room for new entry
+				std::move(upperBound, std::end(suggestions) - 1, upperBound + 1);
+
+				// Insert new entry
+				*upperBound = cmdName;
+			}
+		}
+	}
+
+	// If we only ever encountered <= std::size(suggestions) possible suggestions, our array
+	// will not be sorted. Do it now.
+	if (!suggestionsSorted)
+	{
+		std::sort(std::begin(suggestions), std::begin(suggestions) + suggestionsCount, suggestionsSorter);
+		suggestionsSorted = true;
+	}
+
+	// Copy suggestions into output array
+	for (size_t i = 0; i < suggestionsCount; i++)
+	{
+		strcpy_s(commands[i], partialParsed[0]);
+		commands[i][cmdNameLength] = ' ';
+		commands[i][cmdNameLength + 1] = '\0';
+
+		strncat(commands[i], suggestions[i], COMMAND_COMPLETION_ITEM_LENGTH - (cmdNameLength + 2));
+	}
+
+	return (int)suggestionsCount;
 }
 
 int ConsoleTools::FlagModifyAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
@@ -240,14 +382,6 @@ void ConsoleTools::RemoveFilter(const CCommand &command)
 	else
 		PluginWarning("Usage: %s <filter>\n", command[0]);
 }
-
-// this is a total hijack of a friend class declared but never defined in the public SDK
-class CCvar
-{
-public:
-	static int GetFlags(ConCommandBase *base) { return base->m_nFlags; }
-	static void SetFlags(ConCommandBase *base, int flags) { base->m_nFlags = flags; }
-};
 
 int ConsoleTools::ParseFlags(const CCommand& command)
 {

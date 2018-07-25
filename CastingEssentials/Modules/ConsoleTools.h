@@ -35,12 +35,17 @@ private:
 	ConCommand ce_consoletools_flags_add;
 	ConCommand ce_consoletools_flags_remove;
 
+	ConCommand ce_consoletools_limits_set;
+
 	ConCommand ce_consoletools_alias_remove;
 
 	void AddFilter(const CCommand& command);
 	void RemoveFilter(const CCommand& command);
 	void ListFilters(const CCommand& command);
 	void ToggleFilterEnabled(const ConVar* var);
+
+	static void SetLimits(const CCommand& command);
+	static int SetLimitsAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
 
 	static int FlagModifyAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
 
