@@ -47,9 +47,11 @@ TFPlayerResource::TFPlayerResource()
 	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		m_AliveOffsets[i] = Entities::GetEntityProp<bool>(cc, Entities::PropIndex(buf, "m_bAlive", i + 1));
-		m_StreakOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iStreaks", i + 1));
 		m_DamageOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iDamage", i + 1));
 		m_MaxHealthOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iMaxHealth", i + 1));
+
+		for (int w = 0; w < STREAK_WEAPONS; w++)
+			m_StreakOffsets[i][w] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iStreaks", (i + 1) * STREAK_WEAPONS + w));
 	}
 }
 
@@ -61,12 +63,15 @@ bool TFPlayerResource::IsAlive(int playerEntIndex)
 	return m_AliveOffsets[playerEntIndex - 1].GetValue(m_PlayerResourceEntity.Get());
 }
 
-int* TFPlayerResource::GetKillstreak(int playerEntIndex)
+int* TFPlayerResource::GetKillstreak(int playerEntIndex, uint_fast8_t weapon)
 {
 	if (!CheckEntIndex(playerEntIndex, __FUNCTION__))
 		return nullptr;
 
-	return &m_StreakOffsets[playerEntIndex - 1].GetValue(m_PlayerResourceEntity.Get());
+	if (weapon >= STREAK_WEAPONS)
+		return nullptr;
+
+	return &m_StreakOffsets[playerEntIndex - 1][weapon].GetValue(m_PlayerResourceEntity.Get());
 }
 
 int TFPlayerResource::GetDamage(int playerEntIndex)

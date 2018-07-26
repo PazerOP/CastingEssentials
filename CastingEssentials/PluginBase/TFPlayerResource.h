@@ -23,8 +23,10 @@ public:
 
 	int GetMaxHealth(int playerEntIndex);
 	bool IsAlive(int playerEntIndex);
-	int* GetKillstreak(int playerEntIndex);
+	int* GetKillstreak(int playerEntIndex, uint_fast8_t weapon);
 	int GetDamage(int playerEntIndex);
+
+	static constexpr auto STREAK_WEAPONS = 4;
 
 private:
 	bool CheckEntIndex(int playerEntIndex, const char* functionName);
@@ -33,7 +35,7 @@ private:
 	static std::shared_ptr<TFPlayerResource> m_PlayerResource;
 
 	std::array<EntityOffset<bool>, MAX_PLAYERS> m_AliveOffsets;
-	std::array<EntityOffset<int>, MAX_PLAYERS> m_StreakOffsets;
+	EntityOffset<int> m_StreakOffsets[MAX_PLAYERS][STREAK_WEAPONS];
 	std::array<EntityOffset<int>, MAX_PLAYERS> m_DamageOffsets;
 	std::array<EntityOffset<int>, MAX_PLAYERS> m_MaxHealthOffsets;
 };
