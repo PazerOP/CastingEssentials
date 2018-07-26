@@ -46,10 +46,10 @@ TFPlayerResource::TFPlayerResource()
 	char buf[32];
 	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
-		m_AliveOffsets[i] = Entities::GetEntityProp<bool>(cc, Entities::PropIndex(buf, "m_bAlive", i));
-		m_StreakOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iStreaks", i));
-		m_DamageOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iDamage", i));
-		m_MaxHealthOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iMaxHealth", i));
+		m_AliveOffsets[i] = Entities::GetEntityProp<bool>(cc, Entities::PropIndex(buf, "m_bAlive", i + 1));
+		m_StreakOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iStreaks", i + 1));
+		m_DamageOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iDamage", i + 1));
+		m_MaxHealthOffsets[i] = Entities::GetEntityProp<int>(cc, Entities::PropIndex(buf, "m_iMaxHealth", i + 1));
 	}
 }
 
