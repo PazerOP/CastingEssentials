@@ -8,6 +8,7 @@
 
 #include <optional>
 #include <regex>
+#include <sstream>
 
 #undef min
 #undef max

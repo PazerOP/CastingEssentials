@@ -27,6 +27,7 @@
 #include <cstring>
 #include <iomanip>
 #include <regex>
+#include <sstream>
 
 #undef min
 #undef max
