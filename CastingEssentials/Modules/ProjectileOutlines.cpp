@@ -28,10 +28,10 @@ ProjectileOutlines::ProjectileOutlines() :
 
 	ce_projectileoutlines_color_blu("ce_projectileoutlines_color_blu", "125 169 197 255", FCVAR_NONE,
 		"The color used for outlines of BLU team's projectiles.",
-		[](IConVar* var, const char* pOld, float old) { GetModule()->ColorChanged(var, pOld, old); }),
+		[](IConVar* var, const char* pOld, float) { GetModule()->ColorChanged(static_cast<ConVar*>(var), pOld); }),
 	ce_projectileoutlines_color_red("ce_projectileoutlines_color_red", "189 55 55 255", FCVAR_NONE,
 		"The color used for outlines of RED team's projectiles.",
-		[](IConVar* var, const char* pOld, float old) {GetModule()->ColorChanged(var, pOld, old); }),
+		[](IConVar* var, const char* pOld, float) { GetModule()->ColorChanged(static_cast<ConVar*>(var), pOld); }),
 	ce_projectileoutlines_fade_start("ce_projectileoutlines_fade_start", "-1", FCVAR_NONE,
 		"Distance from the camera at which projectile outlines begin fading out."),
 	ce_projectileoutlines_fade_end("ce_projectileoutlines_fade_end", "-1", FCVAR_NONE,
@@ -45,8 +45,8 @@ ProjectileOutlines::ProjectileOutlines() :
 
 	m_BaseEntityInitHook(std::bind(&ProjectileOutlines::InitDetour, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3))
 {
-	ColorChanged(&ce_projectileoutlines_color_blu, "", 0);
-	ColorChanged(&ce_projectileoutlines_color_red, "", 0);
+	ColorChanged(&ce_projectileoutlines_color_blu, "");
+	ColorChanged(&ce_projectileoutlines_color_red, "");
 }
 
 bool ProjectileOutlines::CheckDependencies()
@@ -231,60 +231,21 @@ bool ProjectileOutlines::InitDetour(C_BaseEntity* pThis, int entnum, int iSerial
 	return true;
 }
 
-void ProjectileOutlines::ColorChanged(IConVar* var, const char* oldValue, float flOldValue)
+void ProjectileOutlines::ColorChanged(ConVar* var, const char* oldValue)
 {
-	Assert(var);
-	if (!var)
-		return;
-
-	ConVar* convar = dynamic_cast<ConVar*>(var);
-	Assert(cvar);
-	if (!cvar)
-	{
-		PluginWarning("%s: Failed to cast %s to a ConVar\n", __FUNCSIG__, var->GetName());
-		goto Revert;
-	}
-
-	int r, g, b, a;
-	const auto readArguments = sscanf_s(convar->GetString(), "%i %i %i %i", &r, &g, &b, &a);
-	if (readArguments != 4)
+	Color scannedColor;
+	if (!ColorFromConVar(*var, scannedColor))
 		goto Usage;
 
-	if (r < 0 || r > 255)
-	{
-		PluginWarning("Red value out of range!\n");
-		goto Usage;
-	}
-	if (g < 0 || g > 255)
-	{
-		PluginWarning("Green value out of range!\n");
-		goto Usage;
-	}
-	if (b < 0 || b > 255)
-	{
-		PluginWarning("Blue value out of range!\n");
-		goto Usage;
-	}
-	if (a < 0 || a > 255)
-	{
-		PluginWarning("Alpha value out of range!\n");
-		goto Usage;
-	}
+	if (var == &ce_projectileoutlines_color_blu)
+		m_ColorBlu = scannedColor;
+	else if (var == &ce_projectileoutlines_color_red)
+		m_ColorRed = scannedColor;
 
-	// Home stretch
-	{
-		const Color scannedColor(r, g, b, a);
-
-		if (var == &ce_projectileoutlines_color_blu)
-			m_ColorBlu = scannedColor;
-		else if (var == &ce_projectileoutlines_color_red)
-			m_ColorRed = scannedColor;
-
-		return;
-	}
+	return;
 
 Usage:
-	PluginWarning("Usage: %s <r> <g> <b> <a>\n", convar->GetName(), convar->GetName());
+	PluginWarning("Usage: %s <r> <g> <b> <a>\n", var->GetName(), convar->GetName());
 Revert:
 	var->SetValue(oldValue);
 }

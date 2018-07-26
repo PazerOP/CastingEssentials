@@ -54,7 +54,7 @@ private:
 	std::vector<int> m_NewEntities;
 
 	bool m_Init;
-	void ColorChanged(IConVar* var, const char* oldValue, float flOldValue);
+	void ColorChanged(ConVar* var, const char* oldValue);
 	Color m_ColorRed;
 	Color m_ColorBlu;
 
