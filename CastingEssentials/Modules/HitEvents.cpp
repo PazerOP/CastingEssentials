@@ -12,17 +12,21 @@
 #include <toolframework/ienginetool.h>
 #include <vgui_controls/EditablePanel.h>
 
+#include <sstream>
+
 HitEvents::HitEvents() :
 	ce_hitevents_enabled("ce_hitevents_enabled", "0", FCVAR_NONE, "Enables hitsounds and damage numbers in STVs.",
 		[](IConVar* var, const char* oldValue, float fOldValue) { GetModule()->UpdateEnabledState(); }),
 	ce_hitevents_dmgnumbers_los("ce_hitevents_dmgnumbers_los", "1", FCVAR_NONE, "Should we require LOS to the target before showing a damage number? For a \"normal\" TF2 experience, this would be set to 1.", [](IConVar*, const char*, float) { GetModule()->UpdateEnabledState(); }),
-	ce_hitevents_debug("ce_hitevents_debug", "0")
+	ce_hitevents_debug("ce_hitevents_debug", "0"),
+
+	m_DisplayDamageFeedbackHook(std::bind(&HitEvents::DisplayDamageFeedbackOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)),
+
+	m_UTILTracelineHook(std::bind(&HitEvents::UTILTracelineOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)),
+
+	m_DamageAccountPanelShouldDrawHook(std::bind(&HitEvents::DamageAccountPanelShouldDrawOverride, this, std::placeholders::_1))
 {
 	m_OverrideUTILTraceline = false;
-
-	m_DisplayDamageFeedbackHook = 0;
-	m_UTILTracelineHook = 0;
-	m_DamageAccountPanelShouldDrawHook = 0;
 
 	m_LastDamageAccount = nullptr;
 }
@@ -289,12 +293,6 @@ void HitEvents::FireGameEvent(IGameEvent* event)
 	gameeventmanager->FireEventClientSide(newEvent);
 }
 
-void HitEvents::AddEventListener()
-{
-	if (!gameeventmanager->FindListener(this, "player_hurt"))
-		gameeventmanager->AddListener(this, "player_hurt", false);
-}
-
 void HitEvents::LevelInit()
 {
 	UpdateEnabledState();
@@ -303,50 +301,24 @@ void HitEvents::LevelInit()
 void HitEvents::LevelShutdown()
 {
 	UpdateEnabledState();
-}
-
-void HitEvents::Enable()
-{
-	if (!gameeventmanager->FindListener(this, "player_hurt"))
-		gameeventmanager->AddListener(this, "player_hurt", false);
-
-	if (!m_DisplayDamageFeedbackHook)
-	{
-		m_DisplayDamageFeedbackHook = GetHooks()->AddHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(std::bind(&HitEvents::DisplayDamageFeedbackOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
-	}
-	if (!m_UTILTracelineHook)
-	{
-		m_UTILTracelineHook = GetHooks()->AddHook<HookFunc::Global_UTIL_TraceLine>(std::bind(&HitEvents::UTILTracelineOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
-	}
-	if (!m_DamageAccountPanelShouldDrawHook)
-	{
-		m_DamageAccountPanelShouldDrawHook = GetHooks()->AddHook<HookFunc::CDamageAccountPanel_ShouldDraw>(std::bind(&HitEvents::DamageAccountPanelShouldDrawOverride, this, std::placeholders::_1));
-	}
-}
-
-void HitEvents::Disable()
-{
-	if (m_DisplayDamageFeedbackHook && GetHooks()->RemoveHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(m_DisplayDamageFeedbackHook, __FUNCSIG__))
-		m_DisplayDamageFeedbackHook = 0;
-
-	if (m_UTILTracelineHook && GetHooks()->RemoveHook<HookFunc::Global_UTIL_TraceLine>(m_UTILTracelineHook, __FUNCSIG__))
-		m_UTILTracelineHook = 0;
-
-	if (m_DamageAccountPanelShouldDrawHook && GetHooks()->RemoveHook<HookFunc::CDamageAccountPanel_ShouldDraw>(m_DamageAccountPanelShouldDrawHook, __FUNCSIG__))
-		m_DamageAccountPanelShouldDrawHook = 0;
-
-	gameeventmanager->RemoveListener(this);
+	m_EventsToIgnore.clear();
 }
 
 void HitEvents::UpdateEnabledState()
 {
-	if (ce_hitevents_enabled.GetBool() && IsInGame())
+	const bool enabled = ce_hitevents_enabled.GetBool() && IsInGame();
+	m_DisplayDamageFeedbackHook.SetEnabled(enabled);
+	m_UTILTracelineHook.SetEnabled(enabled);
+	m_DamageAccountPanelShouldDrawHook.SetEnabled(enabled);
+
+	if (enabled)
 	{
-		Enable();
+		if (!gameeventmanager->FindListener(this, "player_hurt"))
+			gameeventmanager->AddListener(this, "player_hurt", false);
 	}
 	else
 	{
-		Disable();
+		gameeventmanager->RemoveListener(this);
 	}
 }
 
@@ -366,10 +338,9 @@ void HitEvents::DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPl
 	const auto lifeStatePusher = CreateVariablePusher<char>(localPlayer->m_lifeState, LIFE_ALIVE);
 	const auto tracelineOverridePusher = CreateVariablePusher(m_OverrideUTILTraceline, true);
 
-	auto DisplayDamageFeedback = GetHooks()->GetOriginal<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>();
+	auto DisplayDamageFeedback = m_DisplayDamageFeedbackHook.GetOriginal();
 	DisplayDamageFeedback(pThis, (C_TFPlayer*)localPlayer, pVictim, iDamageAmount, iHealth, bigFont);
-	GetHooks()->SetState<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>(Hooking::HookAction::SUPERCEDE);
-	Assert(true);
+	m_DisplayDamageFeedbackHook.SetState(Hooking::HookAction::SUPERCEDE);
 }
 
 void HitEvents::UTILTracelineOverride(const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, const IHandleEntity* ignore, int collisionGroup, trace_t* ptr)
@@ -377,13 +348,13 @@ void HitEvents::UTILTracelineOverride(const Vector& vecAbsStart, const Vector& v
 	if (m_OverrideUTILTraceline && ce_hitevents_dmgnumbers_los.GetBool())
 	{
 		ptr->fraction = 1.0;
-		GetHooks()->SetState<HookFunc::Global_UTIL_TraceLine>(Hooking::HookAction::SUPERCEDE);
+		m_UTILTracelineHook.SetState(Hooking::HookAction::SUPERCEDE);
 	}
 }
 
 bool HitEvents::DamageAccountPanelShouldDrawOverride(CDamageAccountPanel* pThis)
 {
-	GetHooks()->SetState<HookFunc::CDamageAccountPanel_ShouldDraw>(Hooking::HookAction::SUPERCEDE);
+	m_DamageAccountPanelShouldDrawHook.SetState(Hooking::HookAction::SUPERCEDE);
 
 	// Not too sure why this offset is required, maybe i'm just an idiot
 	CDamageAccountPanel* questionable = (CDamageAccountPanel*)((std::byte*)pThis + 44);

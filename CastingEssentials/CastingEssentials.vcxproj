@@ -131,6 +131,7 @@
     <ClCompile Include="PluginBase\CastingPlugin.cpp" />
     <ClCompile Include="PluginBase\Common.cpp" />
     <ClCompile Include="PluginBase\Entities.cpp" />
+    <ClCompile Include="PluginBase\Exceptions.cpp" />
     <ClCompile Include="PluginBase\HookManager.cpp" />
     <ClCompile Include="PluginBase\Interfaces.cpp" />
     <ClCompile Include="PluginBase\Modules.cpp" />

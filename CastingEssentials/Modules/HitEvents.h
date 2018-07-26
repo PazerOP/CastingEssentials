@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PluginBase/HookManager.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -32,11 +33,7 @@ protected:
 private:
 	std::vector<IGameEvent*> m_EventsToIgnore;
 
-	void AddEventListener();
-
 	void UpdateEnabledState();
-	void Enable();
-	void Disable();
 
 	void DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool unknown);
 
@@ -45,9 +42,9 @@ private:
 
 	bool DamageAccountPanelShouldDrawOverride(CDamageAccountPanel* pThis);
 
-	int m_DisplayDamageFeedbackHook;
-	int m_UTILTracelineHook;
-	int m_DamageAccountPanelShouldDrawHook;
+	Hook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback> m_DisplayDamageFeedbackHook;
+	Hook<HookFunc::Global_UTIL_TraceLine> m_UTILTracelineHook;
+	Hook<HookFunc::CDamageAccountPanel_ShouldDraw> m_DamageAccountPanelShouldDrawHook;
 
 	CAccountPanel* m_LastDamageAccount;
 

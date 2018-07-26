@@ -1,6 +1,5 @@
 #pragma once
 
-#include <sstream>
 #include <string>
 
 class invalid_class_prop : public std::exception
@@ -12,37 +11,13 @@ private:
 	const char *className;
 };
 
-inline invalid_class_prop::invalid_class_prop(const char *name) noexcept
-{
-	className = name;
-}
-
-inline const char *invalid_class_prop::what() const noexcept
-{
-	std::string s;
-	std::stringstream ss;
-
-	ss << "Attempted to access invalid property in entity class " << className << "!\n";
-	ss >> s;
-
-	return s.c_str();
-}
-
 class mismatching_entity_offset final : public std::runtime_error
 {
 public:
-	mismatching_entity_offset(const char* expected, const char* actual) noexcept :
-		std::runtime_error(BuildMessage(expected, actual).c_str())
-	{
-	}
+	mismatching_entity_offset(const char* expected, const char* actual) noexcept;
 
 private:
-	static std::string BuildMessage(const char* expected, const char* actual)
-	{
-		std::stringstream ss;
-		ss << "Attempted to use an EntityOffset intended for " << expected << " on " << actual;
-		return ss.str();
-	}
+	static std::string BuildMessage(const char* expected, const char* actual);
 };
 
 class module_not_loaded : public std::exception
@@ -54,22 +29,6 @@ private:
 	const char *moduleName;
 };
 
-inline module_not_loaded::module_not_loaded(const char *name) noexcept
-{
-	moduleName = name;
-}
-
-inline const char *module_not_loaded::what() const noexcept
-{
-	std::string s;
-	std::stringstream ss;
-
-	ss << "Module " << moduleName << " not loaded!\n";
-	ss >> s;
-
-	return s.c_str();
-}
-
 class bad_pointer : public std::exception
 {
 public:
@@ -78,22 +37,6 @@ public:
 private:
 	const char *pointerType;
 };
-
-inline bad_pointer::bad_pointer(const char *type) noexcept
-{
-	pointerType = type;
-}
-
-inline const char *bad_pointer::what() const noexcept
-{
-	std::string s;
-	std::stringstream ss;
-
-	ss << "Invalid pointer to " << pointerType << "!\n";
-	ss >> s;
-
-	return s.c_str();
-}
 
 class not_supported : public std::exception
 {
