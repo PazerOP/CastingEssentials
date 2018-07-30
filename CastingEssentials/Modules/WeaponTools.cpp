@@ -11,10 +11,14 @@
 #include <studio.h>
 #include <shared/animation.h>
 
+#include <Windows.h>
+
 WeaponTools::WeaponTools() :
 	ce_weapon_inspect_debug("ce_weapon_inspect_debug", "0", FCVAR_NONE),
 	ce_weapon_inspect_block("ce_weapon_inspect_block", "0", FCVAR_NONE, "Don't play weapon inspect animations when triggered by players.",
-		[](IConVar* var, const char*, float) { GetModule()->InspectBlockToggled(static_cast<ConVar*>(var)); })
+		[](IConVar* var, const char*, float) { GetModule()->InspectBlockToggled(static_cast<ConVar*>(var)); }),
+	ce_weapon_skin_downsample("ce_weapon_skin_downsample", "2", FCVAR_NONE, "Downsample the skins for other players by this many mips.", true, 0, true, 10,
+		[](IConVar* var, const char*, float) { GetModule()->SkinDownsampleChanged(static_cast<ConVar*>(var)); })
 
 	//ce_weapon_inspect_force("ce_weapon_inspect_force", []() { GetModule()->ForceInspectWeapon(); }, "Start inspecting the player's weapon.")
 {
@@ -147,6 +151,34 @@ void WeaponTools::RecvProxy_SequenceNum_Override(const CRecvProxyData *pData, vo
 	}
 }
 
+void WeaponTools::SkinDownsampleChanged(const ConVar* var)
+{
+	auto downsample = var->GetInt();
+
+	auto vars = GetSkinDownsampleVars();
+	if (!vars.first || !vars.second)
+	{
+		PluginWarning("Unable to change skin downsample amounts: Couldn't find addresses\n");
+		return;
+	}
+
+	DWORD oldProtect1, oldProtect2;
+
+	if (!VirtualProtect(vars.first, 1, PAGE_EXECUTE_READWRITE, &oldProtect1) ||
+		!VirtualProtect(vars.second, 1, PAGE_EXECUTE_READWRITE, &oldProtect2))
+	{
+		PluginWarning("Unable to change skin downsample amounts: VirtualProtect failed\n");
+		return;
+	}
+
+	*vars.first = (std::byte)downsample;
+	*vars.second = (std::byte)downsample;
+
+	DWORD dummy;
+	if (!VirtualProtect(vars.first, 1, oldProtect1, &dummy) || !VirtualProtect(vars.second, 1, oldProtect2, &dummy))
+		PluginWarning("Warning: Skin downsample amounts were changed, but VirtualProtect failed to restore original protections\n");
+}
+
 void WeaponTools::InspectBlockToggled(const ConVar* cv)
 {
 	if (cv->GetBool())
@@ -215,6 +247,13 @@ void WeaponTools::UpdateVMIdleActivity(const CHandle<C_BaseViewModel>& vm, Activ
 	}
 
 	m_ViewModelCache[vm] = newAct;
+}
+
+std::pair<std::byte*, std::byte*> WeaponTools::GetSkinDownsampleVars()
+{
+	static const auto var1 = SignatureScan("client", "\xC1\xF8\x02\x3B\xC2\x0F\x4C\xC2\x89\x45\xF0", "xxxxxxxxxxx", 2);
+	static const auto var2 = SignatureScan("client", "\xC1\xF8\x02\x3B\xC2\x0F\x4C\xC2\x89\x45\xF4", "xxxxxxxxxxx", 2);
+	return std::pair<std::byte*, std::byte*>(var1, var2);
 }
 
 bool WeaponTools::CheckDependencies()

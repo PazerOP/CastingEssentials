@@ -47,11 +47,14 @@ private:
 
 	ConVar ce_weapon_inspect_debug;
 	ConVar ce_weapon_inspect_block;
+	ConVar ce_weapon_skin_downsample;
 	//ConCommand ce_weapon_inspect_force;
 
 	std::optional<VariablePusher<RecvVarProxyFn>> m_InspectStageProxyFnOverride;
 	std::optional<VariablePusher<RecvVarProxyFn>> m_ViewModelProxyFnOverride;
 	void RecvProxy_SequenceNum_Override(const CRecvProxyData* data, void* pStruct, void* out);
+
+	void SkinDownsampleChanged(const ConVar* var);
 
 	void InspectBlockToggled(const ConVar* cv);
 
@@ -63,4 +66,6 @@ private:
 
 	void UpdateVMIdleActivity(const CHandle<C_BaseViewModel>& vm, Activity newAct);
 	std::unordered_map<CHandle<C_BaseViewModel>, Activity, std::hash<CBaseHandle>> m_ViewModelCache;
+
+	static std::pair<std::byte*, std::byte*> GetSkinDownsampleVars();
 };
