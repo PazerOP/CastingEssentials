@@ -1,0 +1,6 @@
+screenspace_general
+{
+	$PIXSHADER      ce_outline_poisson_ps20
+	$alpha_blend    1
+	$basetexture    _rt_fullframefb
+}

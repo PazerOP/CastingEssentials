@@ -50,9 +50,10 @@ Graphics::Graphics() :
 	ce_outlines_mode("ce_outlines_mode", "1", FCVAR_NONE, "Changes the style of outlines.\n\t0: TF2-style hard outlines.\n\t1: L4D-style soft outlines."),
 	ce_outlines_debug_stencil_out("ce_outlines_debug_stencil_out", "1", FCVAR_NONE, "Should we stencil out the players during the final blend to screen?"),
 	ce_outlines_players_override_red("ce_outlines_players_override_red", "", FCVAR_NONE,
-		"Override color for red players. [0, 255], format is \"<red> <green> <blue>\"."),
+		"Override color for red players. [0, 255], format is \"<red> <green> <blue> <alpha>\"."),
 	ce_outlines_players_override_blue("ce_outlines_players_override_blue", "", FCVAR_NONE,
-		"Override color for blue players. [0, 255], format is \"<red> <green> <blue>\"."),
+		"Override color for blue players. [0, 255], format is \"<red> <green> <blue> <alpha>\"."),
+	ce_outlines_radius("ce_outlines_radius", "2.5", FCVAR_NONE, "Radius of the outline effect."),
 	ce_outlines_additive("ce_outlines_additive", "1", FCVAR_NONE, "If set to 1, outlines will add to underlying colors rather than replace them."),
 	ce_outlines_debug("ce_outlines_debug", "0", FCVAR_NONE),
 	ce_outlines_spy_visibility("ce_outlines_spy_visibility", "1", FCVAR_NONE,
@@ -945,7 +946,6 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 		{
 			if (pAttachment->ShouldDraw())
 			{
-				//extra->ApplyGlowColor();
 				pAttachment->DrawModel(STUDIO_RENDER);
 				AssertMsg(initialColor == GetColorModulation(), "Color mismatch after drawing %s", pAttachment->GetClientClass()->GetName());
 			}
@@ -972,11 +972,12 @@ void Graphics::DrawGlowAlways(int nSplitScreenSlot, CMatRenderContextPtr& pRende
 	pRenderContext->OverrideColorWriteEnable(true, true);
 	pRenderContext->OverrideAlphaWriteEnable(true, true);
 	pRenderContext->OverrideDepthEnable(false, false);
-	render->SetBlend(1);
 	for (const auto& current : m_ExtraGlowData)
 	{
 		if (current.m_Mode != GlowMode::Always || current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot))
 			continue;
+
+		render->SetBlend(current.m_Base->m_flGlowAlpha);
 
 		if (current.AnyInfillsActive())
 		{
@@ -1072,11 +1073,12 @@ void Graphics::DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRen
 	stencilState.SetStencilState(pRenderContext);
 
 	// Draw color+alpha, stenciling out pixels from the first pass
-	render->SetBlend(1);
 	for (const auto& current : m_ExtraGlowData)
 	{
 		if (current.m_Mode != GlowMode::Occluded || current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot))
 			continue;
+
+		render->SetBlend(current.m_Base->m_flGlowAlpha);
 
 		if (current.AnyInfillsActive())
 		{
@@ -1104,11 +1106,12 @@ void Graphics::DrawGlowVisible(int nSplitScreenSlot, CMatRenderContextPtr& pRend
 	stencilState.SetStencilState(pRenderContext);
 
 	pRenderContext->OverrideDepthEnable(true, false);
-	render->SetBlend(1);
 	for (const auto& current : m_ExtraGlowData)
 	{
 		if (current.m_Mode != GlowMode::Unoccluded || current.m_Base->IsUnused() || !current.m_Base->ShouldDraw(nSplitScreenSlot))
 			continue;
+
+		render->SetBlend(current.m_Base->m_flGlowAlpha);
 
 		if (current.AnyInfillsActive())
 		{
@@ -1385,7 +1388,14 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 			}
 			else
 			{
-				CRefPtrFix<IMaterial> pMatHaloAddToScreen(materials->FindMaterial("dev/halo_add_to_screen", TEXTURE_GROUP_OTHER, true));
+				CRefPtrFix<IMaterial> pMatHaloAddToScreen(materials->FindMaterial("castingessentials/outlines/poisson_outline", TEXTURE_GROUP_OTHER, true));
+
+				if (auto found = pMatHaloAddToScreen->FindVar("$C0_X", nullptr))
+					found->SetFloatValue(1.0f / nSrcWidth);
+				if (auto found = pMatHaloAddToScreen->FindVar("$C0_Y", nullptr))
+					found->SetFloatValue(1.0f / nSrcHeight);
+				if (auto found = pMatHaloAddToScreen->FindVar("$C0_Z", nullptr))
+					found->SetFloatValue(graphicsModule->ce_outlines_radius.GetFloat());
 
 				// Write to alpha
 				pRenderContext->OverrideAlphaWriteEnable(true, true);

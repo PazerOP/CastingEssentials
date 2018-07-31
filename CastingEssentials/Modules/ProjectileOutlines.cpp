@@ -245,8 +245,7 @@ void ProjectileOutlines::ColorChanged(ConVar* var, const char* oldValue)
 	return;
 
 Usage:
-	PluginWarning("Usage: %s <r> <g> <b> <a>\n", var->GetName(), convar->GetName());
-Revert:
+	PluginWarning("Usage: %s <r> <g> <b> <a>\n", var->GetName());
 	var->SetValue(oldValue);
 }
 

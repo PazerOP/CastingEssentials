@@ -4,6 +4,8 @@
 #include <string>
 #include <mathlib/mathlib.h>
 
+#include "PluginBase/VariablePusher.h"
+
 #pragma warning(disable : 4355)    // 'this': used in base member initializer list
 #pragma warning(disable : 4592)    // 'x': symbol will be dynamically initialized (implementation limitation)
 #pragma warning(disable : 4533)    // initialization of 'x' is skipped by 'instruction' -- should only be a warning, but is promoted error for some reason?
@@ -222,47 +224,6 @@ template<typename T> constexpr T* FirstNotNull(T* first, T* second, T* third)
 		return second;
 
 	return third;
-}
-
-template<class T>
-class VariablePusher final
-{
-public:
-	VariablePusher() = delete;
-	VariablePusher(const VariablePusher<T>& other) = delete;
-	VariablePusher(VariablePusher<T>&& other)
-	{
-		m_Variable = std::move(other.m_Variable);
-		other.m_Variable = nullptr;
-		m_OldValue = std::move(other.m_OldValue);
-	}
-	VariablePusher(T& variable, const T& newValue) : m_Variable(&variable)
-	{
-		m_OldValue = std::move(*m_Variable);
-		*m_Variable = newValue;
-	}
-	VariablePusher(T& variable, T&& newValue) : m_Variable(&variable)
-	{
-		m_OldValue = std::move(*m_Variable);
-		*m_Variable = std::move(newValue);
-	}
-	~VariablePusher()
-	{
-		if (m_Variable)
-			*m_Variable = std::move(m_OldValue);
-	}
-
-	T& GetOldValue() { return m_OldValue; }
-	const T& GetOldValue() const { return m_OldValue; }
-
-private:
-	T* const m_Variable;
-	T m_OldValue;
-};
-
-template<class T> inline VariablePusher<T> CreateVariablePusher(T& variable, T&& newValue)
-{
-	return VariablePusher<T>(variable, newValue);
 }
 
 // smh why were these omitted

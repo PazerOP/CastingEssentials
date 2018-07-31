@@ -202,6 +202,7 @@
     <ClInclude Include="PluginBase\Plugin.h" />
     <ClInclude Include="PluginBase\TFPlayerResource.h" />
     <ClInclude Include="PluginBase\TFTeamResource.h" />
+    <ClInclude Include="PluginBase\VariablePusher.h" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Misc\NatVis\ClientClass.natvis" />

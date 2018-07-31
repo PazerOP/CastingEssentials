@@ -14,10 +14,12 @@ class C_TFViewModel;
 class CAccountPanel;
 class CAutoGameSystemPerFrame;
 class CDamageAccountPanel;
+struct ClientModelRenderInfo_t;
 class CNewParticleEffect;
 class CParticleProperty;
 class CUtlBuffer;
 class CVTFTexture;
+struct DrawModelState_t;
 class IClientRenderTargets;
 class IGameSystem;
 class IMaterialSystem;
@@ -78,6 +80,7 @@ enum class HookFunc
 	Global_UTIL_TraceLine,
 
 	C_BaseAnimating_ComputeHitboxSurroundingBox,
+	C_BaseAnimating_DoInternalDrawModel,
 	C_BaseAnimating_DrawModel,
 	C_BaseAnimating_GetBoneCache,
 	C_BaseAnimating_GetBonePosition,
@@ -364,6 +367,11 @@ class HookManager final
 	{
 		typedef bool(__thiscall *Raw)(C_BaseAnimating* pThis, Vector* pVecWorldMins, Vector* pVecWorldMaxs);
 	};
+	template<> struct HookFuncType<HookFunc::C_BaseAnimating_DoInternalDrawModel>
+	{
+		typedef void(__thiscall* Raw)(C_BaseAnimating* pThis, ClientModelRenderInfo_t* pInfo, DrawModelState_t* pState, matrix3x4_t* pBoneToWorldArray);
+		typedef GlobalClassHook<HookFunc::C_BaseAnimating_DoInternalDrawModel, false, C_BaseAnimating, void, ClientModelRenderInfo_t*, DrawModelState_t*, matrix3x4_t*> Hook;
+	};
 	template<> struct HookFuncType<HookFunc::C_BaseAnimating_GetBoneCache>
 	{
 		typedef CBoneCache*(__thiscall *Raw)(C_BaseAnimating*, CStudioHdr*);
@@ -607,7 +615,7 @@ private:
 	std::unique_ptr<Panel> m_Panel;
 };
 
-extern void* SignatureScan(const char* moduleName, const char* signature, const char* mask);
+extern std::byte* SignatureScan(const char* moduleName, const char* signature, const char* mask, int offset = 0);
 extern HookManager* GetHooks();
 
 template<HookFunc fn>

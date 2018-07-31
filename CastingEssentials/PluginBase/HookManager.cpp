@@ -80,13 +80,17 @@ static void* FindPattern(DWORD dwAddress, DWORD dwSize, BYTE* pbSig, const char*
 	return nullptr;
 }
 
-void* SignatureScan(const char* moduleName, const char* signature, const char* mask)
+std::byte* SignatureScan(const char* moduleName, const char* signature, const char* mask, int offset)
 {
 	MODULEINFO clientModInfo;
 	const HMODULE clientModule = GetModuleHandle((std::string(moduleName) + ".dll").c_str());
 	GetModuleInformation(GetCurrentProcess(), clientModule, &clientModInfo, sizeof(MODULEINFO));
 
-	return FindPattern((DWORD)clientModInfo.lpBaseOfDll, clientModInfo.SizeOfImage, (PBYTE)signature, mask);
+	auto found = (std::byte*)FindPattern((DWORD)clientModInfo.lpBaseOfDll, clientModInfo.SizeOfImage, (PBYTE)signature, mask);
+	if (found)
+		found += offset;
+
+	return found;
 }
 
 #if 0
@@ -200,6 +204,7 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::Global_UTIL_TraceLine>("\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x83\xEC\x6C\x8D\x4D\xA0\x56\xFF\x73\x0C", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
 	FindFunc<HookFunc::C_BaseAnimating_ComputeHitboxSurroundingBox>("\x55\x8B\xEC\x81\xEC????\x56\x8B\xF1\x57\x80\xBE?????\x0F\x85????\x83\xBE?????\x75\x05\xE8????\x8B\xBE????\x85\xFF\x0F\x84????\x8B\x86????\x8B\x17\x53", "xxxxx????xxxxxx?????xx????xx?????xxx????xx????xxxx????xx????xxx");
+	FindFunc<HookFunc::C_BaseAnimating_DoInternalDrawModel>("\x55\x8B\xEC\x8B\x55\x0C\x83\xEC\x30\x56", "xxxxxxxxxx");
 	FindFunc<HookFunc::C_BaseAnimating_DrawModel>("\x55\x8B\xEC\x83\xEC\x20\x8B\x15????\x53\x33\xDB\x56", "xxxxxxxx????xxxx");
 	FindFunc<HookFunc::C_BaseAnimating_GetBoneCache>("\x55\x8B\xEC\x83\xEC\x10\x56\x8B\xF1\x57\xFF\xB6", "xxxxxxxxxxxx");
 	FindFunc<HookFunc::C_BaseAnimating_GetBonePosition>("\x55\x8B\xEC\x83\xEC\x30\x56\x6A\x00", "xxxxxxxxx");
@@ -319,6 +324,7 @@ HookManager::HookManager()
 	InitHook<HookFunc::C_HLTVCamera_SetMode>(Interfaces::GetHLTVCamera(), GetRawFunc<HookFunc::C_HLTVCamera_SetMode>());
 	InitHook<HookFunc::C_HLTVCamera_SetPrimaryTarget>(Interfaces::GetHLTVCamera(), GetRawFunc<HookFunc::C_HLTVCamera_SetPrimaryTarget>());
 
+	InitGlobalHook<HookFunc::C_BaseAnimating_DoInternalDrawModel>();
 	InitGlobalHook<HookFunc::C_BaseAnimating_DrawModel>();
 	InitGlobalHook<HookFunc::C_BaseAnimating_InternalDrawModel>();
 	InitGlobalHook<HookFunc::C_BasePlayer_GetDefaultFOV>();
