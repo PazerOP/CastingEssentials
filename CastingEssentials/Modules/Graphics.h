@@ -41,11 +41,10 @@ private:
 	ConVar ce_graphics_improved_glows;
 	ConVar ce_graphics_fix_invisible_players;
 
-	ConVar ce_outlines_mode;
 	ConVar ce_outlines_players_override_red;
 	ConVar ce_outlines_players_override_blue;
 	ConVar ce_outlines_blur;
-	ConVar ce_outlines_radius;
+	ConVar ce_outlines_expand;
 	ConVar ce_outlines_debug_stencil_out;
 	ConVar ce_outlines_debug;
 	ConVar ce_outlines_spy_visibility;

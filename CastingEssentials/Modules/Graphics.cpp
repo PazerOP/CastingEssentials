@@ -47,14 +47,13 @@ Graphics::Graphics() :
 	ce_graphics_fix_invisible_players("ce_graphics_fix_invisible_players", "1", FCVAR_NONE,
 		"Fix a case where players are invisible if you're firstperson speccing them when the round starts."),
 
-	ce_outlines_mode("ce_outlines_mode", "1", FCVAR_NONE, "Changes the style of outlines.\n\t0: TF2-style hard outlines.\n\t1: L4D-style soft outlines."),
 	ce_outlines_debug_stencil_out("ce_outlines_debug_stencil_out", "1", FCVAR_NONE, "Should we stencil out the players during the final blend to screen?"),
 	ce_outlines_players_override_red("ce_outlines_players_override_red", "", FCVAR_NONE,
 		"Override color for red players. [0, 255], format is \"<red> <green> <blue> <alpha>\"."),
 	ce_outlines_players_override_blue("ce_outlines_players_override_blue", "", FCVAR_NONE,
 		"Override color for blue players. [0, 255], format is \"<red> <green> <blue> <alpha>\"."),
 	ce_outlines_blur("ce_outlines_blur", "0", FCVAR_NONE, "Amount of blur to apply to the outlines. <1 to disable.", true, 0, false, 0),
-	ce_outlines_radius("ce_outlines_radius", "2.5", FCVAR_NONE, "Radius of the outline effect."),
+	ce_outlines_expand("ce_outlines_expand", "2.5", FCVAR_NONE, "Radius of the outline effect."),
 	ce_outlines_debug("ce_outlines_debug", "0", FCVAR_NONE),
 	ce_outlines_spy_visibility("ce_outlines_spy_visibility", "1", FCVAR_NONE,
 		"If set to 1, always show outlines around cloaked spies (as opposed to only when they are behind walls)."),
@@ -1295,7 +1294,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 
 				pPoissonExpand->FindVar("$C0_X")->SetFloatValue(1.0f / nSrcWidth);
 				pPoissonExpand->FindVar("$C0_Y")->SetFloatValue(1.0f / nSrcHeight);
-				pPoissonExpand->FindVar("$C0_Z")->SetFloatValue(graphicsModule->ce_outlines_radius.GetFloat());
+				pPoissonExpand->FindVar("$C0_Z")->SetFloatValue(graphicsModule->ce_outlines_expand.GetFloat());
 
 				// Draw quad
 				pRenderContext->DrawScreenSpaceRectangle(pPoissonExpand,
