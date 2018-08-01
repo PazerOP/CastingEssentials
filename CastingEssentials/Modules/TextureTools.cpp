@@ -10,9 +10,9 @@ TextureTools::TextureTools() :
 		"Create the refraction and water reflection textures at framebuffer resolution (if possible). Must be set before the first map load. Changing after that requires a game restart.",
 		[](IConVar*, const char*, float) {GetModule()->ToggleFullResRTs(); }),
 
-	m_CreateRenderTargetsHook(std::bind(&TextureTools::InitClientRenderTargetsOverride, this, std::placeholders::_1, std::placeholders::_2), false)
+	m_CreateRenderTargetsHook(std::bind(&TextureTools::InitClientRenderTargetsOverride, this,
+		std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5), false)
 {
-
 }
 
 bool TextureTools::CheckDependencies()
@@ -59,7 +59,8 @@ void TextureTools::ToggleFullResRTs()
 	m_CreateRenderTargetsHook.SetEnabled(ce_texturetools_full_res_rts.GetBool());
 }
 
-void TextureTools::InitClientRenderTargetsOverride(IMaterialSystem* matsys, IMaterialSystemHardwareConfig* config)
+void TextureTools::InitClientRenderTargetsOverride(CBaseClientRenderTargets* pThis,
+	IMaterialSystem* matsys, IMaterialSystemHardwareConfig* config, int waterRes, int cameraRes)
 {
 	auto pAbstract = Interfaces::GetClientRenderTargets();
 	auto pBase = static_cast<CBaseClientRenderTargets*>(pAbstract);

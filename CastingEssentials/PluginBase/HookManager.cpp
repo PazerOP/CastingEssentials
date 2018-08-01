@@ -228,6 +228,7 @@ void HookManager::InitRawFunctionsList()
 
 	FindFunc<HookFunc::CAccountPanel_OnAccountValueChanged>("\x55\x8B\xEC\x51\x53\x8B\x5D\x0C\x56\x8B\xF1\x53", "xxxxxxxxxxxx");
 	FindFunc<HookFunc::CAccountPanel_Paint>("\x55\x8B\xEC\x83\xEC\x74\x56\x8B\xC1", "xxxxxxxxx");
+	FindFunc<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets>("\x55\x8B\xEC\x51\x53\x8B\x5D\x08\x56\x57\x6A\x01", "xxxxxxxxxxxx");
 	FindFunc<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>("\x55\x8B\xEC\x81\xEC????\x83\x7D\x10\x00\x53\x8B\xD9\x0F\x8E", "xxxxx????xxxxxxxxx");
 	FindFunc<HookFunc::CDamageAccountPanel_ShouldDraw>("\x56\x8B\xF1\xE8????\x8B\xC8\x85\xC9\x74\x0E", "xxxx????xxxxxx");
 
@@ -305,8 +306,6 @@ HookManager::HookManager()
 	InitHook<HookFunc::ICvar_ConsoleDPrintf>(g_pCVar, &ICvar::ConsoleDPrintf);
 	InitHook<HookFunc::ICvar_ConsolePrintf>(g_pCVar, &ICvar::ConsolePrintf);
 
-	InitHook<HookFunc::IClientRenderTargets_InitClientRenderTargets>(Interfaces::GetClientRenderTargets(), &IClientRenderTargets::InitClientRenderTargets);
-
 	InitHook<HookFunc::IClientEngineTools_InToolMode>(Interfaces::GetClientEngineTools(), &IClientEngineTools::InToolMode);
 	InitHook<HookFunc::IClientEngineTools_IsThirdPersonCamera>(Interfaces::GetClientEngineTools(), &IClientEngineTools::IsThirdPersonCamera);
 	InitHook<HookFunc::IClientEngineTools_SetupEngineView>(Interfaces::GetClientEngineTools(), &IClientEngineTools::SetupEngineView);
@@ -337,6 +336,7 @@ HookManager::HookManager()
 
 	InitGlobalHook<HookFunc::CAccountPanel_OnAccountValueChanged>();
 	InitGlobalHook<HookFunc::CAccountPanel_Paint>();
+	InitGlobalHook<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_ShouldDraw>();
 

@@ -13,6 +13,7 @@ class C_HLTVCamera;
 class C_TFViewModel;
 class CAccountPanel;
 class CAutoGameSystemPerFrame;
+class CBaseClientRenderTargets;
 class CDamageAccountPanel;
 struct ClientModelRenderInfo_t;
 class CNewParticleEffect;
@@ -108,6 +109,7 @@ enum class HookFunc
 	CAccountPanel_OnAccountValueChanged,
 	CAccountPanel_Paint,
 	CAutoGameSystemPerFrame_CAutoGameSystemPerFrame,
+	CBaseClientRenderTargets_InitClientRenderTargets,
 	CDamageAccountPanel_DisplayDamageFeedback,
 	CDamageAccountPanel_ShouldDraw,
 
@@ -130,7 +132,6 @@ enum class HookFunc
 	IClientEngineTools_SetupEngineView,
 
 	IClientRenderable_DrawModel,
-	IClientRenderTargets_InitClientRenderTargets,
 
 	ICvar_ConsoleColorPrintf,
 	ICvar_ConsoleDPrintf,
@@ -474,10 +475,10 @@ class HookManager final
 	{
 		typedef void(__thiscall* Raw)(CAutoGameSystemPerFrame* pThis, const char* name);
 	};
-	template<> struct HookFuncType<HookFunc::IClientRenderTargets_InitClientRenderTargets>
+	template<> struct HookFuncType<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets>
 	{
-		typedef void(__thiscall* Raw)(IClientRenderTargets* pThis, IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* config);
-		typedef VirtualHook<HookFunc::IClientRenderTargets_InitClientRenderTargets, false, IClientRenderTargets, void, IMaterialSystem*, IMaterialSystemHardwareConfig*> Hook;
+		typedef void(__thiscall* Raw)(CBaseClientRenderTargets* pThis, IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* config, int iWaterTextureSize, int iCameraTextureSize);
+		typedef GlobalClassHook<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets, false, CBaseClientRenderTargets, void, IMaterialSystem*, IMaterialSystemHardwareConfig*, int, int> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>
 	{

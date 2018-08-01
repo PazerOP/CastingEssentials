@@ -15,16 +15,10 @@ public:
 	static bool CheckDependencies();
 
 private:
-	void ToggleResourceOverridesEnabled();
-	void ToggleFlagOverridesEnabled();
-
-	void* GetResourceDataOverride(CVTFTexture* pThis, uint32 type, size_t* dataSize);
-	bool ReadHeaderOverride(CVTFTexture* pThis, CUtlBuffer& buf, VTFFileHeader_t& header);
-
-	Hook<HookFunc::IClientRenderTargets_InitClientRenderTargets> m_CreateRenderTargetsHook;
+	Hook<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets> m_CreateRenderTargetsHook;
 
 	void ToggleFullResRTs();
-	void InitClientRenderTargetsOverride(IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* config);
+	void InitClientRenderTargetsOverride(CBaseClientRenderTargets* pThis, IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* config, int waterRes, int cameraRes);
 
 	ConVar ce_texturetools_full_res_rts;
 };
