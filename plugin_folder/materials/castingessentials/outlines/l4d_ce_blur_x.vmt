@@ -1,0 +1,7 @@
+screenspace_general
+{
+	$PIXSHADER      ce_outline_gaussian_ps20
+	$basetexture    _rt_CEOutline0
+	$C0_Z 1 // direction X
+	$C0_W 0 // direction Y
+}

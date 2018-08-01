@@ -1,9 +1,0 @@
-//UnlitGeneric
-Downsample_nohdr
-//sfm_downsample_shader
-{
-	$bloomtintenable    0
-	$cstrike            0
-	$basetexture        _rt_FullFrameFB
-	$ignorez            1
-}

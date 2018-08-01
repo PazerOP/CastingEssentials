@@ -1,8 +1,0 @@
-screenspace_general
-{
-  $PIXSHADER      ce_outline_pass_ps20
-  $C0_X           1       // ALPHA_SCALE
-  $C0_Y           0.15     // INPUT_RANGE_MIN
-  $C0_Z           0.5    // INPUT_RANGE_MAX
-  $basetexture    _rt_SmallFB0
-}

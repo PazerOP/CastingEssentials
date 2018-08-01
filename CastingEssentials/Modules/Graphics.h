@@ -44,9 +44,9 @@ private:
 	ConVar ce_outlines_mode;
 	ConVar ce_outlines_players_override_red;
 	ConVar ce_outlines_players_override_blue;
+	ConVar ce_outlines_blur;
 	ConVar ce_outlines_radius;
 	ConVar ce_outlines_debug_stencil_out;
-	ConVar ce_outlines_additive;
 	ConVar ce_outlines_debug;
 	ConVar ce_outlines_spy_visibility;
 	ConVar ce_outlines_cull_frustum;

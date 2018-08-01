@@ -1,10 +1,7 @@
+//DebugTextureView
 UnlitGeneric
 {
-	$basetexture "_rt_FullFrameFB"
-	//$translucent 1
-	"%noToolTexture" 1
-	$additive 1
-	//$GAMMACOLORREAD 1
-	//"$linearread_basetexture" 1
-	//"$linearwrite" 1
+	$basetexture    _rt_FullFrameFB
+	$ShowAlpha      1
+	$translucent    1
 }

@@ -53,8 +53,8 @@ Graphics::Graphics() :
 		"Override color for red players. [0, 255], format is \"<red> <green> <blue> <alpha>\"."),
 	ce_outlines_players_override_blue("ce_outlines_players_override_blue", "", FCVAR_NONE,
 		"Override color for blue players. [0, 255], format is \"<red> <green> <blue> <alpha>\"."),
+	ce_outlines_blur("ce_outlines_blur", "0", FCVAR_NONE, "Amount of blur to apply to the outlines. <1 to disable.", true, 0, false, 0),
 	ce_outlines_radius("ce_outlines_radius", "2.5", FCVAR_NONE, "Radius of the outline effect."),
-	ce_outlines_additive("ce_outlines_additive", "1", FCVAR_NONE, "If set to 1, outlines will add to underlying colors rather than replace them."),
 	ce_outlines_debug("ce_outlines_debug", "0", FCVAR_NONE),
 	ce_outlines_spy_visibility("ce_outlines_spy_visibility", "1", FCVAR_NONE,
 		"If set to 1, always show outlines around cloaked spies (as opposed to only when they are behind walls)."),
@@ -1164,8 +1164,6 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 
 	ITexture* const pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
 	ITexture* const pRtFullFrameFB1 = materials->FindTexture("_rt_FullFrameFB1", TEXTURE_GROUP_RENDER_TARGET);
-	ITexture* const pRtSmallFB0 = materials->FindTexture("_rt_SmallFB0", TEXTURE_GROUP_RENDER_TARGET);
-	ITexture* const pRtSmallFB1 = materials->FindTexture("_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET);
 
 	pRenderContext->PushRenderTargetAndViewport();
 	pRenderContext->SetToneMappingScaleLinear(Vector(1, 1, 1));
@@ -1225,13 +1223,13 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 	pRenderContext->OverrideAlphaWriteEnable(true, true);
 	pRenderContext->OverrideColorWriteEnable(true, true);
 
-	// Copy MSAA'd glow models to _rt_FullFrameFB0
-	pRenderContext->CopyRenderTargetToTexture(pRtFullFrameFB0);
-
 	const int nSrcWidth = pSetup->width;
 	const int nSrcHeight = pSetup->height;
 	int nViewportX, nViewportY, nViewportWidth, nViewportHeight;
 	pRenderContext->GetViewport(nViewportX, nViewportY, nViewportWidth, nViewportHeight);
+
+	// Copy MSAA'd glow models to _rt_FullFrameFB0
+	pRenderContext->CopyRenderTargetToTexture(pRtFullFrameFB0);
 
 	// Move original contents of the backbuffer from _rt_FullFrameFB1 to the backbuffer
 	{
@@ -1284,128 +1282,135 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 			stencilState.m_ZFailOp = STENCILOPERATION_KEEP;
 			stencilState.SetStencilState(pRenderContext);
 
-			if (graphicsModule->ce_outlines_mode.GetBool())
+			auto srcTexture = pRtFullFrameFB0;
+			auto dstTexture = pRtFullFrameFB1;
+
+			//==================================//
+			// Poisson expand onto _rt_SmallFB1 //
+			//==================================//
 			{
-				//============================================
-				// Downsample _rt_FullFrameFB to _rt_SmallFB0
-				//============================================
-				{
-					CRefPtrFix<IMaterial> pMatDownsample(materials->FindMaterial("castingessentials/outlines/l4d_downsample", TEXTURE_GROUP_OTHER, true));
-					pRenderContext->SetRenderTarget(pRtSmallFB0);
+				CRefPtrFix<IMaterial> pPoissonExpand(materials->FindMaterial("castingessentials/outlines/poisson_outline", TEXTURE_GROUP_OTHER, true));
+				pRenderContext->SetRenderTarget(dstTexture);
+				pRenderContext->ClearBuffers(true, false, false);
 
-					// First clear the full target to black if we're not going to touch every pixel
-					if ((pRtSmallFB0->GetActualWidth() != (pSetup->width / 4)) || (pRtSmallFB0->GetActualHeight() != (pSetup->height / 4)))
-					{
-						pRenderContext->Viewport(0, 0, pRtSmallFB0->GetActualWidth(), pRtSmallFB0->GetActualHeight());
-						pRenderContext->ClearColor3ub(0, 0, 0);
-						pRenderContext->ClearBuffers(true, false, false);
-					}
-
-					// Set the viewport
-					pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
-
-					// Downsample to _rt_SmallFB0
-					pRenderContext->DrawScreenSpaceRectangle(pMatDownsample, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
-						0, 0, nSrcWidth - 4, nSrcHeight - 4,
-						pRtFullFrameFB0->GetActualWidth(), pRtFullFrameFB0->GetActualHeight());
-				}
-
-				//============================//
-				// Guassian blur x rt0 to rt1 //
-				//============================//
-				{
-					CRefPtrFix<IMaterial> pMatBlurX(materials->FindMaterial("castingessentials/outlines/l4d_blur_x", TEXTURE_GROUP_OTHER, true));
-					pRenderContext->SetRenderTarget(pRtSmallFB1);
-
-					// First clear the full target to black if we're not going to touch every pixel
-					if ((pRtSmallFB1->GetActualWidth() != (pSetup->width / 4)) || (pRtSmallFB1->GetActualHeight() != (pSetup->height / 4)))
-					{
-						pRenderContext->Viewport(0, 0, pRtSmallFB1->GetActualWidth(), pRtSmallFB1->GetActualHeight());
-						pRenderContext->ClearColor3ub(0, 0, 0);
-						pRenderContext->ClearBuffers(true, false, false);
-					}
-
-					// Set the viewport
-					pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
-
-					// Blur X to _rt_SmallFB1
-					pRenderContext->DrawScreenSpaceRectangle(pMatBlurX, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
-						0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
-						pRtSmallFB0->GetActualWidth(), pRtSmallFB0->GetActualHeight());
-				}
-
-				//============================//
-				// Gaussian blur y rt1 to rt0 //
-				//============================//
-				{
-					CRefPtrFix<IMaterial> pMatBlurY(materials->FindMaterial("castingessentials/outlines/l4d_blur_y", TEXTURE_GROUP_OTHER, true));
-
-					pRenderContext->SetRenderTarget(pRtSmallFB0);
-					pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
-					IMaterialVar *pBloomAmountVar = pMatBlurY->FindVar("$bloomamount", NULL);
-					if (pBloomAmountVar)
-						pBloomAmountVar->SetFloatValue(flBloomScale);
-
-					// Blur Y to _rt_SmallFB0
-					pRenderContext->DrawScreenSpaceRectangle(pMatBlurY, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
-						0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
-						pRtSmallFB1->GetActualWidth(), pRtSmallFB1->GetActualHeight());
-				}
-
-				// Multiply alpha into _rt_SmallFB1
-				if (!graphicsModule->ce_outlines_additive.GetBool())
-				{
-					CRefPtrFix<IMaterial> pMatAlphaMul(materials->FindMaterial("castingessentials/outlines/l4d_ce_translucent_pass", TEXTURE_GROUP_OTHER, true));
-					pRenderContext->SetRenderTarget(pRtSmallFB1);
-					pRenderContext->Viewport(0, 0, pSetup->width / 4, pSetup->height / 4);
-					pRenderContext->ClearBuffers(true, false, false);
-					pRenderContext->DrawScreenSpaceRectangle(pMatAlphaMul, 0, 0, nSrcWidth / 4, nSrcHeight / 4,
-						0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
-						pRtSmallFB1->GetActualWidth(), pRtSmallFB1->GetActualHeight());
-				}
-
-				// Final upscale and blend onto backbuffer
-				{
-					CRefPtrFix<IMaterial> finalBlendL4D(materials->FindMaterial("castingessentials/outlines/l4d_final_blend", TEXTURE_GROUP_RENDER_TARGET));
-					{
-						auto baseTextureVar = finalBlendL4D->FindVar("$basetexture", nullptr);
-						if (baseTextureVar)
-							baseTextureVar->SetTextureValue(graphicsModule->ce_outlines_additive.GetBool() ? pRtSmallFB0 : pRtSmallFB1);
-
-						finalBlendL4D->SetMaterialVarFlag(MaterialVarFlags_t::MATERIAL_VAR_TRANSLUCENT, !graphicsModule->ce_outlines_additive.GetBool());
-						finalBlendL4D->SetMaterialVarFlag(MaterialVarFlags_t::MATERIAL_VAR_ADDITIVE, graphicsModule->ce_outlines_additive.GetBool());
-					}
-
-					// Draw quad
-					pRenderContext->SetRenderTarget(nullptr);
-					pRenderContext->Viewport(0, 0, pSetup->width, pSetup->height);
-					pRenderContext->DrawScreenSpaceRectangle(finalBlendL4D,
-						0, 0, nViewportWidth, nViewportHeight,
-						0, 0, nSrcWidth / 4 - 1, nSrcHeight / 4 - 1,
-						pRtSmallFB0->GetActualWidth(),
-						pRtSmallFB0->GetActualHeight());
-				}
-			}
-			else
-			{
-				CRefPtrFix<IMaterial> pMatHaloAddToScreen(materials->FindMaterial("castingessentials/outlines/poisson_outline", TEXTURE_GROUP_OTHER, true));
-
-				if (auto found = pMatHaloAddToScreen->FindVar("$C0_X", nullptr))
-					found->SetFloatValue(1.0f / nSrcWidth);
-				if (auto found = pMatHaloAddToScreen->FindVar("$C0_Y", nullptr))
-					found->SetFloatValue(1.0f / nSrcHeight);
-				if (auto found = pMatHaloAddToScreen->FindVar("$C0_Z", nullptr))
-					found->SetFloatValue(graphicsModule->ce_outlines_radius.GetFloat());
-
-				// Write to alpha
-				pRenderContext->OverrideAlphaWriteEnable(true, true);
+				pPoissonExpand->FindVar("$C0_X")->SetFloatValue(1.0f / nSrcWidth);
+				pPoissonExpand->FindVar("$C0_Y")->SetFloatValue(1.0f / nSrcHeight);
+				pPoissonExpand->FindVar("$C0_Z")->SetFloatValue(graphicsModule->ce_outlines_radius.GetFloat());
 
 				// Draw quad
-				pRenderContext->DrawScreenSpaceRectangle(pMatHaloAddToScreen,
-					0, 0, nViewportWidth, nViewportHeight,
+				pRenderContext->DrawScreenSpaceRectangle(pPoissonExpand,
+					0, 0, nSrcWidth, nSrcHeight,
 					0, 0, nSrcWidth - 1, nSrcHeight - 1,
-					pRtFullFrameFB0->GetActualWidth(),
-					pRtFullFrameFB0->GetActualHeight());
+					srcTexture->GetActualWidth(), srcTexture->GetActualHeight());
+
+				std::swap(srcTexture, dstTexture);
+			}
+
+			Vector2D targetSize(nSrcWidth, nSrcHeight);
+			if (const auto BLUR = graphicsModule->ce_outlines_blur.GetFloat(); BLUR >= 1)
+			{
+				targetSize /= BLUR;
+
+				// Downsampling
+				{
+					CRefPtrFix<IMaterial> matDownsample(materials->FindMaterial(
+						"castingessentials/outlines/l4d_ce_downsample4x", TEXTURE_GROUP_RENDER_TARGET));
+
+					pRenderContext->ClearColor4ub(0, 0, 0, 0);
+
+					// Keep halving size until we can just rely on linear interpolation
+					Vector2D inSize(nSrcWidth, nSrcHeight);
+					Vector2D outSize(inSize / 2);
+					for (; inSize.x / 2 > targetSize.x; inSize /= 2, outSize /= 2)
+					{
+						// Copy back and forth, halving res every time
+						matDownsample->FindVar("$basetexture")->SetTextureValue(srcTexture);
+
+						pRenderContext->SetRenderTarget(dstTexture);
+						pRenderContext->ClearBuffers(true, false, false);
+
+						pRenderContext->DrawScreenSpaceRectangle(matDownsample,
+							0, 0, outSize.x, outSize.y,
+							0, 0, inSize.x - 1, inSize.y - 1,
+							srcTexture->GetActualWidth(), srcTexture->GetActualHeight());
+
+						std::swap(srcTexture, dstTexture);
+					}
+
+					// Linear interpolate the rest of the way
+					{
+						CRefPtrFix<IMaterial> matCopy(materials->FindMaterial(
+							"castingessentials/outlines/direct_copy", TEXTURE_GROUP_RENDER_TARGET));
+
+						matCopy->FindVar("$basetexture")->SetTextureValue(srcTexture);
+
+						pRenderContext->SetRenderTarget(dstTexture);
+						pRenderContext->ClearBuffers(true, false, false);
+
+						pRenderContext->DrawScreenSpaceRectangle(matCopy,
+							0, 0, targetSize.x, targetSize.y,
+							0, 0, inSize.x - 1, inSize.y - 1,
+							srcTexture->GetActualWidth(), srcTexture->GetActualHeight());
+
+						std::swap(srcTexture, dstTexture);
+					}
+				}
+
+				//=================//
+				// Guassian blur x //
+				//=================//
+				{
+					CRefPtrFix<IMaterial> pMatBlurX(materials->FindMaterial("castingessentials/outlines/l4d_ce_blur_x", TEXTURE_GROUP_OTHER, true));
+					pMatBlurX->FindVar("$basetexture")->SetTextureValue(srcTexture);
+					pRenderContext->SetRenderTarget(dstTexture);
+					pRenderContext->ClearBuffers(true, false, false);
+
+					pMatBlurX->FindVar("$C0_X")->SetFloatValue(srcTexture->GetActualWidth());
+					pMatBlurX->FindVar("$C0_Y")->SetFloatValue(srcTexture->GetActualHeight());
+
+					// Blur X to _rt_SmallFB1
+					pRenderContext->DrawScreenSpaceRectangle(pMatBlurX,
+						0, 0, std::lround(targetSize.x), std::lround(targetSize.y),
+						0, 0, targetSize.x - 1, targetSize.y - 1,
+						srcTexture->GetActualWidth(), srcTexture->GetActualHeight());
+
+					std::swap(srcTexture, dstTexture);
+				}
+
+				//=================//
+				// Guassian blur y //
+				//=================//
+				{
+					CRefPtrFix<IMaterial> pMatBlurY(materials->FindMaterial("castingessentials/outlines/l4d_ce_blur_y", TEXTURE_GROUP_OTHER));
+					pMatBlurY->FindVar("$basetexture")->SetTextureValue(srcTexture);
+					pRenderContext->SetRenderTarget(dstTexture);
+
+					pMatBlurY->FindVar("$C0_X")->SetFloatValue(srcTexture->GetActualWidth());
+					pMatBlurY->FindVar("$C0_Y")->SetFloatValue(srcTexture->GetActualHeight());
+
+					// Blur Y to _rt_SmallFB0
+					pRenderContext->DrawScreenSpaceRectangle(pMatBlurY,
+						0, 0, std::lround(targetSize.x), std::lround(targetSize.y),
+						0, 0, targetSize.x - 1, targetSize.y - 1,
+						srcTexture->GetActualWidth(), srcTexture->GetActualHeight());
+
+					std::swap(srcTexture, dstTexture);
+				}
+			}
+
+			// Final upscale and blend onto backbuffer
+			{
+				CRefPtrFix<IMaterial> finalBlend(materials->FindMaterial("castingessentials/outlines/final_blend", TEXTURE_GROUP_RENDER_TARGET));
+				finalBlend->FindVar("$basetexture", nullptr)->SetTextureValue(srcTexture);
+
+				// Draw quad to backbuffer
+				pRenderContext->SetRenderTarget(nullptr);
+
+				//pRenderContext->Viewport(0, 0, pSetup->width, pSetup->height);
+				pRenderContext->DrawScreenSpaceRectangle(finalBlend,
+					0, 0, nViewportWidth, nViewportHeight,
+					0, 0, targetSize.x - 1, targetSize.y - 1,
+					srcTexture->GetActualWidth(), srcTexture->GetActualHeight());
 			}
 		}
 	}
@@ -1419,20 +1424,6 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 	pRenderContext->OverrideColorWriteEnable(false, false);
 	pRenderContext->OverrideAlphaWriteEnable(false, false);
 	pRenderContext->OverrideDepthEnable(false, false);
-
-	static ConVarRef mat_hdr_level("mat_hdr_level");
-	static ConVarRef mat_disable_bloom("mat_disable_bloom");
-	if (mat_hdr_level.GetInt() < 1 || mat_disable_bloom.GetBool())
-	{
-		// Wipe these textures to prevent spooky apparitions
-		pRenderContext->ClearColor4ub(0, 0, 0, 0);
-
-		pRenderContext->SetRenderTarget(pRtSmallFB0);
-		pRenderContext->ClearBuffers(true, false, false);
-
-		pRenderContext->SetRenderTarget(pRtSmallFB1);
-		pRenderContext->ClearBuffers(true, false, false);
-	}
 
 	pRenderContext->PopRenderTargetAndViewport();
 }

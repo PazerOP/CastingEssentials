@@ -1,8 +1,0 @@
-//UnlitGeneric
-BlurFilterX
-//sfm_blurfilterx_shader
-{
-	$basetexture    _rt_SmallFB0
-	$bloomscale     1
-	$ignorez        1
-}
