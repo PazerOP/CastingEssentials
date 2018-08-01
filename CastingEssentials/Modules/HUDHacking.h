@@ -46,6 +46,9 @@ private:
 		Concheror = 354,
 	};
 
+	static constexpr const char WEAPON_CHARGE_AMOUNT[] = "weaponchargeamount";
+	static constexpr const char WEAPON_CHARGE_NAME[] = "weaponchargename";
+
 	// Static, because this is only used in GetPlayerFromPanel and we don't want to require
 	// that HUDHacking module was loaded successfully just to use this completely independent function.
 	static ConVar ce_hud_debug_unassociated_playerpanels;
@@ -55,7 +58,7 @@ private:
 	static void ForwardPlayerPanelBorder(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel);
 	static void UpdatePlayerHealth(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
 	static void UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
-	void UpdateBanner(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
+	void UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
 
 	static bool GetBannerInfo(const Player& player, BannerType& type, float& charge);
 

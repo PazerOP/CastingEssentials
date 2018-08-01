@@ -158,8 +158,7 @@ void HUDHacking::UpdatePlayerPanels()
 			if (statusEffects)
 				UpdateStatusEffect(playerVPanel, playerPanel, *player);
 
-			if (bannerStatus)
-				UpdateBanner(playerVPanel, playerPanel, *player);
+			UpdateBanner(bannerStatus, playerVPanel, playerPanel, *player);
 		}
 	}
 }
@@ -226,8 +225,15 @@ void HUDHacking::UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePan
 	}
 }
 
-void HUDHacking::UpdateBanner(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player)
+void HUDHacking::UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player)
 {
+	if (!enabled)
+	{
+		playerPanel->SetDialogVariable(WEAPON_CHARGE_AMOUNT, "");
+		playerPanel->SetDialogVariable(WEAPON_CHARGE_NAME, "");
+		return;
+	}
+
 	bool isRedTeam;
 	bool shouldShowInfo = true;
 	switch (player.GetTeam())
@@ -261,7 +267,7 @@ void HUDHacking::UpdateBanner(vgui::VPANEL playerVPanel, vgui::EditablePanel* pl
 	}
 
 	auto localized = g_pVGuiLocalize->FindAsUTF8(bannerString);
-	playerPanel->SetDialogVariable("weaponchargename", localized ? localized : bannerString);
+	playerPanel->SetDialogVariable(WEAPON_CHARGE_NAME, localized ? localized : bannerString);
 
 	// Set charge level as a percentage
 	{
@@ -271,7 +277,7 @@ void HUDHacking::UpdateBanner(vgui::VPANEL playerVPanel, vgui::EditablePanel* pl
 		else
 			buf[0] = '\0';
 
-		playerPanel->SetDialogVariable("weaponchargeamount", buf);
+		playerPanel->SetDialogVariable(WEAPON_CHARGE_AMOUNT, buf);
 	}
 
 	auto chargebar = dynamic_cast<vgui::ContinuousProgressBar*>(FindChildByName(playerVPanel, isRedTeam ? "WeaponChargeRed" : "WeaponChargeBlue"));

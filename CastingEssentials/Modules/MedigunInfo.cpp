@@ -489,7 +489,7 @@ void MedigunInfo::MedigunPanel::OnMedigunInfoUpdate(KeyValues *attributes)
 	// TODO: set up a custom message that doesn't spam a bunch of DialogVariables messages, forcing the panel to redraw 5 or 6 times.
 
 	const int newCharge = int(floor(level * 100.0f));
-	if (charge != newCharge)
+	if (charge != newCharge || newCharge == 0)
 		SetDialogVariable("charge", charge = newCharge);
 
 	if (medigun == TFMedigun::Vaccinator)
