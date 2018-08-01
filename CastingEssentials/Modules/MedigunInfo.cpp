@@ -322,7 +322,10 @@ void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
 		sprintf_s(materialBuf, "hud/mediguninfo/%s_%s", data->m_Alive ? TF_MEDIGUN_NAMES[(int)data->m_Type] : "dead", TF_TEAM_NAMES[(int)data->m_Team]);
 
 		if (data->m_Type == TFMedigun::Vaccinator)
+		{
+			strcat_s(materialBuf, "_");
 			strcat_s(materialBuf, TF_RESIST_TYPE_NAMES[(int)data->m_ResistType]);
+		}
 
 		vgui::ImagePanel* imgPanel = dynamic_cast<vgui::ImagePanel*>(g_pVGuiPanel->GetPanel(childVPanel, "ClientDLL"));
 		Assert(imgPanel);
