@@ -126,9 +126,6 @@ void HUDHacking::UpdatePlayerPanels()
 	const auto statusEffects = ce_hud_player_status_effects.GetBool();
 	const auto bannerStatus = ce_hud_chargebars_enabled.GetBool();
 
-	if (!forwardBorder && !playerHealthProgressBars && !statusEffects && !bannerStatus)
-		return;
-
 	auto specguivpanel = GetSpecGUI();
 	if (!specguivpanel)
 		return;
