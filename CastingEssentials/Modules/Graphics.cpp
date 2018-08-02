@@ -1256,16 +1256,12 @@ void CGlowObjectManager::ApplyEntityGlowEffects(const CViewSetup* pSetup, int nS
 		if (graphicsModule->ce_graphics_glow_silhouettes.GetBool())
 		{
 			CRefPtrFix<IMaterial> finalBlendMaterial(materials->FindMaterial("castingessentials/outlines/final_blend", TEXTURE_GROUP_RENDER_TARGET));
-			pRenderContext->Bind(finalBlendMaterial);
+			finalBlendMaterial->FindVar("$basetexture", nullptr)->SetTextureValue(pRtFullFrameFB0);
 
-			pRenderContext->OverrideDepthEnable(true, false);
-			{
-				pRenderContext->DrawScreenSpaceRectangle(finalBlendMaterial,
-					0, 0, nViewportWidth, nViewportHeight,
-					0, 0, nSrcWidth - 1, nSrcHeight - 1,
-					pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
-			}
-			pRenderContext->OverrideDepthEnable(false, false);
+			pRenderContext->DrawScreenSpaceRectangle(finalBlendMaterial,
+				0, 0, nViewportWidth, nViewportHeight,
+				0, 0, nSrcWidth - 1, nSrcHeight - 1,
+				pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
 		}
 		else
 		{
