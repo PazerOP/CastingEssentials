@@ -228,6 +228,8 @@ void MedigunInfo::OnTick(bool inGame)
 					m_MainPanel->SetEnabled(true);
 			}
 		}
+		else
+			m_MainPanel.reset();
 
 		if (embeddedEnabled)
 			UpdateEmbeddedPanels();
