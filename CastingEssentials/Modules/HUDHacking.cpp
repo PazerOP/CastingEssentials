@@ -30,6 +30,8 @@ HUDHacking::HUDHacking() :
 	ce_hud_forward_playerpanel_border("ce_hud_forward_playerpanel_border", "0", FCVAR_NONE, "Sets the border of [playerpanel]->PanelColorBG to the same value as [playerpanel]."),
 	ce_hud_player_health_progressbars("ce_hud_player_health_progressbars", "0", FCVAR_NONE, "Enables [playerpanel]->PlayerHealth[Overheal](Red/Blue) ProgressBars."),
 	ce_hud_player_status_effects("ce_hud_player_status_effects", "0", FCVAR_NONE, "Update status effect ImagePanel: [playerpanel]->StatusEffectIcon(Red/Blue)"),
+	ce_hud_player_status_effects_debug("ce_hud_player_status_effects_debug", "0", FCVAR_NONE,
+		"Shows a status effect icon for all players.", true, 0, true, (int)StatusEffect::COUNT),
 	ce_hud_chargebars_enabled("ce_hud_chargebars_enabled", "0", FCVAR_NONE, "Enable showing banner charge status (progress bar + label) in playerpanels."),
 
 	ce_hud_chargebars_buff_banner_text("ce_hud_chargebars_buff_banner_text", "#TF_Unique_Achievement_SoldierBuff", FCVAR_NONE, "Text to use for the Buff Banner for the %banner% dialog variable on playerpanels."),
@@ -111,6 +113,59 @@ vgui::Panel* HUDHacking::FindChildByName(vgui::VPANEL rootPanel, const char* nam
 
 	return nullptr;
 }
+const char* HUDHacking::GetStatusEffectFormatString(StatusEffect effect)
+{
+	switch (effect)
+	{
+		case StatusEffect::None:             return nullptr;
+		case StatusEffect::Ubered:           return "%subered_%s";
+		case StatusEffect::Kritzed:          return "%skritzkrieged_%s";
+		case StatusEffect::Quickfixed:       return "%squickfixed_%s";
+		case StatusEffect::VaccinatorBullet: return "%svaccinated_%s_bullet";
+		case StatusEffect::VaccinatorBlast:  return "%svaccinated_%s_explosive";
+		case StatusEffect::VaccinatorFire:   return "%svaccinated_%s_fire";
+		case StatusEffect::BuffBanner:       return "%sbuff_banner_%s";
+		case StatusEffect::Concheror:        return "%sconcheror_%s";
+		case StatusEffect::Battalions:       return "%sbattalions_backup_%s";
+		case StatusEffect::Bleeding:         return "%sbleeding_%s";
+		case StatusEffect::MarkedForDeath:   return "%smarked_for_death_%s";
+	}
+
+	PluginWarning("Programmer error: Unknown StatusEffect %i in " __FUNCTION__ "()\n", (int)effect);
+	return nullptr;
+}
+
+HUDHacking::StatusEffect HUDHacking::GetStatusEffect(const Player& player)
+{
+	if (player.IsAlive())
+	{
+		if (player.CheckCondition(TFCond::TFCond_Ubercharged) || player.CheckCondition(TFCond::TFCond_UberchargeFading))
+			return StatusEffect::Ubered;
+		else if (player.CheckCondition(TFCond::TFCond_Kritzkrieged))
+			return StatusEffect::Kritzed;
+		else if (player.CheckCondition(TFCond::TFCond_MegaHeal))
+			return StatusEffect::Quickfixed;
+		else if (player.CheckCondition(TFCond::TFCond_UberBulletResist))
+			return StatusEffect::VaccinatorBullet;
+		else if (player.CheckCondition(TFCond::TFCond_UberBlastResist))
+			return StatusEffect::VaccinatorBlast;
+		else if (player.CheckCondition(TFCond::TFCond_UberFireResist))
+			return StatusEffect::VaccinatorFire;
+		else if (player.CheckCondition(TFCond::TFCond_Buffed))
+			return StatusEffect::BuffBanner;
+		else if (player.CheckCondition(TFCond::TFCond_RegenBuffed))
+			return StatusEffect::Concheror;
+		else if (player.CheckCondition(TFCond::TFCond_DefenseBuffed))
+			return StatusEffect::Battalions;
+		else if (player.CheckCondition(TFCond::TFCond_Bleeding))
+			return StatusEffect::Bleeding;
+		else if (player.CheckCondition(TFCond::TFCond_MarkedForDeath) || player.CheckCondition(TFCond::TFCond_MarkedForDeathSilent))
+			return StatusEffect::MarkedForDeath;
+	}
+
+	return StatusEffect::None;
+}
+
 void HUDHacking::OnTick(bool inGame)
 {
 	if (!inGame)
@@ -162,55 +217,37 @@ void HUDHacking::UpdatePlayerPanels()
 
 void HUDHacking::UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player)
 {
-	bool isRedTeam;
+	vgui::ImagePanel* icon;
 	const char* team;
-	switch (player.GetTeam())
+	bool isRedTeam;
+	if (auto teamVal = player.GetTeam(); teamVal == TFTeam::Red)
 	{
-		case TFTeam::Red:
-			team = "red";
-			isRedTeam = true;
-			break;
-		case TFTeam::Blue:
-			team = "blue";
-			isRedTeam = false;
-			break;
-
-		default:
-			return;
+		team = "red";
+		isRedTeam = true;
 	}
+	else if (teamVal == TFTeam::Blue)
+	{
+		team = "blue";
+		isRedTeam = false;
+	}
+	else
+		return;
 
-	const char* iconBaseName = nullptr;
-	if (player.CheckCondition(TFCond::TFCond_Ubercharged) || player.CheckCondition(TFCond::TFCond_UberchargeFading))
-		iconBaseName = "../castingessentials/statuseffects/ubered_%s";
-	else if (player.CheckCondition(TFCond::TFCond_Kritzkrieged))
-		iconBaseName = "../castingessentials/statuseffects/kritzkrieged_%s";
-	else if (player.CheckCondition(TFCond::TFCond_MegaHeal))
-		iconBaseName = "../castingessentials/statuseffects/quickfixed_%s";
-	else if (player.CheckCondition(TFCond::TFCond_UberBulletResist))
-		iconBaseName = "../castingessentials/statuseffects/vaccinated_%s_bullet";
-	else if (player.CheckCondition(TFCond::TFCond_UberBlastResist))
-		iconBaseName = "../castingessentials/statuseffects/vaccinated_%s_explosive";
-	else if (player.CheckCondition(TFCond::TFCond_UberFireResist))
-		iconBaseName = "../castingessentials/statuseffects/vaccinated_%s_fire";
-	else if (player.CheckCondition(TFCond::TFCond_Buffed))
-		iconBaseName = "../castingessentials/statuseffects/buff_banner_%s";
-	else if (player.CheckCondition(TFCond::TFCond_RegenBuffed))
-		iconBaseName = "../castingessentials/statuseffects/concheror_%s";
-	else if (player.CheckCondition(TFCond::TFCond_DefenseBuffed))
-		iconBaseName = "../castingessentials/statuseffects/battalions_backup_%s";
-	else if (player.CheckCondition(TFCond::TFCond_Bleeding))
-		iconBaseName = "../castingessentials/statuseffects/bleeding_%s";
-	else if (player.CheckCondition(TFCond::TFCond_MarkedForDeath) || player.CheckCondition(TFCond::TFCond_MarkedForDeathSilent))
-		iconBaseName = "../castingessentials/statuseffects/marked_for_death_%s";
-
-	auto icon = dynamic_cast<vgui::ImagePanel*>(FindChildByName(playerVPanel, isRedTeam ? "StatusEffectIconRed" : "StatusEffectIconBlue"));
+	icon = dynamic_cast<vgui::ImagePanel*>(FindChildByName(playerVPanel, isRedTeam ? "StatusEffectIconRed" : "StatusEffectIconBlue"));
 	if (!icon)
 		return;
 
-	if (iconBaseName)
+	StatusEffect effect;
+	if (auto debug = ce_hud_player_status_effects_debug.GetInt())
+		effect = (StatusEffect)(debug - 1);
+	else
+		effect = GetStatusEffect(player);
+
+	if (effect != StatusEffect::None)
 	{
+		static constexpr auto PREFIX = "../castingessentials/statuseffects/";
 		char buf[128];
-		sprintf_s(buf, iconBaseName, team);
+		sprintf_s(buf, GetStatusEffectFormatString(effect), PREFIX, team);
 
 		icon->SetVisible(true);
 
@@ -330,32 +367,39 @@ void HUDHacking::UpdatePlayerHealth(vgui::VPANEL playerVPanel, vgui::EditablePan
 
 	struct ProgressBarName
 	{
-		constexpr ProgressBarName(const char* name, bool overheal, bool inverse) :
-			m_Name(name), m_Overheal(overheal), m_Inverse(inverse)
+		constexpr ProgressBarName(const char* name, TFTeam team, bool overheal, bool inverse) :
+			m_Name(name), m_Team(team), m_Overheal(overheal), m_Inverse(inverse)
 		{
 		}
 
 		const char* m_Name;
+		TFTeam m_Team;
 		bool m_Overheal;
 		bool m_Inverse;
 	};
 
 	static constexpr ProgressBarName s_ProgressBars[] =
 	{
-		ProgressBarName("PlayerHealthRed", false, false),
-		ProgressBarName("PlayerHealthInverseRed", false, true),
-		ProgressBarName("PlayerHealthBlue", false, false),
-		ProgressBarName("PlayerHealthInverseBlue", false, true),
+		ProgressBarName("PlayerHealthRed", TFTeam::Red, false, false),
+		ProgressBarName("PlayerHealthInverseRed", TFTeam::Red, false, true),
+		ProgressBarName("PlayerHealthBlue", TFTeam::Blue, false, false),
+		ProgressBarName("PlayerHealthInverseBlue", TFTeam::Blue, false, true),
 
-		ProgressBarName("PlayerHealthOverhealRed", true, false),
-		ProgressBarName("PlayerHealthInverseOverhealRed", true, true),
-		ProgressBarName("PlayerHealthOverhealBlue", true, false),
-		ProgressBarName("PlayerHealthInverseOverhealBlue", true, true)
+		ProgressBarName("PlayerHealthOverhealRed", TFTeam::Red, true, false),
+		ProgressBarName("PlayerHealthInverseOverhealRed", TFTeam::Red, true, true),
+		ProgressBarName("PlayerHealthOverhealBlue", TFTeam::Blue, true, false),
+		ProgressBarName("PlayerHealthInverseOverhealBlue", TFTeam::Blue, true, true)
 	};
+
+	const auto team = player.GetTeam();
 
 	// Show/hide progress bars
 	for (const auto& bar : s_ProgressBars)
 	{
+		// Only update the progress bars for the appropriate team
+		if (bar.m_Team != team)
+			continue;
+
 		auto progressBar = dynamic_cast<vgui::ProgressBar*>(FindChildByName(playerVPanel, bar.m_Name));
 		if (!progressBar)
 			continue;

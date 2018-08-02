@@ -33,6 +33,7 @@ private:
 	ConVar ce_hud_forward_playerpanel_border;
 	ConVar ce_hud_player_health_progressbars;
 	ConVar ce_hud_player_status_effects;
+	ConVar ce_hud_player_status_effects_debug;
 	ConVar ce_hud_chargebars_enabled;
 
 	ConVar ce_hud_chargebars_buff_banner_text;
@@ -46,6 +47,28 @@ private:
 		Concheror = 354,
 	};
 
+	enum class StatusEffect
+	{
+		None = -1,
+
+		Ubered,
+		Kritzed,
+		Quickfixed,
+		VaccinatorBullet,
+		VaccinatorBlast,
+		VaccinatorFire,
+		BuffBanner,
+		Concheror,
+		Battalions,
+		Bleeding,
+		MarkedForDeath,
+
+		COUNT,
+	};
+
+	static const char* GetStatusEffectFormatString(StatusEffect effect);
+	static StatusEffect GetStatusEffect(const Player& player);
+
 	static constexpr const char WEAPON_CHARGE_AMOUNT[] = "weaponchargeamount";
 	static constexpr const char WEAPON_CHARGE_NAME[] = "weaponchargename";
 
@@ -57,7 +80,7 @@ private:
 	void UpdatePlayerPanels();
 	static void ForwardPlayerPanelBorder(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel);
 	static void UpdatePlayerHealth(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
-	static void UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
+	void UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
 	void UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
 
 	static bool GetBannerInfo(const Player& player, BannerType& type, float& charge);
