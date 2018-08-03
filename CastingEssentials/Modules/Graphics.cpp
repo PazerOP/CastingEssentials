@@ -41,7 +41,6 @@ Graphics::Graphics() :
 		[](IConVar* var, const char*, float) { GetModule()->ToggleEntityFade(static_cast<ConVar*>(var)); }),
 	ce_graphics_debug_glow("ce_graphics_debug_glow", "0", FCVAR_UNREGISTERED),
 	ce_graphics_glow_silhouettes("ce_graphics_glow_silhouettes", "0", FCVAR_NONE, "Turns outlines into silhouettes."),
-	ce_graphics_glow_intensity("ce_graphics_glow_intensity", "1", FCVAR_NONE, "Global scalar for glow intensity"),
 	ce_graphics_improved_glows("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?",
 		[](IConVar* var, const char*, float) { GetModule()->ToggleImprovedGlows(static_cast<ConVar*>(var)); }),
 	ce_graphics_fix_invisible_players("ce_graphics_fix_invisible_players", "1", FCVAR_NONE,
@@ -498,8 +497,8 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr, bool& anyAlways, 
 	anyUnoccluded = false;
 
 	bool hasRedOverride, hasBlueOverride;
-	Vector redOverride = ColorToVector(ColorFromConVar(ce_outlines_players_override_red, &hasRedOverride)) * ce_graphics_glow_intensity.GetFloat();
-	Vector blueOverride = ColorToVector(ColorFromConVar(ce_outlines_players_override_blue, &hasBlueOverride)) * ce_graphics_glow_intensity.GetFloat();
+	Vector redOverride = ColorToVector(ColorFromConVar(ce_outlines_players_override_red, &hasRedOverride));
+	Vector blueOverride = ColorToVector(ColorFromConVar(ce_outlines_players_override_blue, &hasBlueOverride));
 
 	uint8_t stencilIndex = 0;
 
@@ -1490,9 +1489,6 @@ void Graphics::ExtraGlowData::ApplyGlowColor() const
 	}
 	else
 	{
-		const Vector vGlowColor = m_Base->m_vGlowColor * (m_Base->m_flGlowAlpha * GetModule()->ce_graphics_glow_intensity.GetFloat());
-		Assert(vGlowColor.x < 1 || vGlowColor.y < 1 || vGlowColor.z < 1);
-
-		render->SetColorModulation(vGlowColor.Base());
+		render->SetColorModulation(m_Base->m_vGlowColor.Base());
 	}
 }

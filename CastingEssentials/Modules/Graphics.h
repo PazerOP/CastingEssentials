@@ -37,7 +37,6 @@ private:
 	ConVar ce_graphics_disable_prop_fades;
 	ConVar ce_graphics_debug_glow;
 	ConVar ce_graphics_glow_silhouettes;
-	ConVar ce_graphics_glow_intensity;
 	ConVar ce_graphics_improved_glows;
 	ConVar ce_graphics_fix_invisible_players;
 
