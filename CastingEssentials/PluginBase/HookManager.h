@@ -63,6 +63,7 @@ namespace vgui
 {
 	class EditablePanel;
 	class ImagePanel;
+	class Panel;
 	class ProgressBar;
 }
 
@@ -148,6 +149,7 @@ enum class HookFunc
 
 	vgui_EditablePanel_GetDialogVariables,
 	vgui_ImagePanel_SetImage,
+	vgui_Panel_FindChildByName,
 	vgui_ProgressBar_ApplySettings,
 
 	Count,
@@ -446,6 +448,11 @@ class HookManager final
 	template<> struct HookFuncType<HookFunc::vgui_EditablePanel_GetDialogVariables>
 	{
 		typedef KeyValues*(__thiscall *Raw)(vgui::EditablePanel* pThis);
+	};
+	template<> struct HookFuncType<HookFunc::vgui_Panel_FindChildByName>
+	{
+		typedef vgui::Panel*(__thiscall* Raw)(vgui::Panel* pThis, const char* childName, bool recurseDown);
+		typedef GlobalClassHook<HookFunc::vgui_Panel_FindChildByName, false, vgui::Panel, vgui::Panel*, const char*, bool> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::vgui_ProgressBar_ApplySettings>
 	{

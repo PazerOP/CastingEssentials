@@ -34,11 +34,20 @@ HUDHacking::HUDHacking() :
 		"Shows a status effect icon for all players.", true, 0, true, (int)StatusEffect::COUNT),
 	ce_hud_chargebars_enabled("ce_hud_chargebars_enabled", "0", FCVAR_NONE, "Enable showing banner charge status (progress bar + label) in playerpanels."),
 
+	ce_hud_progressbar_directions("ce_hud_progressbar_directions", "0", FCVAR_NONE,
+		"Enables setting 'direction <north/east/south/west>' for vgui ProgressBar elements.",
+		[](IConVar* var, const char*, float) { GetModule()->m_ApplySettingsHook.SetEnabled(static_cast<ConVar*>(var)->GetBool()); }),
+
+	ce_hud_find_parent_elements("ce_hud_find_parent_elements", "0", FCVAR_NONE,
+		"Enables moving a panel's search-by-name scope upwards by prefixing the name with '../' (like referencing a parent's sibling in a hud animation)",
+		[](IConVar* var, const char*, float) { GetModule()->m_FindChildByNameHook.SetEnabled(static_cast<ConVar*>(var)->GetBool()); }),
+
 	ce_hud_chargebars_buff_banner_text("ce_hud_chargebars_buff_banner_text", "#TF_Unique_Achievement_SoldierBuff", FCVAR_NONE, "Text to use for the Buff Banner for the %banner% dialog variable on playerpanels."),
 	ce_hud_chargebars_battalions_backup_text("ce_hud_chargebars_battalions_backup_text", "#TF_TheBattalionsBackup", FCVAR_NONE, "Text to use for the Battalion's Backup for the %banner% dialog variable on playerpanels."),
 	ce_hud_chargebars_concheror_text("ce_hud_chargebars_concheror_text", "#TF_SoldierSashimono", FCVAR_NONE, "Text to use for the Concheror for the %banner% dialog variable on playerpanels."),
 
-	m_ApplySettingsHook(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2), true)
+	m_ApplySettingsHook(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2)),
+	m_FindChildByNameHook(std::bind(&HUDHacking::FindChildByNameOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3))
 {
 }
 
@@ -431,4 +440,20 @@ void HUDHacking::ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValue
 
 	// Always execute the real function after we run this hook
 	GetHooks()->SetState<HookFunc::vgui_ProgressBar_ApplySettings>(Hooking::HookAction::IGNORE);
+}
+
+vgui::Panel* HUDHacking::FindChildByNameOverride(vgui::Panel* pThis, const char* name, bool recurseDown)
+{
+	m_FindChildByNameHook.SetState(Hooking::HookAction::SUPERCEDE);
+
+	while (!strncmp(name, "../", 3))
+	{
+		name += 3;
+		pThis = pThis->GetParent();
+
+		if (!pThis)
+			return nullptr;
+	}
+
+	return m_FindChildByNameHook.GetOriginal()(pThis, name, recurseDown);
 }

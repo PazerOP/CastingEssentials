@@ -35,6 +35,8 @@ private:
 	ConVar ce_hud_player_status_effects;
 	ConVar ce_hud_player_status_effects_debug;
 	ConVar ce_hud_chargebars_enabled;
+	ConVar ce_hud_progressbar_directions;
+	ConVar ce_hud_find_parent_elements;
 
 	ConVar ce_hud_chargebars_buff_banner_text;
 	ConVar ce_hud_chargebars_battalions_backup_text;
@@ -87,6 +89,9 @@ private:
 
 	Hook<HookFunc::vgui_ProgressBar_ApplySettings> m_ApplySettingsHook;
 	static void ProgressBarApplySettingsHook(vgui::ProgressBar* pThis, KeyValues* pSettings);
+
+	Hook<HookFunc::vgui_Panel_FindChildByName> m_FindChildByNameHook;
+	vgui::Panel* FindChildByNameOverride(vgui::Panel* pThis, const char* name, bool recurseDown);
 
 	static EntityOffset<float> s_RageMeter;
 };
