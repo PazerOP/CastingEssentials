@@ -1,6 +1,6 @@
 screenspace_general
 {
-	$PIXSHADER ce_texture_copy_ps20
-	$basetexture _rt_FullFrameFB
-	$alpha_blend 1
+	$PIXSHADER      ce_texture_copy_ps20
+	$basetexture    _rt_FullFrameFB
+	$alpha_blend    1
 }

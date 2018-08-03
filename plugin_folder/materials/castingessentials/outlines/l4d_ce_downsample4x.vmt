@@ -1,10 +1,6 @@
 screenspace_general
-//Downsample
 {
 	$PIXSHADER      ce_outline_downsample4x_ps20
 	$basetexture    _rt_FullFrameFB
-
-	$bloomtintenable    0
-	$cstrike            0
-	$ignorez            1
+	$ignorez        1
 }
