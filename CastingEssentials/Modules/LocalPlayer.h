@@ -12,6 +12,7 @@ public:
 	LocalPlayer();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Local Player"; }
 
 private:
 	void OnTick(bool inGame) override;

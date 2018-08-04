@@ -13,6 +13,7 @@ public:
 	virtual ~PlayerAliases() = default;
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Player Aliases"; }
 
 private:
 	bool GetPlayerInfoOverride(int ent_num, player_info_s* pInfo);

@@ -22,6 +22,8 @@
 #undef max
 #include <algorithm>
 
+MODULE_REGISTER(CameraSmooths);
+
 CameraSmooths::CameraSmooths() :
 	ce_smoothing_enabled("ce_smoothing_enabled", "0", FCVAR_NONE, "Enables smoothing between spectator targets."),
 	ce_smoothing_fov("ce_smoothing_fov", "45", FCVAR_NONE, "Only targets within this FOV will be smoothed to.", true, 0, true, 180),
@@ -55,6 +57,8 @@ CameraSmooths::CameraSmooths() :
 
 bool CameraSmooths::CheckDependencies()
 {
+	Modules().Depend<CameraState>();
+
 	bool ready = true;
 
 	if (!Interfaces::GetClientEngineTools())

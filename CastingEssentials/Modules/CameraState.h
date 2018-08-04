@@ -9,10 +9,13 @@ class C_BaseEntity;
 enum ObserverMode;
 class Player;
 
+#include "ClientTools.h"
+
 class CameraState final : public Module<CameraState>
 {
 public:
 	CameraState();
+	static constexpr __forceinline const char* GetModuleName() { return "Camera State"; }
 
 	const Vector& GetLastFramePluginViewOrigin() const { return m_LastFramePluginView.m_Origin; }
 	const QAngle& GetLastFramePluginViewAngles() const { return m_LastFramePluginView.m_Angles; }

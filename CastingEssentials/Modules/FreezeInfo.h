@@ -11,6 +11,7 @@ public:
 	FreezeInfo();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Freeze Info"; }
 
 private:
 	void OnTick(bool inGame) override;

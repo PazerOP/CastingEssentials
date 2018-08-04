@@ -72,45 +72,13 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Player::Load();
 
 	Modules().Init();
-
-	Modules().RegisterAndLoadModule<HUDHacking>("Evil HUD Modifications");
-
-	// CameraTools and CameraSmooths depend on CameraState
-	Modules().RegisterAndLoadModule<CameraState>("Camera State");
-	Modules().RegisterAndLoadModule<CameraTools>("Camera Tools");
-	Modules().RegisterAndLoadModule<CameraSmooths>("Camera Smooths");
-
-	Modules().RegisterAndLoadModule<AntiFreeze>("HUD Antifreeze");
-	Modules().RegisterAndLoadModule<AutoCameras>("AutoCameras");
-	Modules().RegisterAndLoadModule<CameraAutoSwitch>("Camera Auto-Switch");
-	Modules().RegisterAndLoadModule<ConsoleTools>("Console Tools");
-	Modules().RegisterAndLoadModule<FOVOverride>("FOV Override");
-	Modules().RegisterAndLoadModule<FreezeInfo>("Freeze Info");
-	Modules().RegisterAndLoadModule<Graphics>("Graphics Enhancements");
-	Modules().RegisterAndLoadModule<HitEvents>("Player Hit Events");
-	Modules().RegisterAndLoadModule<IngameTeamScores>("Ingame Team Scores");
-	Modules().RegisterAndLoadModule<ItemSchema>("Item Schema");
-	Modules().RegisterAndLoadModule<Killfeed>("Killfeed Fixes");
-	Modules().RegisterAndLoadModule<Killstreaks>("Killstreaks");
-	Modules().RegisterAndLoadModule<LoadoutIcons>("Loadout Icons");
-	Modules().RegisterAndLoadModule<LocalPlayer>("Local Player");
-	Modules().RegisterAndLoadModule<MapConfigs>("Map Configs");
-	Modules().RegisterAndLoadModule<MedigunInfo>("Medigun Info");
-	Modules().RegisterAndLoadModule<PlayerAliases>("Player Aliases");
-	Modules().RegisterAndLoadModule<ProjectileOutlines>("Projectile Outlines");
-	Modules().RegisterAndLoadModule<SniperLOS>("Sniper LOS Beams");
-	Modules().RegisterAndLoadModule<SteamTools>("Steam Tools");
-	Modules().RegisterAndLoadModule<TeamNames>("Team Names");
-	Modules().RegisterAndLoadModule<TextureTools>("Texture Tools");
-	Modules().RegisterAndLoadModule<ClientTools>("Client Tools");
-	Modules().RegisterAndLoadModule<ViewAngles>("High-Precision View Angles");
-	Modules().RegisterAndLoadModule<WeaponTools>("Weapon Tools");
+	Modules().LoadAll();
 
 	ConVar_Register();
 
 	const auto endTime = std::chrono::high_resolution_clock::now();
 	const auto delta = std::chrono::duration<float>(endTime - startTime);
-	PluginMsg("Finished loading in %1.2f seconds.\n", delta.count());
+	PluginMsg("Finished loading %d modules in %1.2f seconds.\n", Modules().size(), delta.count());
 
 	return true;
 }

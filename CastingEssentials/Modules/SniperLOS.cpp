@@ -12,6 +12,8 @@
 #include <tier2/beamsegdraw.h>
 #include <toolframework/ienginetool.h>
 
+MODULE_REGISTER(SniperLOS);
+
 EntityTypeChecker SniperLOS::s_SniperRifleType;
 
 SniperLOS::SniperLOS() :

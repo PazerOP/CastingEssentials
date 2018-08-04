@@ -8,6 +8,8 @@
 #include <vgui/IVGui.h>
 #include <vgui_controls/EditablePanel.h>
 
+MODULE_REGISTER(IngameTeamScores);
+
 class IngameTeamScores::ScorePanel : public vgui::EditablePanel
 {
 	DECLARE_CLASS_SIMPLE(ScorePanel, vgui::EditablePanel);

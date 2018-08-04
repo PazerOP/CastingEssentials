@@ -7,6 +7,7 @@ class TeamNames final : public Module<TeamNames>
 {
 public:
 	TeamNames();
+	static constexpr __forceinline const char* GetModuleName() { return "Team Names"; }
 
 private:
 

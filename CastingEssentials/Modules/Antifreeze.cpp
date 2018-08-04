@@ -10,6 +10,8 @@
 #include <vgui_controls/Panel.h>
 #include <vprof.h>
 
+MODULE_REGISTER(AntiFreeze);
+
 class AntiFreeze::Panel : public vgui::Panel
 {
 public:

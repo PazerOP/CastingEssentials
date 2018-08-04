@@ -6,6 +6,7 @@
 #include <dt_recv.h>
 
 #include <optional>
+#include <map>
 
 class ConCommand;
 class IConVar;
@@ -16,6 +17,7 @@ public:
 	ViewAngles();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "High-Precision View Angles"; }
 
 protected:
 	void OnTick(bool inGame) override;

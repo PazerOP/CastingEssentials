@@ -8,6 +8,7 @@ class IngameTeamScores final : public Module<IngameTeamScores>
 {
 public:
 	IngameTeamScores();
+	static constexpr __forceinline const char* GetModuleName() { return "Ingame Team Scores"; }
 
 private:
 	void ReloadSettings();

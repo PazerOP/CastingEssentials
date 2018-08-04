@@ -2,6 +2,8 @@
 
 #include <vprof.h>
 
+MODULE_REGISTER(TeamNames);
+
 // Hi we're TOTALLY not hijacking a friend class that's eventually only declared in a cpp file
 class CCvar
 {

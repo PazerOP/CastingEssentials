@@ -8,6 +8,7 @@ class MapConfigs final : public Module<MapConfigs>
 {
 public:
 	MapConfigs();
+	static constexpr __forceinline const char* GetModuleName() { return "Map Configs"; }
 
 private:
 	ConVar ce_mapconfigs_enabled;

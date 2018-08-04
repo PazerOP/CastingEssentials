@@ -22,6 +22,8 @@
 #undef min
 #undef max
 
+MODULE_REGISTER(HUDHacking);
+
 EntityOffset<float> HUDHacking::s_RageMeter;
 
 ConVar HUDHacking::ce_hud_debug_unassociated_playerpanels("ce_hud_debug_unassociated_playerpanels", "0", FCVAR_NONE, "Print debug messages to the console when a player cannot be found for a given playerpanel.");

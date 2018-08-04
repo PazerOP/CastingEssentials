@@ -7,6 +7,8 @@
 #include <toolframework/ienginetool.h>
 #include <vprof.h>
 
+MODULE_REGISTER(PlayerAliases);
+
 PlayerAliases::PlayerAliases() :
 	ce_playeraliases_enabled("ce_playeraliases_enabled", "0", FCVAR_NONE, "Enables player aliases.",
 		[](IConVar* var, const char*, float) { GetModule()->ToggleEnabled(static_cast<ConVar*>(var)); }),

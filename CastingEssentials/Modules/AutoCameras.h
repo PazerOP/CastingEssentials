@@ -14,6 +14,7 @@ class AutoCameras final : public Module<AutoCameras>
 {
 public:
 	AutoCameras();
+	static constexpr __forceinline const char* GetModuleName() { return "AutoCameras"; }
 
 	void OnTick(bool ingame) override;
 

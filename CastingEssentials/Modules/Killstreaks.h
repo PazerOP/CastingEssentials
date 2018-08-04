@@ -18,6 +18,7 @@ public:
 	Killstreaks();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Killstreaks"; }
 
 protected:
 	void OnTick(bool inGame) override;

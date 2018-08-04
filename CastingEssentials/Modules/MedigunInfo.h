@@ -4,6 +4,7 @@
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
+#include <map>
 
 enum class TFMedigun;
 enum class TFResistType;
@@ -21,6 +22,7 @@ public:
 	MedigunInfo();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Medigun Info"; }
 
 protected:
 	void LevelShutdown() override;

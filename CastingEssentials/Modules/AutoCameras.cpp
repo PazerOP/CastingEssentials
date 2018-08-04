@@ -29,6 +29,8 @@
 #include <regex>
 #include <sstream>
 
+MODULE_REGISTER(AutoCameras);
+
 #undef min
 #undef max
 

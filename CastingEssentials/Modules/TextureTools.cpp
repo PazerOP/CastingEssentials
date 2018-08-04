@@ -5,6 +5,8 @@
 #include <client/baseclientrendertargets.h>
 #include <vtf/vtf.h>
 
+MODULE_REGISTER(TextureTools);
+
 TextureTools::TextureTools() :
 	ce_texturetools_full_res_rts("ce_texturetools_full_res_rts", "0", FCVAR_NONE,
 		"Create the refraction and water reflection textures at framebuffer resolution (if possible). Must be set before the first map load. Changing after that requires a game restart.",

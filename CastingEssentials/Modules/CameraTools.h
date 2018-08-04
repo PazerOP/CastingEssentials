@@ -34,6 +34,7 @@ public:
 	virtual ~CameraTools() = default;
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Camera Tools"; }
 
 	void SpecPosition(const Vector& pos, const QAngle& angle, ObserverMode mode = OBS_MODE_FIXED, float fov = -1);
 

@@ -13,6 +13,8 @@
 
 #include <Windows.h>
 
+MODULE_REGISTER(WeaponTools);
+
 WeaponTools::WeaponTools() :
 	ce_weapon_inspect_debug("ce_weapon_inspect_debug", "0", FCVAR_NONE),
 	ce_weapon_inspect_block("ce_weapon_inspect_block", "0", FCVAR_NONE, "Don't play weapon inspect animations when triggered by players.",

@@ -15,7 +15,7 @@
     </Link>
     <ClCompile>
       <TreatSpecificWarningsAsErrors>4715;4717;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
-      <PreprocessorDefinitions>SUPPRESS_INVALID_PARAMETER_NO_INFO;VERSION_SAFE_STEAM_API_INTERFACES;CLIENT_DLL;WIN32;RAD_TELEMETRY_DISABLED;TF2_SDK;TF_CLIENT_DLL;NO_PCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SUPPRESS_INVALID_PARAMETER_NO_INFO;VERSION_SAFE_STEAM_API_INTERFACES;CLIENT_DLL;WIN32;RAD_TELEMETRY_DISABLED;TF2_SDK;TF_CLIENT_DLL;NO_PCH;_X86_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>$(ProjectDir)PluginBase\Common.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <DisableSpecificWarnings>4594;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

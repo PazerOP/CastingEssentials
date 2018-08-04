@@ -12,6 +12,8 @@
 #undef min
 #undef max
 
+MODULE_REGISTER(CameraState);
+
 CameraState::CameraState() :
 	m_InToolModeHook(std::bind(&CameraState::InToolModeOverride, this)),
 	m_IsThirdPersonCameraHook(std::bind(&CameraState::IsThirdPersonCameraOverride, this)),

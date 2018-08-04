@@ -20,6 +20,7 @@ public:
 	ItemSchema();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Item Schema"; }
 
 	// Converts a "specialized" version of an item (a botkiller medigun, for example) into its
 	// "base" item (a stock medigun)

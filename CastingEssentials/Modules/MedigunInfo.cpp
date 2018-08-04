@@ -32,6 +32,8 @@
 
 #include <memdbgon.h>
 
+MODULE_REGISTER(MedigunInfo);
+
 EntityOffset<bool> MedigunInfo::s_ChargeRelease;
 EntityOffset<TFResistType> MedigunInfo::s_ChargeResistType;
 EntityOffset<float> MedigunInfo::s_ChargeLevel;

@@ -10,6 +10,7 @@ public:
 	SteamTools();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Steam Tools"; }
 
 protected:
 	void OnTick(bool inGame) override;

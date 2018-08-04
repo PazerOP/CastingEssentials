@@ -10,6 +10,7 @@ public:
 	ClientTools();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Client Tools"; }
 
 private:
 	void UpdateWindowTitle(const char* oldval);

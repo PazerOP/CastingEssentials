@@ -23,6 +23,7 @@ public:
 	virtual ~HitEvents();
 
 	static bool CheckDependencies() { return true; }
+	static constexpr __forceinline const char* GetModuleName() { return "Player Hit Events"; }
 
 protected:
 	void FireGameEvent(IGameEvent* event) override;

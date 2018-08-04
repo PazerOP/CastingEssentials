@@ -16,6 +16,8 @@
 
 #include <functional>
 
+MODULE_REGISTER(LocalPlayer);
+
 LocalPlayer::LocalPlayer() :
 	ce_localplayer_enabled("ce_localplayer_enabled", "0", FCVAR_NONE, "enable local player override",
 		[](IConVar *var, const char*, float) { GetModule()->ToggleEnabled(static_cast<ConVar*>(var)); }),

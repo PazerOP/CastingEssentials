@@ -20,6 +20,7 @@ public:
 	LoadoutIcons();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Loadout Icons"; }
 
 protected:
 	void OnTick(bool ingame) override;

@@ -9,6 +9,7 @@ class Killfeed final : public Module<Killfeed>
 {
 public:
 	Killfeed();
+	static constexpr __forceinline const char* GetModuleName() { return "Killfeed Fixes"; }
 
 private:
 	ConVar ce_killfeed_continuous_update;
