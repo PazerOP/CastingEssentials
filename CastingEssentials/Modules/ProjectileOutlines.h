@@ -20,6 +20,7 @@ public:
 	ProjectileOutlines();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Projectile Outlines"; }
 
 private:
 	ConVar ce_projectileoutlines_rockets;

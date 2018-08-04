@@ -29,6 +29,7 @@ public:
 	const ConVar& GetDebugGlowConVar() const { return ce_graphics_debug_glow; }
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Graphics Enhancements"; }
 
 protected:
 	void OnTick(bool inGame) override;

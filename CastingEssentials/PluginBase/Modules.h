@@ -24,6 +24,9 @@ protected:
 private:
 	friend class ModuleManager;
 
+	// ModuleManager gets to call this so it can retrieve module name after type erasure
+	virtual const char* GetModuleName() = 0;
+
 	static bool s_InGame;
 };
 
@@ -34,10 +37,11 @@ public:
 	virtual ~Module() = default;
 
 	static __forceinline T * GetModule() { return s_Module; }
-	static __forceinline const char* GetModuleName() { return Modules().GetModuleName<T>().c_str(); }
 
 private:
 	friend class ModuleManager;
+
+	virtual const char* GetModuleName() override { return T::GetModuleName(); }
 
 	static T* s_Module;
 };
@@ -51,8 +55,8 @@ public:
 	void UnloadAllModules();
 
 	template <typename ModuleType> ModuleType *GetModule() const;
-	template <typename ModuleType> const std::string& GetModuleName() const;
-	template <typename ModuleType> bool RegisterAndLoadModule(const std::string& moduleName);
+	template <typename ModuleType> constexpr const char* GetModuleName() const;
+	template <typename ModuleType> bool RegisterAndLoadModule();
 
 private:
 	class Panel;
@@ -63,7 +67,6 @@ private:
 	struct ModuleData
 	{
 		std::unique_ptr<IBaseModule> m_Module;
-		std::string m_Name;
 		void** m_Pointer;
 	};
 
@@ -81,38 +84,29 @@ template <typename ModuleType> inline ModuleType *ModuleManager::GetModule() con
 		throw module_not_loaded(GetModuleName<ModuleType>().c_str());
 }
 
-template <typename ModuleType> inline const std::string& ModuleManager::GetModuleName() const
+template <typename ModuleType> inline constexpr const char* ModuleManager::GetModuleName() const
 {
-	static const std::type_index s_ThisModuleType = typeid(ModuleType);
-
-	auto found = modules.find(s_ThisModuleType);
-	if (found != modules.end())
-		return found->second.m_Name;
-	else
-	{
-		static std::string s_UnknownString = "[Unknown]";
-		return s_UnknownString;
-	}
+	return ModuleType::GetModuleName();
 }
 
-template <typename ModuleType> inline bool ModuleManager::RegisterAndLoadModule(const std::string& moduleName)
+template <typename ModuleType> inline bool ModuleManager::RegisterAndLoadModule()
 {
+	const auto moduleName = ModuleType::GetModuleName();
 	if (ModuleType::CheckDependencies())
 	{
 		{
 			ModuleData& data = modules[typeid(ModuleType)];
 			Assert(!data.m_Module);
 			data.m_Module.reset(ModuleType::s_Module = new ModuleType());
-			data.m_Name = moduleName;
 			data.m_Pointer = reinterpret_cast<void**>(&ModuleType::s_Module);
 		}
 
-		PluginColorMsg(Color(0, 255, 0, 255), "Module %s loaded successfully!\n", moduleName.c_str());
+		PluginColorMsg(Color(0, 255, 0, 255), "Module %s loaded successfully!\n", moduleName);
 		return true;
 	}
 	else
 	{
-		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load!\n", moduleName.c_str());
+		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load!\n", moduleName);
 		return false;
 	}
 }

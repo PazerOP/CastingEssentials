@@ -21,6 +21,7 @@ public:
 	MedigunInfo();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Medigun Info"; }
 
 protected:
 	void LevelShutdown() override;

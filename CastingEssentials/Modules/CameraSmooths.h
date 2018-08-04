@@ -19,6 +19,7 @@ public:
 	CameraSmooths();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Camera Smooths"; }
 
 	bool IsSmoothing() const { return m_InProgress; }
 private:

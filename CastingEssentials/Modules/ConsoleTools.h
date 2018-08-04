@@ -13,6 +13,7 @@ public:
 	ConsoleTools();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Console Tools"; }
 
 private:
 	void ConsoleColorPrintfHook(const Color& color, const char* msg);

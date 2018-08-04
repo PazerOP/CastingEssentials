@@ -13,6 +13,7 @@ public:
 	TextureTools();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Texture Tools"; }
 
 private:
 	Hook<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets> m_CreateRenderTargetsHook;

@@ -22,6 +22,7 @@ public:
 	HUDHacking();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Evil HUD Modifications"; }
 
 	static vgui::VPANEL GetSpecGUI();
 	static Player* GetPlayerFromPanel(vgui::EditablePanel* playerPanel);

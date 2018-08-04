@@ -14,6 +14,7 @@ public:
 	SniperLOS();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Sniper LOS Beams"; }
 
 private:
 	static EntityTypeChecker s_SniperRifleType;

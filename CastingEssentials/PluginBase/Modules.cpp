@@ -31,9 +31,10 @@ void ModuleManager::UnloadAllModules()
 {
 	for (auto iterator = modules.rbegin(); iterator != modules.rend(); iterator++)
 	{
+		const std::string moduleName(iterator->second.m_Module->GetModuleName());
 		iterator->second.m_Module.reset();				// Delete the module
 		*iterator->second.m_Pointer = nullptr;			// Zero out the static pointer to self
-		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", iterator->second.m_Name.c_str());
+		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", moduleName.c_str());
 	}
 
 	modules.clear();

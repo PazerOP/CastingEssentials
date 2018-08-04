@@ -12,6 +12,7 @@ public:
 	virtual ~CameraAutoSwitch();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "Camera Auto-Switch"; }
 
 private:
 	ConVar ce_cameraautoswitch_enabled;

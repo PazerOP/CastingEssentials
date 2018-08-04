@@ -12,6 +12,7 @@ public:
 	AntiFreeze();
 
 	static bool CheckDependencies();
+	static constexpr __forceinline const char* GetModuleName() { return "HUD Antifreeze"; }
 
 private:
 	class Panel;
