@@ -9,6 +9,7 @@ static ModuleManager s_ModuleManager;
 ModuleManager& Modules() { return s_ModuleManager; }
 
 bool IBaseModule::s_InGame;
+ModuleDesc* g_ModuleList = nullptr;
 
 class ModuleManager::Panel final : public vgui::StubPanel
 {
@@ -31,7 +32,7 @@ void ModuleManager::UnloadAllModules()
 {
 	for (auto iterator = modules.rbegin(); iterator != modules.rend(); iterator++)
 	{
-		auto mod = iterator->m_Module->ZeroSingleton(); // Grab the singleton instance
+		auto mod = iterator->m_Module->ReplaceSingleton(nullptr); // Grab the singleton instance
 		const std::string moduleName(mod->GetModuleName());
 		mod = nullptr;
 		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", moduleName.c_str());
@@ -39,6 +40,59 @@ void ModuleManager::UnloadAllModules()
 
 	modules.clear();
 	m_Panel.reset();
+}
+
+void ModuleManager::LoadAll()
+{
+	auto md = g_ModuleList;
+	while (md) {
+		try {
+			Load(*md);
+		}
+		catch (const std::exception&) { }
+		md = md->next;
+	}
+}
+
+void ModuleManager::Load(ModuleDesc& desc)
+{
+	switch (desc.state) {
+	case ModuleState::MODULE_FAILED:
+		throw module_load_failed(desc.name.c_str());
+	case ModuleState::MODULE_LOADING:
+		throw module_circular_dependency(desc.name.c_str());
+	case ModuleState::MODULE_LOADED:
+		return;
+	}
+
+	desc.state = ModuleState::MODULE_LOADING;
+	try
+	{
+		auto mod = desc.factory();
+		Assert(mod);
+		modules.push_back({ mod.get() });
+		mod->ReplaceSingleton(std::move(mod));
+		desc.state = ModuleState::MODULE_LOADED;
+		PluginColorMsg(Color(0, 255, 0, 255), "Module %s loaded successfully!\n", desc.name.c_str());
+	}
+	catch (const module_circular_dependency& e)
+	{
+		desc.state = ModuleState::MODULE_FAILED;
+		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load because of circular dependency on module %s!\n", desc.name.c_str(), e.what());
+		throw module_load_failed(desc.name.c_str());
+	}
+	catch (const module_dependency_failed& e)
+	{
+		desc.state = ModuleState::MODULE_FAILED;
+		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load because dependency %s did not load!\n", desc.name.c_str(), e.what());
+		throw module_load_failed(desc.name.c_str());
+	}
+	catch (const std::exception&)
+	{
+		desc.state = ModuleState::MODULE_FAILED;
+		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load!\n", desc.name.c_str());
+		throw module_load_failed(desc.name.c_str());
+	}
 }
 
 void ModuleManager::Panel::LevelInitAllModules()

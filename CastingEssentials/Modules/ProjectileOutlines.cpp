@@ -10,6 +10,8 @@
 // smh windows
 #undef IGNORE
 
+MODULE_REGISTER(ProjectileOutlines);
+
 EntityOffset<bool> ProjectileOutlines::s_GlowDisabledOffset;
 EntityOffset<int> ProjectileOutlines::s_GlowModeOffset;
 EntityOffset<EHANDLE> ProjectileOutlines::s_GlowTargetOffset;

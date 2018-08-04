@@ -12,6 +12,8 @@
 #undef min
 #undef max
 
+MODULE_REGISTER(ItemSchema);
+
 ItemSchema::ItemSchema() :
 	ce_itemschema_print("ce_itemschema_print", []() { GetModule()->PrintAliases(); }, "Prints the current state of the item schema module."),
 	ce_itemschema_reload("ce_itemschema_reload", []() { GetModule()->LoadItemSchema(); }, "Reloads the item schema module.")

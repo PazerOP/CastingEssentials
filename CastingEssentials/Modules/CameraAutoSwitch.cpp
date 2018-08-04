@@ -25,6 +25,8 @@
 #include <vgui/IVGui.h>
 #include <vprof.h>
 
+MODULE_REGISTER(CameraAutoSwitch);
+
 CameraAutoSwitch::CameraAutoSwitch() :
 	ce_cameraautoswitch_enabled("ce_cameraautoswitch_enabled", "0", FCVAR_NONE, "enable automatic switching of camera"),
 

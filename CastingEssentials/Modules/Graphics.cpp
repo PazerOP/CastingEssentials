@@ -28,6 +28,8 @@
 #undef min
 #undef max
 
+MODULE_REGISTER(Graphics);
+
 EntityOffset<EHANDLE> Graphics::s_MoveParent;
 EntityTypeChecker Graphics::s_TFViewModelType;
 

@@ -10,6 +10,8 @@
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 
+MODULE_REGISTER(FreezeInfo);
+
 class FreezeInfo::Panel : public vgui::EditablePanel
 {
 public:

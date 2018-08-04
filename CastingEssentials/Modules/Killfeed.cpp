@@ -10,6 +10,8 @@
 #include <locale>
 #include <codecvt>
 
+MODULE_REGISTER(Killfeed);
+
 Killfeed::Killfeed() :
 	ce_killfeed_continuous_update("ce_killfeed_continuous_update", "0", FCVAR_NONE, "Continually updates the killfeed background/icons based on the local player index.")
 {

@@ -13,6 +13,8 @@
 #undef min
 #undef max
 
+MODULE_REGISTER(ConsoleTools);
+
 class ConsoleTools::PauseFilter final
 {
 public:

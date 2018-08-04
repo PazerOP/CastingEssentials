@@ -14,6 +14,8 @@
 
 #include <sstream>
 
+MODULE_REGISTER(HitEvents);
+
 HitEvents::HitEvents() :
 	ce_hitevents_enabled("ce_hitevents_enabled", "0", FCVAR_NONE, "Enables hitsounds and damage numbers in STVs.",
 		[](IConVar* var, const char* oldValue, float fOldValue) { GetModule()->UpdateEnabledState(); }),

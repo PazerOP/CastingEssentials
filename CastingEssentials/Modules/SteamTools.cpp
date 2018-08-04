@@ -5,6 +5,8 @@
 #include <steam/steam_api.h>
 #include <toolframework/ienginetool.h>
 
+MODULE_REGISTER(SteamTools);
+
 SteamTools::SteamTools() :
 	ce_steamtools_rp_legacy("ce_steamtools_rp_legacy", "", FCVAR_NONE, "The rich presence status displayed in the \"View Game Info\" dialog.",
 		[](IConVar*, const char*, float) { GetModule()->UpdateRichPresence(); }),

@@ -30,6 +30,8 @@
 
 #include "Controls/StubPanel.h"
 
+MODULE_REGISTER(Killstreaks);
+
 std::array<EntityOffset<int>, 4> Killstreaks::s_PlayerStreaks;
 EntityOffset<bool> Killstreaks::s_MedigunHealing;
 EntityOffset<EHANDLE> Killstreaks::s_MedigunHealingTarget;

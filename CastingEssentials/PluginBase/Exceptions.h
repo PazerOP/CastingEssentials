@@ -29,6 +29,35 @@ private:
 	const char *moduleName;
 };
 
+class module_load_failed : public std::exception
+{
+public:
+	module_load_failed(const char *name) noexcept : moduleName(name) {}
+	virtual const char *what() const noexcept { return moduleName.c_str(); }
+private:
+	std::string moduleName;
+};
+
+class module_circular_dependency : public std::exception
+{
+public:
+	module_circular_dependency(const char *name) noexcept : moduleName(name) {}
+	virtual const char *what() const noexcept { return moduleName.c_str(); }
+private:
+	std::string moduleName;
+	std::string message;
+};
+
+class module_dependency_failed : public std::exception
+{
+public:
+	module_dependency_failed(const char *name) noexcept : moduleName(name) {}
+	virtual const char *what() const noexcept { return moduleName.c_str(); }
+private:
+	std::string moduleName;
+	std::string message;
+};
+
 class bad_pointer : public std::exception
 {
 public:

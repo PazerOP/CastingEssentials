@@ -26,6 +26,8 @@
 
 #include <algorithm>
 
+MODULE_REGISTER(CameraTools);
+
 EntityOffset<float> CameraTools::s_ViewOffsetZOffset;
 
 CameraTools::CameraTools() :
@@ -98,6 +100,8 @@ CameraTools::CameraTools() :
 
 bool CameraTools::CheckDependencies()
 {
+	Modules().Depend<CameraState>();
+
 	bool ready = true;
 
 	if (!Interfaces::GetEngineTool())

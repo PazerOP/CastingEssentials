@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <typeindex>
+#include <functional>
 
 #include "exceptions.h"
 
@@ -25,7 +26,7 @@ private:
 	friend class ModuleManager;
 
 	virtual const char* GetModuleName() = 0; // ModuleManager gets to call this so it can retrieve module name after type erasure
-	virtual std::unique_ptr<IBaseModule> ZeroSingleton() = 0; // Unset the global singleton and return the instance that used to be there
+	virtual std::unique_ptr<IBaseModule> ReplaceSingleton(std::unique_ptr<IBaseModule> replacement) = 0; // Replaces global singleton and returns the old instance
 
 	static bool s_InGame;
 };
@@ -45,12 +46,46 @@ private:
 	friend class ModuleManager;
 
 	virtual const char* GetModuleName() override { return T::GetModuleName(); }
-	virtual std::unique_ptr<IBaseModule> ZeroSingleton() override { return std::move(s_Module); }
+	virtual std::unique_ptr<IBaseModule> ReplaceSingleton(std::unique_ptr<IBaseModule> replacement) override {
+		replacement.swap(s_Module);
+		return replacement;
+	}
 
 	static std::unique_ptr<IBaseModule> s_Module;
 };
 
 template<class T> std::unique_ptr<IBaseModule> Module<T>::s_Module = nullptr;	// Static module pointer variable definition
+
+struct ModuleDesc;
+// A global list of all known modules
+extern ModuleDesc* g_ModuleList;
+
+enum class ModuleState
+{
+	MODULE_UNLOADED,
+	MODULE_LOADING,
+	MODULE_FAILED,
+	MODULE_LOADED,
+};
+
+struct ModuleDesc
+{
+	const std::type_info& ti;
+	std::function<std::unique_ptr<IBaseModule>()> factory;
+	const std::string name;
+	ModuleState state = ModuleState::MODULE_UNLOADED;
+	ModuleDesc* next;
+
+	ModuleDesc(const std::type_info& ti, const char* name, std::function<std::unique_ptr<IBaseModule>()> factory) : ti(ti), name(name), factory(factory) {
+		this->next = g_ModuleList;
+		g_ModuleList = this;
+	}
+};
+
+#define MODULE_REGISTER(T) ModuleDesc module_desc_ ## T (typeid(T), T::GetModuleName(), []() -> std::unique_ptr<IBaseModule> { \
+	if (!T::CheckDependencies()) throw module_load_failed(T::GetModuleName()); \
+	return std::make_unique<T>(); \
+});
 
 class ModuleManager final
 {
@@ -60,9 +95,15 @@ public:
 
 	template <typename ModuleType> ModuleType *GetModule() const;
 	template <typename ModuleType> constexpr const char* GetModuleName() const;
-	template <typename ModuleType> bool RegisterAndLoadModule();
+	template <typename ModuleType> void Depend();
+	void LoadAll();
+
+	std::size_t size() { return modules.size(); }
 
 private:
+
+	void Load(ModuleDesc& desc);
+
 	class Panel;
 	std::unique_ptr<Panel> m_Panel;
 
@@ -86,26 +127,24 @@ template <typename ModuleType> inline constexpr const char* ModuleManager::GetMo
 	return ModuleType::GetModuleName();
 }
 
-template <typename ModuleType> inline bool ModuleManager::RegisterAndLoadModule()
+template <typename ModuleType> inline void ModuleManager::Depend()
 {
-	const auto moduleName = ModuleType::GetModuleName();
-	if (ModuleType::s_Module) {
-		PluginColorMsg(Color(0, 0, 255, 255), "Module %s already loaded!\n", moduleName);
-		return true;
+	// Find the module we need in the global list
+	const auto& ti = typeid(ModuleType);
+	auto md = g_ModuleList;
+	while (md) {
+		if (md->ti == ti) {
+			try {
+				Load(*md);
+			}
+			catch (const std::exception&) {
+				throw module_dependency_failed(md->name.c_str());
+			}
+			return;
+		}
+		md = md->next;
 	}
-	else if (ModuleType::CheckDependencies())
-	{
-		ModuleType::s_Module.reset(new ModuleType());
-		modules.push_back({ ModuleType::s_Module.get() });
-
-		PluginColorMsg(Color(0, 255, 0, 255), "Module %s loaded successfully!\n", moduleName);
-		return true;
-	}
-	else
-	{
-		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load!\n", moduleName);
-		return false;
-	}
+	throw module_load_failed(ti.name());
 }
 
 extern ModuleManager& Modules();

@@ -3,6 +3,8 @@
 
 #include <cdll_int.h>
 
+MODULE_REGISTER(MapConfigs);
+
 MapConfigs::MapConfigs() :
 	ce_mapconfigs_enabled("ce_mapconfigs_enabled", "0", FCVAR_NONE, "If 1, execs cfg/<mapname>.cfg on mapchange.")
 {

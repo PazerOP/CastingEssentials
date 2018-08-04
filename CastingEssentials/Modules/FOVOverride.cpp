@@ -14,6 +14,8 @@
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
 
+MODULE_REGISTER(FOVOverride);
+
 FOVOverride::FOVOverride() :
 	ce_fovoverride_firstperson("ce_fovoverride_firstperson", "90"),
 	ce_fovoverride_thirdperson("ce_fovoverride_thirdperson", "90"),

@@ -4,6 +4,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
+MODULE_REGISTER(ClientTools);
+
 ClientTools::ClientTools() :
 	ce_clienttools_windowtitle("ce_clienttools_windowtitle", "", FCVAR_NONE, "Overrides the game window title",
 		[](IConVar* var, const char* oldval, float foldval) { GetModule()->UpdateWindowTitle(oldval); })
@@ -50,6 +52,8 @@ HWND GetMainWindow()
 	}
 	return (HWND)g_pGame->GetMainWindow();
 }
+
+#include "CameraTools.h"
 
 bool ClientTools::CheckDependencies()
 {

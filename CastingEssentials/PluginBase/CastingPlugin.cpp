@@ -72,45 +72,13 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	Player::Load();
 
 	Modules().Init();
-
-	Modules().RegisterAndLoadModule<HUDHacking>();
-
-	// CameraTools and CameraSmooths depend on CameraState
-	Modules().RegisterAndLoadModule<CameraState>();
-	Modules().RegisterAndLoadModule<CameraTools>();
-	Modules().RegisterAndLoadModule<CameraSmooths>();
-
-	Modules().RegisterAndLoadModule<AntiFreeze>();
-	Modules().RegisterAndLoadModule<AutoCameras>();
-	Modules().RegisterAndLoadModule<CameraAutoSwitch>();
-	Modules().RegisterAndLoadModule<ConsoleTools>();
-	Modules().RegisterAndLoadModule<FOVOverride>();
-	Modules().RegisterAndLoadModule<FreezeInfo>();
-	Modules().RegisterAndLoadModule<Graphics>();
-	Modules().RegisterAndLoadModule<HitEvents>();
-	Modules().RegisterAndLoadModule<IngameTeamScores>();
-	Modules().RegisterAndLoadModule<ItemSchema>();
-	Modules().RegisterAndLoadModule<Killfeed>();
-	Modules().RegisterAndLoadModule<Killstreaks>();
-	Modules().RegisterAndLoadModule<LoadoutIcons>();
-	Modules().RegisterAndLoadModule<LocalPlayer>();
-	Modules().RegisterAndLoadModule<MapConfigs>();
-	Modules().RegisterAndLoadModule<MedigunInfo>();
-	Modules().RegisterAndLoadModule<PlayerAliases>();
-	Modules().RegisterAndLoadModule<ProjectileOutlines>();
-	Modules().RegisterAndLoadModule<SniperLOS>();
-	Modules().RegisterAndLoadModule<SteamTools>();
-	Modules().RegisterAndLoadModule<TeamNames>();
-	Modules().RegisterAndLoadModule<TextureTools>();
-	Modules().RegisterAndLoadModule<ClientTools>();
-	Modules().RegisterAndLoadModule<ViewAngles>();
-	Modules().RegisterAndLoadModule<WeaponTools>();
+	Modules().LoadAll();
 
 	ConVar_Register();
 
 	const auto endTime = std::chrono::high_resolution_clock::now();
 	const auto delta = std::chrono::duration<float>(endTime - startTime);
-	PluginMsg("Finished loading in %1.2f seconds.\n", delta.count());
+	PluginMsg("Finished loading %d modules in %1.2f seconds.\n", Modules().size(), delta.count());
 
 	return true;
 }

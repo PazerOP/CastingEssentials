@@ -14,6 +14,8 @@
 #include "vgui_controls/ImagePanel.h"
 #include <vprof.h>
 
+MODULE_REGISTER(LoadoutIcons);
+
 LoadoutIcons::LoadoutIcons() :
 	ce_loadout_enabled("ce_loadout_enabled", "0", FCVAR_NONE, "Enable weapon icons inside player panels in the specgui."),
 	ce_loadout_filter_active_red("ce_loadout_filter_active_red", "255 255 255 255", FCVAR_NONE, "drawcolor_override for red team's active loadout items."),

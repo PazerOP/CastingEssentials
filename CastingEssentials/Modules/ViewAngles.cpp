@@ -6,6 +6,8 @@
 #include <edict.h>
 #include <icliententity.h>
 
+MODULE_REGISTER(ViewAngles);
+
 EntityOffset<float> ViewAngles::s_EyeAngles0Offset;
 EntityOffset<float> ViewAngles::s_EyeAngles1Offset;
 EntityOffset<float> ViewAngles::s_KartBoostOffset;
