@@ -6,6 +6,7 @@
 #include <dt_recv.h>
 
 #include <optional>
+#include <map>
 
 class ConCommand;
 class IConVar;

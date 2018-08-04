@@ -31,9 +31,9 @@ void ModuleManager::UnloadAllModules()
 {
 	for (auto iterator = modules.rbegin(); iterator != modules.rend(); iterator++)
 	{
-		const std::string moduleName(iterator->second.m_Module->GetModuleName());
-		iterator->second.m_Module.reset();				// Delete the module
-		*iterator->second.m_Pointer = nullptr;			// Zero out the static pointer to self
+		auto mod = iterator->m_Module->ZeroSingleton(); // Grab the singleton instance
+		const std::string moduleName(mod->GetModuleName());
+		mod = nullptr;
 		PluginColorMsg(Color(0, 255, 0, 255), "Module %s unloaded!\n", moduleName.c_str());
 	}
 
@@ -45,15 +45,15 @@ void ModuleManager::Panel::LevelInitAllModules()
 {
 	IBaseModule::s_InGame = true;
 
-	for (const auto& pair : Modules().modules)
-		pair.second.m_Module->LevelInit();
+	for (const auto& data : Modules().modules)
+		data.m_Module->LevelInit();
 }
 void ModuleManager::Panel::LevelShutdownAllModules()
 {
 	IBaseModule::s_InGame = false;
 
-	for (const auto& pair : Modules().modules)
-		pair.second.m_Module->LevelShutdown();
+	for (const auto& data : Modules().modules)
+		data.m_Module->LevelShutdown();
 }
 
 void ModuleManager::Panel::OnTick()
@@ -87,6 +87,6 @@ void ModuleManager::Panel::OnTick()
 
 void ModuleManager::TickAllModules(bool inGame)
 {
-	for (const auto& pair : modules)
-		pair.second.m_Module->OnTick(inGame);
+	for (const auto& data : modules)
+		data.m_Module->OnTick(inGame);
 }

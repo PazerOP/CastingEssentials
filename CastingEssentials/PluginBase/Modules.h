@@ -1,6 +1,6 @@
 #pragma once
 
-#include <map>
+#include <vector>
 #include <memory>
 #include <string>
 #include <typeindex>
@@ -24,8 +24,8 @@ protected:
 private:
 	friend class ModuleManager;
 
-	// ModuleManager gets to call this so it can retrieve module name after type erasure
-	virtual const char* GetModuleName() = 0;
+	virtual const char* GetModuleName() = 0; // ModuleManager gets to call this so it can retrieve module name after type erasure
+	virtual std::unique_ptr<IBaseModule> ZeroSingleton() = 0; // Unset the global singleton and return the instance that used to be there
 
 	static bool s_InGame;
 };
@@ -36,17 +36,21 @@ class Module : public IBaseModule
 public:
 	virtual ~Module() = default;
 
-	static __forceinline T * GetModule() { return s_Module; }
+	static __forceinline T* GetModule() {
+		if (!s_Module) throw module_not_loaded(T::GetModuleName());
+		return reinterpret_cast<T*>(s_Module.get());
+	}
 
 private:
 	friend class ModuleManager;
 
 	virtual const char* GetModuleName() override { return T::GetModuleName(); }
+	virtual std::unique_ptr<IBaseModule> ZeroSingleton() override { return std::move(s_Module); }
 
-	static T* s_Module;
+	static std::unique_ptr<IBaseModule> s_Module;
 };
 
-template<class T> T* Module<T>::s_Module = nullptr;	// Static module pointer variable definition
+template<class T> std::unique_ptr<IBaseModule> Module<T>::s_Module = nullptr;	// Static module pointer variable definition
 
 class ModuleManager final
 {
@@ -66,22 +70,15 @@ private:
 
 	struct ModuleData
 	{
-		std::unique_ptr<IBaseModule> m_Module;
-		void** m_Pointer;
+		IBaseModule* m_Module;
 	};
 
-	std::map<std::type_index, ModuleData> modules;
+	std::vector<ModuleData> modules;
 };
 
 template <typename ModuleType> inline ModuleType *ModuleManager::GetModule() const
 {
-	static const std::type_index s_ThisModuleType = typeid(ModuleType);
-
-	auto found = modules.find(s_ThisModuleType);
-	if (found != modules.end())
-		return static_cast<ModuleType *>(found->second.m_Module.get());
-	else
-		throw module_not_loaded(GetModuleName<ModuleType>().c_str());
+	return ModuleType::GetModule();
 }
 
 template <typename ModuleType> inline constexpr const char* ModuleManager::GetModuleName() const
@@ -92,14 +89,14 @@ template <typename ModuleType> inline constexpr const char* ModuleManager::GetMo
 template <typename ModuleType> inline bool ModuleManager::RegisterAndLoadModule()
 {
 	const auto moduleName = ModuleType::GetModuleName();
-	if (ModuleType::CheckDependencies())
+	if (ModuleType::s_Module) {
+		PluginColorMsg(Color(0, 0, 255, 255), "Module %s already loaded!\n", moduleName);
+		return true;
+	}
+	else if (ModuleType::CheckDependencies())
 	{
-		{
-			ModuleData& data = modules[typeid(ModuleType)];
-			Assert(!data.m_Module);
-			data.m_Module.reset(ModuleType::s_Module = new ModuleType());
-			data.m_Pointer = reinterpret_cast<void**>(&ModuleType::s_Module);
-		}
+		ModuleType::s_Module.reset(new ModuleType());
+		modules.push_back({ ModuleType::s_Module.get() });
 
 		PluginColorMsg(Color(0, 255, 0, 255), "Module %s loaded successfully!\n", moduleName);
 		return true;

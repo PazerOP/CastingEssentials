@@ -4,6 +4,7 @@
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
+#include <map>
 
 enum class TFMedigun;
 enum class TFResistType;
