@@ -270,6 +270,8 @@ void HUDHacking::UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePan
 	}
 }
 
+#pragma warning(push)
+#pragma warning(disable : 4701)	// Potentially uninitialized local variable used
 void HUDHacking::UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player)
 {
 	if (!enabled)
@@ -329,6 +331,7 @@ void HUDHacking::UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::Edi
 	if (chargebar)
 		chargebar->SetVisible(shouldShowInfo);
 }
+#pragma warning(pop)
 
 bool HUDHacking::GetBannerInfo(const Player& player, BannerType& type, float& charge)
 {
