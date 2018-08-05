@@ -9,8 +9,6 @@ class C_BaseEntity;
 enum ObserverMode;
 class Player;
 
-#include "ClientTools.h"
-
 class CameraState final : public Module<CameraState>
 {
 public:
