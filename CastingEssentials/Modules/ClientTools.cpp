@@ -53,8 +53,6 @@ HWND GetMainWindow()
 	return (HWND)g_pGame->GetMainWindow();
 }
 
-#include "CameraTools.h"
-
 bool ClientTools::CheckDependencies()
 {
 	bool ready = true;
