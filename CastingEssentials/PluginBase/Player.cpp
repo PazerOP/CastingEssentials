@@ -243,6 +243,27 @@ float Player::GetLastHurtTime() const
 	return Interfaces::GetEngineTool()->ClientTime() - m_LastHurtTime;
 }
 
+void Player::UpdateClassChangedFrame()
+{
+	const auto tick = Interfaces::GetEngineTool()->ClientTick();
+	if (tick == m_LastClassChangedUpdateTick)
+		return;
+
+	auto playerClass = GetClass();
+
+	// Update last class changed frame
+	if (playerClass != m_LastClassChangedClass)
+		m_LastClassChangedFrame = Interfaces::GetEngineTool()->HostFrameCount();
+
+	m_LastClassChangedClass = playerClass;
+	m_LastClassChangedUpdateTick = tick;
+}
+
+bool Player::WasClassChangedThisFrame() const
+{
+	return Interfaces::GetEngineTool()->HostFrameCount() == m_LastClassChangedFrame;
+}
+
 void Player::ResetLastHurtTime()
 {
 	m_LastHurtTime = Interfaces::GetEngineTool()->ClientTime();

@@ -59,7 +59,6 @@
       <AdditionalOptions>/EDITANDCONTINUE %(AdditionalOptions)</AdditionalOptions>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -209,6 +208,11 @@
     <Natvis Include="Misc\NatVis\CUtlVector.natvis" />
     <Natvis Include="Misc\NatVis\RecvProp.natvis" />
     <Natvis Include="Misc\NatVis\RecvTable.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\sdk2013\mp\src\vgui2\vgui_controls\vgui_controls.vcxproj">
+      <Project>{f69b3672-c5e8-cd1a-257f-253a25b5b939}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

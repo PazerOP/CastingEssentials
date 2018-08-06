@@ -10,6 +10,7 @@ class Player;
 namespace vgui
 {
 	typedef unsigned int VPANEL;
+	class AnimationController;
 	class Panel;
 	class EditablePanel;
 	class ImagePanel;
@@ -38,6 +39,8 @@ private:
 	ConVar ce_hud_chargebars_enabled;
 	ConVar ce_hud_progressbar_directions;
 	ConVar ce_hud_find_parent_elements;
+
+	ConVar ce_hud_class_change_animations;
 
 	ConVar ce_hud_chargebars_buff_banner_text;
 	ConVar ce_hud_chargebars_battalions_backup_text;
@@ -85,6 +88,7 @@ private:
 	static void UpdatePlayerHealth(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
 	void UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
 	void UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
+	void UpdateClassChangeAnimations(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, Player& player);
 
 	static bool GetBannerInfo(const Player& player, BannerType& type, float& charge);
 
@@ -93,6 +97,8 @@ private:
 
 	Hook<HookFunc::vgui_Panel_FindChildByName> m_FindChildByNameHook;
 	vgui::Panel* FindChildByNameOverride(vgui::Panel* pThis, const char* name, bool recurseDown);
+
+	static vgui::AnimationController* GetAnimationController();
 
 	static EntityOffset<float> s_RageMeter;
 };

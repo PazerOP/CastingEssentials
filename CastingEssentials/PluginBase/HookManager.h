@@ -61,6 +61,7 @@ class C_TFPlayer;
 
 namespace vgui
 {
+	class AnimationController;
 	class EditablePanel;
 	class ImagePanel;
 	class Panel;
@@ -147,6 +148,7 @@ enum class HookFunc
 
 	IVEngineClient_GetPlayerInfo,
 
+	vgui_AnimationController_StartAnimationSequence,
 	vgui_EditablePanel_GetDialogVariables,
 	vgui_ImagePanel_SetImage,
 	vgui_Panel_FindChildByName,
@@ -444,6 +446,10 @@ class HookManager final
 	{
 		typedef void(__thiscall *Raw)(C_TFViewModel* pThis, C_BasePlayer* player, const Vector& eyePos, const QAngle& eyeAng);
 		typedef GlobalClassHook<HookFunc::C_TFViewModel_CalcViewModelView, false, C_TFViewModel, void, C_BasePlayer*, const Vector&, const QAngle&> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::vgui_AnimationController_StartAnimationSequence>
+	{
+		typedef bool(__thiscall* Raw)(vgui::AnimationController* pThis, vgui::Panel* pWithinParent, const char* sequenceName, bool unknown);
 	};
 	template<> struct HookFuncType<HookFunc::vgui_EditablePanel_GetDialogVariables>
 	{

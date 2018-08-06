@@ -248,6 +248,7 @@ void HookManager::InitRawFunctionsList()
 
 	FindFunc<HookFunc::IGameSystem_Add>("\x55\x8B\xEC\x51\x8B\x15????\x8B\x0D", "xxxxxx????xx");
 
+	FindFunc<HookFunc::vgui_AnimationController_StartAnimationSequence>("\x55\x8B\xEC\x51\x56\x8B\xF1\x57\x80\xBE", "xxxxxxxxxx");
 	FindFunc<HookFunc::vgui_EditablePanel_GetDialogVariables>("\x56\x8B\xF1\x8B\x86????\x85\xC0\x75\x2A", "xxxxx????xxxx");
 	FindFunc<HookFunc::vgui_ImagePanel_SetImage>("\x55\x8B\xEC\x53\x57\x8B\x7D\x08\x8B\xD9\x85\xFF\x74\x18", "xxxxxxxxxxxxxx");
 	FindFunc<HookFunc::vgui_Panel_FindChildByName>("\x55\x8B\xEC\x83\xEC\x28\xA1????\x53\x8B\xD9\x33\xC9", "xxxxxxx????xxxxx");

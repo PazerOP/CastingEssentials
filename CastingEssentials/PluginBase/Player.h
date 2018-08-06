@@ -75,6 +75,9 @@ public:
 	void ResetLastHurtTime();
 	float GetLastHurtTime() const;
 
+	void UpdateClassChangedFrame();
+	bool WasClassChangedThisFrame() const;
+
 private:
 	class Iterator : public std::iterator<std::forward_iterator_tag, Player*>
 	{
@@ -123,6 +126,10 @@ private:
 	int m_LastHurtUpdateTick = -1;
 	float m_LastHurtTime;
 	int m_LastHurtHealth;
+
+	int m_LastClassChangedUpdateTick = -1;
+	int m_LastClassChangedFrame;
+	TFClassType m_LastClassChangedClass;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
 

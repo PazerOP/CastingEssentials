@@ -8,9 +8,11 @@
 #include "PluginBase/TFDefinitions.h"
 
 #include <client/c_basecombatweapon.h>
+#include <client/game_controls/baseviewport.h>
 #include <client/iclientmode.h>
 #include <KeyValues.h>
 #include <vgui/ILocalize.h>
+#include <vgui_controls/AnimationController.h>
 #include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/ImagePanel.h>
 #include <vgui_controls/Panel.h>
@@ -43,6 +45,9 @@ HUDHacking::HUDHacking() :
 	ce_hud_find_parent_elements("ce_hud_find_parent_elements", "0", FCVAR_NONE,
 		"Enables moving a panel's search-by-name scope upwards by prefixing the name with '../' (like referencing a parent's sibling in a hud animation)",
 		[](IConVar* var, const char*, float) { GetModule()->m_FindChildByNameHook.SetEnabled(static_cast<ConVar*>(var)->GetBool()); }),
+
+	ce_hud_class_change_animations("ce_hud_class_change_animations", "0", FCVAR_NONE,
+		"Runs PlayerPanel_ClassChangedRed/Blue hudanims on the playerpanels whenever a player changes class."),
 
 	ce_hud_chargebars_buff_banner_text("ce_hud_chargebars_buff_banner_text", "#TF_Unique_Achievement_SoldierBuff", FCVAR_NONE, "Text to use for the Buff Banner for the %banner% dialog variable on playerpanels."),
 	ce_hud_chargebars_battalions_backup_text("ce_hud_chargebars_battalions_backup_text", "#TF_TheBattalionsBackup", FCVAR_NONE, "Text to use for the Battalion's Backup for the %banner% dialog variable on playerpanels."),
@@ -83,6 +88,23 @@ vgui::VPANEL HUDHacking::GetSpecGUI()
 	}
 
 	return 0;
+}
+
+vgui::AnimationController* HUDHacking::GetAnimationController()
+{
+	auto clientMode = Interfaces::GetClientMode();
+	if (!clientMode)
+		return nullptr;
+
+	auto viewportPanel = clientMode->GetViewport();
+	if (!viewportPanel)
+		return nullptr;
+
+	auto viewport = dynamic_cast<CBaseViewport*>(viewportPanel);
+	if (!viewport)
+		return nullptr;
+
+	return viewport->GetAnimationController();
 }
 
 Player* HUDHacking::GetPlayerFromPanel(vgui::EditablePanel* playerPanel)
@@ -222,6 +244,9 @@ void HUDHacking::UpdatePlayerPanels()
 				UpdateStatusEffect(playerVPanel, playerPanel, *player);
 
 			UpdateBanner(bannerStatus, playerVPanel, playerPanel, *player);
+
+			if (ce_hud_class_change_animations.GetBool())
+				UpdateClassChangeAnimations(playerVPanel, playerPanel, *player);
 		}
 	}
 }
@@ -332,6 +357,23 @@ void HUDHacking::UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::Edi
 		chargebar->SetVisible(shouldShowInfo);
 }
 #pragma warning(pop)
+
+void HUDHacking::UpdateClassChangeAnimations(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, Player& player)
+{
+	player.UpdateClassChangedFrame();
+
+	auto animController = GetAnimationController();
+	if (!animController)
+		return;
+
+	const auto team = player.GetTeam();
+
+	if (player.WasClassChangedThisFrame())
+	{
+		auto startAnimSequence = HookManager::GetRawFunc<HookFunc::vgui_AnimationController_StartAnimationSequence>();
+		startAnimSequence(animController, playerPanel, player.GetTeam() == TFTeam::Red ? "PlayerPanel_ClassChangedRed" : "PlayerPanel_ClassChangedBlue", false);
+	}
+}
 
 bool HUDHacking::GetBannerInfo(const Player& player, BannerType& type, float& charge)
 {
