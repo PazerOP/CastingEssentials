@@ -31,7 +31,10 @@ namespace Hooking
 
 	protected:
 		BaseGroupHook();
+		BaseGroupHook(const SelfType& other) = delete;
 		virtual ~BaseGroupHook();
+
+		SelfType& operator=(const SelfType& other) = delete;
 
 		std::shared_mutex m_HooksTableMutex;		// Mutex for m_HooksTable
 		std::map<uint64, Functional> m_HooksTable;	// Map of hook indices to std::function callbacks

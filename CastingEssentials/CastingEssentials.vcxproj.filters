@@ -359,6 +359,15 @@
     <ClInclude Include="PluginBase\VariablePusher.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PluginBase\HookDefinitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Hooking\HookShim.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PluginBase\Hook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Misc\NatVis\RecvTable.natvis" />

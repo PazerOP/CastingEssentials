@@ -1,6 +1,6 @@
 #pragma once
 #include "PluginBase/EntityOffset.h"
-#include "PluginBase/HookManager.h"
+#include "PluginBase/Hook.h"
 #include "PluginBase/ICameraOverride.h"
 #include "PluginBase/Modules.h"
 

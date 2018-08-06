@@ -1,7 +1,7 @@
 #pragma once
 
 #include "PluginBase/Modules.h"
-#include "PluginBase/HookManager.h"
+#include "PluginBase/Hook.h"
 
 #include <convar.h>
 

@@ -2,7 +2,7 @@
 
 #include "Misc/CRefPtrFix.h"
 #include "PluginBase/EntityOffset.h"
-#include "PluginBase/HookManager.h"
+#include "PluginBase/Hook.h"
 #include "PluginBase/Modules.h"
 
 #define GLOWS_ENABLE

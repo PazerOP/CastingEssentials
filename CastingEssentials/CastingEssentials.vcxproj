@@ -144,6 +144,7 @@
     <ClInclude Include="Controls\VariableLabel.h" />
     <ClInclude Include="Hooking\BaseGroupHook.h" />
     <ClInclude Include="Hooking\GroupGlobalVirtualHook.h" />
+    <ClInclude Include="Hooking\HookShim.h" />
     <ClInclude Include="Hooking\ModuleSegments.h" />
     <ClInclude Include="Hooking\TemplateFunctions.h" />
     <ClInclude Include="Hooking\GroupClassHook.h" />
@@ -191,6 +192,8 @@
     <ClInclude Include="PluginBase\Entities.h" />
     <ClInclude Include="PluginBase\EntityOffset.h" />
     <ClInclude Include="PluginBase\Exceptions.h" />
+    <ClInclude Include="PluginBase\Hook.h" />
+    <ClInclude Include="PluginBase\HookDefinitions.h" />
     <ClInclude Include="PluginBase\HookManager.h" />
     <ClInclude Include="PluginBase\ICameraOverride.h" />
     <ClInclude Include="PluginBase\Player.h" />

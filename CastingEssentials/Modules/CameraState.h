@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PluginBase/HookManager.h"
+#include "PluginBase/Hook.h"
 #include "PluginBase/Modules.h"
 
 #include <mathlib/vector.h>
