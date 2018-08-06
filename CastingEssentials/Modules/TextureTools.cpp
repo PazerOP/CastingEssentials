@@ -10,7 +10,7 @@ MODULE_REGISTER(TextureTools);
 TextureTools::TextureTools() :
 	ce_texturetools_full_res_rts("ce_texturetools_full_res_rts", "0", FCVAR_NONE,
 		"Create the refraction and water reflection textures at framebuffer resolution (if possible). Must be set before the first map load. Changing after that requires a game restart.",
-		[](IConVar*, const char*, float) {GetModule()->ToggleFullResRTs(); }),
+		[](IConVar*, const char*, float) { GetModule()->ToggleFullResRTs(); }),
 
 	m_CreateRenderTargetsHook(std::bind(&TextureTools::InitClientRenderTargetsOverride, this,
 		std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5), false)
@@ -66,6 +66,15 @@ void TextureTools::InitClientRenderTargetsOverride(CBaseClientRenderTargets* pTh
 {
 	auto pAbstract = Interfaces::GetClientRenderTargets();
 	auto pBase = static_cast<CBaseClientRenderTargets*>(pAbstract);
+	Assert(pBase == pThis);
+
+	// Full frame depth texture
+	{
+		materials->RemoveTextureAlias("_rt_FullFrameDepth");
+		m_FullFrameDepth.Init(materials->CreateNamedRenderTargetTextureEx2("_rt_FullFrameDepth", 1, 1,
+			RT_SIZE_FULL_FRAME_BUFFER, IMAGE_FORMAT_IA88, MATERIAL_RT_DEPTH_NONE,
+			TEXTUREFLAGS_CLAMPS | TEXTUREFLAGS_CLAMPT));
+	}
 
 	// Water effects
 	pBase->m_WaterReflectionTexture.Init(CreateWaterReflectionTexture(matsys, 256));

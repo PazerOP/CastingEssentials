@@ -4,6 +4,7 @@
 #include "PluginBase/Hook.h"
 
 #include <convar.h>
+#include <materialsystem/MaterialSystemUtil.h>
 
 #include <optional>
 
@@ -20,6 +21,8 @@ private:
 
 	void ToggleFullResRTs();
 	void InitClientRenderTargetsOverride(CBaseClientRenderTargets* pThis, IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* config, int waterRes, int cameraRes);
+
+	CTextureReference m_FullFrameDepth;
 
 	ConVar ce_texturetools_full_res_rts;
 };

@@ -62,7 +62,17 @@ public:
 	inline const TValue& GetValue(const IClientNetworkable* entity) const
 	{
 		if (!m_ValidTypes.Match(entity))
-			throw mismatching_entity_offset("FIXME", "FIXME2");
+		{
+			const char* clientClass;
+			if (!entity)
+				clientClass = "(null entity)";
+			else if (auto cc = entity->GetClientClass(); !cc)
+				clientClass = "(null ClientClass)";
+			else
+				clientClass = cc->GetName();
+
+			throw mismatching_entity_offset("FIXME", clientClass);
+		}
 
 		return *(TValue*)(((std::byte*)entity->GetDataTableBasePtr()) + m_Offset);
 	}
