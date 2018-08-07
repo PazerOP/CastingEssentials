@@ -4,6 +4,7 @@
 #include <client/c_baseplayer.h>
 #include <client/c_fire_smoke.h>
 #include <client/game_controls/baseviewport.h>
+#include <../materialsystem/texturemanager.h>
 #include <shared/baseviewmodel_shared.h>
 #include <vgui_controls/ImagePanel.h>
 #include <vgui_controls/ProgressBar.h>
@@ -116,6 +117,8 @@ public:
 		Assert((offset = Hooking::VTableOffset(&CBaseViewport::ReloadScheme)) == 242);
 		Assert((offset = Hooking::VTableOffset(&CBaseViewport::AllowedToPrintText)) == 245);
 		Assert((offset = Hooking::VTableOffset(&CBaseViewport::GetAnimationController)) == 248);
+
+		Assert((offset = Hooking::VTableOffset(&ITextureManager::FindNext)) == 32);
 	}
 };
 #ifdef DEBUG

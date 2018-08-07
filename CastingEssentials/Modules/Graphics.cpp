@@ -14,6 +14,8 @@
 #include <materialsystem/itexture.h>
 #include <materialsystem/imaterial.h>
 #include <materialsystem/imaterialvar.h>
+#include <../materialsystem/itextureinternal.h>
+#include <../materialsystem/texturemanager.h>
 #include <model_types.h>
 #include <shaderapi/ishaderapi.h>
 #include <tier3/tier3.h>
@@ -79,6 +81,7 @@ Graphics::Graphics() :
 	ce_infills_fade_after_hurt_bias("ce_infills_fade_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for infill fade outs.", true, 0, true, 1),
 
 	ce_graphics_dump_shader_params("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete),
+	ce_graphics_dump_rts("ce_graphics_dump_rts", DumpRTs, "Dump all rendertargets to console."),
 
 	m_ComputeEntityFadeHook(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
 
@@ -251,6 +254,31 @@ int Graphics::DumpShaderParamsAutocomplete(const char *partial, char commands[CO
 	return outputCount;
 }
 
+void Graphics::DumpRTs(const CCommand& cmd)
+{
+	auto textureMgr = Interfaces::GetTextureManager();
+	if (!textureMgr)
+	{
+		Warning("[%s]: Unable to get texture manager\n", cmd[0]);
+		return;
+	}
+
+	int index = -1;
+	ITextureInternal* tex;
+	int count = 0;
+	while ((index = textureMgr->FindNext(index, &tex)) != -1)
+	{
+		if (!tex->IsRenderTarget())
+			continue;
+
+		Msg("\t%s: %ix%i\n", tex->GetName(), tex->GetActualWidth(), tex->GetActualHeight());
+		count++;
+	}
+
+	Msg("Dumped %i rendertargets.\n", count);
+}
+
+static constexpr auto test = MASK_SHOT_HULL;
 void Graphics::ToggleEntityFade(const ConVar* var)
 {
 	m_ComputeEntityFadeHook.SetEnabled(var->GetBool());

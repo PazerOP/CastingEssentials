@@ -19,6 +19,7 @@ class IGameEventManager2;
 class IGameSystem;
 class IGameSystemPerFrame;
 class IPrediction;
+class ITextureManager;
 class IVEngineClient;
 class IVModelInfoClient;
 class IVRenderView;
@@ -113,6 +114,9 @@ public:
 
 	// #include <game/client/iclientrendertargets.h>
 	static IClientRenderTargets* GetClientRenderTargets() { return s_ClientRenderTargets; }
+
+	// #include <../materialsystem/texturemanager.h>
+	static ITextureManager* GetTextureManager();
 
 private:
 	static IBaseClientDLL *pClientDLL;

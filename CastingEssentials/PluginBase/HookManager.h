@@ -75,4 +75,6 @@ private:
 };
 
 extern std::byte* SignatureScan(const char* moduleName, const char* signature, const char* mask, int offset = 0);
+extern std::byte* SignatureScanMultiple(const char* moduleName, const char* signature, const char* mask,
+	const std::function<bool(std::byte* found)>& testFunc, int offset = 0);
 extern HookManager* GetHooks();

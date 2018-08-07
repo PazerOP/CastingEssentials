@@ -80,6 +80,26 @@ static void* FindPattern(DWORD dwAddress, DWORD dwSize, BYTE* pbSig, const char*
 	return nullptr;
 }
 
+std::byte* SignatureScanMultiple(const char* moduleName, const char* signature, const char* mask,
+	const std::function<bool(std::byte* found)>& testFunc, int offset)
+{
+	MODULEINFO clientModInfo;
+	const HMODULE clientModule = GetModuleHandle((std::string(moduleName) + ".dll").c_str());
+	GetModuleInformation(GetCurrentProcess(), clientModule, &clientModInfo, sizeof(MODULEINFO));
+
+	DWORD searchOffset = 0;
+	std::byte* found;
+	while (found = (std::byte*)FindPattern((DWORD)clientModInfo.lpBaseOfDll + searchOffset, clientModInfo.SizeOfImage - searchOffset, (PBYTE)signature, mask))
+	{
+		if (testFunc(found + offset))
+			return found + offset;
+
+		searchOffset += DWORD(found) - DWORD(clientModInfo.lpBaseOfDll) - searchOffset + 1;
+	}
+
+	return nullptr;
+}
+
 std::byte* SignatureScan(const char* moduleName, const char* signature, const char* mask, int offset)
 {
 	MODULEINFO clientModInfo;

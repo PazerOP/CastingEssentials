@@ -70,10 +70,13 @@ private:
 	ConVar ce_infills_fade_after_hurt_bias;
 
 	ConCommand ce_graphics_dump_shader_params;
+	ConCommand ce_graphics_dump_rts;
 
 	static bool IsDefaultParam(const char* paramName);
 	static void DumpShaderParams(const CCommand& cmd);
 	static int DumpShaderParamsAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
+
+	static void DumpRTs(const CCommand& cmd);
 
 	Hook<HookFunc::Global_UTILComputeEntityFade> m_ComputeEntityFadeHook;
 	void ToggleEntityFade(const ConVar* var);

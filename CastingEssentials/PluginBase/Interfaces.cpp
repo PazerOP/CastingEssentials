@@ -285,3 +285,39 @@ CUtlVector<IGameSystemPerFrame*>* Interfaces::GetGameSystemsPerFrame()
 
 	return s_GameSystems;
 }
+
+ITextureManager* Interfaces::GetTextureManager()
+{
+	static ITextureManager* s_TextureManager = []() -> ITextureManager*
+	{
+		// First find the CTextureManager constructor
+		void* constructor = SignatureScan("MaterialSystem", "\x56\x8B\xF1\x57\xC7\x06????\xC7\x46", "xxxxxx????xx");
+		if (!constructor)
+			return nullptr;
+
+		constexpr const char* SIG = "\xB9????\xE8????\x68????\xE8????\x59\xC3";
+		constexpr const char* MASK = "x????x????x????x????xx";
+
+		// Then find the static initialization function for the s_TextureManager variable
+		auto initFn = SignatureScanMultiple("MaterialSystem", SIG, MASK,
+			[&](std::byte* found)
+		{
+			int offset2 = *(int*)(found + 6);
+			Assert(true);
+
+			return (found + offset2 + 10) == constructor;
+		});
+
+		if (!initFn)
+			return nullptr;
+
+		// First instruction of the init function is mov ecx, offset s_TextureManager
+		int offset = *(int*)(initFn + 1); // Get the offset of the B9 (mov relative w/ 32-bit address) instruction
+		auto mgr = (ITextureManager*)offset;
+		Assert(mgr);
+
+		return mgr;
+	}();
+
+	return s_TextureManager;
+}
