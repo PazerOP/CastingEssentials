@@ -20,7 +20,6 @@ class HitEvents final : public Module<HitEvents>, IGameEventListener2
 {
 public:
 	HitEvents();
-	virtual ~HitEvents();
 
 	static bool CheckDependencies() { return true; }
 	static constexpr __forceinline const char* GetModuleName() { return "Player Hit Events"; }

@@ -55,6 +55,8 @@ ConsoleTools::ConsoleTools() :
 
 	ce_consoletools_alias_remove("ce_consoletools_alias_remove", RemoveAlias,
 		"Removes an existing alias created with the \"alias\" command.", FCVAR_NONE, RemoveAliasAutocomplete),
+	ce_consoletools_unhide_all_cvars("ce_consoletools_unhide_all_cvars", UnhideAllCvars,
+		"Removes FCVAR_DEVELOPMENTONLY and FCVAR_HIDDEN from all cvars."),
 
 	m_ConsoleColorPrintfHook(std::bind(&ConsoleTools::ConsoleColorPrintfHook, this, std::placeholders::_1, std::placeholders::_2)),
 	m_ConsoleDPrintfHook(std::bind(&ConsoleTools::ConsoleDPrintfHook, this, std::placeholders::_1)),
@@ -144,6 +146,14 @@ public:
 		}
 	}
 };
+
+void ConsoleTools::UnhideAllCvars()
+{
+	static constexpr auto MASK = ~(FCVAR_DEVELOPMENTONLY | FCVAR_HIDDEN);
+
+	for (auto var = g_pCVar->GetCommands(); var; var = var->GetNext())
+		CCvar::SetFlags(var, CCvar::GetFlags(var) & MASK);
+}
 
 void ConsoleTools::SetLimits(const CCommand& command)
 {

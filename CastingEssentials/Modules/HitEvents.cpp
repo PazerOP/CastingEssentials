@@ -33,11 +33,6 @@ HitEvents::HitEvents() :
 	m_LastDamageAccount = nullptr;
 }
 
-HitEvents::~HitEvents()
-{
-	ce_hitevents_enabled.SetValue(false);
-}
-
 IGameEvent* HitEvents::TriggerPlayerHurt(int playerEntIndex, int damage)
 {
 	IGameEvent* hurtEvent = gameeventmanager->CreateEvent("player_hurt");

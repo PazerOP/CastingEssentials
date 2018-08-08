@@ -40,6 +40,9 @@ private:
 
 	ConCommand ce_consoletools_alias_remove;
 
+	ConCommand ce_consoletools_unhide_all_cvars;
+	static void UnhideAllCvars();
+
 	void AddFilter(const CCommand& command);
 	void RemoveFilter(const CCommand& command);
 	void ListFilters(const CCommand& command);
