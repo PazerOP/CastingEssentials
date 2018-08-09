@@ -39,7 +39,7 @@ public:
 
 	static __forceinline T* GetModule() {
 		if (!s_Module) throw module_not_loaded(T::GetModuleName());
-		return reinterpret_cast<T*>(s_Module.get());
+		return static_cast<T*>(s_Module.get());
 	}
 
 private:
