@@ -196,6 +196,7 @@
     <ClInclude Include="PluginBase\HookDefinitions.h" />
     <ClInclude Include="PluginBase\HookManager.h" />
     <ClInclude Include="PluginBase\ICameraOverride.h" />
+    <ClInclude Include="PluginBase\IPlayerState.h" />
     <ClInclude Include="PluginBase\Player.h" />
     <ClInclude Include="Controls\StubPanel.h" />
     <ClInclude Include="PluginBase\TFDefinitions.h" />

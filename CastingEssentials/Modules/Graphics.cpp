@@ -628,8 +628,6 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr, bool& anyAlways, 
 
 					if (infillsEnable)
 					{
-						player->UpdateLastHurtTime();
-
 						Vector worldMins, worldMaxs;
 						Vector2D screenMins, screenMaxs;
 
@@ -658,7 +656,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr, bool& anyAlways, 
 										hurtInfill.m_RectMin.Init();
 
 									hurtInfill.m_Color = team == TFTeam::Red ? redInfillNormal : blueInfillNormal;
-									hurtInfill.m_Color.a() *= ApplyInfillTimeEffects(player->GetLastHurtTime());	// Infill fading/flickering
+									hurtInfill.m_Color.a() *= ApplyInfillTimeEffects(player->GetState<PlayerHealthState>().GetLastHurtTime());	// Infill fading/flickering
 
 									hurtInfill.m_RectMax.Init(
 										bInfillDebug ? screenMaxs.x : m_View->width,
@@ -904,7 +902,7 @@ void Graphics::DrawInfills(CMatRenderContextPtr& pRenderContext)
 void Graphics::ResetPlayerHurtTimes()
 {
 	for (Player* player : Player::Iterable())
-		player->ResetLastHurtTime();
+		player->GetState<PlayerHealthState>().ResetLastHurtTime();
 }
 
 void Graphics::BuildMoveChildLists()
@@ -1521,4 +1519,30 @@ void Graphics::ExtraGlowData::ApplyGlowColor() const
 	{
 		render->SetColorModulation(m_Base->m_vGlowColor.Base());
 	}
+}
+
+float Graphics::PlayerHealthState::GetLastHurtTime() const
+{
+	return Interfaces::GetEngineTool()->ClientTime() - m_LastHurtTime;
+}
+
+void Graphics::PlayerHealthState::ResetLastHurtTime()
+{
+	m_LastHurtTime = Interfaces::GetEngineTool()->ClientTime();
+}
+
+void Graphics::PlayerHealthState::Update()
+{
+	const auto tick = Interfaces::GetEngineTool()->ClientTick();
+	if (tick == m_LastHurtUpdateTick)
+		return;
+
+	auto health = GetPlayer().GetHealth();
+
+	// Update last hurt time
+	if (health < m_LastHurtHealth)
+		m_LastHurtTime = Interfaces::GetEngineTool()->ClientTime();
+
+	m_LastHurtHealth = health;
+	m_LastHurtUpdateTick = tick;
 }

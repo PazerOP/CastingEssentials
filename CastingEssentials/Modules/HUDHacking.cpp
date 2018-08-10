@@ -11,12 +11,14 @@
 #include <client/game_controls/baseviewport.h>
 #include <client/iclientmode.h>
 #include <KeyValues.h>
+#include <toolframework/ienginetool.h>
 #include <vgui/ILocalize.h>
 #include <vgui_controls/AnimationController.h>
 #include <vgui_controls/EditablePanel.h>
 #include <vgui_controls/ImagePanel.h>
 #include <vgui_controls/Panel.h>
 #include <vgui_controls/ProgressBar.h>
+#include <vprof.h>
 
 #include <algorithm>
 
@@ -201,6 +203,7 @@ HUDHacking::StatusEffect HUDHacking::GetStatusEffect(const Player& player)
 
 void HUDHacking::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!inGame)
 		return;
 
@@ -360,15 +363,13 @@ void HUDHacking::UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::Edi
 
 void HUDHacking::UpdateClassChangeAnimations(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, Player& player)
 {
-	player.UpdateClassChangedFrame();
-
 	auto animController = GetAnimationController();
 	if (!animController)
 		return;
 
 	const auto team = player.GetTeam();
 
-	if (player.WasClassChangedThisFrame())
+	if (player.GetState<PlayerClassState>().WasClassChangedThisFrame())
 	{
 		auto startAnimSequence = HookManager::GetRawFunc<HookFunc::vgui_AnimationController_StartAnimationSequence>();
 		startAnimSequence(animController, playerPanel, player.GetTeam() == TFTeam::Red ? "PlayerPanel_ClassChangedRed" : "PlayerPanel_ClassChangedBlue", false);
@@ -503,4 +504,25 @@ vgui::Panel* HUDHacking::FindChildByNameOverride(vgui::Panel* pThis, const char*
 	}
 
 	return m_FindChildByNameHook.GetOriginal()(pThis, name, recurseDown);
+}
+
+bool HUDHacking::PlayerClassState::WasClassChangedThisFrame() const
+{
+	return Interfaces::GetEngineTool()->HostFrameCount() == m_LastClassChangedFrame;
+}
+
+void HUDHacking::PlayerClassState::Update()
+{
+	const auto tick = Interfaces::GetEngineTool()->ClientTick();
+	if (tick == m_LastClassChangedUpdateTick)
+		return;
+
+	auto playerClass = GetPlayer().GetClass();
+
+	// Update last class changed frame
+	if (playerClass != m_LastClassChangedClass)
+		m_LastClassChangedFrame = Interfaces::GetEngineTool()->HostFrameCount();
+
+	m_LastClassChangedClass = playerClass;
+	m_LastClassChangedUpdateTick = tick;
 }

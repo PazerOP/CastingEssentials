@@ -1,5 +1,6 @@
 #pragma once
 #include "PluginBase/EntityOffset.h"
+#include "PluginBase/IPlayerState.h"
 
 #include <shared/ehandle.h>
 #include <steam/steamclientpublic.h>
@@ -8,7 +9,9 @@
 
 #include <array>
 #include <string>
+#include <map>
 #include <memory>
+#include <typeindex>
 
 enum TFCond;
 enum class TFClassType;
@@ -71,12 +74,20 @@ public:
 
 	bool IsValid() const;
 
-	void UpdateLastHurtTime();
-	void ResetLastHurtTime();
-	float GetLastHurtTime() const;
+	template<typename T> T& GetState()
+	{
+		static_assert(!std::is_pointer_v<T>);
+		static_assert(!std::is_reference_v<T>);
 
-	void UpdateClassChangedFrame();
-	bool WasClassChangedThisFrame() const;
+		IPlayerState* retVal;
+		if (auto found = m_ExtraState.find(typeid(T)); found != m_ExtraState.end())
+			retVal = found->second.get();
+		else
+			retVal = m_ExtraState.emplace(typeid(T), std::make_unique<T>(*this)).first->second.get();
+
+		retVal->Update();
+		return *static_cast<T*>(retVal);
+	}
 
 private:
 	class Iterator : public std::iterator<std::forward_iterator_tag, Player*>
@@ -123,13 +134,7 @@ private:
 	mutable int m_CachedPlayerInfoLastUpdateFrame;
 	mutable player_info_t m_CachedPlayerInfo;
 
-	int m_LastHurtUpdateTick = -1;
-	float m_LastHurtTime;
-	int m_LastHurtHealth;
-
-	int m_LastClassChangedUpdateTick = -1;
-	int m_LastClassChangedFrame;
-	TFClassType m_LastClassChangedClass;
+	std::map<std::type_index, std::unique_ptr<IPlayerState>> m_ExtraState;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
 

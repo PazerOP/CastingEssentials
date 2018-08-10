@@ -1,11 +1,13 @@
 #pragma once
 #include "PluginBase/EntityOffset.h"
 #include "PluginBase/Hook.h"
+#include "PluginBase/IPlayerState.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
 
 class Player;
+enum class TFClassType;
 
 namespace vgui
 {
@@ -70,6 +72,21 @@ private:
 		MarkedForDeath,
 
 		COUNT,
+	};
+
+	class PlayerClassState : public IPlayerState
+	{
+	public:
+		PlayerClassState(Player& player) : IPlayerState(player) {}
+		bool WasClassChangedThisFrame() const;
+
+	protected:
+		void Update() override;
+
+	private:
+		int m_LastClassChangedUpdateTick = -1;
+		int m_LastClassChangedFrame;
+		TFClassType m_LastClassChangedClass;
 	};
 
 	static const char* GetStatusEffectFormatString(StatusEffect effect);

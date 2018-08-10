@@ -104,6 +104,8 @@ bool Killstreaks::CheckDependencies()
 
 void Killstreaks::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+
 	if (ce_killstreaks_enabled.GetBool())
 		UpdateKillstreaks(inGame);
 

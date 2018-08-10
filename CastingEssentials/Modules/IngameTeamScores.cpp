@@ -7,6 +7,7 @@
 #include <toolframework/ienginetool.h>
 #include <vgui/IVGui.h>
 #include <vgui_controls/EditablePanel.h>
+#include <vprof.h>
 
 MODULE_REGISTER(IngameTeamScores);
 
@@ -57,6 +58,7 @@ void IngameTeamScores::ReloadSettings()
 
 void IngameTeamScores::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (inGame && ce_teamscores_enabled.GetBool())
 	{
 		if (!m_Panel)

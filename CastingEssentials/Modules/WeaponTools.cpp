@@ -10,6 +10,7 @@
 #include <client/c_baseentity.h>
 #include <studio.h>
 #include <shared/animation.h>
+#include <vprof.h>
 
 #include <Windows.h>
 
@@ -277,6 +278,7 @@ bool WeaponTools::CheckDependencies()
 
 void WeaponTools::OnTick(bool inGame)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!inGame)
 		return;
 

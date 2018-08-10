@@ -368,6 +368,9 @@
     <ClInclude Include="PluginBase\Hook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PluginBase\IPlayerState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Misc\NatVis\RecvTable.natvis" />
