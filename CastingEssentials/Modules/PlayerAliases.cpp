@@ -12,6 +12,8 @@ MODULE_REGISTER(PlayerAliases);
 PlayerAliases::PlayerAliases() :
 	ce_playeraliases_enabled("ce_playeraliases_enabled", "0", FCVAR_NONE, "Enables player aliases.",
 		[](IConVar* var, const char*, float) { GetModule()->ToggleEnabled(static_cast<ConVar*>(var)); }),
+
+	ce_playeraliases_format_mode("ce_playeraliases_format_mode", "0", FCVAR_NONE, "0 = apply format to all players, 1 = apply format to aliased players only"),
 	ce_playeraliases_format_blu("ce_playeraliases_format_blu", "%alias%", FCVAR_NONE, "Name format for BLU players."),
 	ce_playeraliases_format_red("ce_playeraliases_format_red", "%alias%", FCVAR_NONE, "Name format for RED players."),
 	ce_playeraliases_format_swap("ce_playeraliases_format_swap", []() { GetModule()->SwapTeamFormats(); },
@@ -59,14 +61,12 @@ bool PlayerAliases::CheckDependencies()
 bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	bool result = GetHooks()->GetHook<HookFunc::IVEngineClient_GetPlayerInfo>()->GetOriginal()(ent_num, pinfo);
-
 	if (ent_num < 1 || ent_num > Interfaces::GetEngineTool()->GetMaxClients())
-		return result;
+		return false;
 
 	Player* player = Player::GetPlayer(ent_num, __FUNCSIG__);
 	if (!player)
-		return result;
+		return false;
 
 	static EUniverse universe = k_EUniverseInvalid;
 	if (universe == k_EUniverseInvalid)
@@ -80,41 +80,52 @@ bool PlayerAliases::GetPlayerInfoOverride(int ent_num, player_info_s *pinfo)
 		}
 	}
 
-	std::string gameName;
-	switch (player->GetTeam())
-	{
-		case TFTeam::Red:
-			gameName = ce_playeraliases_format_red.GetString();
-			break;
-
-		case TFTeam::Blue:
-			gameName = ce_playeraliases_format_blu.GetString();
-			break;
-
-		default:
-			gameName = "%alias%";
-			break;
-	}
+	bool result = m_GetPlayerInfoHook.GetOriginal()(ent_num, pinfo);
 
 	CSteamID playerSteamID(pinfo->friendsID, 1, universe, k_EAccountTypeIndividual);
-	FindAndReplaceInString(gameName, "%alias%", GetAlias(playerSteamID, pinfo->name));
+	const char* alias = GetAlias(playerSteamID);
 
-	V_strcpy_safe(pinfo->name, gameName.c_str());
+	if (auto mode = ce_playeraliases_format_mode.GetInt(); mode == 0 || (mode == 1 && alias))
+	{
+		if (!alias)
+			alias = pinfo->name;
 
-	GetHooks()->SetState<HookFunc::IVEngineClient_GetPlayerInfo>(Hooking::HookAction::SUPERCEDE);
-	return result;
+		std::string gameName;
+		switch (player->GetTeam())
+		{
+			case TFTeam::Red:
+				gameName = ce_playeraliases_format_red.GetString();
+				break;
+
+			case TFTeam::Blue:
+				gameName = ce_playeraliases_format_blu.GetString();
+				break;
+
+			default:
+				gameName = "%alias%";
+				break;
+		}
+
+		FindAndReplaceInString(gameName, "%alias%", alias);
+		V_strcpy_safe(pinfo->name, gameName.c_str());
+
+		GetHooks()->SetState<HookFunc::IVEngineClient_GetPlayerInfo>(Hooking::HookAction::SUPERCEDE);
+		return result;
+	}
+
+	return true;
 }
 
-const std::string& PlayerAliases::GetAlias(const CSteamID& player, const std::string& gameAlias) const
+const char* PlayerAliases::GetAlias(const CSteamID& player) const
 {
 	if (!player.IsValid())
-		return gameAlias;
+		return nullptr;
 
 	auto found = m_CustomAliases.find(player);
 	if (found != m_CustomAliases.end())
-		return found->second;
+		return found->second.c_str();
 
-	return gameAlias;
+	return nullptr;
 }
 
 void PlayerAliases::SwapTeamFormats()
@@ -199,7 +210,7 @@ Usage:
 	Warning("Usage: %s <steam id>\n", ce_playeraliases_remove.GetName());
 }
 
-void PlayerAliases::FindAndReplaceInString(std::string &str, const std::string &find, const std::string &replace)
+void PlayerAliases::FindAndReplaceInString(std::string& str, const std::string_view& find, const std::string_view& replace)
 {
 	if (find.empty())
 		return;

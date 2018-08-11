@@ -21,11 +21,12 @@ private:
 	std::map<CSteamID, std::string> m_CustomAliases;
 	Hook<HookFunc::IVEngineClient_GetPlayerInfo> m_GetPlayerInfoHook;
 
-	static void FindAndReplaceInString(std::string& str, const std::string& find, const std::string& replace);
+	static void FindAndReplaceInString(std::string& str, const std::string_view& find, const std::string_view& replace);
 
-	const std::string& GetAlias(const CSteamID& player, const std::string& gameAlias) const;
+	const char* GetAlias(const CSteamID& player) const;
 
 	ConVar ce_playeraliases_enabled;
+	ConVar ce_playeraliases_format_mode;
 	ConVar ce_playeraliases_format_blu;
 	ConVar ce_playeraliases_format_red;
 
