@@ -3,8 +3,8 @@
 #include "Misc/CRefPtrFix.h"
 #include "PluginBase/EntityOffset.h"
 #include "PluginBase/Hook.h"
-#include "PluginBase/IPlayerState.h"
 #include "PluginBase/Modules.h"
+#include "PluginBase/PlayerStateBase.h"
 
 #define GLOWS_ENABLE
 #include <client/glow_outline_effect.h>
@@ -118,19 +118,18 @@ private:
 		Vector2D m_RectMax = Vector2D(-1, -1);
 	};
 
-	class PlayerHealthState : public IPlayerState
+	class PlayerHealthState : public PlayerStateBase
 	{
 	public:
-		PlayerHealthState(Player& player) : IPlayerState(player) {}
+		PlayerHealthState(Player& player) : PlayerStateBase(player) {}
 
 		void ResetLastHurtTime();
 		float GetLastHurtTime() const;
 
 	protected:
-		void Update() override;
+		void UpdateInternal(bool tickUpdate, bool frameUpdate) override;
 
 	private:
-		int m_LastHurtUpdateTick = -1;
 		float m_LastHurtTime;
 		int m_LastHurtHealth;
 	};

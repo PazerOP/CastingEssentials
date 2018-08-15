@@ -168,7 +168,6 @@ public:
 	vgui::HFont m_hDeltaItemFontBig;	// 532
 };
 
-static constexpr auto test = offsetof(CAccountPanel, m_flDeltaItemStartPos);
 static_assert(offsetof(CAccountPanel, m_Events) == 400);
 //static_assert(offsetof(CAccountPanel, m_EventCount) == 412);
 

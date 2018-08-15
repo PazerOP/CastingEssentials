@@ -93,6 +93,7 @@ enum class HookFunc
 	C_HLTVCamera_SetPrimaryTarget,
 
 	C_TFPlayer_DrawModel,
+	C_TFPlayer_GetEntityForLoadoutSlot,
 
 	C_TFViewModel_CalcViewModelView,
 
@@ -340,6 +341,10 @@ protected:
 	{
 		typedef int(__thiscall *Raw)(C_TFPlayer*, int);
 		typedef GlobalClassHook<HookFunc::C_TFPlayer_DrawModel, false, C_TFPlayer, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_TFPlayer_GetEntityForLoadoutSlot>
+	{
+		typedef C_BaseEntity*(__thiscall *Raw)(C_TFPlayer* pThis, int slot, bool includeWearables);
 	};
 	template<> struct HookFuncType<HookFunc::C_TFViewModel_CalcViewModelView>
 	{

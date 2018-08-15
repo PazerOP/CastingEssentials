@@ -171,6 +171,9 @@
     <ClCompile Include="PluginBase\Exceptions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PluginBase\PlayerStateBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -368,7 +371,10 @@
     <ClInclude Include="PluginBase\Hook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PluginBase\IPlayerState.h">
+    <ClInclude Include="PluginBase\EntityOffsetIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PluginBase\PlayerStateBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

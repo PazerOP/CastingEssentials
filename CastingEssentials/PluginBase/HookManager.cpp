@@ -80,6 +80,8 @@ static void* FindPattern(DWORD dwAddress, DWORD dwSize, BYTE* pbSig, const char*
 	return nullptr;
 }
 
+#pragma warning(push)
+#pragma warning(disable : 4706)  // Assignment within conditional expression
 std::byte* SignatureScanMultiple(const char* moduleName, const char* signature, const char* mask,
 	const std::function<bool(std::byte* found)>& testFunc, int offset)
 {
@@ -99,6 +101,7 @@ std::byte* SignatureScanMultiple(const char* moduleName, const char* signature, 
 
 	return nullptr;
 }
+#pragma warning(pop)
 
 std::byte* SignatureScan(const char* moduleName, const char* signature, const char* mask, int offset)
 {
@@ -163,6 +166,7 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::C_HLTVCamera_SetPrimaryTarget>("\x55\x8B\xEC\x8B\x45\x08\x83\xEC\x00\x53\x56\x8B\xF1", "xxxxxxxx?xxxx");
 
 	FindFunc<HookFunc::C_TFPlayer_DrawModel>("\x55\x8B\xEC\x51\x57\x8B\xF9\x80\x7F\x54\x17", "xxxxxxxxxxx");
+	FindFunc<HookFunc::C_TFPlayer_GetEntityForLoadoutSlot>("\x55\x8B\xEC\x51\x53\x8B\x5D\x08\x57\x8B\xF9\x89\x7D\xFC\x83\xFB\x07", "xxxxxxxxxxxxxxxxx");
 
 	FindFunc<HookFunc::CAccountPanel_OnAccountValueChanged>("\x55\x8B\xEC\x51\x53\x8B\x5D\x0C\x56\x8B\xF1\x53", "xxxxxxxxxxxx");
 	FindFunc<HookFunc::CAccountPanel_Paint>("\x55\x8B\xEC\x83\xEC\x74\x56\x8B\xC1", "xxxxxxxxx");

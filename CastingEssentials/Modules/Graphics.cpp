@@ -1531,10 +1531,9 @@ void Graphics::PlayerHealthState::ResetLastHurtTime()
 	m_LastHurtTime = Interfaces::GetEngineTool()->ClientTime();
 }
 
-void Graphics::PlayerHealthState::Update()
+void Graphics::PlayerHealthState::UpdateInternal(bool tickUpdate, bool frameUpdate)
 {
-	const auto tick = Interfaces::GetEngineTool()->ClientTick();
-	if (tick == m_LastHurtUpdateTick)
+	if (!tickUpdate)
 		return;
 
 	auto health = GetPlayer().GetHealth();
@@ -1544,5 +1543,4 @@ void Graphics::PlayerHealthState::Update()
 		m_LastHurtTime = Interfaces::GetEngineTool()->ClientTime();
 
 	m_LastHurtHealth = health;
-	m_LastHurtUpdateTick = tick;
 }

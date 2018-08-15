@@ -1,6 +1,6 @@
 #pragma once
 #include "PluginBase/EntityOffset.h"
-#include "PluginBase/IPlayerState.h"
+#include "PluginBase/PlayerStateBase.h"
 
 #include <shared/ehandle.h>
 #include <steam/steamclientpublic.h>
@@ -79,7 +79,7 @@ public:
 		static_assert(!std::is_pointer_v<T>);
 		static_assert(!std::is_reference_v<T>);
 
-		IPlayerState* retVal;
+		PlayerStateBase* retVal;
 		if (auto found = m_ExtraState.find(typeid(T)); found != m_ExtraState.end())
 			retVal = found->second.get();
 		else
@@ -134,7 +134,7 @@ private:
 	mutable int m_CachedPlayerInfoLastUpdateFrame;
 	mutable player_info_t m_CachedPlayerInfo;
 
-	std::map<std::type_index, std::unique_ptr<IPlayerState>> m_ExtraState;
+	std::map<std::type_index, std::unique_ptr<PlayerStateBase>> m_ExtraState;
 
 	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
 

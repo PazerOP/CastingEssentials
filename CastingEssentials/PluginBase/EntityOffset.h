@@ -59,6 +59,11 @@ public:
 	{
 	}
 
+	inline constexpr EntityOffset(EntityTypeChecker&& validRecvTables, ptrdiff_t offset) :
+		m_Offset(offset), m_ValidTypes(std::move(validRecvTables))
+	{
+	}
+
 	inline const TValue& GetValue(const IClientNetworkable* entity) const
 	{
 		if (!m_ValidTypes.Match(entity))
@@ -83,7 +88,7 @@ public:
 
 	inline const TValue* TryGetValue(const IClientNetworkable* entity) const
 	{
-		if (!m_ValidTypes.Match(entity))
+		if (!entity || !m_ValidTypes.Match(entity))
 			return nullptr;
 
 		return (TValue*)(((std::byte*)entity->GetDataTableBasePtr()) + m_Offset);
@@ -91,6 +96,20 @@ public:
 	__forceinline TValue* TryGetValue(IClientNetworkable* entity) const
 	{
 		return const_cast<TValue*>(TryGetValue((const IClientNetworkable*)entity));
+	}
+	inline const TValue& TryGetValue(const IClientNetworkable* entity, const TValue& defaultVal) const
+	{
+		if (auto val = TryGetValue(entity))
+			return *val;
+		else
+			return defaultVal;
+	}
+	inline TValue& TryGetValue(IClientNetworkable* entity, TValue& defaultVal) const
+	{
+		if (auto val = TryGetValue(entity))
+			return *val;
+		else
+			return defaultVal;
 	}
 
 	__forceinline ptrdiff_t GetOffset(const IClientNetworkable* entity) const
@@ -104,13 +123,6 @@ public:
 	__forceinline bool IsInit() const { return m_ValidTypes.IsInit(); }
 
 private:
-	inline constexpr EntityOffset(EntityTypeChecker&& validRecvTables, ptrdiff_t offset) :
-		m_Offset(offset), m_ValidTypes(std::move(validRecvTables))
-	{
-	}
-
-	friend class Entities;
-
 	ptrdiff_t m_Offset;
 	EntityTypeChecker m_ValidTypes;
 };

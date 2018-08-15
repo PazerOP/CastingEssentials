@@ -11,6 +11,7 @@
 #include <sstream>
 
 std::map<const RecvTable*, std::set<const RecvTable*>> Entities::s_ContainingRecvTables;
+std::map<std::string_view, const RecvTable*> Entities::s_AllRecvTables;
 
 #ifdef DEBUG
 std::vector<const ClientClass*> Entities::s_DebugClientClasses;
@@ -226,6 +227,11 @@ int Entities::GetItemDefinitionIndex(const IClientNetworkable* entity)
 	return itemdefIndexOffset.GetValue(entity);
 }
 
+const RecvTable* Entities::FindRecvTable(const std::string_view& name)
+{
+	return s_AllRecvTables.find(name)->second;
+}
+
 void* Entities::GetEntityProp(IClientNetworkable* entity, const char* propertyString, bool throwifMissing)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
@@ -261,6 +267,9 @@ void Entities::AddChildTables(const RecvTable* parent, std::vector<const RecvTab
 		for (const auto& parentTable : stack)
 			set.insert(parentTable);
 
+		// Also record into all recv tables list while we're here
+		s_AllRecvTables[table->GetName()] = table;
+
 		AddChildTables(table, stack);
 	}
 
@@ -279,5 +288,8 @@ void Entities::BuildContainingRecvTablesMap()
 
 		s_ContainingRecvTables[cc->m_pRecvTable].insert(cc->m_pRecvTable);
 		AddChildTables(cc->m_pRecvTable, stack);
+
+		// Also record into all recv tables list while we're here
+		s_AllRecvTables[cc->m_pRecvTable->GetName()] = cc->m_pRecvTable;
 	}
 }

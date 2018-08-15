@@ -3,6 +3,7 @@
 #include "Modules/ItemSchema.h"
 
 #include "PluginBase/Entities.h"
+#include "PluginBase/EntityOffsetIterator.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
@@ -29,6 +30,65 @@
 MODULE_REGISTER(HUDHacking);
 
 EntityOffset<float> HUDHacking::s_RageMeter;
+EntityOffset<float> HUDHacking::s_EnergyDrinkMeter;
+EntityOffset<float> HUDHacking::s_HypeMeter;
+EntityOffset<float> HUDHacking::s_ChargeMeter;
+EntityOffset<float> HUDHacking::s_CloakMeter;
+EntityOffset<float> HUDHacking::s_MedigunChargeMeter;
+EntityOffset<float> HUDHacking::s_ItemChargeMeters[11];
+EntityOffset<float> HUDHacking::s_WeaponEnergyMeter;
+EntityOffset<float> HUDHacking::s_WeaponEffectBarRegenTime;
+EntityOffset<float> HUDHacking::s_SpycicleMeltTime;
+EntityOffset<float> HUDHacking::s_SpycicleRegenTime;
+EntityTypeChecker HUDHacking::s_WearableShieldType;
+EntityTypeChecker HUDHacking::s_RazorbackType;
+EntityOffset<float> HUDHacking::s_CleanersCarbineCharge;
+
+const HUDHacking::ChargeBarInfo HUDHacking::s_ChargeBarInfo[(int)ChargeBarType::COUNT] =
+{
+	ChargeBarInfo("soda_popper", 1, "the Soda Popper", "#TF_SodaPopper", 448, MeterType::Hype),
+	ChargeBarInfo("baby_face", 4, "the Baby Face's Blaster", "#TF_Weapon_PEP_Scattergun", 772, MeterType::Hype),
+	ChargeBarInfo("bonk", 2, "Bonk! Atomic Punch", "#TF_Unique_Achievement_EnergyDrink", 46, MeterType::EnergyDrink),
+	ChargeBarInfo("crit_cola", 5, "the Crit-a-Cola", "#TF_Unique_EnergyDrink_CritCola", 163, MeterType::EnergyDrink),
+	ChargeBarInfo("milk", 5, "Mad Milk", "#TF_MadMilk", 222, MeterType::EffectBar, 20),
+	ChargeBarInfo("cleaver", 2, "the Flying Guillotine", "#TF_SD_Cleaver", 812, MeterType::EffectBar, 5),
+	ChargeBarInfo("sandman", 3, "the Sandman", "#TF_Unique_Achievement_Bat", 44, MeterType::EffectBar, 10),
+	ChargeBarInfo("wrap_assassin", 3, "the Wrap Assassin", "#TF_BallBuster", 648, MeterType::EffectBar, 7.5),
+
+	ChargeBarInfo("banner_battalions", 1, "the Battalion's Backup", "#TF_TheBattalionsBackup", 226, MeterType::Rage),
+	ChargeBarInfo("banner_buff", 1, "the Buff Banner", "#TF_Unique_Achievement_SoldierBuff", 129, MeterType::Rage),
+	ChargeBarInfo("banner_conch", 1, "the Concheror", "#TF_SoldierSashimono", 354, MeterType::Rage),
+
+	ChargeBarInfo("phlogistinator", 2, "the Phlogistinator", "#TF_Phlogistinator", 594, MeterType::Rage),
+	ChargeBarInfo("gas_passer", 1, "the Gas Passer", "#TF_GasPasser", 1180, MeterType::ItemCharge1),
+	ChargeBarInfo("jetpack", 1, "the Thermal Thruster", "#TF_ThermalThruster", 1179, MeterType::ItemCharge1),
+
+	ChargeBarInfo("shield_targe", 1, "the Chargin' Targe", "#TF_Unique_Achievement_Shield", 131, MeterType::Charge),
+	ChargeBarInfo("shield_splendid", 1, "the Splendid Screen", "#TF_SplendidScreen", 406, MeterType::Charge),
+	ChargeBarInfo("shield_tide", 1, "the Tide Turner", "#TF_TideTurner", 1099, MeterType::Charge),
+
+	ChargeBarInfo("sandvich", 1, "the Sandvich", "#TF_Unique_Achievement_LunchBox", 42, MeterType::ItemCharge1),
+	ChargeBarInfo("dalokohs", 1, "the Dalokohs Bar", "#TF_Unique_Lunchbox_Chocolate", 159, MeterType::ItemCharge1),
+	ChargeBarInfo("steak_sandvich", 1, "the Buffalo Steak Sandvich", "#TF_BuffaloSteak", 311, MeterType::ItemCharge1),
+	ChargeBarInfo("banana", 1, "the Second Banana", "#TF_Unique_Lunchbox_Banana", 1190, MeterType::ItemCharge1),
+
+	ChargeBarInfo("medigun_uber", 1, "the Medi Gun", "#TF_Weapon_Medigun", 29, MeterType::MedigunCharge),
+	ChargeBarInfo("medigun_kritz", 1, "the Kritzkrieg", "#TF_Unique_Achievement_Medigun1", 35, MeterType::MedigunCharge),
+	ChargeBarInfo("medigun_quickfix", 1, "the Quick-Fix", "#TF_Unique_MediGun_QuickFix", 411, MeterType::MedigunCharge),
+	ChargeBarInfo("medigun_vaccinator", 1, "the Vaccinator", "#TF_Unique_MediGun_Resist", 998, MeterType::MedigunCharge),
+
+	ChargeBarInfo("hitmans_heatmaker", 2, "the Hitman's Heatmaker", "#TF_Pro_SniperRifle", 752, MeterType::Rage),
+	ChargeBarInfo("jarate", 3, "Jarate", "#TF_Unique_Achievement_Jar", 58, MeterType::EffectBar, 20),
+	ChargeBarInfo("razorback", 1, "the Razorback", "#TF_Unique_Backstab_Shield", 57, MeterType::ItemCharge1),
+	ChargeBarInfo("cleaners_carbine", 1, "the Cleaner's Carbine", "#TF_Pro_SMG", 751, MeterType::CleanersCarbine),
+
+	ChargeBarInfo("spycicle", 2, "the Spy-cicle", "#TF_SpyCicle", 649, MeterType::Spycicle),
+	ChargeBarInfo("invis_watch", 1, "the Invis Watch", "#TF_Weapon_Watch", 30, MeterType::Cloak),
+	ChargeBarInfo("cloak_and_dagger", 1, "the Cloak and Dagger", "#TF_Unique_Achievement_CloakWatch", 60, MeterType::Cloak),
+	ChargeBarInfo("dead_ringer", 1, "the Dead Ringer", "#TF_Unique_Achievement_FeignWatch", 59, MeterType::Cloak),
+};
+
+static constexpr auto test = sizeof(HUDHacking);
 
 ConVar HUDHacking::ce_hud_debug_unassociated_playerpanels("ce_hud_debug_unassociated_playerpanels", "0", FCVAR_NONE, "Print debug messages to the console when a player cannot be found for a given playerpanel.");
 
@@ -39,6 +99,7 @@ HUDHacking::HUDHacking() :
 	ce_hud_player_status_effects_debug("ce_hud_player_status_effects_debug", "0", FCVAR_NONE,
 		"Shows a status effect icon for all players.", true, 0, true, (int)StatusEffect::COUNT),
 	ce_hud_chargebars_enabled("ce_hud_chargebars_enabled", "0", FCVAR_NONE, "Enable showing banner charge status (progress bar + label) in playerpanels."),
+	ce_hud_chargebars_debug("ce_hud_chargebars_debug", "0", FCVAR_NONE),
 
 	ce_hud_progressbar_directions("ce_hud_progressbar_directions", "0", FCVAR_NONE,
 		"Enables setting 'direction <north/east/south/west>' for vgui ProgressBar elements.",
@@ -51,20 +112,49 @@ HUDHacking::HUDHacking() :
 	ce_hud_class_change_animations("ce_hud_class_change_animations", "0", FCVAR_NONE,
 		"Runs PlayerPanel_ClassChangedRed/Blue hudanims on the playerpanels whenever a player changes class."),
 
-	ce_hud_chargebars_buff_banner_text("ce_hud_chargebars_buff_banner_text", "#TF_Unique_Achievement_SoldierBuff", FCVAR_NONE, "Text to use for the Buff Banner for the %banner% dialog variable on playerpanels."),
-	ce_hud_chargebars_battalions_backup_text("ce_hud_chargebars_battalions_backup_text", "#TF_TheBattalionsBackup", FCVAR_NONE, "Text to use for the Battalion's Backup for the %banner% dialog variable on playerpanels."),
-	ce_hud_chargebars_concheror_text("ce_hud_chargebars_concheror_text", "#TF_SoldierSashimono", FCVAR_NONE, "Text to use for the Concheror for the %banner% dialog variable on playerpanels."),
-
 	m_ApplySettingsHook(std::bind(ProgressBarApplySettingsHook, std::placeholders::_1, std::placeholders::_2)),
 	m_FindChildByNameHook(std::bind(&HUDHacking::FindChildByNameOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3))
 {
+	for (int i = 0; i < (int)ChargeBarType::COUNT; i++)
+		m_ChargeBarCvars[i].emplace(s_ChargeBarInfo[i]);
 }
 
 bool HUDHacking::CheckDependencies()
 {
 	{
-		const auto playerClass = Entities::GetClientClass("CTFPlayer");
-		s_RageMeter = Entities::GetEntityProp<float>(playerClass, "m_flRageMeter");
+		// CTFPlayer
+		{
+			const auto playerClass = Entities::GetClientClass("CTFPlayer");
+			s_RageMeter = Entities::GetEntityProp<float>(playerClass, "m_flRageMeter");
+			s_EnergyDrinkMeter = Entities::GetEntityProp<float>(playerClass, "m_flEnergyDrinkMeter");
+			s_HypeMeter = Entities::GetEntityProp<float>(playerClass, "m_flHypeMeter");
+			s_ChargeMeter = Entities::GetEntityProp<float>(playerClass, "m_flChargeMeter");
+			s_CloakMeter = Entities::GetEntityProp<float>(playerClass, "m_flCloakMeter");
+
+			char buf[32];
+			for (int i = 0; i < 11; i++)
+				s_ItemChargeMeters[i] = Entities::GetEntityProp<float>(playerClass, Entities::PropIndex(buf, "m_flItemChargeMeter", i));
+		}
+
+		// CTFWeaponBase
+		{
+			const auto weaponClass = Entities::GetClientClass("CTFWeaponBase");
+			s_WeaponEnergyMeter = Entities::GetEntityProp<float>(weaponClass, "m_flEnergy");
+			s_WeaponEffectBarRegenTime = Entities::GetEntityProp<float>(weaponClass, "m_flEffectBarRegenTime");
+		}
+
+		// CTFKnife
+		{
+			const auto spycicleClass = Entities::GetClientClass("CTFKnife");
+			s_SpycicleRegenTime = Entities::GetEntityProp<float>(spycicleClass, "m_flKnifeRegenerateDuration");
+			s_SpycicleMeltTime = Entities::GetEntityProp<float>(spycicleClass, "m_flKnifeMeltTimestamp");
+		}
+
+		s_MedigunChargeMeter = Entities::GetEntityProp<float>("CWeaponMedigun", "m_flChargeLevel");
+		s_CleanersCarbineCharge = Entities::GetEntityProp<float>("CTFChargedSMG", "m_flMinicritCharge");
+
+		s_WearableShieldType = Entities::GetTypeChecker("CTFWearableDemoShield");
+		s_RazorbackType = Entities::GetTypeChecker("CTFWearableRazorback");
 	}
 
 	return true;
@@ -147,6 +237,84 @@ vgui::Panel* HUDHacking::FindChildByName(vgui::VPANEL rootPanel, const char* nam
 	}
 
 	return nullptr;
+}
+float HUDHacking::GetChargeMeter(const ChargeBarInfo& info, Player& player, const IClientNetworkable& playerNetworkable,
+	const IClientNetworkable& weapon) const
+{
+	if (ce_hud_chargebars_debug.GetBool())
+	{
+		int i = 0;
+
+		{
+			static const RecvTable* excludeTables[] =
+			{
+				Entities::FindRecvTable("DT_BaseFlex"),
+				Entities::FindRecvTable("DT_AttributeList"),
+				Entities::FindRecvTable("DT_EconEntity"),
+			};
+
+			for (const auto& prop : EntityOffsetIterable<float>(&weapon, std::begin(excludeTables), std::end(excludeTables)))
+				engine->Con_NPrintf(i++, "%s: %1.2f", prop.first.c_str(), prop.second.GetValue(&weapon));
+
+			i++;
+		}
+
+		engine->Con_NPrintf(i++, "rage: %1.2f", s_RageMeter.TryGetValue(&playerNetworkable, NAN));
+		engine->Con_NPrintf(i++, "energy drink: %1.2f", s_EnergyDrinkMeter.TryGetValue(&playerNetworkable, NAN));
+		engine->Con_NPrintf(i++, "hype: %1.2f", s_HypeMeter.TryGetValue(&playerNetworkable, NAN));
+		engine->Con_NPrintf(i++, "charge: %1.2f", s_ChargeMeter.TryGetValue(&playerNetworkable, NAN));
+		engine->Con_NPrintf(i++, "cloak: %1.2f", s_CloakMeter.TryGetValue(&playerNetworkable, NAN));
+
+		engine->Con_NPrintf(i++, "weapon energy: %1.2f", s_WeaponEnergyMeter.TryGetValue(&weapon, NAN));
+
+		engine->Con_NPrintf(i++, "effect bar regen time: %1.2f", s_WeaponEffectBarRegenTime.TryGetValue(&weapon, NAN));
+		engine->Con_NPrintf(i++, "cleaners carbine charge: %1.2f", s_CleanersCarbineCharge.TryGetValue(&weapon, NAN));
+
+		i++;
+
+		for (int a = 0; a < 11; a++)
+			engine->Con_NPrintf(i++, "item charge %i: %1.2f", a, s_ItemChargeMeters[a].TryGetValue(&playerNetworkable, NAN));
+	}
+
+	switch (info.m_Meter)
+	{
+		case MeterType::Rage:               return s_RageMeter.GetValue(&playerNetworkable);
+		case MeterType::EnergyDrink:        return s_EnergyDrinkMeter.GetValue(&playerNetworkable);
+		case MeterType::Hype:               return s_HypeMeter.GetValue(&playerNetworkable);
+		case MeterType::Charge:             return s_ChargeMeter.GetValue(&playerNetworkable);
+		case MeterType::MedigunCharge:      return s_MedigunChargeMeter.GetValue(&playerNetworkable);
+		case MeterType::Cloak:              return s_CloakMeter.GetValue(&playerNetworkable);
+
+		case MeterType::ItemCharge0:        return s_ItemChargeMeters[0].GetValue(&playerNetworkable);
+		case MeterType::ItemCharge1:        return s_ItemChargeMeters[1].GetValue(&playerNetworkable);
+		case MeterType::CleanersCarbine:    return player.GetState<PlayerState>().GetCleanersCarbineCharge();
+
+		case MeterType::Spycicle:
+		{
+			auto regenTime = s_SpycicleRegenTime.GetValue(&weapon);
+			auto meltTime = s_SpycicleMeltTime.GetValue(&weapon);
+			auto clientTime = Interfaces::GetEngineTool()->ClientTime();
+
+			if (clientTime >= (meltTime + regenTime))
+				return 100;
+
+			return ((clientTime - meltTime) / regenTime) * 100;
+		}
+
+		case MeterType::EffectBar:
+		{
+			auto regenTime = s_WeaponEffectBarRegenTime.GetValue(&weapon);
+			Assert(info.m_EffectBarChargeTime > 0);
+			auto clientTime = Interfaces::GetEngineTool()->ClientTime();
+
+			if (clientTime >= regenTime)
+				return 100;
+
+			return 100 - ((regenTime - clientTime) / info.m_EffectBarChargeTime * 100);
+		}
+	}
+
+	return (2.0f / 3) * 100;
 }
 const char* HUDHacking::GetStatusEffectFormatString(StatusEffect effect)
 {
@@ -246,7 +414,7 @@ void HUDHacking::UpdatePlayerPanels()
 			if (statusEffects)
 				UpdateStatusEffect(playerVPanel, playerPanel, *player);
 
-			UpdateBanner(bannerStatus, playerVPanel, playerPanel, *player);
+			UpdateChargeBar(bannerStatus, playerVPanel, playerPanel, *player);
 
 			if (ce_hud_class_change_animations.GetBool())
 				UpdateClassChangeAnimations(playerVPanel, playerPanel, *player);
@@ -300,7 +468,7 @@ void HUDHacking::UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePan
 
 #pragma warning(push)
 #pragma warning(disable : 4701)	// Potentially uninitialized local variable used
-void HUDHacking::UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player)
+void HUDHacking::UpdateChargeBar(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, Player& player)
 {
 	if (!enabled)
 	{
@@ -325,21 +493,14 @@ void HUDHacking::UpdateBanner(bool enabled, vgui::VPANEL playerVPanel, vgui::Edi
 			return;
 	}
 
-	BannerType type;
+	ChargeBarType type;
 	float charge;
 	if (shouldShowInfo)
-		shouldShowInfo = player.IsAlive() && GetBannerInfo(player, type, charge);
+		shouldShowInfo = player.IsAlive() && GetChargeBarData(player, type, charge);
 
 	const char* bannerString = "";
 	if (shouldShowInfo)
-	{
-		switch (type)
-		{
-			case BannerType::BattalionsBackup:    bannerString = ce_hud_chargebars_battalions_backup_text.GetString(); break;
-			case BannerType::BuffBanner:          bannerString = ce_hud_chargebars_buff_banner_text.GetString(); break;
-			case BannerType::Concheror:           bannerString = ce_hud_chargebars_concheror_text.GetString(); break;
-		}
-	}
+		bannerString = m_ChargeBarCvars[(int)type]->m_TextCvar.GetString();
 
 	auto localized = g_pVGuiLocalize->FindAsUTF8(bannerString);
 	playerPanel->SetDialogVariable(WEAPON_CHARGE_NAME, localized ? localized : bannerString);
@@ -369,37 +530,82 @@ void HUDHacking::UpdateClassChangeAnimations(vgui::VPANEL playerVPanel, vgui::Ed
 
 	const auto team = player.GetTeam();
 
-	if (player.GetState<PlayerClassState>().WasClassChangedThisFrame())
+	if (player.GetState<PlayerState>().WasClassChangedThisFrame())
 	{
 		auto startAnimSequence = HookManager::GetRawFunc<HookFunc::vgui_AnimationController_StartAnimationSequence>();
 		startAnimSequence(animController, playerPanel, player.GetTeam() == TFTeam::Red ? "PlayerPanel_ClassChangedRed" : "PlayerPanel_ClassChangedBlue", false);
 	}
 }
 
-bool HUDHacking::GetBannerInfo(const Player& player, BannerType& type, float& charge)
+void HUDHacking::CheckItemForCharge(Player& player, const IClientNetworkable& playerNetworkable, const IClientNetworkable& item,
+	int& bestPriority, ChargeBarType& type, float& charge) const
 {
-	if (player.GetClass() != TFClassType::Soldier)
-		return false;
+	const auto itemID = ItemSchema::GetModule()->GetBaseItemID(Entities::GetItemDefinitionIndex(&item));
 
-	for (int i = 0; i < MAX_WEAPONS; i++)
+	for (size_t i = 0; i < std::size(s_ChargeBarInfo); i++)
 	{
-		C_BaseCombatWeapon* weapon = player.GetWeapon(i);
-		if (!weapon)
+		const auto& info = s_ChargeBarInfo[i];
+		if (itemID != info.m_ItemID)
 			continue;
 
-		// Make sure this is a banner of some type
-		type = (BannerType)ItemSchema::GetModule()->GetBaseItemID(Entities::GetItemDefinitionIndex(weapon));
-		switch (type)
+		const auto priority = m_ChargeBarCvars[i]->m_PriorityCvar.GetInt();
+		if (priority <= bestPriority)
+			continue;
+
+		bestPriority = priority;
+		type = (ChargeBarType)i;
+		charge = GetChargeMeter(info, player, playerNetworkable, item);
+	}
+}
+
+bool HUDHacking::GetChargeBarData(Player& player, ChargeBarType& type, float& charge) const
+{
+	if (false)
+	{
+		int i = 0;
+
+		static const RecvTable* excludeTables[] =
 		{
-			case BannerType::BuffBanner:
-			case BannerType::BattalionsBackup:
-			case BannerType::Concheror:
-				charge = s_RageMeter.GetValue(player.GetEntity());
-				return true;
-		}
+			Entities::FindRecvTable("DT_BaseFlex"),
+			Entities::FindRecvTable("DT_AttributeList"),
+			Entities::FindRecvTable("DT_EconEntity"),
+			Entities::FindRecvTable("m_chAreaBits"),
+			Entities::FindRecvTable("m_chAreaPortalBits"),
+			Entities::FindRecvTable("DT_Local"),
+			Entities::FindRecvTable("m_iAmmo"),
+		};
+
+		for (const auto& prop : EntityOffsetIterable<int>(player.GetEntity()->GetClientClass()->m_pRecvTable, std::begin(excludeTables), std::end(excludeTables)))
+			engine->Con_NPrintf(i++, "%s: %i", prop.first.c_str(), prop.second.GetValue(player.GetEntity()));
 	}
 
-	return false;
+	IClientNetworkable* playerNetworkable;
+	if (auto playerEnt = player.GetEntity())
+		playerNetworkable = playerEnt->GetClientNetworkable();
+	else
+		return false;
+
+	int bestPriority = 0;
+	for (int iWep = 0; iWep < MAX_WEAPONS; iWep++)
+	{
+		if (auto weapon = player.GetWeapon(iWep))
+			CheckItemForCharge(player, *playerNetworkable, *weapon, bestPriority, type, charge);
+	}
+
+	// Demoman shields and razorbacks are weird and don't go in the m_hMyWeapons array >.<
+	for (int iWearable = 0; iWearable < 4; iWearable++)
+	{
+		C_BaseEntity* item = HookManager::GetRawFunc<HookFunc::C_TFPlayer_GetEntityForLoadoutSlot>()((C_TFPlayer*)player.GetEntity(), iWearable, true);
+		if (!item)
+			continue;
+
+		if (s_WearableShieldType.Match(item) || s_RazorbackType.Match(item))
+			CheckItemForCharge(player, *playerNetworkable, *item, bestPriority, type, charge);
+
+		continue;
+	}
+
+	return bestPriority > 0;
 }
 
 void HUDHacking::ForwardPlayerPanelBorder(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel)
@@ -506,17 +712,30 @@ vgui::Panel* HUDHacking::FindChildByNameOverride(vgui::Panel* pThis, const char*
 	return m_FindChildByNameHook.GetOriginal()(pThis, name, recurseDown);
 }
 
-bool HUDHacking::PlayerClassState::WasClassChangedThisFrame() const
+bool HUDHacking::PlayerState::WasClassChangedThisFrame() const
 {
 	return Interfaces::GetEngineTool()->HostFrameCount() == m_LastClassChangedFrame;
 }
 
-void HUDHacking::PlayerClassState::Update()
+float HUDHacking::PlayerState::GetCleanersCarbineCharge() const
 {
-	const auto tick = Interfaces::GetEngineTool()->ClientTick();
-	if (tick == m_LastClassChangedUpdateTick)
-		return;
+	if (m_CleanersCarbineEmptyTime > 0)
+		return std::clamp<float>((m_CleanersCarbineEmptyTime - Interfaces::GetEngineTool()->ClientTime()) / CLEANERS_CARBINE_DURATION, 0, 1) * 100;
+	else
+		return m_LastCleanersCarbineCharge;
+}
 
+void HUDHacking::PlayerState::UpdateInternal(bool tickUpdate, bool frameUpdate)
+{
+	if (tickUpdate)
+	{
+		UpdateClass();
+		UpdateCleanersCarbineMeter();
+	}
+}
+
+void HUDHacking::PlayerState::UpdateClass()
+{
 	auto playerClass = GetPlayer().GetClass();
 
 	// Update last class changed frame
@@ -524,5 +743,54 @@ void HUDHacking::PlayerClassState::Update()
 		m_LastClassChangedFrame = Interfaces::GetEngineTool()->HostFrameCount();
 
 	m_LastClassChangedClass = playerClass;
-	m_LastClassChangedUpdateTick = tick;
+}
+
+void HUDHacking::PlayerState::UpdateCleanersCarbineMeter()
+{
+	float newCharge = -1;
+	if (GetPlayer().IsAlive())
+	{
+		for (int i = 0; i < MAX_WEAPONS; i++)
+		{
+			if (auto charge = s_CleanersCarbineCharge.TryGetValue(GetPlayer().GetWeapon(i)); charge)
+				newCharge = *charge;
+		}
+	}
+
+	if (newCharge == 0 && m_LastCleanersCarbineCharge == 100 && GetPlayer().CheckCondition(TFCond_CritCola))
+	{
+		// We just started using our meter
+		m_CleanersCarbineEmptyTime = Interfaces::GetEngineTool()->ClientTime() + CLEANERS_CARBINE_DURATION;
+	}
+	else if (newCharge < 0 || !GetPlayer().CheckCondition(TFCond_CritCola))
+	{
+		// We're dead or we changed class or something. Snap meter to empty.
+		m_CleanersCarbineEmptyTime = 0;
+	}
+
+	m_LastCleanersCarbineCharge = newCharge;
+}
+
+template<typename... Args>
+std::unique_ptr<char[]> HUDHacking::WeaponChargeBarCvarData::FormatAndAlloc(const char* fmt, const Args&... args)
+{
+	char buf[256];
+	auto length = sprintf_s(buf, fmt, args...) + 1;
+
+	auto retVal = std::make_unique<char[]>(length);
+	memcpy(retVal.get(), buf, length);
+	return retVal;
+}
+
+HUDHacking::WeaponChargeBarCvarData::WeaponChargeBarCvarData(const ChargeBarInfo& info) :
+	m_PriorityCvarName(FormatAndAlloc("ce_hud_chargebars_priority_%s", info.m_Name)),
+	m_PriorityCvarHelpText(FormatAndAlloc("Priority of the charge bar for %s when competing with other enabled chargebars. 0 to disable showing this charge bar.", info.m_HelpText)),
+	m_PriorityCvarDefault(FormatAndAlloc("%i", info.m_DefaultPriority)),
+
+	m_TextCvarName(FormatAndAlloc("ce_hud_chargebars_text_%s", info.m_Name)),
+	m_TextCvarHelpText(FormatAndAlloc("Text to display on the hud when the chargebar for %s is showing.", info.m_HelpText)),
+
+	m_PriorityCvar(m_PriorityCvarName.get(), m_PriorityCvarDefault.get(), FCVAR_NONE, m_PriorityCvarHelpText.get()),
+	m_TextCvar(m_TextCvarName.get(), info.m_DisplayText, FCVAR_NONE, m_TextCvarHelpText.get())
+{
 }

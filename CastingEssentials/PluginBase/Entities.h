@@ -66,6 +66,8 @@ public:
 
 	static int GetItemDefinitionIndex(const IClientNetworkable* entity);
 
+	static const RecvTable* FindRecvTable(const std::string_view& name);
+
 private:
 	Entities() = delete;
 	~Entities() = delete;
@@ -81,6 +83,8 @@ private:
 	static std::map<const RecvTable*, std::set<const RecvTable*>> s_ContainingRecvTables;
 	static void BuildContainingRecvTablesMap();
 	static void AddChildTables(const RecvTable* parent, std::vector<const RecvTable*>& stack);
+
+	static std::map<std::string_view, const RecvTable*> s_AllRecvTables;
 
 #ifdef DEBUG
 	static std::vector<const ClientClass*> s_DebugClientClasses;
