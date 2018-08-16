@@ -41,14 +41,18 @@ static constexpr auto STENCIL_INDEX_MASK = 0xFC;
 static bool s_DisableForcedMaterialOverride = false;
 
 Graphics::Graphics() :
-	ce_graphics_disable_prop_fades("ce_graphics_disable_prop_fades", "0", FCVAR_UNREGISTERED, "Enable/disable prop fading.",
-		[](IConVar* var, const char*, float) { GetModule()->ToggleEntityFade(static_cast<ConVar*>(var)); }),
+	ce_graphics_disable_prop_fades("ce_graphics_disable_prop_fades", "0", FCVAR_NONE, "Enable/disable prop fading.",
+		[](IConVar* var, const char*, float) { GetModule()->TogglePropFade(static_cast<ConVar*>(var)); }),
 	ce_graphics_debug_glow("ce_graphics_debug_glow", "0", FCVAR_UNREGISTERED),
 	ce_graphics_glow_silhouettes("ce_graphics_glow_silhouettes", "0", FCVAR_NONE, "Turns outlines into silhouettes."),
 	ce_graphics_improved_glows("ce_graphics_improved_glows", "1", FCVAR_NONE, "Should we used the new and improved glow code?",
 		[](IConVar* var, const char*, float) { GetModule()->ToggleImprovedGlows(static_cast<ConVar*>(var)); }),
 	ce_graphics_fix_invisible_players("ce_graphics_fix_invisible_players", "1", FCVAR_NONE,
 		"Fix a case where players are invisible if you're firstperson speccing them when the round starts."),
+
+	ce_graphics_fxaa("ce_graphics_fxaa", "0", FCVAR_NONE, "Enables postprocess antialiasing (NVIDIA FXAA 3.11)",
+		[](IConVar* var, const char*, float) { GetModule()->ToggleFXAA(static_cast<ConVar*>(var)); }),
+	ce_graphics_fxaa_debug("ce_graphics_fxaa_debug", "0"),
 
 	ce_outlines_debug_stencil_out("ce_outlines_debug_stencil_out", "1", FCVAR_NONE, "Should we stencil out the players during the final blend to screen?"),
 	ce_outlines_players_override_red("ce_outlines_players_override_red", "", FCVAR_NONE,
@@ -83,6 +87,9 @@ Graphics::Graphics() :
 	ce_graphics_dump_shader_params("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete),
 	ce_graphics_dump_rts("ce_graphics_dump_rts", DumpRTs, "Dump all rendertargets to console."),
 
+	m_PostEffectsHook(std::bind(&Graphics::PostEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5)),
+
+	m_ComputePropOpacityHook(std::bind(&Graphics::ComputePropOpacityOverride, this, std::placeholders::_1, std::placeholders::_2)),
 	m_ComputeEntityFadeHook(std::bind(&Graphics::ComputeEntityFadeOveride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
 
 	m_ApplyEntityGlowEffectsHook(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9)),
@@ -278,10 +285,88 @@ void Graphics::DumpRTs(const CCommand& cmd)
 	Msg("Dumped %i rendertargets.\n", count);
 }
 
-static constexpr auto test = MASK_SHOT_HULL;
-void Graphics::ToggleEntityFade(const ConVar* var)
+void Graphics::ToggleFXAA(const ConVar* var)
 {
-	m_ComputeEntityFadeHook.SetEnabled(var->GetBool());
+	m_PostEffectsHook.SetEnabled(var->GetBool());
+}
+
+void Graphics::PostEffectsOverride(CViewRender* pThis, int x, int y, int w, int h)
+{
+	m_PostEffectsHook.SetState(Hooking::HookAction::SUPERCEDE);
+
+	m_PostEffectsHook.GetOriginal()(pThis, x, y, w, h);
+
+	// Always run FXAA after other postproc effects, as they may exhibit shader aliasing
+	DrawFXAA(x, y, w, h);
+}
+void Graphics::DrawFXAA(int x, int y, int w, int h)
+{
+	CMatRenderContextPtr pRenderContext(materials);
+	pRenderContext->PushRenderTargetAndViewport();
+	pRenderContext->SetToneMappingScaleLinear(Vector(1, 1, 1));
+
+	ITexture* pRtFullFrameFB0 = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
+	ITexture* pRtFullFrameFB1 = materials->FindTexture("_rt_FullFrameFB1", TEXTURE_GROUP_RENDER_TARGET);
+
+	pRenderContext->SetRenderTargetEx(0, nullptr);
+
+	// Save current backbuffer to _rt_FullFrameFB1
+	pRenderContext->CopyRenderTargetToTexture(pRtFullFrameFB1);
+
+	// Store luma in alpha of fb1
+	{
+		CRefPtrFix<IMaterial> lumaToAlphaMaterial(materials->FindMaterial("castingessentials/fxaa/luma_to_alpha", TEXTURE_GROUP_CLIENT_EFFECTS));
+
+		static int frameCount = 0;
+		pRenderContext->SetRenderTarget(pRtFullFrameFB0);
+		pRenderContext->ClearColor4ub(0, 0, 0, 0);
+		pRenderContext->ClearBuffers(true, true, true);
+
+		pRenderContext->OverrideAlphaWriteEnable(true, true);
+		{
+			pRenderContext->DrawScreenSpaceRectangle(lumaToAlphaMaterial,
+				x, y, w, h,
+				x, y, x + w - 1, y + h - 1,
+				pRtFullFrameFB1->GetActualWidth(), pRtFullFrameFB1->GetActualHeight());
+		}
+		pRenderContext->OverrideAlphaWriteEnable(false, false);
+	}
+
+	// FXAA to backbuffer
+	{
+		CRefPtrFix<IMaterial> fxaaMaterial(materials->FindMaterial("castingessentials/fxaa/fxaa", TEXTURE_GROUP_CLIENT_EFFECTS));
+
+		fxaaMaterial->FindVar("$C0_X")->SetFloatValue(pRtFullFrameFB1->GetActualWidth());
+		fxaaMaterial->FindVar("$C0_Y")->SetFloatValue(pRtFullFrameFB1->GetActualHeight());
+
+		pRenderContext->SetRenderTarget(nullptr);
+
+		if (ce_graphics_fxaa_debug.GetBool())
+		{
+			static std::default_random_engine s_Random;
+			pRenderContext->ClearColor4ub(0, 0, 0, 255);
+			pRenderContext->ClearBuffers(true, true, true);
+		}
+
+		pRenderContext->DrawScreenSpaceRectangle(fxaaMaterial,
+			x, y, w, h,
+			x, y, x + w - 1, y + h - 1,
+			pRtFullFrameFB0->GetActualWidth(), pRtFullFrameFB0->GetActualHeight());
+	}
+
+	pRenderContext->PopRenderTargetAndViewport();
+}
+void Graphics::TogglePropFade(const ConVar* var)
+{
+	const bool enabled = var->GetBool();
+	m_ComputeEntityFadeHook.SetEnabled(enabled);
+	m_ComputePropOpacityHook.SetEnabled(enabled);
+}
+
+void Graphics::ComputePropOpacityOverride(const Vector& viewOrigin, float factor)
+{
+	m_ComputePropOpacityHook.SetState(Hooking::HookAction::SUPERCEDE);
+	m_ComputePropOpacityHook.GetOriginal()(viewOrigin, -1);
 }
 
 unsigned char Graphics::ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale)

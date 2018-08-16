@@ -11,6 +11,7 @@
 #include <icvar.h>
 #include <cdll_int.h>
 #include <client/hltvcamera.h>
+#include <engine/IStaticPropMgr.h>
 #include <game/client/iclientrendertargets.h>
 #include <toolframework/iclientenginetools.h>
 #include <iprediction.h>
@@ -185,6 +186,8 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::CStudioHdr_GetNumSeq>("\x8B\x41\x04\x85\xC0\x75\x09\x8B\x01\x8B\x80????\xC3\x8B\x40\x14", "xxxxxxxxxxx????xxxx");
 	FindFunc<HookFunc::CStudioHdr_pSeqdesc>("\x55\x8B\xEC\x56\x8B\x75\x08\x57\x8B\xF9\x85\xF6\x78\x18", "xxxxxxxxxxxxxx");
 
+	FindFunc<HookFunc::CViewRender_PerformScreenSpaceEffects>("\x55\x8B\xEC\x83\xEC\x08\x8B\x0D????\x53\x56\x57\x33\xF6\x33\xFF\x89\x75\xF8\x89\x7D\xFC\x8B\x01\x85\xC0\x74\x36\x68????\x68????\x68????\x68????\x68????\x57\x57\x57\x57\x8D\x4D\xF8\x51\x50\x8B\x40\x50\xFF\xD0\x8B\x7D\xFC\x83\xC4\x2C\x8B\x75\xF8\x8B\x0D????\x8B\x19\x8B\x0D", "xxxxxxxx????xxxxxxxxxxxxxxxxxxxx????x????x????x????x????xxxxxxxxxxxxxxxxxxxxxxxxx????xxxx");
+
 	FindFunc<HookFunc::CVTFTexture_GetResourceData>("\x55\x8B\xEC\x8B\x45\x08\x56\x25", "xxxxxxxx", 0, "MaterialSystem");
 	FindFunc<HookFunc::CVTFTexture_ReadHeader>("\x55\x8B\xEC\x56\x8B\x75\x0C\x57\x6A\x50", "xxxxxxxxxx", 0, "MaterialSystem");
 
@@ -262,6 +265,8 @@ HookManager::HookManager()
 
 	InitHook<HookFunc::IPrediction_PostEntityPacketReceived>(Interfaces::GetPrediction(), &IPrediction::PostEntityPacketReceived);
 
+	InitHook<HookFunc::IStaticPropMgrClient_ComputePropOpacity>(Interfaces::GetStaticPropMgr(), &IStaticPropMgrClient::ComputePropOpacity);
+
 	InitHook<HookFunc::IStudioRender_ForcedMaterialOverride>(g_pStudioRender, &IStudioRender::ForcedMaterialOverride);
 
 	InitHook<HookFunc::C_HLTVCamera_SetCameraAngle>(Interfaces::GetHLTVCamera(), GetRawFunc<HookFunc::C_HLTVCamera_SetCameraAngle>());
@@ -283,6 +288,8 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_ShouldDraw>();
+
+	InitGlobalHook<HookFunc::CViewRender_PerformScreenSpaceEffects>();
 
 	InitGlobalHook<HookFunc::CVTFTexture_GetResourceData>();
 	InitGlobalHook<HookFunc::CVTFTexture_ReadHeader>();

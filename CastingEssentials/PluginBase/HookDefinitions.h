@@ -19,6 +19,7 @@ struct ClientModelRenderInfo_t;
 class CNewParticleEffect;
 class CParticleProperty;
 class CUtlBuffer;
+class CViewRender;
 class CVTFTexture;
 struct DrawModelState_t;
 class IClientRenderTargets;
@@ -26,6 +27,7 @@ class IGameSystem;
 class IMaterialSystem;
 class IMaterialSystemHardwareConfig;
 class INetworkStringTable;
+class IStaticPropMgrClient;
 struct mstudioseqdesc_t;
 using trace_t = class CGameTrace;
 struct VTFFileHeader_t;
@@ -115,6 +117,8 @@ enum class HookFunc
 	CStudioHdr_GetNumSeq,
 	CStudioHdr_pSeqdesc,
 
+	CViewRender_PerformScreenSpaceEffects,
+
 	CVTFTexture_GetResourceData,
 	CVTFTexture_ReadHeader,
 
@@ -144,6 +148,8 @@ enum class HookFunc
 	IGameSystem_Add,
 
 	IPrediction_PostEntityPacketReceived,
+
+	IStaticPropMgrClient_ComputePropOpacity,
 
 	IStudioRender_ForcedMaterialOverride,
 
@@ -222,6 +228,11 @@ protected:
 	{
 		typedef VirtualHook<HookFunc::IPrediction_PostEntityPacketReceived, false, IPrediction, void> Hook;
 	};
+	template<> struct HookFuncType<HookFunc::IStaticPropMgrClient_ComputePropOpacity>
+	{
+		typedef void(__thiscall* Raw)(const Vector& viewOrigin, float factor);
+		typedef VirtualHook<HookFunc::IStaticPropMgrClient_ComputePropOpacity, false, IStaticPropMgrClient, void, const Vector&, float> Hook;
+	};
 	template<> struct HookFuncType<HookFunc::IStudioRender_ForcedMaterialOverride>
 	{
 		typedef VirtualHook<HookFunc::IStudioRender_ForcedMaterialOverride, false, IStudioRender, void, IMaterial*, OverrideType_t> Hook;
@@ -257,6 +268,11 @@ protected:
 	template<> struct HookFuncType<HookFunc::CStudioHdr_pSeqdesc>
 	{
 		typedef mstudioseqdesc_t&(__thiscall *Raw)(CStudioHdr* pThis, int iSequence);
+	};
+	template<> struct HookFuncType<HookFunc::CViewRender_PerformScreenSpaceEffects>
+	{
+		typedef void(__thiscall* Raw)(CViewRender* pThis, int x, int y, int w, int h);
+		typedef GlobalClassHook<HookFunc::CViewRender_PerformScreenSpaceEffects, false, CViewRender, void, int, int, int, int> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::CVTFTexture_GetResourceData>
 	{

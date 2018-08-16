@@ -1,0 +1,10 @@
+screenspace_general
+{
+	$PIXSHADER      ce_luma_to_alpha_ps20
+	$basetexture    _rt_FullFrameFB1
+	$ignorez        1
+	$alpha_blend    0
+
+	$LINEARREAD_BASETEXTURE 1
+	$LINEARWRITE 1
+}

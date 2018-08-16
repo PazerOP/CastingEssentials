@@ -19,6 +19,7 @@ class IGameEventManager2;
 class IGameSystem;
 class IGameSystemPerFrame;
 class IPrediction;
+class IStaticPropMgrClient;
 class ITextureManager;
 class IVEngineClient;
 class IVModelInfoClient;
@@ -118,10 +119,14 @@ public:
 	// #include <../materialsystem/texturemanager.h>
 	static ITextureManager* GetTextureManager();
 
+	// #include <engine/IStaticPropMgr.h>
+	static IStaticPropMgrClient* GetStaticPropMgr() { return s_StaticPropMgr; }
+
 private:
 	static IBaseClientDLL *pClientDLL;
 	static IClientEngineTools *pClientEngineTools;
 	static IClientEntityList *pClientEntityList;
+	static IStaticPropMgrClient* s_StaticPropMgr;
 	static IVEngineClient *pEngineClient;
 	static IEngineTool *pEngineTool;
 	static IGameEventManager2 *pGameEventManager;

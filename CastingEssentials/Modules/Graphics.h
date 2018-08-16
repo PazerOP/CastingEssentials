@@ -42,6 +42,9 @@ private:
 	ConVar ce_graphics_improved_glows;
 	ConVar ce_graphics_fix_invisible_players;
 
+	ConVar ce_graphics_fxaa;
+	ConVar ce_graphics_fxaa_debug;
+
 	ConVar ce_outlines_players_override_red;
 	ConVar ce_outlines_players_override_blue;
 	ConVar ce_outlines_blur;
@@ -79,8 +82,15 @@ private:
 
 	static void DumpRTs(const CCommand& cmd);
 
+	void ToggleFXAA(const ConVar* var);
+	Hook<HookFunc::CViewRender_PerformScreenSpaceEffects> m_PostEffectsHook;
+	void PostEffectsOverride(CViewRender* pThis, int x, int y, int w, int h);
+	void DrawFXAA(int x, int y, int w, int h);
+
+	Hook<HookFunc::IStaticPropMgrClient_ComputePropOpacity> m_ComputePropOpacityHook;
 	Hook<HookFunc::Global_UTILComputeEntityFade> m_ComputeEntityFadeHook;
-	void ToggleEntityFade(const ConVar* var);
+	void TogglePropFade(const ConVar* var);
+	void ComputePropOpacityOverride(const Vector& viewOrigin, float factor);
 	unsigned char ComputeEntityFadeOveride(C_BaseEntity* entity, float minDist, float maxDist, float fadeScale);
 
 	Hook<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects> m_ApplyEntityGlowEffectsHook;

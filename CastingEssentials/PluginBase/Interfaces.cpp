@@ -5,6 +5,7 @@
 #include "Exceptions.h"
 
 #include <cdll_int.h>
+#include <engine/IStaticPropMgr.h>
 #include <engine/ivmodelinfo.h>
 #include <game/client/iclientrendertargets.h>
 #include <icliententitylist.h>
@@ -30,6 +31,7 @@
 IBaseClientDLL *Interfaces::pClientDLL = nullptr;
 IClientEngineTools *Interfaces::pClientEngineTools = nullptr;
 IClientEntityList *Interfaces::pClientEntityList = nullptr;
+IStaticPropMgrClient* Interfaces::s_StaticPropMgr;
 IVEngineClient *Interfaces::pEngineClient = nullptr;
 IEngineTool *Interfaces::pEngineTool = nullptr;
 IGameEventManager2 *Interfaces::pGameEventManager = nullptr;
@@ -87,6 +89,7 @@ void Interfaces::Load(CreateInterfaceFn factory)
 	s_EngineTrace = (IEngineTrace*)factory(INTERFACEVERSION_ENGINETRACE_CLIENT, nullptr);
 	s_SpatialPartition = (ISpatialPartition*)factory(INTERFACEVERSION_SPATIALPARTITION, nullptr);
 	s_ClientRenderTargets = (IClientRenderTargets*)factory(CLIENTRENDERTARGETS_INTERFACE_VERSION, nullptr);
+	s_StaticPropMgr = (IStaticPropMgrClient*)factory(INTERFACEVERSION_STATICPROPMGR_CLIENT, nullptr);
 
 	CreateInterfaceFn gameClientFactory;
 	pEngineTool->GetClientFactory(gameClientFactory);
