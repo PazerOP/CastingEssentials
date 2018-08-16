@@ -41,6 +41,9 @@ CameraTools::CameraTools() :
 		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); }),
 	ce_cameratools_spec_player_alive("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players."),
 	ce_cameratools_fix_view_heights("ce_cameratools_fix_view_heights", "0", FCVAR_NONE, "Corrects HLTV view height to match that of spectated classes."),
+	ce_cameratools_disable_view_punches("ce_cameratools_disable_view_punches", "0", FCVAR_NONE,
+		"Disables all view punches (used for recoil effects on some weapons)",
+		[](IConVar* var, const char*, float) { GetModule()->ToggleDisableViewPunches(static_cast<ConVar*>(var)); }),
 
 	ce_tplock_enable("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player."),
 	ce_tplock_taunt_enable("ce_tplock_taunt_enable", "0", FCVAR_NONE, "Force the camera into thirdperson tplock when taunting. Does not require ce_tplock_enable."),
@@ -663,6 +666,40 @@ bool CameraTools::FixViewHeights()
 	}
 
 	return true;
+}
+
+void CameraTools::ToggleDisableViewPunches(const ConVar* var)
+{
+	if (var->GetBool())
+	{
+		auto angle = Entities::FindRecvProp("CTFPlayer", "m_vecPunchAngle");
+		auto velocity = Entities::FindRecvProp("CTFPlayer", "m_vecPunchAngleVel");
+
+		if (!angle)
+		{
+			PluginWarning("%s: Unable to locate RecvProp for C_TFPlayer::m_vecPunchAngle\n", var->GetName());
+			return;
+		}
+		if (!velocity)
+		{
+			PluginWarning("%s: Unable to locate RecvProp for C_TFPlayer::m_vecPunchAngleVel\n", var->GetName());
+			return;
+		}
+
+		RecvVarProxyFn zeroProxy = [](const CRecvProxyData* pData, void* pStruct, void* pOut)
+		{
+			auto outVec = reinterpret_cast<Vector*>(pOut);
+			outVec->Init(0, 0, 0);
+		};
+
+		m_vecPunchAngleProxy = CreateVariablePusher(angle->m_ProxyFn, zeroProxy);
+		m_vecPunchAngleVelProxy = CreateVariablePusher(velocity->m_ProxyFn, zeroProxy);
+	}
+	else
+	{
+		m_vecPunchAngleProxy.Clear();
+		m_vecPunchAngleVelProxy.Clear();
+	}
 }
 
 void CameraTools::UpdateIsTaunting()

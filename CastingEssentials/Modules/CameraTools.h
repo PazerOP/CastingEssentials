@@ -62,6 +62,7 @@ private:
 	ConVar ce_cameratools_force_valid_target;
 	ConVar ce_cameratools_spec_player_alive;
 	ConVar ce_cameratools_fix_view_heights;
+	ConVar ce_cameratools_disable_view_punches;
 
 	ConVar ce_tplock_enable;
 	ConVar ce_tplock_taunt_enable;
@@ -144,6 +145,10 @@ private:
 	std::optional<VariablePusher<Vector>> m_OldDuckViewHeight;
 	static EntityOffset<float> s_ViewOffsetZOffset;
 	bool FixViewHeights();
+
+	void ToggleDisableViewPunches(const ConVar* var);
+	VariablePusher<RecvVarProxyFn> m_vecPunchAngleProxy;
+	VariablePusher<RecvVarProxyFn> m_vecPunchAngleVelProxy;
 
 	Vector CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& orbitCenter, const QAngle& angle) const;
 

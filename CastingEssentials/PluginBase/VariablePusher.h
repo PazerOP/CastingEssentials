@@ -40,7 +40,7 @@ public:
 	__forceinline constexpr const T& GetOldValue() const { return m_OldValue; }
 
 	__forceinline constexpr bool IsEmpty() const { return !m_Variable; }
-	constexpr void Clear()
+	void Clear()
 	{
 		if (m_Variable)
 		{
@@ -50,7 +50,7 @@ public:
 	}
 
 private:
-	T* const m_Variable;
+	T* m_Variable;
 	T m_OldValue;
 };
 
