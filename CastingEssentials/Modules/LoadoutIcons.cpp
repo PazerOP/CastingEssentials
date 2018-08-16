@@ -23,7 +23,6 @@ LoadoutIcons::LoadoutIcons() :
 	ce_loadout_filter_inactive_red("ce_loadout_filter_inactive_red", "255 255 255 255", FCVAR_NONE, "drawcolor_override for red team's inactive loadout items."),
 	ce_loadout_filter_inactive_blu("ce_loadout_filter_inactive_blu", "255 255 255 255", FCVAR_NONE, "drawcolor_override for blu team's inactive loadout items.")
 {
-
 	memset(m_Weapons, 0, sizeof(m_Weapons));
 	memset(m_ActiveWeaponIndices, 0, sizeof(m_ActiveWeaponIndices));
 }
@@ -41,17 +40,6 @@ bool LoadoutIcons::CheckDependencies()
 	if (!Interfaces::GetClientMode())
 	{
 		PluginWarning("Required interface IClientMode for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	try
-	{
-		HookManager::GetRawFunc<HookFunc::vgui_EditablePanel_GetDialogVariables>();
-		HookManager::GetRawFunc<HookFunc::vgui_ImagePanel_SetImage>();
-	}
-	catch (bad_pointer ex)
-	{
-		PluginWarning("No signature match found for %s, required for module %s!\n", ex.what(), GetModuleName());
 		ready = false;
 	}
 
@@ -160,20 +148,14 @@ void LoadoutIcons::PlayerPanelUpdateIcons(vgui::EditablePanel* playerPanel)
 				sprintf_s(materialBuffer, "loadout_icons/%i_%s", weaponIndex, TF_TEAM_NAMES[(int)team]);
 
 				// Dumb, evil, unsafe hacks
-				auto hackImgPanel = reinterpret_cast<vgui::ImagePanel*>(iconPanel);
-
-				HookManager::GetRawFunc<HookFunc::vgui_ImagePanel_SetImage>()(hackImgPanel, materialBuffer);
-
-				//Color* m_FillColor = (Color*)(((DWORD*)hackImgPanel) + 94);
-				Color* m_DrawColor = (Color*)(((DWORD*)hackImgPanel) + 95);
-
-				if (iconIndex == IDX_ACTIVE || m_ActiveWeaponIndices[playerIndex] == iconIndex)
+				if (auto imgPanel = dynamic_cast<vgui::ImagePanel*>(iconPanel))
 				{
-					*m_DrawColor = ColorFromConVar(team == TFTeam::Red ? ce_loadout_filter_active_red : ce_loadout_filter_active_blu);
-				}
-				else
-				{
-					*m_DrawColor = ColorFromConVar(team == TFTeam::Red ? ce_loadout_filter_inactive_red : ce_loadout_filter_inactive_blu);
+					imgPanel->SetImage(materialBuffer);
+
+					if (iconIndex == IDX_ACTIVE || m_ActiveWeaponIndices[playerIndex] == iconIndex)
+						imgPanel->SetDrawColor(ColorFromConVar(team == TFTeam::Red ? ce_loadout_filter_active_red : ce_loadout_filter_active_blu));
+					else
+						imgPanel->SetDrawColor(ColorFromConVar(team == TFTeam::Red ? ce_loadout_filter_inactive_red : ce_loadout_filter_inactive_blu));
 				}
 
 				iconPanel->SetVisible(true);

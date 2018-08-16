@@ -156,8 +156,6 @@ enum class HookFunc
 	IVEngineClient_GetPlayerInfo,
 
 	vgui_AnimationController_StartAnimationSequence,
-	vgui_EditablePanel_GetDialogVariables,
-	vgui_ImagePanel_SetImage,
 	vgui_Panel_FindChildByName,
 	vgui_ProgressBar_ApplySettings,
 
@@ -371,10 +369,6 @@ protected:
 	{
 		typedef bool(__thiscall* Raw)(vgui::AnimationController* pThis, vgui::Panel* pWithinParent, const char* sequenceName, bool unknown);
 	};
-	template<> struct HookFuncType<HookFunc::vgui_EditablePanel_GetDialogVariables>
-	{
-		typedef KeyValues*(__thiscall *Raw)(vgui::EditablePanel* pThis);
-	};
 	template<> struct HookFuncType<HookFunc::vgui_Panel_FindChildByName>
 	{
 		typedef vgui::Panel*(__thiscall* Raw)(vgui::Panel* pThis, const char* childName, bool recurseDown);
@@ -384,10 +378,6 @@ protected:
 	{
 		typedef void(__thiscall *Raw)(vgui::ProgressBar* pThis, KeyValues* pSettings);
 		typedef GlobalClassHook<HookFunc::vgui_ProgressBar_ApplySettings, false, vgui::ProgressBar, void, KeyValues*> Hook;
-	};
-	template<> struct HookFuncType<HookFunc::vgui_ImagePanel_SetImage>
-	{
-		typedef void(__thiscall *Raw)(vgui::ImagePanel* pThis, const char* imageName);
 	};
 	template<> struct HookFuncType<HookFunc::CGlowObjectManager_ApplyEntityGlowEffects>
 	{

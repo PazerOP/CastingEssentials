@@ -209,7 +209,7 @@ Player* HUDHacking::GetPlayerFromPanel(vgui::EditablePanel* playerPanel)
 		return nullptr;
 	}
 
-	auto dv = HookManager::GetRawFunc<HookFunc::vgui_EditablePanel_GetDialogVariables>()(playerPanel);
+	auto dv = playerPanel->GetDialogVariables();
 
 	const char* playername = dv->GetString("playername");
 	Assert(playername);	// Not a spectator gui playerpanel?
@@ -454,13 +454,11 @@ void HUDHacking::UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePan
 
 	if (effect != StatusEffect::None)
 	{
-		static constexpr auto PREFIX = "../castingessentials/statuseffects/";
-		char buf[128];
-		sprintf_s(buf, GetStatusEffectFormatString(effect), PREFIX, team);
+		char buf[MAX_PATH];
+		sprintf_s(buf, GetStatusEffectFormatString(effect), "../castingessentials/statuseffects/", team);
 
 		icon->SetVisible(true);
-
-		HookManager::GetRawFunc<HookFunc::vgui_ImagePanel_SetImage>()(icon, buf);
+		icon->SetImage(buf);
 	}
 	else
 	{
