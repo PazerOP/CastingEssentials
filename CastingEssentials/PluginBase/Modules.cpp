@@ -141,6 +141,15 @@ void ModuleManager::Panel::OnTick()
 
 void ModuleManager::TickAllModules(bool inGame)
 {
-	for (const auto& data : modules)
-		data.m_Module->OnTick(inGame);
+	auto ite = modules.begin();
+	while (ite != modules.end()) {
+		try {
+			ite->m_Module->OnTick(inGame);
+			++ite;
+		}
+		catch (std::exception e) {
+			PluginColorMsg(Color(255, 0, 0, 255), "Module %s tick failed, disabling: %s\n", ite->m_Module->GetModuleName(), e.what());
+			ite = modules.erase(ite);
+		}
+	}
 }
