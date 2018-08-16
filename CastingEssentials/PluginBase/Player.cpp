@@ -28,7 +28,7 @@ std::array<EntityOffset<uint32_t>, 5> Player::s_PlayerCondBitOffsets;
 
 EntityTypeChecker Player::s_MedigunType;
 
-std::unique_ptr<Player> Player::s_Players[ABSOLUTE_PLAYER_LIMIT];
+std::unique_ptr<Player> Player::s_Players[MAX_PLAYERS];
 
 int Player::s_UserInfoChangedCallbackHook;
 
@@ -304,7 +304,7 @@ bool Player::CheckCache() const
 void Player::UserInfoChangedCallbackOverride(void*, INetworkStringTable* stringTable, int stringNumber, const char* newString, const void* newData)
 {
 	// If there's any changes, force a recreation of the Player instance
-	Assert(stringNumber >= 0 && stringNumber < std::size(s_Players));
+	Assert(stringNumber >= 0 && stringNumber < (int)std::size(s_Players));
 	s_Players[stringNumber].reset();
 }
 

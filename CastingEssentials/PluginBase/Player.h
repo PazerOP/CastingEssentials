@@ -136,7 +136,7 @@ private:
 
 	std::map<std::type_index, std::unique_ptr<PlayerStateBase>> m_ExtraState;
 
-	static std::unique_ptr<Player> s_Players[ABSOLUTE_PLAYER_LIMIT];
+	static std::unique_ptr<Player> s_Players[MAX_PLAYERS];
 
 	static int s_UserInfoChangedCallbackHook;
 	static void UserInfoChangedCallbackOverride(void*, INetworkStringTable* stringTable, int stringNumber, const char* newString, const void* newData);
