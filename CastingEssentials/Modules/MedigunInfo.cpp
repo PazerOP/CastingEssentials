@@ -89,19 +89,7 @@ private:
 MedigunInfo::MedigunInfo() :
 	ce_mediguninfo_separate_enabled("ce_mediguninfo_separate_enabled", "0", FCVAR_NONE, "Enable separated medigun panels."),
 	ce_mediguninfo_separate_reload("ce_mediguninfo_separate_reload", []() { GetModule()->ReloadSettings(); },
-		"Reload settings for the separated medigun panels from the .res file."),
-
-	ce_mediguninfo_embedded_enabled("ce_mediguninfo_embedded_enabled", "0", FCVAR_NONE, "Enable medigun panels embedded in specgui player panels."),
-	ce_mediguninfo_embedded_medigun_text("ce_mediguninfo_embedded_medigun_text", "#TF_Weapon_Medigun", FCVAR_NONE,
-		"Text to use for the Medi-Gun for the %medigun% dialog variable on playerpanels."),
-	ce_mediguninfo_embedded_kritzkrieg_text("ce_mediguninfo_embedded_kritzkrieg_text", "#TF_Unique_Achievement_Medigun1", FCVAR_NONE,
-		"Text to use for the Kritzkrieg for the %medigun% dialog variable on playerpanels."),
-	ce_mediguninfo_embedded_quickfix_text("ce_mediguninfo_embedded_quickfix_text", "#TF_Unique_MediGun_QuickFix", FCVAR_NONE,
-		"Text to use for the Quick-Fix for the %medigun% dialog variable on playerpanels."),
-	ce_mediguninfo_embedded_vaccinator_text("ce_mediguninfo_embedded_vaccinator_text", "#TF_Unique_MediGun_Resist", FCVAR_NONE,
-		"Text to use for the Vaccinator for the %medigun% dialog variable on playerpanels."),
-	ce_mediguninfo_embedded_dead_text("ce_mediguninfo_embedded_dead_text", "", FCVAR_NONE,
-		"Text to use for the %medigun% dialog variable on playerpanels when the player is dead.")
+		"Reload settings for the separated medigun panels from the .res file.")
 {
 }
 
@@ -195,9 +183,8 @@ void MedigunInfo::OnTick(bool inGame)
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
 	const bool separateEnabled = ce_mediguninfo_separate_enabled.GetBool();
-	const bool embeddedEnabled = ce_mediguninfo_embedded_enabled.GetBool();
 
-	if (inGame && (separateEnabled || embeddedEnabled))
+	if (inGame && separateEnabled)
 	{
 		CollectMedigunData();
 
@@ -232,112 +219,9 @@ void MedigunInfo::OnTick(bool inGame)
 		}
 		else
 			m_MainPanel.reset();
-
-		if (embeddedEnabled)
-			UpdateEmbeddedPanels();
 	}
 	else if (m_MainPanel)
 		m_MainPanel.reset();
-}
-
-void MedigunInfo::UpdateEmbeddedPanels()
-{
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	auto specguivpanel = HUDHacking::GetSpecGUI();
-	if (!specguivpanel)
-		return;
-
-	const auto specguiChildCount = g_pVGuiPanel->GetChildCount(specguivpanel);
-	for (int playerPanelIndex = 0; playerPanelIndex < specguiChildCount; playerPanelIndex++)
-	{
-		vgui::VPANEL playerVPanel = g_pVGuiPanel->GetChild(specguivpanel, playerPanelIndex);
-		const char* playerPanelName = g_pVGuiPanel->GetName(playerVPanel);
-		if (!g_pVGuiPanel->IsVisible(playerVPanel) || strncmp(playerPanelName, "playerpanel", 11))	// Names are like "playerpanel13"
-			continue;
-
-		vgui::EditablePanel* player = assert_cast<vgui::EditablePanel*>(g_pVGuiPanel->GetPanel(playerVPanel, "ClientDLL"));
-
-		UpdateEmbeddedPanel(player);
-	}
-}
-
-void MedigunInfo::UpdateEmbeddedPanel(vgui::EditablePanel* playerPanel)
-{
-	Player* player = HUDHacking::GetPlayerFromPanel(playerPanel);
-	if (!player)
-		return;
-
-	const auto& foundData = m_MedigunPanelData.find(player->entindex() - 1);
-	const Data* data = foundData != m_MedigunPanelData.end() ? &foundData->second : nullptr;
-	if (data)
-	{
-		const char* medigunString = "UNKNOWN_MEDIGUN";
-		if (data->m_Alive)
-		{
-			switch (data->m_Type)
-			{
-				case TFMedigun::MediGun:    medigunString = ce_mediguninfo_embedded_medigun_text.GetString(); break;
-				case TFMedigun::Kritzkrieg: medigunString = ce_mediguninfo_embedded_kritzkrieg_text.GetString(); break;
-				case TFMedigun::QuickFix:   medigunString = ce_mediguninfo_embedded_quickfix_text.GetString(); break;
-				case TFMedigun::Vaccinator: medigunString = ce_mediguninfo_embedded_vaccinator_text.GetString(); break;
-			}
-		}
-		else
-			medigunString = ce_mediguninfo_embedded_dead_text.GetString();
-
-		auto localized = g_pVGuiLocalize->FindAsUTF8(medigunString);
-		playerPanel->SetDialogVariable("medigun", localized ? localized : medigunString);
-
-		Assert(true);
-	}
-	else
-		playerPanel->SetDialogVariable("medigun", "");
-
-	const auto playerVPanel = playerPanel->GetVPanel();
-	for (int childIndex = 0; childIndex < g_pVGuiPanel->GetChildCount(playerVPanel); childIndex++)
-	{
-		const auto childVPanel = g_pVGuiPanel->GetChild(playerVPanel, childIndex);
-		const auto childName = g_pVGuiPanel->GetName(childVPanel);
-
-		const bool isBlueIcon = !strcmp(childName, EMBEDDED_ICON_BLUE);
-		const bool isRedIcon = !isBlueIcon && !strcmp(childName, EMBEDDED_ICON_RED);
-		const bool isProgressRed = !isBlueIcon && !isRedIcon && !strcmp(childName, EMBEDDED_PROGRESS_BLUE);
-		const bool isProgressBlue = !isBlueIcon && !isRedIcon && !isProgressRed && !strcmp(childName, EMBEDDED_PROGRESS_RED);
-
-		// We need to control the visibility of our progress bars
-		if (!isBlueIcon && !isRedIcon && !isProgressRed && !isProgressBlue)
-			continue;
-
-		const auto childPanel = g_pVGuiPanel->GetPanel(childVPanel, "ClientDLL");
-
-		if (!data)
-		{
-			childPanel->SetVisible(false);
-			continue;
-		}
-
-		childPanel->SetVisible(true);
-
-		// Icon-only stuff below
-		if (!isBlueIcon && !isRedIcon)
-			continue;
-
-		char materialBuf[128];
-		sprintf_s(materialBuf, "hud/mediguninfo/%s_%s", data->m_Alive ? TF_MEDIGUN_NAMES[(int)data->m_Type] : "dead", TF_TEAM_NAMES[(int)data->m_Team]);
-
-		if (data->m_Type == TFMedigun::Vaccinator)
-		{
-			strcat_s(materialBuf, "_");
-			strcat_s(materialBuf, TF_RESIST_TYPE_NAMES[(int)data->m_ResistType]);
-		}
-
-		vgui::ImagePanel* imgPanel = dynamic_cast<vgui::ImagePanel*>(g_pVGuiPanel->GetPanel(childVPanel, "ClientDLL"));
-		Assert(imgPanel);
-		if (!imgPanel)
-			continue;
-
-		HookManager::GetRawFunc<HookFunc::vgui_ImagePanel_SetImage>()(imgPanel, materialBuf);
-	}
 }
 
 void MedigunInfo::ReloadSettings()

@@ -35,6 +35,7 @@ EntityOffset<float> HUDHacking::s_HypeMeter;
 EntityOffset<float> HUDHacking::s_ChargeMeter;
 EntityOffset<float> HUDHacking::s_CloakMeter;
 EntityOffset<float> HUDHacking::s_MedigunChargeMeter;
+EntityOffset<TFResistType> HUDHacking::s_MedigunResistType;
 EntityOffset<float> HUDHacking::s_ItemChargeMeters[11];
 EntityOffset<float> HUDHacking::s_WeaponEnergyMeter;
 EntityOffset<float> HUDHacking::s_WeaponEffectBarRegenTime;
@@ -59,7 +60,7 @@ const HUDHacking::ChargeBarInfo HUDHacking::s_ChargeBarInfo[(int)ChargeBarType::
 	ChargeBarInfo("banner_buff", 1, "the Buff Banner", "#TF_Unique_Achievement_SoldierBuff", 129, MeterType::Rage),
 	ChargeBarInfo("banner_conch", 1, "the Concheror", "#TF_SoldierSashimono", 354, MeterType::Rage),
 
-	ChargeBarInfo("phlogistinator", 2, "the Phlogistinator", "#TF_Phlogistinator", 594, MeterType::Rage),
+	ChargeBarInfo("phlog", 2, "the Phlogistinator", "#TF_Phlogistinator", 594, MeterType::Rage),
 	ChargeBarInfo("gas_passer", 1, "the Gas Passer", "#TF_GasPasser", 1180, MeterType::ItemCharge1),
 	ChargeBarInfo("jetpack", 1, "the Thermal Thruster", "#TF_ThermalThruster", 1179, MeterType::ItemCharge1),
 
@@ -151,6 +152,7 @@ bool HUDHacking::CheckDependencies()
 		}
 
 		s_MedigunChargeMeter = Entities::GetEntityProp<float>("CWeaponMedigun", "m_flChargeLevel");
+		s_MedigunResistType = Entities::GetEntityProp<TFResistType>("CWeaponMedigun", "m_nChargeResistType");
 		s_CleanersCarbineCharge = Entities::GetEntityProp<float>("CTFChargedSMG", "m_flMinicritCharge");
 
 		s_WearableShieldType = Entities::GetTypeChecker("CTFWearableDemoShield");
@@ -282,7 +284,7 @@ float HUDHacking::GetChargeMeter(const ChargeBarInfo& info, Player& player, cons
 		case MeterType::EnergyDrink:        return s_EnergyDrinkMeter.GetValue(&playerNetworkable);
 		case MeterType::Hype:               return s_HypeMeter.GetValue(&playerNetworkable);
 		case MeterType::Charge:             return s_ChargeMeter.GetValue(&playerNetworkable);
-		case MeterType::MedigunCharge:      return s_MedigunChargeMeter.GetValue(&playerNetworkable);
+		case MeterType::MedigunCharge:      return s_MedigunChargeMeter.GetValue(&weapon) * 100;
 		case MeterType::Cloak:              return s_CloakMeter.GetValue(&playerNetworkable);
 
 		case MeterType::ItemCharge0:        return s_ItemChargeMeters[0].GetValue(&playerNetworkable);
@@ -468,7 +470,7 @@ void HUDHacking::UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePan
 
 #pragma warning(push)
 #pragma warning(disable : 4701)	// Potentially uninitialized local variable used
-void HUDHacking::UpdateChargeBar(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, Player& player)
+void HUDHacking::UpdateChargeBar(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, Player& player) const
 {
 	if (!enabled)
 	{
@@ -490,7 +492,7 @@ void HUDHacking::UpdateChargeBar(bool enabled, vgui::VPANEL playerVPanel, vgui::
 
 		default:
 			shouldShowInfo = false;
-			return;
+			break;
 	}
 
 	ChargeBarType type;
@@ -499,8 +501,19 @@ void HUDHacking::UpdateChargeBar(bool enabled, vgui::VPANEL playerVPanel, vgui::
 		shouldShowInfo = player.IsAlive() && GetChargeBarData(player, type, charge);
 
 	const char* bannerString = "";
+	char iconPath[MAX_PATH];
+	iconPath[0] = '\0';
 	if (shouldShowInfo)
+	{
 		bannerString = m_ChargeBarCvars[(int)type]->m_TextCvar.GetString();
+		sprintf_s(iconPath, "../castingessentials/chargebars/%s_%s", s_ChargeBarInfo[(int)type].m_Name, isRedTeam ? "red" : "blue");
+
+		if (C_BaseCombatWeapon* medigun; type == ChargeBarType::MedigunVaccinator && (medigun = player.GetMedigun()) != nullptr)
+		{
+			strcat_s(iconPath, "_");
+			strcat_s(iconPath, TF_RESIST_TYPE_NAMES[(int)s_MedigunResistType.GetValue(medigun)]);
+		}
+	}
 
 	auto localized = g_pVGuiLocalize->FindAsUTF8(bannerString);
 	playerPanel->SetDialogVariable(WEAPON_CHARGE_NAME, localized ? localized : bannerString);
@@ -516,9 +529,11 @@ void HUDHacking::UpdateChargeBar(bool enabled, vgui::VPANEL playerVPanel, vgui::
 		playerPanel->SetDialogVariable(WEAPON_CHARGE_AMOUNT, buf);
 	}
 
-	auto chargebar = dynamic_cast<vgui::ContinuousProgressBar*>(FindChildByName(playerVPanel, isRedTeam ? "WeaponChargeRed" : "WeaponChargeBlue"));
-	if (chargebar)
+	if (auto chargebar = dynamic_cast<vgui::ContinuousProgressBar*>(FindChildByName(playerVPanel, isRedTeam ? "WeaponChargeRed" : "WeaponChargeBlue")))
 		chargebar->SetVisible(shouldShowInfo);
+
+	if (auto icon = dynamic_cast<vgui::ImagePanel*>(FindChildByName(playerVPanel, isRedTeam ? "WeaponChargeIconRed" : "WeaponChargeIconBlue")))
+		icon->SetImage(iconPath);
 }
 #pragma warning(pop)
 

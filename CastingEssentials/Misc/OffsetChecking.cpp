@@ -78,10 +78,34 @@ public:
 #ifdef DEBUG
 		int offset;
 #endif
+		using namespace Hooking;
 
-		Assert((offset = Hooking::VTableOffset(&Panel::SetVisible)) == 33);
-		Assert((offset = Hooking::VTableOffset(&Panel::SetEnabled)) == 54);
+		// vgui::Panel
+		{
+			Assert((offset = Hooking::VTableOffset(&Panel::SetVisible)) == 33);
+			Assert((offset = Hooking::VTableOffset(&Panel::SetEnabled)) == 54);
+			Assert((offset = VTableOffset(&Panel::SetBgColor)) == 58);
+			Assert((offset = VTableOffset(&Panel::SetBorder)) == 68);
+			Assert((offset = VTableOffset(&Panel::IsCursorNone)) == 78);
+			Assert((offset = VTableOffset(&Panel::ApplySchemeSettings)) == 88);
+			Assert((offset = VTableOffset(&Panel::OnSetFocus)) == 97);
+			Assert((offset = VTableOffset(&Panel::OnCursorMoved)) == 102);
+			Assert((offset = VTableOffset(&Panel::OnMouseReleased)) == 107);
+			Assert((offset = VTableOffset(&Panel::IsKeyOverridden)) == 117);
+			Assert((offset = VTableOffset(&Panel::OnMouseFocusTicked)) == 127);
+			Assert((offset = VTableOffset(&Panel::SetKeyBoardInputEnabled)) == 137);
+			Assert((offset = VTableOffset(&Panel::SetShowDragHelper)) == 147);
+			Assert((offset = VTableOffset(&Panel::OnDropContextHoverHide)) == 157);
+			Assert((offset = VTableOffset(&Panel::GetDropTarget)) == 167);
+			Assert((offset = VTableOffset(&Panel::NavigateDown)) == 177);
+			Assert((offset = VTableOffset(&Panel::OnStartDragging)) == 187);
+			Assert((offset = VTableOffset(&Panel::OnRequestFocus)) == 194);
+		}
 
+		// vgui::ImagePanel
+		Assert((offset = VTableOffset(static_cast<void(ImagePanel::*)(const char*)>(&ImagePanel::SetImage))) == 212);
+
+		// vgui::EditablePanel
 		{
 			Assert((offset = Hooking::VTableOffset(&EditablePanel::LoadControlSettings)) == 212);
 			Assert((offset = Hooking::VTableOffset(&EditablePanel::LoadUserConfig)) == 213);
@@ -105,20 +129,23 @@ public:
 				static_cast<void (EditablePanel::*)(const char*, const char*)>(&EditablePanel::SetDialogVariable))) == 230);
 		}
 
-		Assert((offset = Hooking::VTableOffset(&EditablePanel::RegisterControlSettingsFile)) == 231);
-		Assert((offset = Hooking::VTableOffset(&CBaseViewport::RegisterControlSettingsFile)) == 231);
+		// CBaseViewport
+		{
+			Assert((offset = Hooking::VTableOffset(&EditablePanel::RegisterControlSettingsFile)) == 231);
+			Assert((offset = Hooking::VTableOffset(&CBaseViewport::RegisterControlSettingsFile)) == 231);
 
-		Assert((offset = Hooking::VTableOffset(&CBaseViewport::CreatePanelByName)) == 237);
-		//Assert((offset = Hooking::VTableOffset(&CBaseViewport::FindPanelByName)) == 238);
-		//Assert((offset = Hooking::VTableOffset(&CBaseViewport::GetActivePanel)) == 239);
-		Assert((offset = Hooking::VTableOffset(&CBaseViewport::AddNewPanel)) == 239);
-		Assert((offset = Hooking::VTableOffset(&CBaseViewport::CreateDefaultPanels)) == 240);
-		Assert((offset = Hooking::VTableOffset(&CBaseViewport::Start)) == 241);
-		Assert((offset = Hooking::VTableOffset(&CBaseViewport::ReloadScheme)) == 242);
-		Assert((offset = Hooking::VTableOffset(&CBaseViewport::AllowedToPrintText)) == 245);
-		Assert((offset = Hooking::VTableOffset(&CBaseViewport::GetAnimationController)) == 248);
+			Assert((offset = Hooking::VTableOffset(&CBaseViewport::CreatePanelByName)) == 237);
+			//Assert((offset = Hooking::VTableOffset(&CBaseViewport::FindPanelByName)) == 238);
+			//Assert((offset = Hooking::VTableOffset(&CBaseViewport::GetActivePanel)) == 239);
+			Assert((offset = Hooking::VTableOffset(&CBaseViewport::AddNewPanel)) == 239);
+			Assert((offset = Hooking::VTableOffset(&CBaseViewport::CreateDefaultPanels)) == 240);
+			Assert((offset = Hooking::VTableOffset(&CBaseViewport::Start)) == 241);
+			Assert((offset = Hooking::VTableOffset(&CBaseViewport::ReloadScheme)) == 242);
+			Assert((offset = Hooking::VTableOffset(&CBaseViewport::AllowedToPrintText)) == 245);
+			Assert((offset = Hooking::VTableOffset(&CBaseViewport::GetAnimationController)) == 248);
 
-		Assert((offset = Hooking::VTableOffset(&ITextureManager::FindNext)) == 32);
+			Assert((offset = Hooking::VTableOffset(&ITextureManager::FindNext)) == 32);
+		}
 	}
 };
 #ifdef DEBUG

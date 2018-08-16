@@ -10,6 +10,7 @@
 
 class Player;
 enum class TFClassType;
+enum class TFResistType;
 
 namespace vgui
 {
@@ -219,7 +220,7 @@ private:
 	static void ForwardPlayerPanelBorder(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel);
 	static void UpdatePlayerHealth(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
 	void UpdateStatusEffect(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, const Player& player);
-	void UpdateChargeBar(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, Player& player);
+	void UpdateChargeBar(bool enabled, vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, Player& player) const;
 	void UpdateClassChangeAnimations(vgui::VPANEL playerVPanel, vgui::EditablePanel* playerPanel, Player& player);
 
 	bool GetChargeBarData(Player& player, ChargeBarType& type, float& charge) const;
@@ -242,6 +243,7 @@ private:
 	static EntityOffset<float> s_ChargeMeter;
 	static EntityOffset<float> s_CloakMeter;
 	static EntityOffset<float> s_MedigunChargeMeter;
+	static EntityOffset<TFResistType> s_MedigunResistType;
 	static EntityOffset<float> s_WeaponEnergyMeter;
 	static EntityOffset<float> s_WeaponEffectBarRegenTime;
 	static EntityOffset<float> s_ItemChargeMeters[11];
