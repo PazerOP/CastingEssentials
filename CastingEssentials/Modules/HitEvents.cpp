@@ -19,10 +19,9 @@ MODULE_REGISTER(HitEvents);
 HitEvents::HitEvents() :
 	ce_hitevents_enabled("ce_hitevents_enabled", "0", FCVAR_NONE, "Enables hitsounds and damage numbers in STVs.",
 		[](IConVar* var, const char* oldValue, float fOldValue) { GetModule()->UpdateEnabledState(); }),
-	ce_hitevents_dmgnumbers_los("ce_hitevents_dmgnumbers_los", "1", FCVAR_NONE, "Should we require LOS to the target before showing a damage number? For a \"normal\" TF2 experience, this would be set to 1.", [](IConVar*, const char*, float) { GetModule()->UpdateEnabledState(); }),
-	ce_hitevents_debug("ce_hitevents_debug", "0"),
+	ce_hitevents_dmgnumbers_los("ce_hitevents_dmgnumbers_los", "1", FCVAR_NONE, "Should we require LOS to the target before showing a damage number? For a \"normal\" TF2 experience, this would be set to 1."),
 
-	m_DisplayDamageFeedbackHook(std::bind(&HitEvents::DisplayDamageFeedbackOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)),
+	m_FireGameEventHook(std::bind(&HitEvents::FireGameEventOverride, this, std::placeholders::_1, std::placeholders::_2)),
 
 	m_UTILTracelineHook(std::bind(&HitEvents::UTILTracelineOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)),
 
@@ -31,32 +30,6 @@ HitEvents::HitEvents() :
 	m_OverrideUTILTraceline = false;
 
 	m_LastDamageAccount = nullptr;
-}
-
-IGameEvent* HitEvents::TriggerPlayerHurt(int playerEntIndex, int damage)
-{
-	IGameEvent* hurtEvent = gameeventmanager->CreateEvent("player_hurt");
-	if (hurtEvent)
-	{
-		Player* player = Player::GetPlayer(playerEntIndex, __FUNCTION__);
-		Player* localPlayer = Player::GetLocalPlayer();
-		hurtEvent->SetInt("userid", player->GetUserID());
-		hurtEvent->SetInt("attacker", localPlayer->GetUserID());
-		//hurtEvent->SetInt("attacker", player->GetUserID());
-		//hurtEvent->SetInt("userid", localPlayer->GetUserID());
-		hurtEvent->SetInt("health", player->GetHealth());
-		hurtEvent->SetInt("damageamount", damage);
-
-		hurtEvent->SetInt("custom", 0);
-		hurtEvent->SetBool("showdisguisedcrit", false);
-		hurtEvent->SetBool("crit", false);
-		hurtEvent->SetBool("minicrit", false);
-		hurtEvent->SetBool("allseecrit", false);
-		hurtEvent->SetInt("weaponid", 10);
-		hurtEvent->SetInt("bonuseffect", 0);
-	}
-
-	return hurtEvent;
 }
 
 #pragma pack( 1 )
@@ -203,92 +176,6 @@ public:
 
 static_assert(offsetof(CDamageAccountPanel, garbo) > offsetof(CAccountPanel, m_hDeltaItemFontBig));
 
-void HitEvents::FireGameEvent(IGameEvent* event)
-{
-	if (stricmp(event->GetName(), "player_hurt"))
-		return;
-
-	// Don't die to infinite recursion
-	if (auto found = std::find(m_EventsToIgnore.begin(), m_EventsToIgnore.end(), event); found != m_EventsToIgnore.end())
-	{
-		m_EventsToIgnore.erase(found);
-		return;
-	}
-
-	if (event->GetInt("userid") == event->GetInt("attacker"))
-		return;	// Early-out self damage
-
-	Player* localPlayer = Player::GetLocalPlayer();
-	if (!localPlayer)
-		return;
-
-	if (auto mode = CameraState::GetLocalObserverMode();
-		mode != ObserverMode::OBS_MODE_CHASE && mode != ObserverMode::OBS_MODE_IN_EYE)
-	{
-		return;
-	}
-
-	auto specTarget = Player::AsPlayer(CameraState::GetLocalObserverTarget());
-	if (!specTarget || specTarget->GetUserID() != event->GetInt("attacker"))
-		return;
-
-	if (ce_hitevents_debug.GetBool())
-	{
-		std::stringstream msg;
-		msg << std::boolalpha;
-
-		auto attackedPlayer = Player::GetPlayerFromUserID(event->GetInt("userid"));
-		auto attackingPlayer = Player::GetPlayerFromUserID(event->GetInt("attacker"));
-
-		msg << "Received " << event->GetName() << " game event:\n"
-			<< "\tuserid:            " << event->GetInt("userid") << " (" << (attackedPlayer ? attackedPlayer->GetName() : "<???>") << ")\n"
-			<< "\tattacker:          " << event->GetInt("attacker") << " (" << (attackingPlayer ? attackingPlayer->GetName() : "<???>") << ")\n"
-			<< "\tdamageamount:      " << event->GetInt("damageamount") << '\n';
-
-		if (ce_hitevents_debug.GetInt() > 1)
-		{
-			msg << "\thealth:            " << event->GetInt("health") << '\n'
-				<< "\tcustom:            " << event->GetInt("custom") << '\n'
-				<< "\tshowdisguisedcrit: " << event->GetBool("showdisguisedcrit") << '\n'
-				<< "\tcrit:              " << event->GetBool("crit") << '\n'
-				<< "\tminicrit:          " << event->GetBool("minicrit") << '\n'
-				<< "\tallseecrit:        " << event->GetBool("allseecrit") << '\n'
-				<< "\tweaponid:          " << event->GetInt("weaponid") << '\n'
-				<< "\tbonuseffect:       " << event->GetInt("bonuseffect") << '\n';
-		}
-
-		PluginMsg("%s", msg.str().c_str());
-	}
-
-	// Clone event
-	IGameEvent* newEvent = gameeventmanager->CreateEvent("player_hurt");
-	newEvent->SetInt("userid", event->GetInt("userid"));
-	newEvent->SetInt("health", event->GetInt("health"));
-	newEvent->SetInt("attacker", event->GetInt("attacker"));
-	newEvent->SetInt("damageamount", event->GetInt("damageamount"));
-
-	newEvent->SetInt("custom", event->GetInt("custom"));
-	newEvent->SetBool("showdisguisedcrit", event->GetBool("showdisguisedcrit"));
-	newEvent->SetBool("crit", event->GetBool("crit"));
-	newEvent->SetBool("minicrit", event->GetBool("minicrit"));
-	newEvent->SetBool("allseecrit", event->GetBool("allseecrit"));
-	newEvent->SetInt("weaponid", event->GetInt("weaponid"));
-	newEvent->SetInt("bonuseffect", event->GetInt("bonuseffect"));
-
-	// Override attacker
-	newEvent->SetInt("attacker", localPlayer->GetUserID());
-
-	if (ce_hitevents_debug.GetInt())
-	{
-		auto attackerUserID = newEvent->GetInt("attacker");
-		PluginMsg("Rebroadcasting with attacker = %i (%s)\n", attackerUserID, Player::GetPlayerFromUserID(attackerUserID)->GetName());
-	}
-
-	m_EventsToIgnore.push_back(newEvent);
-
-	gameeventmanager->FireEventClientSide(newEvent);
-}
-
 void HitEvents::LevelInit()
 {
 	UpdateEnabledState();
@@ -302,46 +189,56 @@ void HitEvents::LevelShutdown()
 
 void HitEvents::UpdateEnabledState()
 {
-	const bool enabled = ce_hitevents_enabled.GetBool() && IsInGame();
-	m_DisplayDamageFeedbackHook.SetEnabled(enabled);
+	const bool enabled = IsInGame() && (ce_hitevents_enabled.GetBool());
+	m_FireGameEventHook.SetEnabled(enabled);
 	m_UTILTracelineHook.SetEnabled(enabled);
 	m_DamageAccountPanelShouldDrawHook.SetEnabled(enabled);
-
-	if (enabled)
-	{
-		if (!gameeventmanager->FindListener(this, "player_hurt"))
-			gameeventmanager->AddListener(this, "player_hurt", false);
-	}
-	else
-	{
-		gameeventmanager->RemoveListener(this);
-	}
 }
 
-void HitEvents::DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool bigFont)
+void HitEvents::FireGameEventOverride(CDamageAccountPanel* pThis, IGameEvent* event)
 {
-	auto localPlayer = C_BasePlayer::GetLocalPlayer();
+	auto is_player_hurt = stricmp(event->GetName(), "player_hurt") == 0;
+	auto is_player_healed = !is_player_hurt && stricmp(event->GetName(), "player_healed") == 0;
+	if (is_player_hurt || is_player_healed) {
+		m_FireGameEventHook.SetState(Hooking::HookAction::SUPERCEDE);
 
-	Assert(localPlayer->IsPlayer());
+		if (auto mode = CameraState::GetLocalObserverMode();
+			(mode != ObserverMode::OBS_MODE_CHASE && mode != ObserverMode::OBS_MODE_IN_EYE))
+		{
+			return;
+		}
 
-	auto localEntindex = localPlayer->entindex();
+		auto localPlayer = Player::GetLocalPlayer();
+		if (!localPlayer)
+			return;
+		
+		auto inflictor = event->GetInt(is_player_hurt ? "attacker" : "healer");
+		if (event->GetInt(is_player_hurt ? "userid" : "patient") == inflictor) return;
 
-	auto otherLocalAttacker = (C_BaseEntity*)pAttacker;
-	auto otherLocalEntindex = otherLocalAttacker ? otherLocalAttacker->entindex() : -1;
-	if (localEntindex != otherLocalEntindex)
-		return;
+		auto specTarget = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+		if (!specTarget || specTarget->GetUserID() != inflictor) return;
 
-	const auto lifeStatePusher = CreateVariablePusher<char>(localPlayer->m_lifeState, LIFE_ALIVE);
-	const auto tracelineOverridePusher = CreateVariablePusher(m_OverrideUTILTraceline, true);
+		auto localPlayerEnt = C_BasePlayer::GetLocalPlayer();
+		Assert(localPlayerEnt->IsPlayer());
 
-	auto DisplayDamageFeedback = m_DisplayDamageFeedbackHook.GetOriginal();
-	DisplayDamageFeedback(pThis, (C_TFPlayer*)localPlayer, pVictim, iDamageAmount, iHealth, bigFont);
-	m_DisplayDamageFeedbackHook.SetState(Hooking::HookAction::SUPERCEDE);
+		const auto lifeStatePusher = CreateVariablePusher<char>(localPlayerEnt->m_lifeState, LIFE_ALIVE);
+		const auto tracelineOverridePusher = CreateVariablePusher(m_OverrideUTILTraceline, !ce_hitevents_dmgnumbers_los.GetBool());
+
+		// Not sure we can just mutate the event, so we'll clone it instead. std::unique_ptr is convenient here for giving
+		// us an RAII wrapper around the event.
+		auto deleter = [](IGameEvent* event) { gameeventmanager->FreeEvent(event); };
+		std::unique_ptr<IGameEvent, decltype(deleter)> newEvent(gameeventmanager->DuplicateEvent(event), deleter);
+		newEvent->SetInt(is_player_hurt ? "attacker" : "healer", localPlayer->GetUserID());
+		m_FireGameEventHook.GetOriginal()(pThis, newEvent.get());
+	}
+	else {
+		m_FireGameEventHook.SetState(Hooking::HookAction::IGNORE);
+	}
 }
 
 void HitEvents::UTILTracelineOverride(const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, const IHandleEntity* ignore, int collisionGroup, trace_t* ptr)
 {
-	if (m_OverrideUTILTraceline && ce_hitevents_dmgnumbers_los.GetBool())
+	if (m_OverrideUTILTraceline)
 	{
 		ptr->fraction = 1.0;
 		m_UTILTracelineHook.SetState(Hooking::HookAction::SUPERCEDE);
@@ -354,9 +251,6 @@ bool HitEvents::DamageAccountPanelShouldDrawOverride(CDamageAccountPanel* pThis)
 
 	// Not too sure why this offset is required, maybe i'm just an idiot
 	CDamageAccountPanel* questionable = (CDamageAccountPanel*)((std::byte*)pThis + 44);
-
-	if (ce_hitevents_debug.GetBool())
-		engine->Con_NPrintf(5, "account panel entries: %i", questionable->m_Events.Count());
 
 	return questionable->m_Events.Count() > 0;
 }

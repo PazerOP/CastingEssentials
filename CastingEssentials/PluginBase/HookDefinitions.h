@@ -103,7 +103,7 @@ enum class HookFunc
 	CAccountPanel_Paint,
 	CAutoGameSystemPerFrame_CAutoGameSystemPerFrame,
 	CBaseClientRenderTargets_InitClientRenderTargets,
-	CDamageAccountPanel_DisplayDamageFeedback,
+	CDamageAccountPanel_FireGameEvent,
 	CDamageAccountPanel_ShouldDraw,
 
 	CParticleProperty_DebugPrintEffects,
@@ -403,10 +403,10 @@ protected:
 		typedef void(__thiscall* Raw)(CBaseClientRenderTargets* pThis, IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* config, int iWaterTextureSize, int iCameraTextureSize);
 		typedef GlobalClassHook<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets, false, CBaseClientRenderTargets, void, IMaterialSystem*, IMaterialSystemHardwareConfig*, int, int> Hook;
 	};
-	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>
+	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_FireGameEvent>
 	{
-		typedef void(__thiscall *Raw)(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool unknown);
-		typedef GlobalClassHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback, false, CDamageAccountPanel, void, C_TFPlayer*, C_BaseCombatCharacter*, int, int, bool> Hook;
+		typedef void(__thiscall *Raw)(CDamageAccountPanel* pThis, IGameEvent*);
+		typedef GlobalClassHook<HookFunc::CDamageAccountPanel_FireGameEvent, false, CDamageAccountPanel, void, IGameEvent*> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_ShouldDraw>
 	{

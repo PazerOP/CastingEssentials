@@ -172,7 +172,7 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::CAccountPanel_OnAccountValueChanged>("\x55\x8B\xEC\x51\x53\x8B\x5D\x0C\x56\x8B\xF1\x53", "xxxxxxxxxxxx");
 	FindFunc<HookFunc::CAccountPanel_Paint>("\x55\x8B\xEC\x83\xEC\x74\x56\x8B\xC1", "xxxxxxxxx");
 	FindFunc<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets>("\x55\x8B\xEC\x51\x53\x8B\x5D\x08\x56\x57\x6A\x01", "xxxxxxxxxxxx");
-	FindFunc<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>("\x55\x8B\xEC\x81\xEC????\x83\x7D\x10\x00\x53\x8B\xD9\x0F\x8E", "xxxxx????xxxxxxxxx");
+	FindFunc<HookFunc::CDamageAccountPanel_FireGameEvent>("\x55\x8B\xEC\x83\xEC\x1C\x53\x8B\x5D\x08\x56\x89\x4D\xFC\x8B\xCB\x57\x8B\x03\xFF\x50\x04\x3D", "xxxxxxxxxxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::CDamageAccountPanel_ShouldDraw>("\x56\x8B\xF1\xE8????\x8B\xC8\x85\xC9\x74\x0E", "xxxx????xxxxxx");
 
 	FindFunc<HookFunc::CParticleProperty_DebugPrintEffects>("\x55\x8B\xEC\x51\x8B\xC1\x53\x56\x33\xF6\x89\x45\xFC\x8B\x58\x14", "xxxxxxxxxxxxxxxx");
@@ -284,7 +284,7 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::CAccountPanel_OnAccountValueChanged>();
 	InitGlobalHook<HookFunc::CAccountPanel_Paint>();
 	InitGlobalHook<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets>();
-	InitGlobalHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>();
+	InitGlobalHook<HookFunc::CDamageAccountPanel_FireGameEvent>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_ShouldDraw>();
 
 	InitGlobalHook<HookFunc::CViewRender_PerformScreenSpaceEffects>();
