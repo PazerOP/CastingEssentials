@@ -800,12 +800,12 @@ void AutoCameras::CycleCamera(const CCommand& args)
 		goto Usage;
 
 	// Get current camera origin
-	const Vector camOrigin;
+	const Vector camOrigin = CameraState::GetModule()->GetActiveCamera()->GetOrigin();
 	{
 		QAngle dummy;
 		Assert(CameraState::GetModule());
 		if (CameraState::GetModule())
-			CameraState::GetModule()->GetThisFramePluginView(const_cast<Vector&>(camOrigin), dummy);
+			CameraState::GetModule()->GetActiveCamera()->GetOrigin();
 	}
 
 	// Check if we're already at a camera, in which case we just operate by file (group) order
@@ -1016,9 +1016,10 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 
 	Assert(bestCamera);
 
+	const auto activeCam = camState->GetActiveCamera();
 	if (bestCamera != m_LastActiveCamera ||
-		!VectorsAreEqual(camState->GetLastFramePluginViewOrigin(), m_LastActiveCamera->m_Pos, 25) ||
-		(!bFollow && !QAnglesAreEqual(camState->GetLastFramePluginViewAngles(), m_LastActiveCamera->m_DefaultAngle)))
+		!VectorsAreEqual(activeCam->GetOrigin(), m_LastActiveCamera->m_Pos, 25) ||
+		(!bFollow && !QAnglesAreEqual(activeCam->GetAngles(), m_LastActiveCamera->m_DefaultAngle)))
 	{
 		GotoCamera(*bestCamera, mode);
 

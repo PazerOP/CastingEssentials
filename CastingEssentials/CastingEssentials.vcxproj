@@ -96,6 +96,10 @@
     <ClCompile Include="Hooking\ModuleSegments.cpp" />
     <ClCompile Include="Misc\DebugOverlay.cpp" />
     <ClCompile Include="Misc\OffsetChecking.cpp" />
+    <ClCompile Include="Modules\Camera\FirstPersonCamera.cpp" />
+    <ClCompile Include="Modules\Camera\HybridPlayerCameraSmooth.cpp" />
+    <ClCompile Include="Modules\Camera\SimpleCameraSmooth.cpp" />
+    <ClCompile Include="Modules\Camera\TPLockCamera.cpp" />
     <ClCompile Include="Modules\ClientTools.cpp" />
     <ClCompile Include="Modules\HitEvents.cpp" />
     <ClCompile Include="Modules\HUDHacking.cpp" />
@@ -160,6 +164,13 @@
     <ClInclude Include="Misc\DebugOverlay.h" />
     <ClInclude Include="Misc\Extras\VPlane.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
+    <ClInclude Include="Modules\Camera\FirstPersonCamera.h" />
+    <ClInclude Include="Modules\Camera\HybridPlayerCameraSmooth.h" />
+    <ClInclude Include="Modules\Camera\ICamera.h" />
+    <ClInclude Include="Modules\Camera\ICameraSmooth.h" />
+    <ClInclude Include="Modules\Camera\SimpleCameraSmooth.h" />
+    <ClInclude Include="Modules\Camera\SimpleCamera.h" />
+    <ClInclude Include="Modules\Camera\TPLockCamera.h" />
     <ClInclude Include="Modules\ClientTools.h" />
     <ClInclude Include="Modules\HitEvents.h" />
     <ClInclude Include="Modules\HUDHacking.h" />
@@ -197,7 +208,6 @@
     <ClInclude Include="PluginBase\Hook.h" />
     <ClInclude Include="PluginBase\HookDefinitions.h" />
     <ClInclude Include="PluginBase\HookManager.h" />
-    <ClInclude Include="PluginBase\ICameraOverride.h" />
     <ClInclude Include="PluginBase\PlayerStateBase.h" />
     <ClInclude Include="PluginBase\Player.h" />
     <ClInclude Include="Controls\StubPanel.h" />

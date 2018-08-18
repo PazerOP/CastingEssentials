@@ -192,8 +192,6 @@ extern std::string KeyValuesDumpAsString(KeyValues* kv, int indentLevel = 0);
 
 Vector ApproachVector(const Vector& from, const Vector& to, float speed);
 
-template <typename T, std::size_t N> constexpr std::size_t arraysize(T const (&)[N]) noexcept { return N; }
-
 constexpr float Rad2Deg(float radians)
 {
 	return radians * float(180.0 / 3.14159265358979323846);
@@ -226,6 +224,9 @@ template<typename T> constexpr T* FirstNotNull(T* first, T* second, T* third)
 	return third;
 }
 
+// Returns a copy of an object.
+template<typename T> constexpr T copy(const T& input) { return input; }
+
 // smh why were these omitted
 namespace std
 {
@@ -247,3 +248,21 @@ template<> struct _PADDING_HELPER<size_t(-1)>
 };
 
 #define PADDING(size) _PADDING_HELPER<size> EXPAND_CONCAT(CE_PADDING, __COUNTER__)
+
+template<typename T> struct remove_const_ptr_ref           { using type = T;  };
+template<typename T> struct remove_const_ptr_ref<const T&> { using type = T&;  };
+template<typename T> struct remove_const_ptr_ref<const T*> { using type = T*; };
+template<typename T> using remove_const_ptr_ref_t = typename remove_const_ptr_ref<T>::type;
+
+template<typename T> struct add_const_ptr_ref { using type = T; };
+template<typename T> struct add_const_ptr_ref<T&> { using type = const T&; };
+template<typename T> struct add_const_ptr_ref<T*> { using type = const T*; };
+template<typename T> using add_const_ptr_ref_t = typename add_const_ptr_ref<T>::type;
+
+template<class Type, class RetVal, class... Args> using MemberFnPtr_Const = RetVal(Type::*)(Args...) const;
+// const TValue(T::*func)(Args...) const
+template<typename T, typename TValue, typename... Args>
+inline auto call_const(T* pThis, TValue(T::*func)(Args...) const, Args&&... args)
+{
+	return const_cast<remove_const_ptr_ref_t<TValue>>((const_cast<const T*>(pThis)->*func)(args...));
+}

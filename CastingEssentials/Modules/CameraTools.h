@@ -1,8 +1,9 @@
 #pragma once
 #include "PluginBase/EntityOffset.h"
 #include "PluginBase/Hook.h"
-#include "PluginBase/ICameraOverride.h"
 #include "PluginBase/Modules.h"
+
+#include "Modules/Camera/TPLockCamera.h"
 
 #include <convar.h>
 #include <mathlib/vector.h>
@@ -27,7 +28,7 @@ enum class ModeSwitchReason
 	SpecPosition,
 };
 
-class CameraTools final : public Module<CameraTools>, public ICameraOverride
+class CameraTools final : public Module<CameraTools>
 {
 public:
 	CameraTools();
@@ -42,11 +43,6 @@ public:
 	                             const IHandleEntity* ignoreEnt = nullptr);
 
 	ModeSwitchReason GetModeSwitchReason() const { return m_SwitchReason; }
-
-protected:
-	bool InToolModeOverride() const override;
-	bool IsThirdPersonCameraOverride() const override { return m_IsTaunting; }
-	bool SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov) override;
 
 private:
 	Hook<HookFunc::C_HLTVCamera_SetMode> m_SetModeHook;
@@ -96,22 +92,7 @@ private:
 	void SpecPosition(const CCommand &command);
 	void SpecPositionDelta(const CCommand& command);
 
-	struct TPLockValue
-	{
-		enum class Mode
-		{
-			Set,
-			Add,
-			Scale,
-			ScaleAdd,
-		};
-
-		Mode m_Mode;
-		float m_Value;
-		float m_Base;
-
-		float GetValue(float input) const;
-	};
+	using TPLockValue = TPLockCamera::TPLockValue;
 	static bool ParseTPLockValues(const CCommand& valuesIn, std::array<TPLockValue, 3>& valuesOut);
 	static void ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<TPLockValue, 3>& values);
 	static void ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<float, 3>& values);
@@ -149,13 +130,6 @@ private:
 	void ToggleDisableViewPunches(const ConVar* var);
 	VariablePusher<RecvVarProxyFn> m_vecPunchAngleProxy;
 	VariablePusher<RecvVarProxyFn> m_vecPunchAngleVelProxy;
-
-	Vector CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& orbitCenter, const QAngle& angle) const;
-
-	QAngle m_LastFrameAngle;
-	Player* m_LastTargetPlayer;
-
-	bool PerformTPLock(const TPLockRuleset& ruleset, Vector& origin, QAngle& angles, float& fov);
 
 	void AttachHooks(bool attach);
 

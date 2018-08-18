@@ -51,7 +51,7 @@ void Player::Unload()
 	if (s_UserInfoChangedCallbackHook && GetHooks()->RemoveHook<HookFunc::Global_UserInfoChangedCallback>(s_UserInfoChangedCallbackHook, __FUNCSIG__))
 		s_UserInfoChangedCallbackHook = 0;
 
-	for (size_t i = 0; i < arraysize(s_Players); i++)
+	for (size_t i = 0; i < std::size(s_Players); i++)
 		s_Players[i].reset();
 }
 

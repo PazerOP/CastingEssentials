@@ -5,6 +5,7 @@
 #include "PluginBase/TFDefinitions.h"
 #include "Misc/DebugOverlay.h"
 #include "Misc/HLTVCameraHack.h"
+#include "Modules/Camera/HybridPlayerCameraSmooth.h"
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
 
@@ -49,10 +50,6 @@ CameraSmooths::CameraSmooths() :
 	ce_smoothing_los_buffer("ce_smoothing_los_buffer", "32", FCVAR_NONE, "Additional space to give ourselves so we can sorta see around corners."),
 	ce_smoothing_los_min("ce_smoothing_los_min", "0", FCVAR_NONE, "Minimum percentage of points that must pass the LOS check before we allow ourselves to smooth to a target.", true, 0, true, 1)
 {
-	m_EndMode = OBS_MODE_NONE;
-	m_EndTarget = 0;
-	m_InProgress = false;
-	m_LastHostTime = 0;
 }
 
 bool CameraSmooths::CheckDependencies()
@@ -111,329 +108,102 @@ bool CameraSmooths::CheckDependencies()
 	return ready;
 }
 
-void CameraSmooths::UpdateCollisionTests()
+std::shared_ptr<ICamera> CameraSmooths::CreatePlayerSmooth(const std::shared_ptr<ICamera>& currentCam, const std::shared_ptr<ICamera>& newCam) const
 {
-	const auto currentFrame = Interfaces::GetEngineTool()->HostFrameCount();
-	if (m_CollisionTestFrame != currentFrame)
-	{
-		m_CollisionTests.clear();
-
-		const Vector& viewPos = CameraState::GetModule()->GetLastFramePluginViewOrigin();
-
-		for (Player* player : Player::Iterable())
-		{
-			const auto team = player->GetTeam();
-			if (team != TFTeam::Red && team != TFTeam::Blue)
-				continue;
-
-			if (!player->IsAlive())
-				continue;
-
-			IClientEntity* const entity = player->GetEntity();
-			if (!entity)
-				continue;
-
-			CollisionTest newTest;
-			newTest.m_Entity = entity->GetRefEHandle();
-
-			const Vector eyePos = player->GetEyePosition();
-
-			{
-				const Vector buffer(ce_smoothing_los_buffer.GetFloat());
-				newTest.m_Mins = eyePos - buffer;
-				newTest.m_Maxs = eyePos + buffer;
-			}
-
-			newTest.m_Visibility = CameraTools::CollisionTest3D(viewPos, eyePos, ce_smoothing_los_buffer.GetFloat(), entity);
-
-			m_CollisionTests.push_back(newTest);
-		}
-
-		m_CollisionTestFrame = currentFrame;
-	}
-}
-
-void CameraSmooths::DrawCollisionTests()
-{
-	UpdateCollisionTests();
-
-	for (const CollisionTest& test : m_CollisionTests)
-	{
-		C_BaseEntity* entity = test.m_Entity.Get();
-		if (!entity)
-			continue;
-
-		NDebugOverlay::Box(Vector(0, 0, 0), test.m_Mins, test.m_Maxs,
-			Lerp(test.m_Visibility, 255, 0),
-			Lerp(test.m_Visibility, 0, 255),
-			0,
-			64, 0);
-
-		const std::string success = strprintf("Success rate: %1.1f", test.m_Visibility * 100);
-		NDebugOverlay::Text(entity->GetAbsOrigin(), success.c_str(), false, 0);
-	}
-}
-
-float CameraSmooths::GetVisibility(int entIndex)
-{
-	UpdateCollisionTests();
-	for (const auto& test : m_CollisionTests)
-	{
-		if (test.m_Entity.GetEntryIndex() != entIndex)
-			continue;
-
-		return test.m_Visibility;
-	}
-
-	return 0;
-}
-
-// Returns the distance to target. See https://www.desmos.com/calculator/fspe3a4hd6
-static float ComputeSmooth(float time, float startTime, float totalDist, float maxSpeed, float bezierDist, float bezierDuration, float& percent)
-{
-	// x = time in seconds
-	// y = distance to target
-
-	const float slope = maxSpeed;
-
-	constexpr float x0 = 0;
-	constexpr float y0 = 0;
-
-	const float y2 = totalDist;
-	const float x2 = y2 / slope;
-
-	const float x3 = x2 + bezierDuration;
-	const float y3 = y2;
-
-	if (totalDist <= bezierDist)
-	{
-		constexpr float splitPoint = 0;
-
-		constexpr float x1 = 0;
-		constexpr float y1 = 0;
-
-		percent = (time - startTime) / x3;
-
-		return totalDist - Bezier(percent, y1, y2, y3);
-	}
-	else
-	{
-		const float splitPoint = 1 - (bezierDist / totalDist);
-
-		const float x1 = splitPoint * (y3 / slope);
-		const float y1 = splitPoint * totalDist;
-
-		const float bezierBeginX = x1;
-		//const float bezierBeginY = y1;
-
-		const float t = time - startTime;
-		percent = t / x3;
-
-		if (t < bezierBeginX)
-		{
-			// Simple linear interp between 0 and y1
-			const float lerp = Lerp<float>(t / bezierBeginX, 0, y1);
-			return totalDist - lerp;
-		}
-		else
-		{
-			const float bezier = Bezier((t - bezierBeginX) / (x3 - bezierBeginX), y1, y2, y3);
-			return totalDist - bezier;
-		}
-	}
-}
-
-bool CameraSmooths::InToolModeOverride() const
-{
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (!Interfaces::GetEngineClient()->IsHLTV())
-		return false;
-
-	if (m_InProgress)
-		return true;
-
-	return false;
-}
-
-bool CameraSmooths::IsThirdPersonCameraOverride() const
-{
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (!Interfaces::GetEngineClient()->IsHLTV())
-		return false;
-
-	if (m_InProgress)
-		return true;
-
-	return false;
-}
-
-bool CameraSmooths::SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov)
-{
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (!ce_smoothing_enabled.GetBool())
-		return false;
+		return newCam;
 
 	if (!Interfaces::GetEngineClient()->IsHLTV())
-		return false;
-
-	HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
-
-	const Vector& lastFramePos = CameraState::GetModule()->GetLastFramePluginViewOrigin();
-	const QAngle& lastFrameAng = CameraState::GetModule()->GetLastFramePluginViewAngles();
+		return newCam;
 
 	const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
 	const float hosttime = Interfaces::GetEngineTool()->HostTime();
 
-	if (hltvcamera->GetMode() == OBS_MODE_IN_EYE || hltvcamera->GetMode() == OBS_MODE_CHASE)
+	Vector currentForward;
+	AngleVectors(currentCam->GetAngles(), &currentForward);
+
+	const Vector deltaPos = newCam->GetOrigin() - currentCam->GetOrigin();
+	const float angle = Rad2Deg(std::acosf(currentForward.Dot(deltaPos) / (currentForward.Length() + deltaPos.Length())));
+	const float distance = deltaPos.Length();
+
+	const bool forceSmooth = distance <= ce_smoothing_force_distance.GetFloat();
+	if (!forceSmooth)
 	{
-		if (hltvcamera->m_iTraget1 != m_EndTarget || (hltvcamera->GetMode() != m_EndMode && !m_InProgress))
+		if (angle > ce_smoothing_fov.GetFloat())
 		{
-			m_EndMode = hltvcamera->GetMode();
-			m_EndTarget = hltvcamera->m_iTraget1;
-
-			Vector currentForward;
-			AngleVectors(lastFrameAng, &currentForward);
-
-			const Vector deltaPos = origin - lastFramePos;
-			const float angle = Rad2Deg(std::acosf(currentForward.Dot(deltaPos) / (currentForward.Length() + deltaPos.Length())));
-			const float distance = deltaPos.Length();
-
-			const bool forceSmooth = distance <= ce_smoothing_force_distance.GetFloat();
-			if (!forceSmooth)
-			{
-				if (angle > ce_smoothing_fov.GetFloat())
-				{
-					if (ce_smoothing_debug.GetBool())
-						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, angle difference was %1.0f degrees.\n\n", GetModuleName(), angle);
-					m_InProgress = false;
-					return false;
-				}
-
-				if (ce_smoothing_debug.GetBool())
-					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed angle test with difference of %1.0f degrees.\n", GetModuleName(), angle);
-
-				const float visibility = GetVisibility(m_EndTarget);
-				if (visibility <= ce_smoothing_los_min.GetFloat())
-				{
-					if (ce_smoothing_debug.GetBool())
-						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, no visibility to new target\n\n", GetModuleName());
-					m_InProgress = false;
-					return false;
-				}
-
-				if (ce_smoothing_debug.GetBool())
-					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed LOS test (%1.0f%% visible)\n", GetModuleName(), visibility * 100);
-
-				if (ce_smoothing_max_distance.GetFloat() > 0 && distance > ce_smoothing_max_distance.GetFloat())
-				{
-					if (ce_smoothing_debug.GetBool())
-						ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, distance of %1.0f units > %s (%1.0f units)\n\n", GetModuleName(), distance, ce_smoothing_max_distance.GetName(), ce_smoothing_max_distance.GetFloat());
-					m_InProgress = false;
-					return false;
-				}
-
-				if (ce_smoothing_debug.GetBool())
-					ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed distance test, %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_smoothing_max_distance.GetName(), ce_smoothing_max_distance.GetFloat());
-			}
-			else
-			{
-				if (ce_smoothing_debug.GetBool())
-					ConColorMsg(DBGMSG_COLOR, "[%s] Forcing smooth, distance of %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_smoothing_force_distance.GetName(), ce_smoothing_force_distance.GetFloat());
-			}
-
 			if (ce_smoothing_debug.GetBool())
-				ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth!\n\n", GetModuleName());
+				ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, angle difference was %1.0f degrees.\n\n", GetModuleName(), angle);
 
-			m_SmoothStartAng = lastFrameAng;
-			m_SmoothStartPos = lastFramePos;
-			m_StartDist = m_SmoothStartPos.DistTo(origin);
-			m_SmoothStartTime = m_LastHostTime;
-			m_LastOverallProgress = m_LastAngPercentage = 0;
-			m_InProgress = true;
+			return newCam;
 		}
-	}
-	else
-		m_InProgress = false;
-
-	if (m_InProgress)
-	{
-		const Vector targetPos = origin;
-		const float distToTarget = lastFramePos.DistTo(targetPos);
-
-		float percent;
-
-		const float targetDist = ComputeSmooth(
-			hosttime, m_SmoothStartTime,
-			m_StartDist,
-			ce_smoothing_linear_speed.GetFloat(),
-			ce_smoothing_bezier_dist.GetFloat(),
-			ce_smoothing_bezier_duration.GetFloat(),
-			percent);
 
 		if (ce_smoothing_debug.GetBool())
+			ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed angle test with difference of %1.0f degrees.\n", GetModuleName(), angle);
+
+		const float visibility = TestVisibility(currentCam->GetOrigin(), newCam->GetOrigin());
+		if (visibility <= ce_smoothing_los_min.GetFloat())
 		{
-			GetConLine();
-			engine->Con_NPrintf(GetConLine(), "%%: %1.1f", percent * 100);
-			engine->Con_NPrintf(GetConLine(), "targetDist: %1.0f", targetDist);
+			if (ce_smoothing_debug.GetBool())
+				ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, no visibility to new target\n\n", GetModuleName());
+
+			return newCam;
 		}
 
-		if (percent >= 1)
+		if (ce_smoothing_debug.GetBool())
+			ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed LOS test (%1.0f%% visible)\n", GetModuleName(), visibility * 100);
+
+		if (ce_smoothing_max_distance.GetFloat() > 0 && distance > ce_smoothing_max_distance.GetFloat())
 		{
-			m_InProgress = false;
+			if (ce_smoothing_debug.GetBool())
+				ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, distance of %1.0f units > %s (%1.0f units)\n\n", GetModuleName(), distance, ce_smoothing_max_distance.GetName(), ce_smoothing_max_distance.GetFloat());
 
-			if (hltvcamera)
-				hltvcamera->SetMode(m_EndMode);
+			return newCam;
 		}
-		else
-		{
-			if (ce_smoothing_mode.GetInt() == 0)
-				origin = ApproachVector(targetPos, lastFramePos, targetDist);
-			else if (ce_smoothing_mode.GetInt() == 1)
-				origin = VectorLerp(m_SmoothStartPos, targetPos, RemapVal(targetDist, m_StartDist, 0, 0, 1));
 
-			// Angles
-			{
-				// Percentage this frame
-				const float percentThisFrame = percent - m_LastOverallProgress;
-
-				const float adjustedPercentage = percentThisFrame / (1 - percent);
-
-				// Angle percentage is determined by overall progress towards our goal position
-				const float angPercentage = EaseIn(percent, ce_smoothing_ang_bias.GetFloat());
-
-				const float angPercentThisFrame = angPercentage - m_LastAngPercentage;
-				const float adjustedAngPercentage = angPercentThisFrame / (1 - angPercentage);
-
-				const float distx = AngleDistance(angles.x, lastFrameAng.x);
-				const float disty = AngleDistance(angles.y, lastFrameAng.y);
-				const float distz = AngleDistance(angles.z, lastFrameAng.z);
-
-				angles.x = ApproachAngle(angles.x, lastFrameAng.x, distx * adjustedAngPercentage);
-				angles.y = ApproachAngle(angles.y, lastFrameAng.y, disty * adjustedAngPercentage);
-				angles.z = ApproachAngle(angles.z, lastFrameAng.z, distz * adjustedAngPercentage);
-
-				m_LastAngPercentage = angPercentage;
-				m_LastOverallProgress = percent;
-			}
-
-			return true;
-		}
+		if (ce_smoothing_debug.GetBool())
+			ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed distance test, %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_smoothing_max_distance.GetName(), ce_smoothing_max_distance.GetFloat());
+	}
+	else
+	{
+		if (ce_smoothing_debug.GetBool())
+			ConColorMsg(DBGMSG_COLOR, "[%s] Forcing smooth, distance of %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_smoothing_force_distance.GetName(), ce_smoothing_force_distance.GetFloat());
 	}
 
-	m_EndMode = hltvcamera->GetMode();
-	m_EndTarget = hltvcamera->m_iTraget1;
-	m_InProgress = false;
-	m_LastHostTime = hosttime;
+	if (ce_smoothing_debug.GetBool())
+		ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth!\n\n", GetModuleName());
 
-	return false;
+	auto newSmooth = std::make_shared<HybridPlayerCameraSmooth>(copy(currentCam), copy(newCam));
+	newSmooth->m_AngleBias = ce_smoothing_ang_bias.GetFloat();
+	newSmooth->m_BezierDist = ce_smoothing_bezier_dist.GetFloat();
+	newSmooth->m_BezierDuration = ce_smoothing_bezier_duration.GetFloat();
+	newSmooth->m_LinearSpeed = ce_smoothing_linear_speed.GetFloat();
+	newSmooth->m_SmoothingMode = (HybridPlayerCameraSmooth::SmoothingMode)ce_smoothing_mode.GetInt();
+
+	return newSmooth;
 }
 
-void CameraSmooths::OnTick(bool inGame)
+float CameraSmooths::TestVisibility(const Vector& eyePos, const Vector& targetPos) const
 {
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (inGame)
+	float visibility = CameraTools::CollisionTest3D(eyePos, targetPos, ce_smoothing_los_buffer.GetFloat(), nullptr);
+
+	if (ce_smoothing_debug_los.GetBool())
 	{
-		if (ce_smoothing_debug_los.GetBool())
-			DrawCollisionTests();
+		constexpr auto DISPLAY_TIME = 15;
+
+		const Vector buffer(ce_smoothing_los_buffer.GetFloat());
+		const auto mins = eyePos - buffer;
+		const auto maxs = eyePos + buffer;
+
+		NDebugOverlay::Box(Vector(0, 0, 0), mins, maxs,
+			Lerp(visibility, 255, 0),
+			Lerp(visibility, 0, 255),
+			0,
+			64, DISPLAY_TIME);
+
+		char buf[64];
+		sprintf_s(buf, "Success rate: %1.1f", visibility * 100);
+		NDebugOverlay::Text(targetPos, buf, false, DISPLAY_TIME);
 	}
+
+	return visibility;
 }

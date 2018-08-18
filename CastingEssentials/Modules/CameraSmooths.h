@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PluginBase/ICameraOverride.h"
+#include "Modules/Camera/ICameraSmooth.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -13,7 +13,7 @@ class ConVar;
 class IConVar;
 class C_BaseEntity;
 
-class CameraSmooths : public Module<CameraSmooths>, public ICameraOverride
+class CameraSmooths : public Module<CameraSmooths>
 {
 public:
 	CameraSmooths();
@@ -21,25 +21,9 @@ public:
 	static bool CheckDependencies();
 	static constexpr __forceinline const char* GetModuleName() { return "Camera Smooths"; }
 
-	bool IsSmoothing() const { return m_InProgress; }
+	std::shared_ptr<ICamera> CreatePlayerSmooth(const std::shared_ptr<ICamera>& currentCam, const std::shared_ptr<ICamera>& newCam) const;
+
 private:
-	int m_EndMode;
-	int m_EndTarget;
-	bool m_InProgress;
-	float m_LastHostTime;
-	float m_StartDist;
-
-	float m_LastAngPercentage;
-	float m_LastOverallProgress;
-
-	Vector m_SmoothStartPos;
-	QAngle m_SmoothStartAng;
-	float m_SmoothStartTime;
-
-	bool InToolModeOverride() const override;
-	bool IsThirdPersonCameraOverride() const override;
-	bool SetupEngineViewOverride(Vector &origin, QAngle &angles, float &fov) override;
-
 	ConVar ce_smoothing_enabled;
 	ConVar ce_smoothing_fov;
 	ConVar ce_smoothing_force_distance;
@@ -60,22 +44,7 @@ private:
 	ConVar ce_smoothing_los_buffer;
 	ConVar ce_smoothing_los_min;
 
-	struct CollisionTest
-	{
-		Vector m_Mins;
-		Vector m_Maxs;
-
-		CHandle<C_BaseEntity> m_Entity;
-		float m_Visibility;
-	};
-
-	int m_CollisionTestFrame;
-	std::vector<CollisionTest> m_CollisionTests;
-	void UpdateCollisionTests();
-	void DrawCollisionTests();
-	float GetVisibility(int entIndex);
-
-	void OnTick(bool inGame) override;
+	float TestVisibility(const Vector& eyePos, const Vector& targetPos) const;
 
 	static constexpr Color DBGMSG_COLOR = Color(255, 205, 68, 255);
 };

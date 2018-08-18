@@ -727,106 +727,6 @@ void CameraTools::AttachHooks(bool attach)
 	m_SetModeHook.SetEnabled(attach);
 }
 
-Vector CameraTools::CalcPosForAngle(const TPLockRuleset& ruleset, const Vector& orbitCenter, const QAngle& angle) const
-{
-	Vector forward, right, up;
-	AngleVectors(angle, &forward, &right, &up);
-
-	Vector idealPos = orbitCenter + forward * ruleset.m_Pos[1];
-	idealPos += right * ruleset.m_Pos[0];
-	idealPos += up * ruleset.m_Pos[2];
-
-	const Vector camDir = (idealPos - orbitCenter).Normalized();
-	const float dist = orbitCenter.DistTo(idealPos);
-
-	// clip against walls
-	trace_t trace;
-
-	CTraceFilterNoNPCsOrPlayer noPlayers(nullptr, COLLISION_GROUP_NONE);
-	UTIL_TraceHull(orbitCenter, idealPos, WALL_MIN, WALL_MAX, MASK_SOLID, &noPlayers, &trace);
-
-	const float wallDist = (trace.endpos - orbitCenter).Length();
-
-	return orbitCenter + camDir * wallDist;;
-}
-
-bool CameraTools::InToolModeOverride() const
-{
-	if (ce_tplock_enable.GetBool() && CameraState::GetLocalObserverMode() == ObserverMode::OBS_MODE_CHASE)
-		return true;
-
-	if (m_IsTaunting)
-		return true;
-
-	return false;
-}
-
-bool CameraTools::SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov)
-{
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-
-	// Normal tplock only activates when we're in thirdperson of our own
-	// free will
-	if (m_IsTaunting)
-		return PerformTPLock(m_TPLockTaunt, origin, angles, fov);
-	if (ce_tplock_enable.GetBool() && CameraState::GetLocalObserverMode() == ObserverMode::OBS_MODE_CHASE)
-		return PerformTPLock(m_TPLockDefault, origin, angles, fov);
-
-	return false;
-}
-
-bool CameraTools::PerformTPLock(const TPLockRuleset& ruleset, Vector& origin, QAngle& angles, float& fov)
-{
-	auto const targetPlayer = Player::AsPlayer(CameraState::GetLocalObserverTarget());
-	if (!targetPlayer)
-	{
-		m_LastTargetPlayer = nullptr;
-		return false;
-	}
-
-	C_BaseAnimating* baseAnimating = targetPlayer->GetBaseAnimating();
-	if (!baseAnimating)
-		return false;
-
-	Vector targetPos;
-	const int targetBone = baseAnimating->LookupBone(ruleset.m_Bone.c_str());
-	if (targetBone < 0)
-	{
-		DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", ruleset.m_Bone.c_str());
-		const_cast<Vector&>(targetPos) = targetPlayer->GetEyePosition();
-	}
-	else
-	{
-		QAngle dummy;
-		baseAnimating->GetBonePosition(targetBone, targetPos, dummy);
-	}
-
-	QAngle idealAngles = targetPlayer->GetEyeAngles();
-	for (uint_fast8_t i = 0; i < 3; i++)
-		idealAngles[i] = AngleNormalize(ruleset.m_Angle[i].GetValue(idealAngles[i]));
-
-	if (m_LastTargetPlayer == targetPlayer)
-	{
-		const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
-
-		for (uint_fast8_t i = 0; i < 3; i++)
-		{
-			if (ruleset.m_DPS[i] >= 0)
-				idealAngles[i] = ApproachAngle(idealAngles[i], m_LastFrameAngle[i], ruleset.m_DPS[i] * frametime);
-		}
-	}
-
-	const Vector idealPos = CalcPosForAngle(ruleset, targetPos, idealAngles);
-
-	m_LastFrameAngle = idealAngles;
-	m_LastTargetPlayer = targetPlayer;
-
-	angles = idealAngles;
-	origin = idealPos;
-
-	return true;
-}
-
 void CameraTools::SpecSteamID(const CCommand& command)
 {
 	CCommand newCommand;
@@ -1074,14 +974,18 @@ void CameraTools::SpecPosition(const CCommand &command)
 	QAngle ang;
 	ObserverMode mode;
 
-	Vector pluginPos;
-	QAngle pluginAng;
-	CameraState::GetModule()->GetLastFramePluginView(pluginPos, pluginAng);
+	const auto camState = CameraState::GetModule();
+	if (!camState)
+	{
+		Warning("%s: Failed to get CameraState module\n", command[0]);
+		return;
+	}
 
 	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->GetMode();
+	const auto activeCam = camState->GetActiveCamera();
 
 	// Legacy support, we used to always force OBS_MODE_FIXED
-	if (ParseSpecPosCommand(command, pos, ang, mode, pluginPos, pluginAng, defaultMode))
+	if (ParseSpecPosCommand(command, pos, ang, mode, activeCam->GetOrigin(), activeCam->GetAngles(), defaultMode))
 		SpecPosition(pos, ang, mode);
 }
 
@@ -1095,12 +999,17 @@ void CameraTools::SpecPositionDelta(const CCommand& command)
 
 	if (ParseSpecPosCommand(command, pos, ang, mode, vec3_origin, vec3_angle, defaultMode))
 	{
-		Vector pluginPos;
-		QAngle pluginAng;
-		CameraState::GetModule()->GetLastFramePluginView(pluginPos, pluginAng);
+		const auto camState = CameraState::GetModule();
+		if (!camState)
+		{
+			Warning("%s: Failed to get CameraState module\n", command[0]);
+			return;
+		}
 
-		pos += pluginPos;
-		ang += pluginAng;
+		const auto activeCam = camState->GetActiveCamera();
+
+		pos += activeCam->GetOrigin();
+		ang += activeCam->GetAngles();
 
 		SpecPosition(pos, ang, mode);
 	}

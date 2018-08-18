@@ -84,7 +84,7 @@ void Killfeed::OnTick(bool inGame)
 
 			// Now we should just have " + Assister"
 			static constexpr const char plus[] = " + ";
-			if (!strncmp(plus, killerAndAssisterName.c_str(), arraysize(plus) - 1))
+			if (!strncmp(plus, killerAndAssisterName.c_str(), std::size(plus) - 1))
 			{
 				// We started with " + ", so remove it
 				killerAndAssisterName.erase(0, 3);

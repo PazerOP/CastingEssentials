@@ -77,11 +77,6 @@ float FOVOverride::GetBaseFOV(ObserverMode mode) const
 	return fov;
 }
 
-bool FOVOverride::InToolModeOverride() const
-{
-	return true;
-}
-
 bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
