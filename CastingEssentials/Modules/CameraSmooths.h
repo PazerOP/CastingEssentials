@@ -44,6 +44,9 @@ private:
 	ConVar ce_smoothing_los_buffer;
 	ConVar ce_smoothing_los_min;
 
+	ConCommand ce_smoothing_lerpto;
+	void LerpTo(const CCommand& cmd) const;
+
 	float TestVisibility(const Vector& eyePos, const Vector& targetPos) const;
 
 	static constexpr Color DBGMSG_COLOR = Color(255, 205, 68, 255);

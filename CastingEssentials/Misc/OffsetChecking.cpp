@@ -6,6 +6,7 @@
 #include <client/game_controls/baseviewport.h>
 #include <../materialsystem/texturemanager.h>
 #include <shared/baseviewmodel_shared.h>
+#include <shared/usercmd.h>
 #include <vgui_controls/ImagePanel.h>
 #include <vgui_controls/ProgressBar.h>
 
@@ -27,6 +28,7 @@ class OffsetChecking
 
 	OFFSET_CHECK(C_BasePlayer, m_iFOVStart, 4152);
 	OFFSET_CHECK(C_BasePlayer, m_iDefaultFOV, 4160);
+	OFFSET_CHECK(C_BasePlayer, m_pCurrentCommand, 4220);
 	OFFSET_CHECK(C_BasePlayer, m_hVehicle, 4300);
 	OFFSET_CHECK(C_BasePlayer, m_hViewModel, 4472);
 
@@ -36,6 +38,11 @@ class OffsetChecking
 	OFFSET_CHECK(C_BaseViewModel, m_sAnimationPrefix, 2256);
 
 	OFFSET_CHECK(C_EntityFlame, m_hEffect, 1360);
+
+	OFFSET_CHECK(ConVar, m_fnChangeCallbackClient, 88);
+
+	OFFSET_CHECK(CUserCmd, mousedx, 56);
+	OFFSET_CHECK(CUserCmd, mousedy, 58);
 
 	OFFSET_CHECK(vgui::ContinuousProgressBar, _unknown0, 388);
 	OFFSET_CHECK(vgui::ContinuousProgressBar, _unknown1, 392);

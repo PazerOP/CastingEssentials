@@ -1,5 +1,6 @@
 #include "ConsoleTools.h"
 
+#include "Misc/CCvar.h"
 #include "Misc/CmdAlias.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -119,34 +120,6 @@ void ConsoleTools::ToggleFilterEnabled(const ConVar *var)
 	m_ConsoleColorPrintfHook.SetEnabled(enabled);
 }
 
-// this is a total hijack of a friend class declared but never defined in the public SDK
-class CCvar
-{
-public:
-	static int GetFlags(ConCommandBase *base) { return base->m_nFlags; }
-	static void SetFlags(ConCommandBase *base, int flags) { base->m_nFlags = flags; }
-	static void SetMin(ConVar* var, const std::optional<float>& min)
-	{
-		if (!min.has_value())
-			var->m_bHasMin = false;
-		else
-		{
-			var->m_bHasMin = true;
-			var->m_fMinVal = min.value();
-		}
-	}
-	static void SetMax(ConVar* var, const std::optional<float>& max)
-	{
-		if (!max.has_value())
-			var->m_bHasMax = false;
-		else
-		{
-			var->m_bHasMax = true;
-			var->m_fMaxVal = max.value();
-		}
-	}
-};
-
 void ConsoleTools::UnhideAllCvars()
 {
 	static constexpr auto MASK = ~(FCVAR_DEVELOPMENTONLY | FCVAR_HIDDEN);
@@ -167,16 +140,16 @@ void ConsoleTools::SetLimits(const CCommand& command)
 		goto Usage;
 	}
 
-	std::optional<float> minMax[2];
+	float minMax[2];
 	for (int i = 0; i < 2; i++)
 	{
 		if (command[2 + i][0] == 'x' && command[2 + i][1] == '\0')
-			continue;
+			minMax[i] = NAN;
 		else if (command[2 + i][0] == '?' && command[2 + i][1] == '\0')
 		{
-			float val;
-			if ((i == 0 && var->GetMin(val)) || (i == 1 && var->GetMax(val)))
-				minMax[i] = val;
+			float oldMinMaxVal;
+			if ((i == 0 && var->GetMin(oldMinMaxVal)) || (i == 1 && var->GetMax(oldMinMaxVal)))
+				minMax[i] = oldMinMaxVal;
 		}
 		else if (float parsed; TryParseFloat(command[2 + i], parsed))
 			minMax[i] = parsed;

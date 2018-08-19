@@ -183,6 +183,8 @@ void HookManager::InitRawFunctionsList()
 
 	FindFunc<HookFunc::CHudBaseDeathNotice_GetIcon>("\x55\x8B\xEC\x81\xEC????\x83\x7D\x0C\x00\x56", "xxxxx????xxxxx");
 
+	FindFunc<HookFunc::CInput_CreateMove>("\x55\x8B\xEC\x83\xEC\x50\x53\x8B\x5D\x08\xB8", "xxxxxxxxxxx");
+
 	FindFunc<HookFunc::CStudioHdr_GetNumSeq>("\x8B\x41\x04\x85\xC0\x75\x09\x8B\x01\x8B\x80????\xC3\x8B\x40\x14", "xxxxxxxxxxx????xxxx");
 	FindFunc<HookFunc::CStudioHdr_pSeqdesc>("\x55\x8B\xEC\x56\x8B\x75\x08\x57\x8B\xF9\x85\xF6\x78\x18", "xxxxxxxxxxxxxx");
 
@@ -286,6 +288,8 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>();
 	InitGlobalHook<HookFunc::CDamageAccountPanel_ShouldDraw>();
+
+	InitGlobalHook<HookFunc::CInput_CreateMove>();
 
 	InitGlobalHook<HookFunc::CViewRender_PerformScreenSpaceEffects>();
 

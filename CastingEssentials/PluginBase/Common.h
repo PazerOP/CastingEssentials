@@ -1,4 +1,6 @@
 #pragma once
+#include "Misc/Padding.h"
+
 #include <Color.h>
 #include <dbg.h>
 #include <string>
@@ -232,22 +234,6 @@ namespace std
 {
 	inline std::string to_string(const char* str) { return std::string(str); }
 }
-
-template<size_t i> struct _PADDING_HELPER : _PADDING_HELPER<i - 1>
-{
-	static_assert(i != 0, "0 size struct not supported in C++");
-	std::byte : 8;
-};
-template<> struct _PADDING_HELPER<1>
-{
-	std::byte : 8;
-};
-template<> struct _PADDING_HELPER<size_t(-1)>
-{
-	// To catch infinite recursion
-};
-
-#define PADDING(size) _PADDING_HELPER<size> EXPAND_CONCAT(CE_PADDING, __COUNTER__)
 
 template<typename T> struct remove_const_ptr_ref           { using type = T;  };
 template<typename T> struct remove_const_ptr_ref<const T&> { using type = T&;  };

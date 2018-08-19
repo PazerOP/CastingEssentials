@@ -3,7 +3,7 @@
 #include "Modules/Camera/ICameraSmooth.h"
 #include "Modules/Camera/SimpleCamera.h"
 
-class HybridPlayerCameraSmooth : public ICameraSmooth, public ICamera, public std::enable_shared_from_this<ICamera>
+class HybridPlayerCameraSmooth : public ICameraSmooth
 {
 public:
 	HybridPlayerCameraSmooth(CameraPtr&& startCamera, CameraPtr&& endCamera);
@@ -13,7 +13,6 @@ public:
 
 	CameraConstPtr GetStartCamera() const override { return m_StartCamera; }
 	CameraConstPtr GetEndCamera() const override { return m_EndCamera; }
-	CameraConstPtr GetSmoothedCamera() const override { return shared_from_this(); }
 
 	void Update(float dt) override;
 	float GetProgress() const override { return m_Percent; }
@@ -29,6 +28,9 @@ public:
 		Approach,
 		Lerp,
 	} m_SmoothingMode = SmoothingMode::Approach;
+
+protected:
+	bool IsCollapsible() const override { return true; }
 
 private:
 	static float ComputeSmooth(float time, float startTime, float totalDist, float maxSpeed, float bezierDist, float bezierDuration, float& percent);

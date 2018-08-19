@@ -49,7 +49,7 @@
     <ClCompile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>_CRT_NO_VA_START_VALIDATION;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <PostBuildEvent>
@@ -96,8 +96,12 @@
     <ClCompile Include="Hooking\ModuleSegments.cpp" />
     <ClCompile Include="Misc\DebugOverlay.cpp" />
     <ClCompile Include="Misc\OffsetChecking.cpp" />
+    <ClCompile Include="Modules\CameraTPLock.cpp" />
     <ClCompile Include="Modules\Camera\FirstPersonCamera.cpp" />
     <ClCompile Include="Modules\Camera\HybridPlayerCameraSmooth.cpp" />
+    <ClCompile Include="Modules\Camera\ICamera.cpp" />
+    <ClCompile Include="Modules\Camera\OrbitCamera.cpp" />
+    <ClCompile Include="Modules\Camera\RoamingCamera.cpp" />
     <ClCompile Include="Modules\Camera\SimpleCameraSmooth.cpp" />
     <ClCompile Include="Modules\Camera\TPLockCamera.cpp" />
     <ClCompile Include="Modules\ClientTools.cpp" />
@@ -159,15 +163,22 @@
     <ClInclude Include="Hooking\IBaseHook.h" />
     <ClInclude Include="Hooking\IGroupHook.h" />
     <ClInclude Include="Hooking\TemplateTypedefs.h" />
+    <ClInclude Include="Misc\CCvar.h" />
     <ClInclude Include="Misc\CmdAlias.h" />
     <ClInclude Include="Misc\CRefPtrFix.h" />
     <ClInclude Include="Misc\DebugOverlay.h" />
     <ClInclude Include="Misc\Extras\VPlane.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
+    <ClInclude Include="Misc\Padding.h" />
+    <ClInclude Include="Modules\CameraTPLock.h" />
+    <ClInclude Include="Modules\Camera\CameraStateDelta.h" />
     <ClInclude Include="Modules\Camera\FirstPersonCamera.h" />
     <ClInclude Include="Modules\Camera\HybridPlayerCameraSmooth.h" />
     <ClInclude Include="Modules\Camera\ICamera.h" />
     <ClInclude Include="Modules\Camera\ICameraSmooth.h" />
+    <ClInclude Include="Modules\Camera\ICameraStateCallbacks.h" />
+    <ClInclude Include="Modules\Camera\OrbitCamera.h" />
+    <ClInclude Include="Modules\Camera\RoamingCamera.h" />
     <ClInclude Include="Modules\Camera\SimpleCameraSmooth.h" />
     <ClInclude Include="Modules\Camera\SimpleCamera.h" />
     <ClInclude Include="Modules\Camera\TPLockCamera.h" />

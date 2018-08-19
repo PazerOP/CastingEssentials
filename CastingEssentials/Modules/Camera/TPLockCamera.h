@@ -12,7 +12,9 @@ class TPLockCamera final : public ICamera
 public:
 	TPLockCamera(CHandle<C_BaseEntity> entity);
 
+	void Reset() override {}
 	void Update(float dt) override;
+	int GetAttachedEntity() const override { return m_Entity.GetEntryIndex(); }
 
 	struct TPLockValue
 	{
@@ -37,6 +39,10 @@ public:
 	std::array<float, 3> m_DPS;
 
 	CHandle<C_BaseEntity> m_Entity;
+
+protected:
+	// Based off of player position, never collapse
+	bool IsCollapsible() const override { return false; }
 
 private:
 	Vector CalcPosForAngle(const Vector& orbitCenter, const QAngle& angle) const;

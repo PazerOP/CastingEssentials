@@ -15,6 +15,7 @@ class CAccountPanel;
 class CAutoGameSystemPerFrame;
 class CBaseClientRenderTargets;
 class CDamageAccountPanel;
+class CInput;
 struct ClientModelRenderInfo_t;
 class CNewParticleEffect;
 class CParticleProperty;
@@ -105,6 +106,8 @@ enum class HookFunc
 	CBaseClientRenderTargets_InitClientRenderTargets,
 	CDamageAccountPanel_DisplayDamageFeedback,
 	CDamageAccountPanel_ShouldDraw,
+
+	CInput_CreateMove,
 
 	CParticleProperty_DebugPrintEffects,
 	CNewParticleEffect_StopEmission,
@@ -412,6 +415,11 @@ protected:
 	{
 		typedef bool(__thiscall *Raw)(CDamageAccountPanel* pThis);
 		typedef GlobalClassHook<HookFunc::CDamageAccountPanel_ShouldDraw, false, CDamageAccountPanel, bool> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::CInput_CreateMove>
+	{
+		typedef void(__thiscall* Raw)(CInput* pThis, int sequenceNumber, float inputSampleFrametime, bool active);
+		typedef GlobalClassHook<HookFunc::CInput_CreateMove, false, CInput, void, int, float, bool> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::CParticleProperty_DebugPrintEffects>
 	{

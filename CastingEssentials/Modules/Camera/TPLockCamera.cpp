@@ -54,7 +54,7 @@ void TPLockCamera::Update(float dt)
 	m_Origin = idealPos;
 }
 
-Vector TPLockCamera::CalcPosForAngle(const Vector & orbitCenter, const QAngle & angle) const
+Vector TPLockCamera::CalcPosForAngle(const Vector& orbitCenter, const QAngle& angle) const
 {
 	Vector forward, right, up;
 	AngleVectors(angle, &forward, &right, &up);
@@ -75,4 +75,22 @@ Vector TPLockCamera::CalcPosForAngle(const Vector & orbitCenter, const QAngle & 
 	const float wallDist = (trace.endpos - orbitCenter).Length();
 
 	return orbitCenter + camDir * wallDist;;
+}
+
+float TPLockCamera::TPLockValue::GetValue(float input) const
+{
+	switch (m_Mode)
+	{
+		case Mode::Set:
+			return m_Value;
+		case Mode::Add:
+			return input + m_Value;
+		case Mode::Scale:
+			return input * m_Value;
+		case Mode::ScaleAdd:
+			return input * m_Value + m_Base;
+	}
+
+	Assert(!"Should never get here...");
+	return NAN;
 }

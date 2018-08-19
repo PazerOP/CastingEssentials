@@ -22,12 +22,6 @@ class C_HLTVCamera;
 class C_BaseEntity;
 class Player;
 
-enum class ModeSwitchReason
-{
-	Unknown,
-	SpecPosition,
-};
-
 class CameraTools final : public Module<CameraTools>
 {
 public:
@@ -42,11 +36,7 @@ public:
 	static float CollisionTest3D(const Vector& startPos, const Vector& targetPos, float scale,
 	                             const IHandleEntity* ignoreEnt = nullptr);
 
-	ModeSwitchReason GetModeSwitchReason() const { return m_SwitchReason; }
-
 private:
-	Hook<HookFunc::C_HLTVCamera_SetMode> m_SetModeHook;
-	Hook<HookFunc::C_HLTVCamera_SetPrimaryTarget> m_SetPrimaryTargetHook;
 	KeyValues* m_SpecGUISettings;
 
 	void SetModeOverride(int iMode);
@@ -59,19 +49,6 @@ private:
 	ConVar ce_cameratools_spec_player_alive;
 	ConVar ce_cameratools_fix_view_heights;
 	ConVar ce_cameratools_disable_view_punches;
-
-	ConVar ce_tplock_enable;
-	ConVar ce_tplock_taunt_enable;
-
-	ConVar ce_tplock_default_pos;
-	ConVar ce_tplock_default_angle;
-	ConVar ce_tplock_default_dps;
-
-	ConVar ce_tplock_taunt_pos;
-	ConVar ce_tplock_taunt_angle;
-	ConVar ce_tplock_taunt_dps;
-
-	ConVar ce_tplock_bone;
 
 	ConCommand ce_cameratools_spec_pos;
 	ConCommand ce_cameratools_spec_pos_delta;
@@ -92,31 +69,11 @@ private:
 	void SpecPosition(const CCommand &command);
 	void SpecPositionDelta(const CCommand& command);
 
-	using TPLockValue = TPLockCamera::TPLockValue;
-	static bool ParseTPLockValues(const CCommand& valuesIn, std::array<TPLockValue, 3>& valuesOut);
-	static void ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<TPLockValue, 3>& values);
-	static void ParseTPLockValuesInto(ConVar* cvar, const char* oldVal, std::array<float, 3>& values);
-	void TPLockBoneUpdated(ConVar* cvar);
-
-	struct TPLockRuleset
-	{
-		std::array<float, 3> m_Pos;
-		std::array<TPLockValue, 3> m_Angle;
-		std::array<float, 3> m_DPS;
-		std::string m_Bone;
-	};
-
-	TPLockRuleset m_TPLockDefault;
-	TPLockRuleset m_TPLockTaunt;
-
 	void SpecClass(const CCommand& command);
 	void SpecClass(TFTeam team, TFClassType playerClass, int classIndex);
 	void SpecSteamID(const CCommand& command);
 	void SpecIndex(const CCommand& command);
 	void SpecEntIndex(const CCommand& command);
-
-	bool m_IsTaunting;
-	void UpdateIsTaunting();
 
 	void SpecPlayer(int playerIndex);
 
@@ -130,8 +87,4 @@ private:
 	void ToggleDisableViewPunches(const ConVar* var);
 	VariablePusher<RecvVarProxyFn> m_vecPunchAngleProxy;
 	VariablePusher<RecvVarProxyFn> m_vecPunchAngleVelProxy;
-
-	void AttachHooks(bool attach);
-
-	ModeSwitchReason m_SwitchReason;
 };

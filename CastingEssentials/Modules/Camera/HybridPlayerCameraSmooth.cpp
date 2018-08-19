@@ -11,20 +11,20 @@ HybridPlayerCameraSmooth::HybridPlayerCameraSmooth(CameraPtr&& startCamera, Came
 
 void HybridPlayerCameraSmooth::Update(float dt)
 {
-	const auto& startCam = GetStartCamera();
-	const auto& endCam = GetEndCamera();
+	m_StartCamera->Update(dt);
+	TryCollapse(m_StartCamera);
 
-	startCam->Update(dt);
-	endCam->Update(dt);
+	m_EndCamera->Update(dt);
+	TryCollapse(m_EndCamera);
 
 	if (!IsSmoothComplete())
 	{
 		if (m_ElapsedTime == 0)
 		{
-			m_Angles = startCam->GetAngles();
-			m_FOV = startCam->GetFOV();
-			m_Origin = startCam->GetOrigin();
-			m_IsFirstPerson = startCam->IsFirstPerson();
+			m_Angles = m_StartCamera->GetAngles();
+			m_FOV = m_StartCamera->GetFOV();
+			m_Origin = m_StartCamera->GetOrigin();
+			m_IsFirstPerson = m_StartCamera->IsFirstPerson();
 
 			if (dt == 0)
 				return;
@@ -35,13 +35,13 @@ void HybridPlayerCameraSmooth::Update(float dt)
 	}
 	else
 	{
-		m_Angles = endCam->GetAngles();
-		m_FOV = endCam->GetFOV();
-		m_Origin = endCam->GetOrigin();
-		m_IsFirstPerson = endCam->IsFirstPerson();
+		m_Angles = m_EndCamera->GetAngles();
+		m_FOV = m_EndCamera->GetFOV();
+		m_Origin = m_EndCamera->GetOrigin();
+		m_IsFirstPerson = m_EndCamera->IsFirstPerson();
 	}
 
-	const Vector targetPos = endCam->GetOrigin();
+	const Vector targetPos = m_EndCamera->GetOrigin();
 	const float distToTarget = m_Origin.DistTo(targetPos);
 
 	float percent;
@@ -49,17 +49,17 @@ void HybridPlayerCameraSmooth::Update(float dt)
 
 	if (m_Percent >= 1)
 	{
-		m_Origin = endCam->GetOrigin();
-		m_Angles = endCam->GetAngles();
-		m_FOV = endCam->GetFOV();
-		m_IsFirstPerson = endCam->IsFirstPerson();
+		m_Origin = m_EndCamera->GetOrigin();
+		m_Angles = m_EndCamera->GetAngles();
+		m_FOV = m_EndCamera->GetFOV();
+		m_IsFirstPerson = m_EndCamera->IsFirstPerson();
 	}
 	else if (m_ElapsedTime > 0)
 	{
 		if (m_SmoothingMode == SmoothingMode::Approach)
 			m_Origin = ApproachVector(targetPos, m_Origin, targetDist);
 		else
-			m_Origin = VectorLerp(startCam->GetOrigin(), targetPos, RemapVal(targetDist, m_StartDist, 0, 0, 1));
+			m_Origin = VectorLerp(m_StartCamera->GetOrigin(), targetPos, RemapVal(targetDist, m_StartDist, 0, 0, 1));
 
 		// Angles
 		{
@@ -74,7 +74,7 @@ void HybridPlayerCameraSmooth::Update(float dt)
 			const float angPercentThisFrame = angPercentage - m_LastAngPercent;
 			const float adjustedAngPercentage = angPercentThisFrame / (1 - angPercentage);
 
-			const auto& targetAng = endCam->GetAngles();
+			const auto& targetAng = m_EndCamera->GetAngles();
 			const float distx = AngleDistance(targetAng.x, m_Angles.x);
 			const float disty = AngleDistance(targetAng.y, m_Angles.y);
 			const float distz = AngleDistance(targetAng.z, m_Angles.z);

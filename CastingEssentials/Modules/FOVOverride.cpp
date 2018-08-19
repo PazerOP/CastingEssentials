@@ -14,7 +14,8 @@
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
 
-MODULE_REGISTER(FOVOverride);
+static_assert(DEBUG, "Fix this before release, dummy");
+//MODULE_REGISTER(FOVOverride);
 
 FOVOverride::FOVOverride() :
 	ce_fovoverride_firstperson("ce_fovoverride_firstperson", "90"),
@@ -79,6 +80,7 @@ float FOVOverride::GetBaseFOV(ObserverMode mode) const
 
 bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 {
+#if false
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
 	if (ce_fovoverride_test_enabled.GetBool())
@@ -143,7 +145,7 @@ bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 				return false;
 		}
 	}
-
+#endif
 	//fov = ce_fovoverride_fov.GetFloat();
 	return true;
 }

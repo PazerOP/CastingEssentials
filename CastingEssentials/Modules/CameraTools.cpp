@@ -1,4 +1,5 @@
 #include "CameraTools.h"
+#include "Misc/CCvar.h"
 #include "Misc/HLTVCameraHack.h"
 #include "Modules/CameraSmooths.h"
 #include "Modules/CameraState.h"
@@ -45,26 +46,6 @@ CameraTools::CameraTools() :
 		"Disables all view punches (used for recoil effects on some weapons)",
 		[](IConVar* var, const char*, float) { GetModule()->ToggleDisableViewPunches(static_cast<ConVar*>(var)); }),
 
-	ce_tplock_enable("ce_tplock_enable", "0", FCVAR_NONE, "Locks view angles in spec_mode 5 (thirdperson/chase) to always looking the same direction as the spectated player."),
-	ce_tplock_taunt_enable("ce_tplock_taunt_enable", "0", FCVAR_NONE, "Force the camera into thirdperson tplock when taunting. Does not require ce_tplock_enable."),
-
-	ce_tplock_default_pos("ce_tplock_default_pos", "18 -80 20", FCVAR_NONE, "Camera x/y/z offset from ce_tplock_bone when tplock is active.",
-		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockDefault.m_Pos); }),
-	ce_tplock_default_angle("ce_tplock_default_angle", "*0.5 ? =0", FCVAR_NONE, "Camera angle offset (pitch/yaw/roll) from ce_tplock_bone when tplock is active. See wiki for more information.",
-		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockDefault.m_Angle); }),
-	ce_tplock_default_dps("ce_tplock_default_dps", "-1 -1 -1", FCVAR_NONE, "Max degrees per second for angle (pitch/yaw/roll) when tplock is active. Set < 0 to uncap.",
-		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockDefault.m_DPS); }),
-
-	ce_tplock_taunt_pos("ce_tplock_taunt_pos", "0 -80 -15", FCVAR_NONE, "Camera x/y/z offset from ce_tplock_bone when taunting with taunt tplock enabled.",
-		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockTaunt.m_Pos); }),
-	ce_tplock_taunt_angle("ce_tplock_taunt_angle", "=15 180 =0", FCVAR_NONE, "Camera angle offset (pitch/yaw/roll) from ce_tplock_bone when taunting with taunt tplock enabled.",
-		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockTaunt.m_Angle); }),
-	ce_tplock_taunt_dps("ce_tplock_taunt_dps", "-1 -1 -1", FCVAR_NONE, "Max degrees per second for angle (pitch/yaw/roll) when taunting with taunt tplock enabled. Set < 0 to uncap.",
-		[](IConVar* var, const char* old, float) { ParseTPLockValuesInto(static_cast<ConVar*>(var), old, GetModule()->m_TPLockTaunt.m_DPS); }),
-
-	ce_tplock_bone("ce_tplock_bone", "bip_spine_2", FCVAR_NONE, "Bone to attach camera position to. Enable developer 2 for associated warnings.",
-		[](IConVar* var, const char*, float) { GetModule()->TPLockBoneUpdated(static_cast<ConVar*>(var)); }),
-
 	ce_cameratools_spec_entindex("ce_cameratools_spec_entindex", [](const CCommand& args) { GetModule()->SpecEntIndex(args); },
 		"Spectates a player by entindex"),
 	ce_cameratools_spec_pos("ce_cameratools_spec_pos", [](const CCommand& args) { GetModule()->SpecPosition(args); },
@@ -79,26 +60,10 @@ CameraTools::CameraTools() :
 		"Spectate a player based on their index in the tournament spectator hud."),
 
 	ce_cameratools_show_users("ce_cameratools_show_users", [](const CCommand& args) { GetModule()->ShowUsers(args); },
-		"Lists all currently connected players on the server."),
-
-	m_SetModeHook(std::bind(&CameraTools::SetModeOverride, this, std::placeholders::_1)),
-	m_SetPrimaryTargetHook(std::bind(&CameraTools::SetPrimaryTargetOverride, this, std::placeholders::_1))
+		"Lists all currently connected players on the server.")
 {
-	m_SwitchReason = ModeSwitchReason::Unknown;
 	m_SpecGUISettings = new KeyValues("Resource/UI/SpectatorTournament.res");
 	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
-
-	m_IsTaunting = false;
-
-	// Parse the default values
-	ParseTPLockValuesInto(&ce_tplock_default_pos, ce_tplock_default_pos.GetDefault(), m_TPLockDefault.m_Pos);
-	ParseTPLockValuesInto(&ce_tplock_default_angle, ce_tplock_default_angle.GetDefault(), m_TPLockDefault.m_Angle);
-	ParseTPLockValuesInto(&ce_tplock_default_dps, ce_tplock_default_dps.GetDefault(), m_TPLockDefault.m_DPS);
-
-	ParseTPLockValuesInto(&ce_tplock_taunt_pos, ce_tplock_taunt_pos.GetDefault(), m_TPLockTaunt.m_Pos);
-	ParseTPLockValuesInto(&ce_tplock_taunt_angle, ce_tplock_taunt_angle.GetDefault(), m_TPLockTaunt.m_Angle);
-	ParseTPLockValuesInto(&ce_tplock_taunt_dps, ce_tplock_taunt_dps.GetDefault(), m_TPLockTaunt.m_DPS);
-	m_TPLockTaunt.m_Bone = m_TPLockDefault.m_Bone = ce_tplock_bone.GetString();
 }
 
 bool CameraTools::CheckDependencies()
@@ -199,7 +164,8 @@ void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverM
 			HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
 
 			hltvcamera->SetMode(mode);
-			m_SwitchReason = ModeSwitchReason::SpecPosition;
+			Assert(!"FIXME");
+			//m_SwitchReason = ModeSwitchReason::SpecPosition;
 
 			hltvcamera->m_iCameraMan = 0;
 			hltvcamera->m_vCamOrigin = pos;
@@ -328,92 +294,6 @@ void CameraTools::ShowUsers(const CCommand& command)
 
 	for (size_t i = 0; i < blu.size(); i++)
 		ConColorMsg(Color(128, 128, 255, 255), "    alias player_blu%i \"%s %s\"		// %s (%s)\n", i, ce_cameratools_spec_steamid.GetName(), RenderSteamID(blu[i]->GetSteamID().ConvertToUint64()).c_str(), blu[i]->GetName(), TF_CLASS_NAMES[(int)blu[i]->GetClass()]);
-}
-
-bool CameraTools::ParseTPLockValues(const CCommand& valuesIn, std::array<TPLockValue, 3>& valuesOut)
-{
-	if (valuesIn.ArgC() != (int)valuesOut.size())
-		return false;
-
-	for (uint_fast8_t i = 0; i < valuesOut.size(); i++)
-	{
-		const char* valIn = valuesIn[i];
-		auto& valOut = valuesOut[i];
-
-		if (valIn[0] == '*')
-		{
-			valOut.m_Mode = TPLockValue::Mode::Scale;
-
-			char* endVal;
-			valOut.m_Value = strtof(&valIn[1], &endVal);
-
-			valIn = endVal;
-			if (valIn[i] == '+' || valIn[i] == '-')
-			{
-				valOut.m_Mode = TPLockValue::Mode::ScaleAdd;
-				valOut.m_Base = strtof(valIn, nullptr);
-			}
-		}
-		else if (valIn[0] == '=')
-		{
-			valOut.m_Mode = TPLockValue::Mode::Set;
-			valOut.m_Value = strtof(&valIn[1], nullptr);
-		}
-		else if (valIn[0] == '?')
-		{
-			valOut.m_Mode = TPLockValue::Mode::Add;
-			valOut.m_Value = 0;
-		}
-		else
-		{
-			valOut.m_Mode = TPLockValue::Mode::Add;
-			valOut.m_Value = strtof(valIn, nullptr);
-		}
-	}
-
-	return true;
-}
-
-void CameraTools::ParseTPLockValuesInto(ConVar* cv, const char* oldVal, std::array<TPLockValue, 3>& values)
-{
-	CCommand cmd;
-	cmd.Tokenize(cv->GetString());
-
-	if (!ParseTPLockValues(cmd, values))
-	{
-		Warning("%s: Failed to parse tplock values\n", cv->GetName());
-		cv->SetValue(oldVal);
-	}
-}
-
-void CameraTools::ParseTPLockValuesInto(ConVar* cv, const char* oldVal, std::array<float, 3>& values)
-{
-	CCommand cmd;
-	cmd.Tokenize(cv->GetString());
-
-	if (cmd.ArgC() != (int)values.size())
-		goto ParseFailed;
-
-	for (uint_fast8_t i = 0; i < values.size(); i++)
-	{
-		char* endPtr;
-		values[i] = strtof(cmd[i], &endPtr);
-
-		if (endPtr == cmd[i])
-			goto ParseFailed;
-	}
-
-	return;
-
-ParseFailed:
-	Warning("%s: Failed to parse 3 float values\n", cv->GetName());
-	cv->SetValue(oldVal);
-}
-
-void CameraTools::TPLockBoneUpdated(ConVar* cv)
-{
-	// For the time being, bone is shared between all rulesets
-	m_TPLockDefault.m_Bone = m_TPLockTaunt.m_Bone = cv->GetString();
 }
 
 void CameraTools::SpecClass(const CCommand& command)
@@ -562,7 +442,9 @@ void CameraTools::SpecPlayer(int playerIndex)
 				if (hltvcamera)
 				{
 					hltvcamera->SetPrimaryTarget(player->GetEntity()->entindex());
-					hltvcamera->SetMode(ce_tplock_enable.GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE);
+
+					Assert(!"FIXME");
+					//hltvcamera->SetMode(ce_tplock_enable.GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE);
 				}
 			}
 			catch (bad_pointer &e)
@@ -582,8 +464,6 @@ void CameraTools::SpecPlayer(int playerIndex)
 void CameraTools::OnTick(bool inGame)
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-
-	AttachHooks(inGame);
 
 	if (inGame)
 	{
@@ -622,8 +502,6 @@ void CameraTools::OnTick(bool inGame)
 			m_OldViewHeight.reset();
 			m_OldDuckViewHeight.reset();
 		}
-
-		UpdateIsTaunting();
 	}
 }
 
@@ -700,31 +578,6 @@ void CameraTools::ToggleDisableViewPunches(const ConVar* var)
 		m_vecPunchAngleProxy.Clear();
 		m_vecPunchAngleVelProxy.Clear();
 	}
-}
-
-void CameraTools::UpdateIsTaunting()
-{
-	m_IsTaunting = false;
-
-	if (!ce_tplock_taunt_enable.GetBool())
-		return;
-
-	if (auto mode = CameraState::GetLocalObserverMode();
-		mode != ObserverMode::OBS_MODE_IN_EYE && mode != ObserverMode::OBS_MODE_CHASE)
-	{
-		return;
-	}
-
-	auto player = Player::AsPlayer(CameraState::GetLocalObserverTarget());
-	if (!player)
-		return;
-
-	m_IsTaunting = player->CheckCondition(TFCond::TFCond_Taunting);
-}
-
-void CameraTools::AttachHooks(bool attach)
-{
-	m_SetModeHook.SetEnabled(attach);
 }
 
 void CameraTools::SpecSteamID(const CCommand& command)
@@ -861,41 +714,9 @@ void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flO
 	}
 }
 
-void CameraTools::SetModeOverride(int iMode)
-{
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	static ConVarRef spec_autodirector("spec_autodirector");
-	if (spec_autodirector.GetBool())
-	{
-		const int forceMode = ce_cameratools_autodirector_mode.GetInt();
-
-		if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
-			iMode = forceMode;
-
-		GetHooks()->GetOriginal<HookFunc::C_HLTVCamera_SetMode>()(iMode);
-		GetHooks()->SetState<HookFunc::C_HLTVCamera_SetMode>(Hooking::HookAction::SUPERCEDE);
-	}
-
-	m_SwitchReason = ModeSwitchReason::Unknown;
-}
-
-void CameraTools::SetPrimaryTargetOverride(int nEntity)
-{
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	const int forceTarget = ce_cameratools_force_target.GetInt();
-
-	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
-		nEntity = forceTarget;
-
-	if (!Interfaces::GetClientEntityList()->GetClientEntity(nEntity))
-		nEntity = ((HLTVCameraOverride *)Interfaces::GetHLTVCamera())->m_iTraget1;
-
-	GetHooks()->GetOriginal<HookFunc::C_HLTVCamera_SetPrimaryTarget>()(nEntity);
-	GetHooks()->SetState<HookFunc::C_HLTVCamera_SetPrimaryTarget>(Hooking::HookAction::SUPERCEDE);
-}
-
 void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float flOldValue)
 {
+#if false
 	const int forceTarget = ce_cameratools_force_target.GetInt();
 
 	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
@@ -916,6 +737,7 @@ void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float f
 		if (!ce_cameratools_force_valid_target.GetBool())
 			m_SetPrimaryTargetHook.Disable();
 	}
+#endif
 }
 
 bool CameraTools::ParseSpecPosCommand(const CCommand& command, Vector& pos, QAngle& ang, ObserverMode& mode,
@@ -1017,26 +839,10 @@ void CameraTools::SpecPositionDelta(const CCommand& command)
 
 void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, float flOldValue)
 {
+#if false
 	if (ce_cameratools_force_valid_target.GetBool())
 		m_SetPrimaryTargetHook.Enable();
 	else if(!Interfaces::GetClientEntityList()->GetClientEntity(ce_cameratools_force_target.GetInt()))
 		m_SetPrimaryTargetHook.Disable();
-}
-
-float CameraTools::TPLockValue::GetValue(float input) const
-{
-	switch (m_Mode)
-	{
-		case Mode::Set:
-			return m_Value;
-		case Mode::Add:
-			return input + m_Value;
-		case Mode::Scale:
-			return input * m_Value;
-		case Mode::ScaleAdd:
-			return input * m_Value + m_Base;
-	}
-
-	Assert(!"Should never get here...");
-	return NAN;
+#endif
 }

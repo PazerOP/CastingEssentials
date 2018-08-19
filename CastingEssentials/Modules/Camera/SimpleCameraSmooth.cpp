@@ -15,25 +15,24 @@ SimpleCameraSmooth::SimpleCameraSmooth(CameraPtr&& startCamera, CameraPtr&& endC
 
 void SimpleCameraSmooth::Update(float dt)
 {
-	const auto startCam = GetStartCamera();
-	const auto endCam = GetEndCamera();
-
-	startCam->Update(dt);
-	endCam->Update(dt);
+	m_StartCamera->Update(dt);
+	TryCollapse(m_StartCamera);
+	m_EndCamera->Update(dt);
+	TryCollapse(m_EndCamera);
 
 	if (!IsSmoothComplete())
 		m_CurrentTime = std::min(m_CurrentTime + dt, m_Duration);
 
 	const float progress = GetProgress();
 
-	m_Origin = Lerp(progress, startCam->GetOrigin(), endCam->GetOrigin());
-	m_Angles = Lerp(progress, startCam->GetAngles(), endCam->GetAngles());
-	m_FOV = Lerp(progress, startCam->GetFOV(), endCam->GetFOV());
+	m_Origin = Lerp(progress, m_StartCamera->GetOrigin(), m_EndCamera->GetOrigin());
+	m_Angles = Lerp(progress, m_StartCamera->GetAngles(), m_EndCamera->GetAngles());
+	m_FOV = Lerp(progress, m_StartCamera->GetFOV(), m_EndCamera->GetFOV());
 
 	if (progress == 0)
-		m_IsFirstPerson = startCam->IsFirstPerson();
+		m_IsFirstPerson = m_StartCamera->IsFirstPerson();
 	else if (progress == 1)
-		m_IsFirstPerson = endCam->IsFirstPerson();
+		m_IsFirstPerson = m_EndCamera->IsFirstPerson();
 	else
 		m_IsFirstPerson = false;
 }

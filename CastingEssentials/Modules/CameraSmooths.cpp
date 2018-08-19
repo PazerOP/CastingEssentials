@@ -6,6 +6,7 @@
 #include "Misc/DebugOverlay.h"
 #include "Misc/HLTVCameraHack.h"
 #include "Modules/Camera/HybridPlayerCameraSmooth.h"
+#include "Modules/Camera/SimpleCameraSmooth.h"
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
 
@@ -48,7 +49,9 @@ CameraSmooths::CameraSmooths() :
 
 	ce_smoothing_check_los("ce_smoothing_check_los", "1", FCVAR_NONE, "Make sure we have LOS to the player we're smoothing to."),
 	ce_smoothing_los_buffer("ce_smoothing_los_buffer", "32", FCVAR_NONE, "Additional space to give ourselves so we can sorta see around corners."),
-	ce_smoothing_los_min("ce_smoothing_los_min", "0", FCVAR_NONE, "Minimum percentage of points that must pass the LOS check before we allow ourselves to smooth to a target.", true, 0, true, 1)
+	ce_smoothing_los_min("ce_smoothing_los_min", "0", FCVAR_NONE, "Minimum percentage of points that must pass the LOS check before we allow ourselves to smooth to a target.", true, 0, true, 1),
+
+	ce_smoothing_lerpto("ce_smoothing_lerpto", [](const CCommand& cmd) { GetModule()->LerpTo(cmd); })
 {
 }
 
@@ -178,8 +181,45 @@ std::shared_ptr<ICamera> CameraSmooths::CreatePlayerSmooth(const std::shared_ptr
 	newSmooth->m_BezierDuration = ce_smoothing_bezier_duration.GetFloat();
 	newSmooth->m_LinearSpeed = ce_smoothing_linear_speed.GetFloat();
 	newSmooth->m_SmoothingMode = (HybridPlayerCameraSmooth::SmoothingMode)ce_smoothing_mode.GetInt();
+	newSmooth->ApplySettings();
 
 	return newSmooth;
+}
+
+void CameraSmooths::LerpTo(const CCommand& cmd) const
+{
+	auto cs = CameraState::GetModule();
+	if (!cs)
+	{
+		Warning("%s: Unable to get Camera State module\n", cmd[0]);
+		return;
+	}
+
+	do
+	{
+		if (cmd.ArgC() != 8)
+			break;
+
+		auto endCam = std::make_shared<SimpleCamera>();
+		for (uint_fast8_t i = 0; i < 3; i++)
+		{
+			endCam->m_Origin[i] = atof(cmd[i + 1]);
+			endCam->m_Angles[i] = atof(cmd[i + 4]);
+		}
+
+		auto newSmooth = std::make_shared<SimpleCameraSmooth>(copy(cs->GetActiveCamera()), std::move(endCam), 8);
+		newSmooth->ApplySettings();
+
+		cs->SetActiveCamera(newSmooth);
+
+		return;
+
+	} while (false);
+	if (cmd.ArgC() != 7)
+		goto Usage;
+
+Usage:
+	Warning("Usage: %s <x> <y> <z> <pitch> <yaw> <roll> <duration>\n", cmd[0]);
 }
 
 float CameraSmooths::TestVisibility(const Vector& eyePos, const Vector& targetPos) const
