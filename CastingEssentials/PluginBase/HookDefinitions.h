@@ -11,6 +11,8 @@ class C_BaseCombatCharacter;
 class C_BasePlayer;
 class C_HLTVCamera;
 class C_TFViewModel;
+class C_TFWeaponBase;
+class C_BaseCombatWeapon;
 class CAccountPanel;
 class CAutoGameSystemPerFrame;
 class CBaseClientRenderTargets;
@@ -98,6 +100,8 @@ enum class HookFunc
 	C_TFPlayer_GetEntityForLoadoutSlot,
 
 	C_TFViewModel_CalcViewModelView,
+
+	C_TFWeaponBase_PostDataUpdate,
 
 	CAccountPanel_OnAccountValueChanged,
 	CAccountPanel_Paint,
@@ -349,7 +353,8 @@ protected:
 	};
 	template<> struct HookFuncType<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer>
 	{
-		typedef bool(*Raw)();
+		typedef bool(__thiscall *Raw)(C_BasePlayer* pThis);
+		typedef GlobalClassHook<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer, false, C_BasePlayer, bool> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::C_TFPlayer_DrawModel>
 	{
@@ -364,6 +369,11 @@ protected:
 	{
 		typedef void(__thiscall *Raw)(C_TFViewModel* pThis, C_BasePlayer* player, const Vector& eyePos, const QAngle& eyeAng);
 		typedef GlobalClassHook<HookFunc::C_TFViewModel_CalcViewModelView, false, C_TFViewModel, void, C_BasePlayer*, const Vector&, const QAngle&> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_TFWeaponBase_PostDataUpdate>
+	{
+		typedef void(__thiscall *Raw)(IClientNetworkable* pThis, int updateType);
+		typedef GlobalClassHook<HookFunc::C_TFWeaponBase_PostDataUpdate, false, IClientNetworkable, void, int> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::vgui_AnimationController_StartAnimationSequence>
 	{

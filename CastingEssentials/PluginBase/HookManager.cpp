@@ -160,7 +160,7 @@ void HookManager::InitRawFunctionsList()
 
 	FindFunc<HookFunc::C_BasePlayer_GetDefaultFOV>("\x57\x8B\xF9\x8B\x07\xFF\x90????\x83\xF8\x04", "xxxxxxx????xxx");
 	FindFunc<HookFunc::C_BasePlayer_GetFOV>("\x55\x8B\xEC\x83\xEC\x10\x56\x8B\xF1\x8B\x0D????\x8B\x01", "xxxxxxxxxxx????xx");
-	FindFunc<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer>("\x8B\x0D????\x85\xC9\x74\x3B\x8B\x01", "xx????xxxxxx");
+	FindFunc<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer>("\x56\x57\x8B\x3D????\x8B\xF1\x3B\xFE\x74\x3F\x85\xFF\x0F\x84\xA5\x00\x00\x00\x8B\x07\x8B\xCF\xFF\x90\xC8\x03\x00\x00\x83\xF8\x04\x0F\x85\x92\x00\x00\x00", "xxxx????xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
 	FindFunc<HookFunc::C_HLTVCamera_SetCameraAngle>("\x55\x8B\xEC\x8B\x45\x08\x56\x8B\xF1\x8D\x56\x00\xD9\x00\xD9\x1A\xD9\x40\x00\xD9\x5A\x00\xD9\x40\x00\x52", "xxxxxxxxxxx?xxxxxx?xx?xx?x");
 	FindFunc<HookFunc::C_HLTVCamera_SetMode>("\x55\x8B\xEC\x8B\x45\x08\x53\x56\x8B\xF1\x8B\x5E\x00", "xxxxxxxxxxxx?");
@@ -168,6 +168,8 @@ void HookManager::InitRawFunctionsList()
 
 	FindFunc<HookFunc::C_TFPlayer_DrawModel>("\x55\x8B\xEC\x51\x57\x8B\xF9\x80\x7F\x54\x17", "xxxxxxxxxxx");
 	FindFunc<HookFunc::C_TFPlayer_GetEntityForLoadoutSlot>("\x55\x8B\xEC\x51\x53\x8B\x5D\x08\x57\x8B\xF9\x89\x7D\xFC\x83\xFB\x07", "xxxxxxxxxxxxxxxxx");
+
+	FindFunc<HookFunc::C_TFWeaponBase_PostDataUpdate>("\x55\x8B\xEC\x53\x56\x57\x8B\xF9\x8D\x4F\xF8\xE8\x60\x55\xB9\xFF\x8B\xF0\x85\xF6\x74\x10\x8B\x06\x8B\xCE\x8B\x80\x0C\x02\x00\x00\xFF\xD0\x84\xC0\x75\x02", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
 	FindFunc<HookFunc::CAccountPanel_OnAccountValueChanged>("\x55\x8B\xEC\x51\x53\x8B\x5D\x0C\x56\x8B\xF1\x53", "xxxxxxxxxxxx");
 	FindFunc<HookFunc::CAccountPanel_Paint>("\x55\x8B\xEC\x83\xEC\x74\x56\x8B\xC1", "xxxxxxxxx");
@@ -275,7 +277,9 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::C_BaseAnimating_DrawModel>();
 	InitGlobalHook<HookFunc::C_BaseAnimating_InternalDrawModel>();
 	InitGlobalHook<HookFunc::C_BasePlayer_GetDefaultFOV>();
+	InitGlobalHook<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer>();
 	InitGlobalHook<HookFunc::C_TFPlayer_DrawModel>();
+	InitGlobalHook<HookFunc::C_TFWeaponBase_PostDataUpdate>();
 
 	InitGlobalHook<HookFunc::C_BaseEntity_Init>();
 

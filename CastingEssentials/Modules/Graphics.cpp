@@ -7,6 +7,7 @@
 #include "PluginBase/Entities.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
+#include "Modules/CameraState.h"
 
 #include <bone_setup.h>
 #include <debugoverlay_shared.h>
@@ -49,6 +50,9 @@ Graphics::Graphics() :
 		[](IConVar* var, const char*, float) { GetModule()->ToggleImprovedGlows(static_cast<ConVar*>(var)); }),
 	ce_graphics_fix_invisible_players("ce_graphics_fix_invisible_players", "1", FCVAR_NONE,
 		"Fix a case where players are invisible if you're firstperson speccing them when the round starts."),
+	ce_graphics_fix_viewmodel_particles("ce_graphics_fix_viewmodel_particles", "1", FCVAR_NONE,
+		"Fix a case where particles on view models(e.g. medic beams and unusual effects) disappear right after loading.",
+		[](IConVar* var, const char*, float) { GetModule()->ToggleFixViewmodel(static_cast<ConVar*>(var)); }),
 
 	ce_graphics_fxaa("ce_graphics_fxaa", "0", FCVAR_NONE, "Enables postprocess antialiasing (NVIDIA FXAA 3.11)",
 		[](IConVar* var, const char*, float) { GetModule()->ToggleFXAA(static_cast<ConVar*>(var)); }),
@@ -94,9 +98,13 @@ Graphics::Graphics() :
 
 	m_ApplyEntityGlowEffectsHook(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9)),
 
-	m_ForcedMaterialOverrideHook(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2))
+	m_ForcedMaterialOverrideHook(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2)),
+
+	m_PostDataUpdateHook(std::bind(&Graphics::PostDataUpdateOverride, this, std::placeholders::_1, std::placeholders::_2)),
+	m_ShouldDrawLocalPlayerHook(std::bind(&Graphics::ShouldDrawLocalPlayerOverride, this, std::placeholders::_1))
 {
 	ToggleImprovedGlows(&ce_graphics_improved_glows);
+	ToggleFixViewmodel(&ce_graphics_fix_viewmodel_particles);
 }
 
 bool Graphics::IsDefaultParam(const char* paramName)
@@ -399,6 +407,34 @@ void Graphics::ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_
 	{
 		GetHooks()->SetState<HookFunc::IStudioRender_ForcedMaterialOverride>(Hooking::HookAction::IGNORE);
 	}
+}
+
+void Graphics::ToggleFixViewmodel(const ConVar* var)
+{
+	auto enabled = var->GetBool();
+	m_ShouldDrawLocalPlayerHook.SetEnabled(enabled);
+	m_PostDataUpdateHook.SetEnabled(enabled);
+}
+
+void Graphics::PostDataUpdateOverride(IClientNetworkable* pThis, int updateType)
+{
+	m_PostDataUpdateHook.SetState(Hooking::HookAction::SUPERCEDE);
+	auto weapon = static_cast<C_BaseEntity*>(pThis);
+	const auto localOwnerOverride = CreateVariablePusher(m_LocalOwner, weapon ? weapon->GetOwnerEntity() : nullptr);
+	m_PostDataUpdateHook.GetOriginal()(pThis, updateType);
+}
+
+bool Graphics::ShouldDrawLocalPlayerOverride(C_BasePlayer * pThis)
+{
+	if (!m_LocalOwner) return false;
+
+	m_ShouldDrawLocalPlayerHook.SetState(Hooking::HookAction::SUPERCEDE);
+	auto ret = m_ShouldDrawLocalPlayerHook.GetOriginal()(pThis);
+	if (!ret && CameraState::GetLocalObserverMode() == OBS_MODE_IN_EYE) {
+		auto specTarget = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+		if (specTarget && m_LocalOwner == specTarget->GetEntity()) return true;
+	}
+	return ret;
 }
 
 Graphics::ExtraGlowData* Graphics::FindExtraGlowData(int entindex)
