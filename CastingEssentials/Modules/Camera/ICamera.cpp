@@ -1,10 +1,15 @@
 #include "ICamera.h"
 
-void ICamera::TryCollapse(CameraPtr& ptr)
+bool ICamera::TryCollapse(CameraPtr& ptr)
 {
 	if (ptr->IsCollapsible())
 	{
 		if (auto collapsed = ptr->GetCollapsedCamera())
+		{
 			ptr = collapsed;
+			return true;
+		}
 	}
+
+	return false;
 }

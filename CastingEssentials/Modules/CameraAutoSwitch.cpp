@@ -175,7 +175,14 @@ void CameraAutoSwitch::OnTick(bool inGame)
 		Player* const localObserverTarget = Player::AsPlayer(CameraState::GetLocalObserverTarget());
 		if (localObserverTarget)
 		{
-			const int localObserverTargetIndex = localObserverTarget->entindex();
+			const int localObserverTargetUserID = localObserverTarget->GetUserID();
+
+			char buf[32];
+			sprintf_s(buf, "spec_player #%i\n", localObserverTargetUserID);
+			Warning("SEND: %s\n", buf);
+			engine->ClientCmd(buf);
+
+			/*
 			if (m_AutoSwitchFromPlayer == localObserverTargetIndex)
 			{
 				try
@@ -186,7 +193,7 @@ void CameraAutoSwitch::OnTick(bool inGame)
 				{
 					Warning("%s\n", e.what());
 				}
-			}
+			}*/
 		}
 	}
 }

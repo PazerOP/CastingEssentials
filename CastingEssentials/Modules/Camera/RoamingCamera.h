@@ -13,6 +13,7 @@ public:
 	void Reset() override;
 	void Update(float dt) override;
 	int GetAttachedEntity() const override { return 0; }
+	const char* GetDebugName() const override { return "RoamingCamera"; }
 
 	void SetPosition(const Vector& pos, const QAngle& angles);
 	void CreateMove(const CUserCmd& cmd);

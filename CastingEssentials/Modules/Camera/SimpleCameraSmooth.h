@@ -15,9 +15,10 @@ public:
 	CameraConstPtr GetEndCamera() const override { return m_EndCamera; }
 
 	void Reset() override { m_CurrentTime = 0; }
-	float GetProgress() const override { return m_CurrentTime / m_Duration; }
-
 	void Update(float dt) override;
+	const char* GetDebugName() const override { return "SimpleCameraSmooth"; }
+
+	float GetProgress() const override { return m_CurrentTime / m_Duration; }
 
 protected:
 	bool IsCollapsible() const override { return true; }
@@ -26,5 +27,5 @@ private:
 	CameraPtr m_StartCamera;
 	CameraPtr m_EndCamera;
 	float m_Duration;
-	float m_CurrentTime;
+	float m_CurrentTime = 0;
 };

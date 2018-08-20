@@ -35,4 +35,8 @@ void SimpleCameraSmooth::Update(float dt)
 		m_IsFirstPerson = m_EndCamera->IsFirstPerson();
 	else
 		m_IsFirstPerson = false;
+
+	Assert(m_Origin.IsValid());
+	Assert(m_Angles.IsValid());
+	Assert(std::isfinite(m_FOV));
 }

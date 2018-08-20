@@ -128,6 +128,13 @@ void RoamingCamera::Update(float dt)
 		m_Velocity.Init();
 }
 
+void RoamingCamera::SetPosition(const Vector& pos, const QAngle& angles)
+{
+	m_Origin = pos;
+	m_Angles = angles;
+	m_Velocity.Init();
+}
+
 void RoamingCamera::CreateMove(const CUserCmd& cmd)
 {
 	m_LastCmd = cmd;

@@ -1,6 +1,7 @@
 #include "CameraState.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
+#include "PluginBase/TFDefinitions.h"
 #include "Misc/CCvar.h"
 #include "Misc/HLTVCameraHack.h"
 #include "Modules/Camera/ICamera.h"
@@ -17,7 +18,30 @@
 #undef min
 #undef max
 
+static IClientEntityList* s_ClientEntityList;
+static IEngineTool* s_EngineTool;
+static HLTVCameraOverride* s_HLTVCamera;
+static IVEngineClient* s_EngineClient;
+
 MODULE_REGISTER(CameraState);
+
+class EngineCamera final : public ICamera
+{
+	void Reset() override {}
+	void Update(float dt) override {}
+	int GetAttachedEntity() const override { return 0; }
+	bool IsCollapsible() const override { return false; }
+	const char* GetDebugName() const override { return "EngineCamera"; }
+};
+
+static const auto s_DebugOrbitCamera = std::invoke([]()
+{
+	auto orbit = std::make_shared<OrbitCamera>();
+	orbit->m_OrbitPoint.Init();
+	orbit->m_Radius = 1000;
+	orbit->m_ZOffset = 500;
+	return orbit;
+});
 
 static ConCommand ce_test_toggle_orbit("ce_test_toggle_orbit", [](const CCommand& cmd)
 {
@@ -47,9 +71,9 @@ static ConCommand ce_test_toggle_orbit("ce_test_toggle_orbit", [](const CCommand
 });
 
 CameraState::CameraState() :
-	CAutoGameSystemPerFrame("Camera State: Per-Frame Camera Updates"),
-
 	ce_camerastate_clear_cameras("ce_camerastate_clear_cameras", []() { GetModule()->ClearCameras(); }),
+
+	ce_camerastate_debug_cameras("ce_camerastate_debug_cameras", "0"),
 
 	m_InToolModeHook(std::bind(&CameraState::InToolModeOverride, this)),
 	m_IsThirdPersonCameraHook(std::bind(&CameraState::IsThirdPersonCameraOverride, this)),
@@ -60,7 +84,7 @@ CameraState::CameraState() :
 
 	m_CreateMoveHook(std::bind(&CameraState::CreateMoveOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
 
-	m_EngineCamera(std::make_shared<SimpleCamera>()),
+	m_EngineCamera(std::make_shared<EngineCamera>()),
 	m_RoamingCamera(std::make_shared<RoamingCamera>())
 {
 	m_LastSpecTarget = 0;
@@ -69,13 +93,24 @@ CameraState::CameraState() :
 	m_ActiveCamera = m_EngineCamera;
 }
 
+bool CameraState::CheckDependencies()
+{
+	if (!CheckDependency(Interfaces::GetClientEntityList(), s_ClientEntityList))
+		return false;
+	if (!CheckDependency(Interfaces::GetEngineTool(), s_EngineTool))
+		return false;
+	if (!CheckDependency(Interfaces::GetHLTVCamera(), s_HLTVCamera))
+		return false;
+	if (!CheckDependency(Interfaces::GetEngineClient(), s_EngineClient))
+		return false;
+
+	return true;
+}
+
 ObserverMode CameraState::GetLocalObserverMode()
 {
-	if (auto engineClient = Interfaces::GetEngineClient(); engineClient && engineClient->IsHLTV())
-	{
-		if (auto hltvCamera = Interfaces::GetHLTVCamera())
-			return hltvCamera->GetMode();
-	}
+	if (s_EngineClient->IsHLTV())
+		return s_HLTVCamera->GetMode();
 
 	if (const auto localPlayer = Player::GetLocalPlayer())
 		return localPlayer->GetObserverMode();
@@ -92,10 +127,9 @@ C_BaseEntity* CameraState::GetLocalObserverTarget(bool attachedModesOnly)
 			return nullptr;
 	}
 
-	if (auto client = Interfaces::GetEngineClient(); client && client->IsHLTV())
+	if (s_EngineClient->IsHLTV())
 	{
-		if (auto hltvcamera = Interfaces::GetHLTVCamera())
-			return hltvcamera->GetPrimaryTarget();
+		return s_HLTVCamera->GetPrimaryTarget();
 	}
 	else
 	{
@@ -112,11 +146,7 @@ C_BaseEntity* CameraState::GetLastSpecTarget() const
 	if (m_LastSpecTarget < 0 || m_LastSpecTarget > MAX_EDICTS)
 		return nullptr;
 
-	auto list = Interfaces::GetClientEntityList();
-	if (!list)
-		return nullptr;
-
-	auto clientEnt = list->GetClientEntity(m_LastSpecTarget);
+	auto clientEnt = s_ClientEntityList->GetClientEntity(m_LastSpecTarget);
 	return clientEnt ? clientEnt->GetBaseEntity() : nullptr;
 }
 
@@ -130,15 +160,6 @@ void CameraState::SetActiveCamera(const CameraPtr& camera)
 	m_ActiveCamera->ApplySettings();
 }
 
-void CameraState::Update(float dt)
-{
-	if (IsInGame())
-	{
-		if (auto currentMode = GetLocalObserverMode(); currentMode != m_LastSpecMode)
-			SpecModeChanged(m_LastSpecMode = currentMode);
-	}
-}
-
 void CameraState::ClearCameras()
 {
 	SetActiveCamera(nullptr);
@@ -146,54 +167,58 @@ void CameraState::ClearCameras()
 
 bool CameraState::InToolModeOverride()
 {
-	if (GetActiveCamera())
-	{
-		m_InToolModeHook.SetState(Hooking::HookAction::SUPERCEDE);
-		return true;
-	}
+	if (IsEngineCameraActive() || !GetActiveCamera())
+		return false;
 
-	return false;
+	m_InToolModeHook.SetState(Hooking::HookAction::SUPERCEDE);
+	return true;
 }
 
 bool CameraState::IsThirdPersonCameraOverride()
 {
-	if (const auto& cam = GetActiveCamera(); cam && !cam->IsFirstPerson())
-	{
-		m_IsThirdPersonCameraHook.SetState(Hooking::HookAction::SUPERCEDE);
-		return true;
-	}
+	if (IsEngineCameraActive())
+		return false;
 
-	return false;
+	const auto& cam = GetActiveCamera();
+	if (!cam || cam->IsFirstPerson())
+		return false;
+
+	m_IsThirdPersonCameraHook.SetState(Hooking::HookAction::SUPERCEDE);
+	return true;
 }
 
 bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov)
 {
-	m_EngineCamera->m_Origin = origin;
-	m_EngineCamera->m_Angles = angles;
-	m_EngineCamera->m_FOV = fov;
-	m_EngineCamera->m_IsFirstPerson = GetLocalObserverMode() == OBS_MODE_IN_EYE;
-
-	if (const auto& cam = GetActiveCamera())
+	if (m_QueuedCopyEngineData)
 	{
-		float dt = 0;
-		if (auto engineTool = Interfaces::GetEngineTool())
-			dt = engineTool->ClientFrameTime();
-
-		m_ActiveCamera->Update(dt);
-		ICamera::TryCollapse(m_ActiveCamera);
-
-		m_SetupEngineViewHook.SetState(Hooking::HookAction::SUPERCEDE);
-
-		origin = cam->GetOrigin();
-		angles = cam->GetAngles();
-		fov = cam->GetFOV();
-
-		UpdateServerPosition(origin, angles, fov);
-
-		return true;
+		m_RoamingCamera->SetPosition(origin, angles);
+		m_QueuedCopyEngineData = false;
 	}
 
-	return false;
+	if (IsEngineCameraActive())
+		return false;
+
+	const auto& cam = GetActiveCamera();
+	if (!cam)
+		return false;
+
+	float dt = s_EngineTool->ClientFrameTime();
+
+	m_ActiveCamera->Update(dt);
+	ICamera::TryCollapse(m_ActiveCamera);
+
+	origin = cam->GetOrigin();
+	angles = cam->GetAngles();
+	fov = cam->GetFOV();
+
+	Assert(origin.IsValid());
+	Assert(angles.IsValid());
+	Assert(std::isfinite(fov));
+
+	UpdateServerPosition(origin, angles, fov);
+
+	m_SetupEngineViewHook.SetState(Hooking::HookAction::SUPERCEDE);
+	return true;
 }
 
 void CameraState::CreateMoveOverride(CInput* pThis, int sequenceNumber, float inputSampleFrametime, bool active)
@@ -211,9 +236,26 @@ void CameraState::OnTick(bool inGame)
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 	if (inGame)
 	{
-		// Update last spec target
-		if (auto primaryTarget = Interfaces::GetHLTVCamera()->m_iTraget1; primaryTarget > 0 && primaryTarget < MAX_EDICTS)
-			m_LastSpecTarget = primaryTarget;
+		// Update spec mode/target
+		{
+			auto newMode = GetLocalObserverMode();
+			auto newTarget = GetLocalObserverTarget();
+			auto newTargetEntindex = newTarget ? newTarget->entindex() : 0;
+
+			if (newMode != m_LastSpecMode || newTargetEntindex != m_LastSpecTarget)
+			{
+				SpecStateChanged(newMode, newTarget);
+
+				m_LastSpecMode = newMode;
+				m_LastSpecTarget = newTargetEntindex;
+			}
+		}
+
+		if (ce_camerastate_debug_cameras.GetBool())
+		{
+			auto camera = m_ActiveCamera.get();
+			engine->Con_NPrintf(2, "Current camera type: %s", camera ? camera->GetDebugName() : "(null)");
+		}
 	}
 	else
 	{
@@ -226,12 +268,9 @@ void CameraState::LevelInit()
 	SetupHooks(true);
 	m_NextPlayerPosUpdateTick = -1;
 
-	if (auto engineTool = Interfaces::GetEngineTool())
-	{
-		engineTool->Command(
-			"ce_consoletools_flags_remove sv_force_transmit_ents FCVAR_CHEAT FCVAR_DEVELOPMENTONLY\n"
-			"sv_force_transmit_ents 1\n");
-	}
+	// This only helps on listen servers, but it won't hurt us anywhere else
+	if (auto found = cvar->FindVar("sv_force_transmit_ents"))
+		found->SetValue(1);
 }
 
 void CameraState::LevelShutdown()
@@ -260,15 +299,11 @@ void CameraState::UpdateServerPosition(const Vector& origin, const QAngle& angle
 		if (origin == m_LastUpdatedServerPos)
 			return;
 
-		//static ConVarRef sv_cheats("sv_cheats");
-		//if (!sv_cheats.GetBool())
-		//	return;
-
-		auto engineTool = Interfaces::GetEngineTool();
-		if (!engineTool)
+		static ConVarRef sv_cheats("sv_cheats");
+		if (!sv_cheats.GetBool())
 			return;
 
-		const auto tick = engineTool->ClientTick();
+		const auto tick = s_EngineTool->ClientTick();
 		if (tick < m_NextPlayerPosUpdateTick)
 			return;
 
@@ -276,7 +311,7 @@ void CameraState::UpdateServerPosition(const Vector& origin, const QAngle& angle
 
 		char buf[128];
 		sprintf_s(buf, "spec_goto %f %f %f %f %f %f\n", origin.x, origin.y, origin.z, angles.x, angles.y, angles.z);
-		engineTool->Command(buf);
+		s_EngineTool->Command(buf);
 	}
 }
 
@@ -304,7 +339,21 @@ void CameraState::SetupHooks(bool connect)
 			}
 			else
 			{
-				Warning("%s: Failed to \"hook\" spec_mode: command dispatch callback type has changed\n", GetModuleName());
+				Warning("%s: Failed to \"hook\" %s: command dispatch callback type has changed\n", found->GetName(), GetModuleName());
+			}
+		}
+
+		if (auto found = cvar->FindCommand("spec_player"))
+		{
+			auto callback = CCvar::GetDispatchCallback(found);
+			if (std::holds_alternative<FnCommandCallback_t*>(callback))
+			{
+				m_SpecPlayerDetour.Emplace(*std::get<FnCommandCallback_t*>(callback),
+					[](const CCommand& cmd) { GetModule()->SpecPlayerDetour(cmd); });
+			}
+			else
+			{
+				Warning("%s: Failed to \"hook\" %s: command dispatch callback type has changed\n", found->GetName(), GetModuleName());
 			}
 		}
 	}
@@ -315,26 +364,61 @@ void CameraState::SetupHooks(bool connect)
 void CameraState::SetModeOverride(int iMode)
 {
 	// HLTV path
-	auto mode = (ObserverMode)iMode;
-	SpecModeChanged(mode);
+	Assert(!"FIXME");
+	//auto mode = (ObserverMode)iMode;
+	//SpecModeChanged(mode);
 }
 
-void CameraState::SpecModeChanged(ObserverMode mode)
+void CameraState::SpecPlayerDetour(const CCommand& cmd)
 {
-	switch (mode)
-	{
-		case OBS_MODE_ROAMING:
-			SetActiveCamera(GetRoamingCamera());
-			break;
-
-		default:
-			SetActiveCamera(nullptr);
-	}
+	Warning("PARSED: %s\n", cmd.GetCommandString());
+	m_SpecPlayerDetour.GetOldValue()(cmd);
 }
 
+void CameraState::SpecStateChanged(ObserverMode mode, C_BaseEntity* primaryTarget)
+{
+	if (auto local = Player::GetLocalPlayer(); local && local->GetTeam() != TFTeam::Spectator)
+	{
+		SetActiveCamera(m_EngineCamera);
+		return;
+	}
+
+	CamStateData state;
+	state.m_Mode = mode;
+	state.m_PrimaryTarget = primaryTarget;
+
+	CameraStateCallbacks::RunSetupCameraState(state);
+
+	CameraPtr newCamera = m_EngineCamera;
+
+	if (state.m_Mode == OBS_MODE_ROAMING)
+	{
+		if (state.m_PrimaryTarget)
+			m_QueuedCopyEngineData = true;
+
+		newCamera = s_DebugOrbitCamera;
+		//newCamera = m_RoamingCamera;
+	}
+	else if (state.m_PrimaryTarget)
+	{
+		if (state.m_Mode == OBS_MODE_IN_EYE)
+			newCamera = std::make_shared<FirstPersonCamera>(state.m_PrimaryTarget);
+	}
+
+	// default camera so we know something's broken
+	if (!newCamera)
+		newCamera = s_DebugOrbitCamera;
+
+	CameraStateCallbacks::RunSetupCameraTarget(state, newCamera);
+	CameraStateCallbacks::RunSetupCameraSmooth(state, m_ActiveCamera, newCamera);
+
+	SetActiveCamera(newCamera);
+}
 
 void CameraState::SetPrimaryTargetOverride(int nEntity)
 {
+	Assert(!"FIXME");
+	//SpecTargetChanged(nEntity);
 }
 
 void CameraState::SpecModeDetour(const CCommand& cmd)

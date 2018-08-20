@@ -47,7 +47,6 @@ CameraSmooths::CameraSmooths() :
 	ce_smoothing_debug("ce_smoothing_debug", "0", FCVAR_NONE, "Prints debugging info about camera smooths to the console."),
 	ce_smoothing_debug_los("ce_smoothing_debug_los", "0", FCVAR_NONE, "Draw points associated with LOS checking for camera smooths."),
 
-	ce_smoothing_check_los("ce_smoothing_check_los", "1", FCVAR_NONE, "Make sure we have LOS to the player we're smoothing to."),
 	ce_smoothing_los_buffer("ce_smoothing_los_buffer", "32", FCVAR_NONE, "Additional space to give ourselves so we can sorta see around corners."),
 	ce_smoothing_los_min("ce_smoothing_los_min", "0", FCVAR_NONE, "Minimum percentage of points that must pass the LOS check before we allow ourselves to smooth to a target.", true, 0, true, 1),
 
@@ -111,21 +110,18 @@ bool CameraSmooths::CheckDependencies()
 	return ready;
 }
 
-std::shared_ptr<ICamera> CameraSmooths::CreatePlayerSmooth(const std::shared_ptr<ICamera>& currentCam, const std::shared_ptr<ICamera>& newCam) const
+void CameraSmooths::SetupCameraSmooth(const CamStateData& state, const CameraPtr& currentCamera, CameraPtr& targetCamera)
 {
 	if (!ce_smoothing_enabled.GetBool())
-		return newCam;
-
-	if (!Interfaces::GetEngineClient()->IsHLTV())
-		return newCam;
+		return;
 
 	const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
 	const float hosttime = Interfaces::GetEngineTool()->HostTime();
 
 	Vector currentForward;
-	AngleVectors(currentCam->GetAngles(), &currentForward);
+	AngleVectors(currentCamera->GetAngles(), &currentForward);
 
-	const Vector deltaPos = newCam->GetOrigin() - currentCam->GetOrigin();
+	const Vector deltaPos = targetCamera->GetOrigin() - currentCamera->GetOrigin();
 	const float angle = Rad2Deg(std::acosf(currentForward.Dot(deltaPos) / (currentForward.Length() + deltaPos.Length())));
 	const float distance = deltaPos.Length();
 
@@ -137,19 +133,19 @@ std::shared_ptr<ICamera> CameraSmooths::CreatePlayerSmooth(const std::shared_ptr
 			if (ce_smoothing_debug.GetBool())
 				ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, angle difference was %1.0f degrees.\n\n", GetModuleName(), angle);
 
-			return newCam;
+			return;
 		}
 
 		if (ce_smoothing_debug.GetBool())
 			ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed angle test with difference of %1.0f degrees.\n", GetModuleName(), angle);
 
-		const float visibility = TestVisibility(currentCam->GetOrigin(), newCam->GetOrigin());
-		if (visibility <= ce_smoothing_los_min.GetFloat())
+		const float visibility = TestVisibility(currentCamera->GetOrigin(), targetCamera->GetOrigin());
+		if (visibility < ce_smoothing_los_min.GetFloat())
 		{
 			if (ce_smoothing_debug.GetBool())
 				ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, no visibility to new target\n\n", GetModuleName());
 
-			return newCam;
+			return;
 		}
 
 		if (ce_smoothing_debug.GetBool())
@@ -160,7 +156,7 @@ std::shared_ptr<ICamera> CameraSmooths::CreatePlayerSmooth(const std::shared_ptr
 			if (ce_smoothing_debug.GetBool())
 				ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, distance of %1.0f units > %s (%1.0f units)\n\n", GetModuleName(), distance, ce_smoothing_max_distance.GetName(), ce_smoothing_max_distance.GetFloat());
 
-			return newCam;
+			return;
 		}
 
 		if (ce_smoothing_debug.GetBool())
@@ -175,7 +171,10 @@ std::shared_ptr<ICamera> CameraSmooths::CreatePlayerSmooth(const std::shared_ptr
 	if (ce_smoothing_debug.GetBool())
 		ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth!\n\n", GetModuleName());
 
-	auto newSmooth = std::make_shared<HybridPlayerCameraSmooth>(copy(currentCam), copy(newCam));
+	targetCamera = std::make_shared<SimpleCameraSmooth>(copy(currentCamera), copy(targetCamera), 2);
+	return;
+
+	auto newSmooth = std::make_shared<HybridPlayerCameraSmooth>(copy(currentCamera), copy(targetCamera));
 	newSmooth->m_AngleBias = ce_smoothing_ang_bias.GetFloat();
 	newSmooth->m_BezierDist = ce_smoothing_bezier_dist.GetFloat();
 	newSmooth->m_BezierDuration = ce_smoothing_bezier_duration.GetFloat();
@@ -183,7 +182,7 @@ std::shared_ptr<ICamera> CameraSmooths::CreatePlayerSmooth(const std::shared_ptr
 	newSmooth->m_SmoothingMode = (HybridPlayerCameraSmooth::SmoothingMode)ce_smoothing_mode.GetInt();
 	newSmooth->ApplySettings();
 
-	return newSmooth;
+	targetCamera = newSmooth;
 }
 
 void CameraSmooths::LerpTo(const CCommand& cmd) const

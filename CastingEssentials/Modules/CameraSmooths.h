@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Modules/Camera/CameraStateCallbacks.h"
 #include "Modules/Camera/ICameraSmooth.h"
 #include "PluginBase/Modules.h"
 
@@ -13,15 +14,13 @@ class ConVar;
 class IConVar;
 class C_BaseEntity;
 
-class CameraSmooths : public Module<CameraSmooths>
+class CameraSmooths final : public Module<CameraSmooths>, CameraStateCallbacks
 {
 public:
 	CameraSmooths();
 
 	static bool CheckDependencies();
 	static constexpr __forceinline const char* GetModuleName() { return "Camera Smooths"; }
-
-	std::shared_ptr<ICamera> CreatePlayerSmooth(const std::shared_ptr<ICamera>& currentCam, const std::shared_ptr<ICamera>& newCam) const;
 
 private:
 	ConVar ce_smoothing_enabled;
@@ -40,12 +39,13 @@ private:
 	ConVar ce_smoothing_debug;
 	ConVar ce_smoothing_debug_los;
 
-	ConVar ce_smoothing_check_los;
 	ConVar ce_smoothing_los_buffer;
 	ConVar ce_smoothing_los_min;
 
 	ConCommand ce_smoothing_lerpto;
 	void LerpTo(const CCommand& cmd) const;
+
+	void SetupCameraSmooth(const CamStateData& state, const CameraPtr& currentCamera, CameraPtr& targetCamera) override;
 
 	float TestVisibility(const Vector& eyePos, const Vector& targetPos) const;
 

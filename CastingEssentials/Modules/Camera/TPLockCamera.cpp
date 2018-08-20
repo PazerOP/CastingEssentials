@@ -15,6 +15,7 @@ TPLockCamera::TPLockCamera(CHandle<C_BaseEntity> entity) :
 void TPLockCamera::Update(float dt)
 {
 	C_BaseEntity* const ent = m_Entity.Get();
+	Assert(ent);
 	if (!ent)
 		return;
 

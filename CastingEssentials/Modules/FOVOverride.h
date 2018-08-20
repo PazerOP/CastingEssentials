@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Modules/Camera/ICameraStateCallbacks.h"
+#include "Modules/Camera/CameraStateCallbacks.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
@@ -9,7 +9,7 @@ enum ObserverMode;
 class QAngle;
 class Vector;
 
-class FOVOverride : public Module<FOVOverride>, ICameraStateCallbacks
+class FOVOverride : public Module<FOVOverride>, CameraStateCallbacks
 {
 public:
 	FOVOverride();

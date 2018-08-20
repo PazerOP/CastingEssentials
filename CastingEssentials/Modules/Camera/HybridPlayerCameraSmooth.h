@@ -17,6 +17,7 @@ public:
 	void Update(float dt) override;
 	float GetProgress() const override { return m_Percent; }
 	void Reset() override;
+	const char* GetDebugName() const override { return "HybridPlayerCameraSmooth"; }
 
 	float m_LinearSpeed = 875;
 	float m_BezierDist = 1000;

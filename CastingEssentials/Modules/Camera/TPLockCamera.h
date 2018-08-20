@@ -16,6 +16,8 @@ public:
 	void Update(float dt) override;
 	int GetAttachedEntity() const override { return m_Entity.GetEntryIndex(); }
 
+	const char* GetDebugName() const override { return "TPLockCamera"; }
+
 	struct TPLockValue
 	{
 		enum class Mode
@@ -37,6 +39,7 @@ public:
 	Vector m_PosOffset;
 	std::array<TPLockValue, 3> m_AngOffset;
 	std::array<float, 3> m_DPS;
+	using ICamera::m_FOV;
 
 	CHandle<C_BaseEntity> m_Entity;
 

@@ -9,6 +9,8 @@
 #include <client/cliententitylist.h>
 #include <shared/shareddefs.h>
 
+static IClientEntityList* s_ClientEntityList;
+
 MODULE_REGISTER(CameraTPLock);
 
 CameraTPLock::CameraTPLock() :
@@ -48,6 +50,9 @@ CameraTPLock::CameraTPLock() :
 bool CameraTPLock::CheckDependencies()
 {
 	Modules().Depend<CameraState>();
+
+	if (!CheckDependency(Interfaces::GetClientEntityList(), s_ClientEntityList))
+		return false;
 
 	return true;
 }
@@ -177,29 +182,21 @@ void CameraTPLock::TPLockBoneUpdated(ConVar* cv)
 	m_TPLockDefault.m_Bone = m_TPLockTaunt.m_Bone = cv->GetString();
 }
 
-void CameraTPLock::OnCameraStateChanged(CameraStateDelta& delta)
+void CameraTPLock::SetupCameraTarget(const CamStateData& state, CameraPtr& newCamera)
 {
-	if (delta.m_Mode.newVal == OBS_MODE_CHASE)
-	{
-		auto entList = Interfaces::GetClientEntityList();
-		if (!entList)
-			return;
+	if (state.m_Mode != OBS_MODE_CHASE)
+		return;
 
-		auto clientEnt = entList->GetClientEntity(delta.m_Target1.GetLatestValue());
-		if (!clientEnt)
-			return;
+	if (!state.m_PrimaryTarget)
+		return;
 
-		auto baseEnt = clientEnt->GetBaseEntity();
-		if (!baseEnt)
-			return;
+	auto tplock = std::make_shared<TPLockCamera>(state.m_PrimaryTarget);
+	tplock->m_Bone = m_TPLockDefault.m_Bone;
+	tplock->m_PosOffset = m_TPLockDefault.m_Pos;
+	tplock->m_DPS = m_TPLockDefault.m_DPS;
+	tplock->m_AngOffset = m_TPLockDefault.m_Angle;
+	tplock->m_FOV = 90;
+	tplock->ApplySettings();
 
-		auto tplock = std::make_shared<TPLockCamera>(baseEnt);
-		tplock->m_Bone = m_TPLockDefault.m_Bone;
-		tplock->m_PosOffset = m_TPLockDefault.m_Pos;
-		tplock->m_DPS = m_TPLockDefault.m_DPS;
-		tplock->m_AngOffset = m_TPLockDefault.m_Angle;
-		tplock->ApplySettings();
-
-		CameraState::GetModule()->SetActiveCamera(tplock);
-	}
+	newCamera = tplock;
 }

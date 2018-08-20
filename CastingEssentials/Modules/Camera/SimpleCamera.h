@@ -19,6 +19,7 @@ public:
 	void Reset() override {}
 	void Update(float dt) override {}
 	int GetAttachedEntity() const override { return 0; }
+	const char* GetDebugName() const override { return "SimpleCamera"; }
 
 	using ICamera::m_Origin;
 	using ICamera::m_Angles;

@@ -42,6 +42,18 @@ public:
 		return static_cast<T*>(s_Module.get());
 	}
 
+protected:
+	template<typename TInterface> static bool CheckDependency(TInterface* interface, TInterface*& interfacePtr)
+	{
+		if ((interfacePtr = interface) == nullptr)
+		{
+			PluginWarning("Failed to get %s for module %s\n", typeid(TInterface).name(), T::GetModuleName());
+			return false;
+		}
+
+		return true;
+	}
+
 private:
 	friend class ModuleManager;
 

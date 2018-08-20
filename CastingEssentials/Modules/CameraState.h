@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Modules/Camera/FirstPersonCamera.h"
 #include "Modules/Camera/RoamingCamera.h"
 #include "Modules/Camera/SimpleCamera.h"
 #include "PluginBase/Hook.h"
@@ -21,11 +22,12 @@ enum class ModeSwitchReason
 	SpecPosition,
 };
 
-class CameraState final : public Module<CameraState>, CAutoGameSystemPerFrame
+class CameraState final : public Module<CameraState>
 {
 public:
 	CameraState();
 	static constexpr __forceinline const char* GetModuleName() { return "Camera State"; }
+	static bool CheckDependencies();
 
 	static ObserverMode GetLocalObserverMode();
 	static C_BaseEntity* GetLocalObserverTarget(bool attachedModesOnly = false);
@@ -39,14 +41,13 @@ public:
 	bool IsEngineCameraActive() const { return m_ActiveCamera == m_EngineCamera; }
 	CameraConstPtr GetEngineCamera() const { return m_EngineCamera; }
 
-	auto& GetRoamingCamera() const { return m_RoamingCamera; }
-
-protected:
-	void Update(float dt) override;
+	auto& GetRoamingCamera() { return m_RoamingCamera; }
 
 private:
 	ConCommand ce_camerastate_clear_cameras;
 	void ClearCameras();
+
+	ConVar ce_camerastate_debug_cameras;
 
 	bool InToolModeOverride();
 	bool IsThirdPersonCameraOverride();
@@ -64,14 +65,17 @@ private:
 	Vector m_LastUpdatedServerPos;
 	void UpdateServerPosition(const Vector& origin, const QAngle& angles, float fov);
 
-	int m_LastSpecTarget;
+	int m_LastSpecTarget = 0;
 	ObserverMode m_LastSpecMode;
 
 	ModeSwitchReason m_SwitchReason = ModeSwitchReason::Unknown;
 	VariablePusher<FnCommandCallback_t> m_SpecModeDetour;
 	void SpecModeDetour(const CCommand& cmd);
 
-	void SpecModeChanged(ObserverMode newMode);
+	VariablePusher<FnCommandCallback_t> m_SpecPlayerDetour;
+	void SpecPlayerDetour(const CCommand& cmd);
+
+	void SpecStateChanged(ObserverMode mode, C_BaseEntity* primaryTarget);
 
 	Hook<HookFunc::IClientEngineTools_InToolMode> m_InToolModeHook;
 	Hook<HookFunc::IClientEngineTools_IsThirdPersonCamera> m_IsThirdPersonCameraHook;
@@ -85,6 +89,8 @@ private:
 
 	CameraPtr m_ActiveCamera;
 
-	const std::shared_ptr<SimpleCamera> m_EngineCamera;
+	bool m_QueuedCopyEngineData = false;
+
+	const CameraPtr m_EngineCamera;
 	const std::shared_ptr<RoamingCamera> m_RoamingCamera;
 };

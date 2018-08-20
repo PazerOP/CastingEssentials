@@ -8,6 +8,9 @@ public:
 
 	void Reset() override;
 	void Update(float dt) override;
+	int GetAttachedEntity() const override { return 0; }
+
+	const char* GetDebugName() const override { return "OrbitCamera"; }
 
 	Vector m_OrbitPoint;
 	float m_Radius;
@@ -17,7 +20,6 @@ public:
 
 protected:
 	bool IsCollapsible() const override { return false; }
-	int GetAttachedEntity() const override { return 0; }
 
 private:
 	float m_ElapsedTime = 0;

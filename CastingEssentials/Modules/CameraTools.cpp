@@ -469,31 +469,22 @@ void CameraTools::OnTick(bool inGame)
 	{
 		if (ce_cameratools_show_mode.GetBool())
 		{
-			int mode = -1;
-			int target = -1;
-			std::string playerName;
-			if (Interfaces::GetEngineClient()->IsHLTV())
-			{
-				mode = Interfaces::GetHLTVCamera()->GetMode();
-				target = Interfaces::GetHLTVCamera()->m_iTraget1;
-				if (Player::IsValidIndex(target) && Player::GetPlayer(target, __FUNCSIG__))
-					playerName = Player::GetPlayer(target, __FUNCSIG__)->GetName();
-			}
+			auto mode = CameraState::GetLocalObserverMode();
+			auto target = CameraState::GetLocalObserverTarget();
+			auto targetIndex = target ? target->entindex() : 0;
+			const char* playerName;
+
+			if (auto player = Player::AsPlayer(target))
+				playerName = player->GetName();
 			else
-			{
-				Player* local = Player::GetLocalPlayer();
-				if (local)
-				{
-					mode = local->GetObserverMode();
-				}
-			}
+				playerName = "not a player";
 
 			if (mode >= 0)
 			{
 				Interfaces::GetEngineClient()->Con_NPrintf(GetConLine(), "Current spec_mode: %i %s",
 					mode, mode >= 0 && mode < NUM_OBSERVER_MODES ? s_ObserverModes[mode] : "INVALID");
 				Interfaces::GetEngineClient()->Con_NPrintf(GetConLine(), "Current target: %i%s",
-					target, target == 0 ? " (Unspecified)" : (strprintf(" (%s)", playerName.c_str())).c_str());
+					targetIndex, targetIndex == 0 ? " (none)" : (strprintf(" (%s)", playerName)).c_str());
 			}
 		}
 

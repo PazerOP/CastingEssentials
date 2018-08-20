@@ -97,6 +97,7 @@
     <ClCompile Include="Misc\DebugOverlay.cpp" />
     <ClCompile Include="Misc\OffsetChecking.cpp" />
     <ClCompile Include="Modules\CameraTPLock.cpp" />
+    <ClCompile Include="Modules\Camera\CameraStateCallbacks.cpp" />
     <ClCompile Include="Modules\Camera\FirstPersonCamera.cpp" />
     <ClCompile Include="Modules\Camera\HybridPlayerCameraSmooth.cpp" />
     <ClCompile Include="Modules\Camera\ICamera.cpp" />
@@ -176,7 +177,7 @@
     <ClInclude Include="Modules\Camera\HybridPlayerCameraSmooth.h" />
     <ClInclude Include="Modules\Camera\ICamera.h" />
     <ClInclude Include="Modules\Camera\ICameraSmooth.h" />
-    <ClInclude Include="Modules\Camera\ICameraStateCallbacks.h" />
+    <ClInclude Include="Modules\Camera\CameraStateCallbacks.h" />
     <ClInclude Include="Modules\Camera\OrbitCamera.h" />
     <ClInclude Include="Modules\Camera\RoamingCamera.h" />
     <ClInclude Include="Modules\Camera\SimpleCameraSmooth.h" />

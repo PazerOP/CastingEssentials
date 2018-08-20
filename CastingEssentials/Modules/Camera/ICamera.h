@@ -19,6 +19,8 @@ public:
 	// This helps us keep our camera system more in sync with the game's.
 	virtual int GetAttachedEntity() const = 0;
 
+	virtual const char* GetDebugName() const = 0;
+
 	// Code readability
 	void ApplySettings() { Update(0); }
 
@@ -28,7 +30,7 @@ public:
 
 	__forceinline bool IsFirstPerson() const { return m_IsFirstPerson; }
 
-	static void TryCollapse(CameraPtr& ptr);
+	static bool TryCollapse(CameraPtr& ptr);
 
 protected:
 	virtual bool IsCollapsible() const = 0;

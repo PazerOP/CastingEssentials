@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Modules/Camera/ICameraStateCallbacks.h"
+#include "Modules/Camera/CameraStateCallbacks.h"
 #include "Modules/Camera/TPLockCamera.h"
 #include "PluginBase/Modules.h"
 
 #include <convar.h>
 
-class CameraTPLock final : public Module<CameraTPLock>, ICameraStateCallbacks
+class CameraTPLock final : public Module<CameraTPLock>, CameraStateCallbacks
 {
 public:
 	CameraTPLock();
@@ -48,5 +48,5 @@ private:
 	TPLockRuleset m_TPLockDefault;
 	TPLockRuleset m_TPLockTaunt;
 
-	void OnCameraStateChanged(CameraStateDelta& delta) override;
+	void SetupCameraTarget(const CamStateData& state, CameraPtr& newCamera) override;
 };
