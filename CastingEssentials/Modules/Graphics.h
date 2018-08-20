@@ -42,6 +42,7 @@ private:
 	ConVar ce_graphics_glow_silhouettes;
 	ConVar ce_graphics_improved_glows;
 	ConVar ce_graphics_fix_invisible_players;
+	ConVar ce_graphics_fix_viewmodel_particles;
 
 	ConVar ce_graphics_fxaa;
 	ConVar ce_graphics_fxaa_debug;
@@ -101,6 +102,13 @@ private:
 
 	Hook<HookFunc::IStudioRender_ForcedMaterialOverride> m_ForcedMaterialOverrideHook;
 	void ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_t overrideType);
+
+	Hook<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer> m_ShouldDrawLocalPlayerHook;
+	Hook<HookFunc::C_TFWeaponBase_PostDataUpdate> m_PostDataUpdateHook;
+	C_BaseEntity* m_LocalOwner{ nullptr };
+	void ToggleFixViewmodel(const ConVar* var);
+	void PostDataUpdateOverride(IClientNetworkable* pThis, int updateType);
+	bool ShouldDrawLocalPlayerOverride(C_BasePlayer* pThis);
 
 	void DrawGlowAlways(int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;
 	void DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;

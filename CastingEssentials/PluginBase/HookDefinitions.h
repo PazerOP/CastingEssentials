@@ -11,6 +11,8 @@ class C_BaseCombatCharacter;
 class C_BasePlayer;
 class C_HLTVCamera;
 class C_TFViewModel;
+class C_TFWeaponBase;
+class C_BaseCombatWeapon;
 class CAccountPanel;
 class CAutoGameSystemPerFrame;
 class CBaseClientRenderTargets;
@@ -99,11 +101,13 @@ enum class HookFunc
 
 	C_TFViewModel_CalcViewModelView,
 
+	C_TFWeaponBase_PostDataUpdate,
+
 	CAccountPanel_OnAccountValueChanged,
 	CAccountPanel_Paint,
 	CAutoGameSystemPerFrame_CAutoGameSystemPerFrame,
 	CBaseClientRenderTargets_InitClientRenderTargets,
-	CDamageAccountPanel_DisplayDamageFeedback,
+	CDamageAccountPanel_FireGameEvent,
 	CDamageAccountPanel_ShouldDraw,
 
 	CParticleProperty_DebugPrintEffects,
@@ -349,7 +353,8 @@ protected:
 	};
 	template<> struct HookFuncType<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer>
 	{
-		typedef bool(*Raw)();
+		typedef bool(__thiscall *Raw)(C_BasePlayer* pThis);
+		typedef GlobalClassHook<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer, false, C_BasePlayer, bool> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::C_TFPlayer_DrawModel>
 	{
@@ -364,6 +369,11 @@ protected:
 	{
 		typedef void(__thiscall *Raw)(C_TFViewModel* pThis, C_BasePlayer* player, const Vector& eyePos, const QAngle& eyeAng);
 		typedef GlobalClassHook<HookFunc::C_TFViewModel_CalcViewModelView, false, C_TFViewModel, void, C_BasePlayer*, const Vector&, const QAngle&> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_TFWeaponBase_PostDataUpdate>
+	{
+		typedef void(__thiscall *Raw)(IClientNetworkable* pThis, int updateType);
+		typedef GlobalClassHook<HookFunc::C_TFWeaponBase_PostDataUpdate, false, IClientNetworkable, void, int> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::vgui_AnimationController_StartAnimationSequence>
 	{
@@ -403,10 +413,10 @@ protected:
 		typedef void(__thiscall* Raw)(CBaseClientRenderTargets* pThis, IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* config, int iWaterTextureSize, int iCameraTextureSize);
 		typedef GlobalClassHook<HookFunc::CBaseClientRenderTargets_InitClientRenderTargets, false, CBaseClientRenderTargets, void, IMaterialSystem*, IMaterialSystemHardwareConfig*, int, int> Hook;
 	};
-	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_DisplayDamageFeedback>
+	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_FireGameEvent>
 	{
-		typedef void(__thiscall *Raw)(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool unknown);
-		typedef GlobalClassHook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback, false, CDamageAccountPanel, void, C_TFPlayer*, C_BaseCombatCharacter*, int, int, bool> Hook;
+		typedef void(__thiscall *Raw)(CDamageAccountPanel* pThis, IGameEvent*);
+		typedef GlobalClassHook<HookFunc::CDamageAccountPanel_FireGameEvent, false, CDamageAccountPanel, void, IGameEvent*> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::CDamageAccountPanel_ShouldDraw>
 	{
