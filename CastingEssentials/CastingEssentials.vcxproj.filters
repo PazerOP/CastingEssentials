@@ -377,6 +377,12 @@
     <ClInclude Include="PluginBase\PlayerStateBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Misc\CommandCallbacks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Misc\SuggestionList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Misc\NatVis\RecvTable.natvis" />

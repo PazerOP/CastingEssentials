@@ -1,4 +1,5 @@
 #pragma once
+#include "Misc/CommandCallbacks.h"
 #include "PluginBase/Hook.h"
 #include "PluginBase/Modules.h"
 
@@ -48,16 +49,19 @@ private:
 	void ListFilters(const CCommand& command);
 	void ToggleFilterEnabled(const ConVar* var);
 
+	CommandCallbacks m_SetLimitsCallbacks;
 	static void SetLimits(const CCommand& command);
-	static int SetLimitsAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
+	static void SetLimitsAutocomplete(const CCommand& partial, CUtlVector<CUtlString>& suggestions);
 
-	static int FlagModifyAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
+	CommandCallbacks m_AddFlagsCallbacks;
+	CommandCallbacks m_RemoveFlagsCallbacks;
+	static void AddFlags(const CCommand& command);
+	static void RemoveFlags(const CCommand& command);
+	static void FlagModifyAutocomplete(const CCommand& partial, CUtlVector<CUtlString>& suggestions);
 
-	void AddFlags(const CCommand& command);
-	void RemoveFlags(const CCommand& command);
-
+	CommandCallbacks m_RemoveAliasCallbacks;
 	static void RemoveAlias(const CCommand& command);
-	static int RemoveAliasAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
+	static void RemoveAliasAutocomplete(const CCommand& partial, CUtlVector<CUtlString>& suggestions);
 
 	class PauseFilter;
 	int m_FilterPaused;

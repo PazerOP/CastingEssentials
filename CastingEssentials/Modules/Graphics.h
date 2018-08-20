@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Misc/CommandCallbacks.h"
 #include "Misc/CRefPtrFix.h"
 #include "PluginBase/EntityOffset.h"
 #include "PluginBase/Hook.h"
@@ -77,8 +78,9 @@ private:
 	ConCommand ce_graphics_dump_rts;
 
 	static bool IsDefaultParam(const char* paramName);
+	CommandCallbacks m_ShaderParamsCallbacks;
 	static void DumpShaderParams(const CCommand& cmd);
-	static int DumpShaderParamsAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
+	static void DumpShaderParamsAutocomplete(const CCommand& partial, CUtlVector<CUtlString>& outSuggestions);
 
 	static void DumpRTs(const CCommand& cmd);
 
