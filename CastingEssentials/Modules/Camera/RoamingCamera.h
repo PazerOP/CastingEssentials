@@ -11,7 +11,6 @@ public:
 	RoamingCamera();
 
 	void Reset() override;
-	void Update(float dt) override;
 	int GetAttachedEntity() const override { return 0; }
 	const char* GetDebugName() const override { return "RoamingCamera"; }
 
@@ -20,6 +19,7 @@ public:
 
 protected:
 	bool IsCollapsible() const override { return false; }
+	void Update(float dt, uint32_t frame) override;
 
 private:
 	void Accelerate(Vector& wishdir, float wishspeed, float accel, float dt);

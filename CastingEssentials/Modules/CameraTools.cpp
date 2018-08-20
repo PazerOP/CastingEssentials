@@ -62,8 +62,6 @@ CameraTools::CameraTools() :
 	ce_cameratools_show_users("ce_cameratools_show_users", [](const CCommand& args) { GetModule()->ShowUsers(args); },
 		"Lists all currently connected players on the server.")
 {
-	m_SpecGUISettings = new KeyValues("Resource/UI/SpectatorTournament.res");
-	m_SpecGUISettings->LoadFromFile(g_pFullFileSystem, "resource/ui/spectatortournament.res", "mod");
 }
 
 bool CameraTools::CheckDependencies()

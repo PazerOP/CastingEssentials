@@ -136,39 +136,9 @@ inline const char* stristr(const char* const searchThis, const char* const forTh
 	return (const char*)(searchThis + dist);
 }
 
-// Easing functions, see https://www.desmos.com/calculator/wist7qm16z for live demo
-inline float EaseOut(float x, float bias = 0.5)
-{
-	//Assert(x >= 0 && x <= 1);
-	//Assert(bias >= 0 && bias <= 1);
-	return 1 - std::pow(1 - std::pow(x, bias), 1 / bias);
-}
-inline float EaseIn(float x, float bias = 0.5)
-{
-	//Assert(x >= 0 && x <= 1);
-	//Assert(bias >= 0 && bias <= 1);
-	return std::pow(1 - std::pow(1 - x, bias), 1 / bias);
-}
-inline float EaseOut2(float x, float bias = 0.35)
-{
-	return 1 - std::pow(-x + 1, 1 / bias);
-}
-inline float EaseInSlope(float x, float bias = 0.5)
-{
-	return std::pow(1 - std::pow(1 - x, bias), (1 / bias) - 1) * std::pow(1 - x, bias - 1);
-}
 __forceinline float Bezier(float t, float x0, float x1, float x2)
 {
 	return Lerp(t, Lerp(t, x0, x1), Lerp(t, x1, x2));
-}
-
-inline float smoothstep(float x)
-{
-	return 3.0f*(x*x) - 2.0f*(x*x*x);
-}
-inline float smootherstep(float x)
-{
-	return 6.0f*(x*x*x*x*x) - 15.0f*(x*x*x*x) + 10.0f*(x*x*x);
 }
 
 extern std::string RenderSteamID(const CSteamID& id);

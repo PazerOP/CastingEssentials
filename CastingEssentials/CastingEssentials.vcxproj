@@ -178,6 +178,7 @@
     <ClInclude Include="Modules\Camera\ICamera.h" />
     <ClInclude Include="Modules\Camera\ICameraSmooth.h" />
     <ClInclude Include="Modules\Camera\CameraStateCallbacks.h" />
+    <ClInclude Include="Misc\Interpolators.h" />
     <ClInclude Include="Modules\Camera\OrbitCamera.h" />
     <ClInclude Include="Modules\Camera\RoamingCamera.h" />
     <ClInclude Include="Modules\Camera\SimpleCameraSmooth.h" />

@@ -1,3 +1,4 @@
+#include "Misc/Interpolators.h"
 #include "Modules/Camera/HybridPlayerCameraSmooth.h"
 
 #include <algorithm>
@@ -9,12 +10,12 @@ HybridPlayerCameraSmooth::HybridPlayerCameraSmooth(CameraPtr&& startCamera, Came
 {
 }
 
-void HybridPlayerCameraSmooth::Update(float dt)
+void HybridPlayerCameraSmooth::Update(float dt, uint32_t frame)
 {
-	m_StartCamera->Update(dt);
+	m_StartCamera->TryUpdate(dt, frame);
 	TryCollapse(m_StartCamera);
 
-	m_EndCamera->Update(dt);
+	m_EndCamera->TryUpdate(dt, frame);
 	TryCollapse(m_EndCamera);
 
 	if (!IsSmoothComplete())
@@ -69,7 +70,7 @@ void HybridPlayerCameraSmooth::Update(float dt)
 			const float adjustedPercentage = percentThisFrame / (1 - percent);
 
 			// Angle percentage is determined by overall progress towards our goal position
-			const float angPercentage = EaseIn(percent, m_AngleBias);
+			const float angPercentage = Interpolators::CircleEaseIn(percent, m_AngleBias);
 
 			const float angPercentThisFrame = angPercentage - m_LastAngPercent;
 			const float adjustedAngPercentage = angPercentThisFrame / (1 - angPercentage);

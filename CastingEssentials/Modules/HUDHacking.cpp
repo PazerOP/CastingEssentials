@@ -489,8 +489,9 @@ void HUDHacking::UpdateChargeBar(bool enabled, vgui::VPANEL playerVPanel, vgui::
 			break;
 
 		default:
-			shouldShowInfo = false;
-			break;
+			return;
+			//shouldShowInfo = false;
+			//break;
 	}
 
 	ChargeBarType type;

@@ -28,7 +28,7 @@ MODULE_REGISTER(CameraState);
 class EngineCamera final : public ICamera
 {
 	void Reset() override {}
-	void Update(float dt) override {}
+	void Update(float dt, uint32_t frame) override {}
 	int GetAttachedEntity() const override { return 0; }
 	bool IsCollapsible() const override { return false; }
 	const char* GetDebugName() const override { return "EngineCamera"; }
@@ -58,7 +58,6 @@ static ConCommand ce_test_toggle_orbit("ce_test_toggle_orbit", [](const CCommand
 		orbit->m_Radius = 300;
 		orbit->m_ZOffset = 50;
 		orbit->m_OrbitPoint = module->GetActiveCamera()->GetOrigin();
-		orbit->Update(0); // Apply settings
 		module->SetActiveCamera(orbit);
 	}
 	else
@@ -153,11 +152,12 @@ C_BaseEntity* CameraState::GetLastSpecTarget() const
 void CameraState::SetActiveCamera(const CameraPtr& camera)
 {
 	if (camera)
+	{
 		m_ActiveCamera = camera;
+		m_ActiveCamera->ApplySettings();
+	}
 	else
 		m_ActiveCamera = m_EngineCamera;
-
-	m_ActiveCamera->ApplySettings();
 }
 
 void CameraState::ClearCameras()
@@ -202,9 +202,7 @@ bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 	if (!cam)
 		return false;
 
-	float dt = s_EngineTool->ClientFrameTime();
-
-	m_ActiveCamera->Update(dt);
+	m_ActiveCamera->TryUpdate(s_EngineTool->ClientFrameTime(), s_EngineTool->HostFrameCount());
 	ICamera::TryCollapse(m_ActiveCamera);
 
 	origin = cam->GetOrigin();
@@ -410,7 +408,12 @@ void CameraState::SpecStateChanged(ObserverMode mode, C_BaseEntity* primaryTarge
 		newCamera = s_DebugOrbitCamera;
 
 	CameraStateCallbacks::RunSetupCameraTarget(state, newCamera);
-	CameraStateCallbacks::RunSetupCameraSmooth(state, m_ActiveCamera, newCamera);
+
+	if (newCamera != m_ActiveCamera)
+	{
+		newCamera->ApplySettings();
+		CameraStateCallbacks::RunSetupCameraSmooth(state, m_ActiveCamera, newCamera);
+	}
 
 	SetActiveCamera(newCamera);
 }

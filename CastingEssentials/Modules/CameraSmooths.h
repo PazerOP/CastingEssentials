@@ -28,6 +28,9 @@ private:
 	ConVar ce_smoothing_force_distance;
 	ConVar ce_smoothing_max_distance;
 
+	ConVar ce_smoothing_rate;
+	ConVar ce_smoothing_rate_dist_exp;
+
 	ConVar ce_smoothing_linear_speed;
 	ConVar ce_smoothing_bezier_dist;
 	ConVar ce_smoothing_bezier_duration;

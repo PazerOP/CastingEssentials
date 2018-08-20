@@ -17,7 +17,6 @@ public:
 	}
 
 	void Reset() override {}
-	void Update(float dt) override {}
 	int GetAttachedEntity() const override { return 0; }
 	const char* GetDebugName() const override { return "SimpleCamera"; }
 
@@ -28,4 +27,5 @@ public:
 
 protected:
 	bool IsCollapsible() const override { return false; }
+	void Update(float dt, uint32_t frame) override {}
 };

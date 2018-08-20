@@ -1,7 +1,10 @@
 #pragma once
 
+#include "Misc/Interpolators.h"
 #include "Modules/Camera/ICamera.h"
 #include "Modules/Camera/ICameraSmooth.h"
+
+#include <functional>
 
 class SimpleCameraSmooth final : public ICameraSmooth
 {
@@ -15,13 +18,15 @@ public:
 	CameraConstPtr GetEndCamera() const override { return m_EndCamera; }
 
 	void Reset() override { m_CurrentTime = 0; }
-	void Update(float dt) override;
 	const char* GetDebugName() const override { return "SimpleCameraSmooth"; }
 
 	float GetProgress() const override { return m_CurrentTime / m_Duration; }
 
+	std::function<float(float x)> m_Interpolator = Interpolators::Linear;
+
 protected:
 	bool IsCollapsible() const override { return true; }
+	void Update(float dt, uint32_t frame) override;
 
 private:
 	CameraPtr m_StartCamera;

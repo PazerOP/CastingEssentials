@@ -1,4 +1,5 @@
 #include "ProjectileOutlines.h"
+#include "Misc/Interpolators.h"
 #include "PluginBase/Entities.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/TFDefinitions.h"
@@ -139,7 +140,7 @@ void ProjectileOutlines::OnTick(bool inGame)
 			const float dist = viewPos.DistTo(entPos);
 
 			const byte alpha = (ce_projectileoutlines_fade_start.GetFloat() >= 0 && ce_projectileoutlines_fade_end.GetFloat() >= 0) ?
-				Lerp(smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start.GetFloat(), ce_projectileoutlines_fade_end.GetFloat(), 1, 0)), 0, 255) :
+				Lerp(Interpolators::Smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start.GetFloat(), ce_projectileoutlines_fade_end.GetFloat(), 1, 0)), 0, 255) :
 				255;
 
 			Color& glowColor = s_GlowColorOffset.GetValue(glowEntity);

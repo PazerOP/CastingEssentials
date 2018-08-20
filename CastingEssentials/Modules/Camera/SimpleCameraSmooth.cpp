@@ -11,19 +11,21 @@ SimpleCameraSmooth::SimpleCameraSmooth(CameraPtr&& startCamera, CameraPtr&& endC
 	m_Origin = startCam->GetOrigin();
 	m_Angles = startCam->GetAngles();
 	m_FOV = startCam->GetFOV();
+
+	Assert(std::isfinite(m_Duration));
 }
 
-void SimpleCameraSmooth::Update(float dt)
+void SimpleCameraSmooth::Update(float dt, uint32_t frame)
 {
-	m_StartCamera->Update(dt);
+	m_StartCamera->TryUpdate(dt, frame);
 	TryCollapse(m_StartCamera);
-	m_EndCamera->Update(dt);
+	m_EndCamera->TryUpdate(dt, frame);
 	TryCollapse(m_EndCamera);
 
 	if (!IsSmoothComplete())
 		m_CurrentTime = std::min(m_CurrentTime + dt, m_Duration);
 
-	const float progress = GetProgress();
+	const float progress = m_Interpolator(GetProgress());
 
 	m_Origin = Lerp(progress, m_StartCamera->GetOrigin(), m_EndCamera->GetOrigin());
 	m_Angles = Lerp(progress, m_StartCamera->GetAngles(), m_EndCamera->GetAngles());

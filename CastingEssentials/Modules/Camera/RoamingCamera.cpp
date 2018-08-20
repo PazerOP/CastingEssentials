@@ -40,7 +40,7 @@ void RoamingCamera::Reset()
 	m_Velocity.Init();
 }
 
-void RoamingCamera::Update(float dt)
+void RoamingCamera::Update(float dt, uint32_t frame)
 {
 	Vector wishvel;
 	Vector forward, right, up;

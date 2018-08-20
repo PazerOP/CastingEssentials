@@ -196,7 +196,6 @@ void CameraTPLock::SetupCameraTarget(const CamStateData& state, CameraPtr& newCa
 	tplock->m_DPS = m_TPLockDefault.m_DPS;
 	tplock->m_AngOffset = m_TPLockDefault.m_Angle;
 	tplock->m_FOV = 90;
-	tplock->ApplySettings();
 
 	newCamera = tplock;
 }

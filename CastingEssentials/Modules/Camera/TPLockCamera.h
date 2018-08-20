@@ -13,7 +13,6 @@ public:
 	TPLockCamera(CHandle<C_BaseEntity> entity);
 
 	void Reset() override {}
-	void Update(float dt) override;
 	int GetAttachedEntity() const override { return m_Entity.GetEntryIndex(); }
 
 	const char* GetDebugName() const override { return "TPLockCamera"; }
@@ -46,6 +45,7 @@ public:
 protected:
 	// Based off of player position, never collapse
 	bool IsCollapsible() const override { return false; }
+	void Update(float dt, uint32_t frame) override;
 
 private:
 	Vector CalcPosForAngle(const Vector& orbitCenter, const QAngle& angle) const;

@@ -10,7 +10,7 @@ void OrbitCamera::Reset()
 	m_ElapsedTime = 0;
 }
 
-void OrbitCamera::Update(float dt)
+void OrbitCamera::Update(float dt, uint32_t frame)
 {
 	m_ElapsedTime += dt;
 

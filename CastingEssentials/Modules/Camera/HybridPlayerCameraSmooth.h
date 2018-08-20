@@ -14,7 +14,6 @@ public:
 	CameraConstPtr GetStartCamera() const override { return m_StartCamera; }
 	CameraConstPtr GetEndCamera() const override { return m_EndCamera; }
 
-	void Update(float dt) override;
 	float GetProgress() const override { return m_Percent; }
 	void Reset() override;
 	const char* GetDebugName() const override { return "HybridPlayerCameraSmooth"; }
@@ -32,6 +31,7 @@ public:
 
 protected:
 	bool IsCollapsible() const override { return true; }
+	void Update(float dt, uint32_t frame) override;
 
 private:
 	static float ComputeSmooth(float time, float startTime, float totalDist, float maxSpeed, float bezierDist, float bezierDuration, float& percent);

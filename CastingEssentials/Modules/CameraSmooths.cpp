@@ -6,6 +6,7 @@
 #include "Misc/DebugOverlay.h"
 #include "Misc/HLTVCameraHack.h"
 #include "Modules/Camera/HybridPlayerCameraSmooth.h"
+#include "Modules/Camera/OrbitCamera.h"
 #include "Modules/Camera/SimpleCameraSmooth.h"
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
@@ -26,11 +27,18 @@
 
 MODULE_REGISTER(CameraSmooths);
 
+static constexpr char SMOOTH_RATE_HELP[] = "<smooth duration> = <initial distance>^<ce_smoothing_rate_dist_exp> / <ce_smoothing_rate>";
+
 CameraSmooths::CameraSmooths() :
 	ce_smoothing_enabled("ce_smoothing_enabled", "0", FCVAR_NONE, "Enables smoothing between spectator targets."),
 	ce_smoothing_fov("ce_smoothing_fov", "45", FCVAR_NONE, "Only targets within this FOV will be smoothed to.", true, 0, true, 180),
 	ce_smoothing_max_distance("ce_smoothing_max_distance", "2250", FCVAR_NONE, "max distance at which smoothing will be performed"),
 	ce_smoothing_force_distance("ce_smoothing_force_distance", "128", FCVAR_NONE, "Always smooth if we're closer than this distance."),
+
+	ce_smoothing_rate("ce_smoothing_rate", "5", FCVAR_NONE,
+		"Adjusts the speed of smooths. <smooth duration> = <initial distance>^<ce_smoothing_rate_dist_exp> / <ce_smoothing_rate>"),
+	ce_smoothing_rate_dist_exp("ce_smoothing_rate_dist_exp", "0.315", FCVAR_NONE,
+		"Adjusts the ratio of smooth duration vs distance. <smooth duration> = <initial distance>^<ce_smoothing_rate_dist_exp> / <ce_smoothing_rate>"),
 
 	ce_smoothing_linear_speed("ce_smoothing_linear_speed", "875", FCVAR_NONE, "Speed at which to approach the bezier curve start."),
 	ce_smoothing_bezier_dist("ce_smoothing_bezier_dist", "1000", FCVAR_NONE, "Units from target to begin the bezier smooth."),
@@ -171,7 +179,14 @@ void CameraSmooths::SetupCameraSmooth(const CamStateData& state, const CameraPtr
 	if (ce_smoothing_debug.GetBool())
 		ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth!\n\n", GetModuleName());
 
-	targetCamera = std::make_shared<SimpleCameraSmooth>(copy(currentCamera), copy(targetCamera), 2);
+	auto distexp = std::powf(distance, ce_smoothing_rate_dist_exp.GetFloat());
+	auto time = distexp / ce_smoothing_rate.GetFloat();
+
+	ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth, time %1.2f, dist %1.2f, dist^exp %1.2f\n", GetModuleName(), time, distance, distexp);
+	auto newSimpleSmooth = std::make_shared<SimpleCameraSmooth>(copy(currentCamera), copy(targetCamera), time);
+	newSimpleSmooth->m_Interpolator = Interpolators::Smoothstep;
+
+	targetCamera = newSimpleSmooth;
 	return;
 
 	auto newSmooth = std::make_shared<HybridPlayerCameraSmooth>(copy(currentCamera), copy(targetCamera));
@@ -180,7 +195,6 @@ void CameraSmooths::SetupCameraSmooth(const CamStateData& state, const CameraPtr
 	newSmooth->m_BezierDuration = ce_smoothing_bezier_duration.GetFloat();
 	newSmooth->m_LinearSpeed = ce_smoothing_linear_speed.GetFloat();
 	newSmooth->m_SmoothingMode = (HybridPlayerCameraSmooth::SmoothingMode)ce_smoothing_mode.GetInt();
-	newSmooth->ApplySettings();
 
 	targetCamera = newSmooth;
 }

@@ -12,7 +12,7 @@ TPLockCamera::TPLockCamera(CHandle<C_BaseEntity> entity) :
 	m_IsFirstPerson = false;
 }
 
-void TPLockCamera::Update(float dt)
+void TPLockCamera::Update(float dt, uint32_t frame)
 {
 	C_BaseEntity* const ent = m_Entity.Get();
 	Assert(ent);

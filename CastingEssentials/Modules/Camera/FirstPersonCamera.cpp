@@ -9,7 +9,7 @@ FirstPersonCamera::FirstPersonCamera(CHandle<C_BaseEntity> entity) :
 	m_IsFirstPerson = true;
 }
 
-void FirstPersonCamera::Update(float dt)
+void FirstPersonCamera::Update(float dt, uint32_t frame)
 {
 	if (auto ent = m_Entity.Get())
 	{

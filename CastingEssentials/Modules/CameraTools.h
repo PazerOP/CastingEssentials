@@ -37,11 +37,6 @@ public:
 	                             const IHandleEntity* ignoreEnt = nullptr);
 
 private:
-	KeyValues* m_SpecGUISettings;
-
-	void SetModeOverride(int iMode);
-	void SetPrimaryTargetOverride(int nEntity);
-
 	ConVar ce_cameratools_show_mode;
 	ConVar ce_cameratools_autodirector_mode;
 	ConVar ce_cameratools_force_target;
