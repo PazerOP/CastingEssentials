@@ -16,7 +16,7 @@ class C_TFPlayer;
 class IHandleEntity;
 using trace_t = class CGameTrace;
 
-class HitEvents final : public Module<HitEvents>, IGameEventListener2
+class HitEvents final : public Module<HitEvents>
 {
 public:
 	HitEvents();
@@ -25,8 +25,6 @@ public:
 	static constexpr __forceinline const char* GetModuleName() { return "Player Hit Events"; }
 
 protected:
-	void FireGameEvent(IGameEvent* event) override;
-
 	void LevelInit() override;
 	void LevelShutdown() override;
 
@@ -35,14 +33,14 @@ private:
 
 	void UpdateEnabledState();
 
-	void DisplayDamageFeedbackOverride(CDamageAccountPanel* pThis, C_TFPlayer* pAttacker, C_BaseCombatCharacter* pVictim, int iDamageAmount, int iHealth, bool unknown);
+	void FireGameEventOverride(CDamageAccountPanel* pThis, IGameEvent* event);
 
 	bool m_OverrideUTILTraceline;
 	void UTILTracelineOverride(const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, const IHandleEntity* ignore, int collisionGroup, trace_t* ptr);
 
 	bool DamageAccountPanelShouldDrawOverride(CDamageAccountPanel* pThis);
 
-	Hook<HookFunc::CDamageAccountPanel_DisplayDamageFeedback> m_DisplayDamageFeedbackHook;
+	Hook<HookFunc::CDamageAccountPanel_FireGameEvent> m_FireGameEventHook;
 	Hook<HookFunc::Global_UTIL_TraceLine> m_UTILTracelineHook;
 	Hook<HookFunc::CDamageAccountPanel_ShouldDraw> m_DamageAccountPanelShouldDrawHook;
 
@@ -50,7 +48,4 @@ private:
 
 	ConVar ce_hitevents_enabled;
 	ConVar ce_hitevents_dmgnumbers_los;
-	ConVar ce_hitevents_debug;
-
-	IGameEvent* TriggerPlayerHurt(int playerEntIndex, int damage);
 };
