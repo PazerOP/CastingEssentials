@@ -154,7 +154,7 @@ void ProjectileOutlines::OnTick(bool inGame)
 	}
 }
 
-CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* projectileEntity)
+void ProjectileOutlines::CreateGlowForEntity(IClientEntity* projectileEntity)
 {
 	C_BaseEntity* ent;
 	{
@@ -181,7 +181,7 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 
 	ent->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_CREATED);
 	ent->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_DATATABLE_CHANGED);
-	return ent;
+	m_GlowEntities.emplace(projectileEntity->GetRefEHandle().ToInt(), ent);
 }
 
 void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
@@ -195,7 +195,7 @@ void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 	if (entity->GetClientClass() != s_RocketType)
 		return;
 
-	m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
+	CreateGlowForEntity(entity);
 }
 
 void ProjectileOutlines::DemoGlows(IClientEntity* entity)
@@ -213,9 +213,9 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 		return;
 
 	if (pills && type == TFGrenadePipebombType::Pill)
-		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
+		CreateGlowForEntity(entity);
 	else if (stickies && (type == TFGrenadePipebombType::Sticky || type == TFGrenadePipebombType::StickyJumper))
-		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
+		CreateGlowForEntity(entity);
 }
 
 bool ProjectileOutlines::InitDetour(C_BaseEntity* pThis, int entnum, int iSerialNum)

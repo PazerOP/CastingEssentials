@@ -40,7 +40,7 @@ private:
 	void SoldierGlows(IClientEntity* entity);
 	void DemoGlows(IClientEntity* entity);
 
-	CHandle<C_BaseEntity> CreateGlowForEntity(IClientEntity* ent);
+	void CreateGlowForEntity(IClientEntity* ent);
 	std::unordered_map<int, CHandle<C_BaseEntity>> m_GlowEntities;
 
 	// Some random numbers I generated
