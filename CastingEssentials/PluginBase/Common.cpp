@@ -7,6 +7,8 @@
 #include <steam/steamclientpublic.h>
 #include <toolframework/ienginetool.h>
 #include <view_shared.h>
+#include <vgui/IScheme.h>
+#include <vgui_controls/Controls.h>
 
 #include <regex>
 
@@ -60,7 +62,19 @@ bool ColorFromString(const char* str, Color& out)
 		return true;
 	}
 	else
-		return false;
+	{
+		// Ugh, this is horrible, but there doesn't seem to be a method to determine if a given
+		// color actually exists in the client scheme. Instead we grab the same color twice, but
+		// with different defaults. If the colors are different, that means it doesn't exist.
+		auto scheme = vgui::scheme()->GetIScheme(vgui::scheme()->GetScheme("ClientScheme"));
+		auto color_a = scheme->GetColor(str, Color(0, 255, 0, 255));
+		auto color_b = scheme->GetColor(str, Color(255, 0, 255, 255));
+		if (color_a == color_b) {
+			out = color_a;
+			return true;
+		} else
+			return false;
+	}
 }
 
 Color ColorFromString(const char* str, bool* success)
