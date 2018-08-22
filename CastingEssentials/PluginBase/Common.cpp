@@ -3,6 +3,7 @@
 
 #include <characterset.h>
 #include <cdll_int.h>
+#include <con_nprint.h>
 #include <KeyValues.h>
 #include <steam/steamclientpublic.h>
 #include <toolframework/ienginetool.h>
@@ -126,6 +127,34 @@ Vector ApproachVector(const Vector& from, const Vector& to, float speed)
 	return from + dir * speed;
 }
 
+void AngleDistance(const QAngle& a1, const QAngle& a2, Vector& dists)
+{
+	dists.x = AngleDistance(a1.x, a2.x);
+	dists.y = AngleDistance(a1.y, a2.y);
+	dists.z = AngleDistance(a1.z, a2.z);
+}
+
+Quaternion operator+(const Quaternion& p, const Quaternion& q)
+{
+	Quaternion retVal;
+	QuaternionAdd(p, q, retVal);
+	return retVal;
+}
+Quaternion operator-(const Quaternion& p)
+{
+	return Quaternion(-p.x, -p.y, -p.z, -p.w);
+}
+Quaternion& operator+=(Quaternion& p, const Quaternion& q)
+{
+	QuaternionAdd(p, q, p);
+	return p;
+}
+Quaternion& operator*=(Quaternion& p, float scalar)
+{
+	QuaternionScale(p, scalar, p);
+	return p;
+}
+
 int GetConLine()
 {
 	static int s_LastConLine = 0;
@@ -139,6 +168,12 @@ int GetConLine()
 	}
 
 	return s_LastConLine++;
+}
+
+con_nprint_s* GetConLine(con_nprint_s& data)
+{
+	data.index = GetConLine();
+	return &data;
 }
 
 std::string KeyValuesDumpAsString(KeyValues* kv, int indentLevel)

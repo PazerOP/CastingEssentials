@@ -62,9 +62,7 @@ static ConCommand ce_test_toggle_orbit("ce_test_toggle_orbit", [](const CCommand
 	}
 	else
 	{
-		auto activeCam = module->GetActiveCamera().get();
-		auto engineCam = module->GetEngineCamera().get();
-		Assert(activeCam != engineCam);
+		Assert(module->GetActiveCamera().get() != module->GetEngineCamera().get());
 		module->SetActiveCamera(nullptr);
 	}
 });
@@ -252,7 +250,7 @@ void CameraState::OnTick(bool inGame)
 		if (ce_camerastate_debug_cameras.GetBool())
 		{
 			auto camera = m_ActiveCamera.get();
-			engine->Con_NPrintf(2, "Current camera type: %s", camera ? camera->GetDebugName() : "(null)");
+			engine->Con_NPrintf(GetConLine(), "Current camera type: %s", camera ? camera->GetDebugName() : "(null)");
 		}
 	}
 	else

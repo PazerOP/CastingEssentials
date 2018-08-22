@@ -460,6 +460,8 @@ bool Graphics::WorldToScreenMat(const VMatrix& worldToScreen, const Vector& worl
 bool Graphics::Test_PlaneHitboxesIntersect(C_BaseAnimating* animating, const Frustum_t& viewFrustum,
 	const VMatrix& worldToScreen, Vector2D& screenMins, Vector2D& screenMaxs)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+
 	CStudioHdr *pStudioHdr = animating->GetModelPtr();
 	if (!pStudioHdr)
 		return false;
@@ -606,6 +608,8 @@ void Graphics::EnforceSpyVisibility(Player& player, CGlowObjectManager::GlowObje
 #include <client/view_scene.h>
 void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr, bool& anyAlways, bool& anyOccluded, bool& anyUnoccluded)
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+
 	m_ExtraGlowData.clear();
 	anyAlways = false;
 	anyOccluded = false;
@@ -992,6 +996,8 @@ void Graphics::ResetPlayerHurtTimes()
 
 void Graphics::BuildMoveChildLists()
 {
+	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
+
 	IClientEntityList* const entityList = Interfaces::GetClientEntityList();
 	for (int i = 0; i < entityList->GetHighestEntityIndex(); i++)
 	{

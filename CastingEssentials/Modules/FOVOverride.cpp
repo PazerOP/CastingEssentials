@@ -14,7 +14,7 @@
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
 
-static_assert(DEBUG, "Fix this before release, dummy");
+//static_assert(DEBUG, "Fix this before release, dummy");
 //MODULE_REGISTER(FOVOverride);
 
 FOVOverride::FOVOverride() :

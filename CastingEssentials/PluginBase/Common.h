@@ -18,6 +18,8 @@ static constexpr const char* PLUGIN_NAME = "CastingEssentials";
 extern const char* const PLUGIN_VERSION_ID;
 extern const char* const PLUGIN_FULL_VERSION;
 
+static constexpr float PI_2 = M_PI * 2;
+
 //#define NDEBUG_PER_FRAME_SUPPORT 1
 #ifdef NDEBUG_PER_FRAME_SUPPORT
 // Oddly specific
@@ -159,10 +161,17 @@ extern bool ParseAngle(QAngle& a, const char* str);
 
 extern Vector GetViewOrigin();
 extern int GetConLine();
+extern struct con_nprint_s* GetConLine(con_nprint_s& data);
 
 extern std::string KeyValuesDumpAsString(KeyValues* kv, int indentLevel = 0);
 
 Vector ApproachVector(const Vector& from, const Vector& to, float speed);
+void AngleDistance(const QAngle& a1, const QAngle& a2, Vector& dists);
+
+Quaternion operator+(const Quaternion& p, const Quaternion& q);
+Quaternion operator-(const Quaternion& p);
+Quaternion& operator+=(Quaternion& p, const Quaternion& q);
+Quaternion& operator*=(Quaternion& p, float scalar);
 
 constexpr float Rad2Deg(float radians)
 {

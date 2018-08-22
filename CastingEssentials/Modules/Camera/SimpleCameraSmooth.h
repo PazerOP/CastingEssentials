@@ -17,12 +17,16 @@ public:
 	CameraConstPtr GetStartCamera() const override { return m_StartCamera; }
 	CameraConstPtr GetEndCamera() const override { return m_EndCamera; }
 
-	void Reset() override { m_CurrentTime = 0; }
+	void Reset() override;
 	const char* GetDebugName() const override { return "SimpleCameraSmooth"; }
 
 	float GetProgress() const override { return m_CurrentTime / m_Duration; }
 
 	std::function<float(float x)> m_Interpolator = Interpolators::Linear;
+
+	bool m_UpdateStartAngles = true;
+	bool m_UpdateStartOrigin = true;
+	bool m_UpdateStartFOV = true;
 
 protected:
 	bool IsCollapsible() const override { return true; }
@@ -33,4 +37,24 @@ private:
 	CameraPtr m_EndCamera;
 	float m_Duration;
 	float m_CurrentTime = 0;
+
+	bool m_RotatingClockwise;
+	AngularImpulse m_AnglesVelocity;
+	static void FlipYaw(Quaternion& q);
+	static Quaternion QuaternionDelta(const Quaternion& a, const Quaternion& b);
+	static Quaternion HackQuaternionScale(const Quaternion& a, float scalar);
+	static Quaternion HackQuaternionAdd(const Quaternion& a, const Quaternion& b);
+	static Quaternion HackQuaternionSlerp(const Quaternion& a, Quaternion b, float t);
+
+	static float QuaternionAngleDist(const Quaternion& a, const Quaternion& b);
+
+	//float m_InitialAngleDot;
+
+	//Quaternion m_InitialStartAngles;
+	//Quaternion m_InitialEndAngles;
+	Quaternion m_PreviousAngles;
+
+	Vector m_StartOrigin;
+	QAngle m_StartAngles;
+	float m_StartFOV;
 };

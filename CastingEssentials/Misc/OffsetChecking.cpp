@@ -153,6 +153,53 @@ public:
 
 			Assert((offset = Hooking::VTableOffset(&ITextureManager::FindNext)) == 32);
 		}
+
+		// C_BaseEntity
+		{
+			Assert((offset = VTableOffset(&C_BaseEntity::DrawBrushModel)) == 101);
+			Assert((offset = VTableOffset(&C_BaseEntity::ValidateEntityAttachedToPlayer)) == 158);
+		}
+
+		// C_BaseAnimating
+		{
+			Assert((offset = VTableOffset(&C_BaseAnimating::InternalDrawModel)) == 166);
+			Assert((offset = VTableOffset(&C_BaseAnimating::GetEconWeaponMaterialOverride)) == 169);
+		}
+
+		// C_BasePlayer
+		{
+			Assert((offset = VTableOffset(&C_BasePlayer::GetEconWeaponMaterialOverride)) == 169);
+			Assert((offset = VTableOffset(&C_BasePlayer::ControlMouth)) == 170);
+			Assert((offset = VTableOffset(&C_BasePlayer::DoAnimationEvents)) == 171);
+			Assert((offset = VTableOffset(&C_BasePlayer::FireEvent)) == 172);
+			Assert((offset = VTableOffset(&C_BasePlayer::BecomeRagdollOnClient)) == 182);
+			Assert((offset = VTableOffset(&C_BasePlayer::ComputeClientSideAnimationFlags)) == 192);
+			Assert((offset = VTableOffset(&C_BasePlayer::FormatViewModelAttachment)) == 202);
+			Assert((offset = VTableOffset(&C_BasePlayer::CalcAttachments)) == 204);
+			Assert((offset = VTableOffset(&C_BasePlayer::LastBoneChangedTime)) == 205);
+			//Assert((offset = VTableOffset(&C_BasePlayer::OnModelLoadComplete)) == 206);
+			Assert((offset = VTableOffset(&C_BasePlayer::InitPhonemeMappings)) == 206);
+			Assert((offset = VTableOffset(&C_BasePlayer::SetViewTarget)) == 209);
+			Assert((offset = VTableOffset(&C_BasePlayer::ProcessSceneEvents)) == 211);
+			Assert((offset = VTableOffset(&C_BasePlayer::ProcessSceneEvent)) == 212);
+			Assert((offset = VTableOffset(&C_BasePlayer::ProcessSequenceSceneEvent)) == 213);
+			Assert((offset = VTableOffset(&C_BasePlayer::ClearSceneEvent)) == 214);
+			Assert((offset = VTableOffset(&C_BasePlayer::CheckSceneEventCompletion)) == 215);
+			//Assert((offset = VTableOffset(&C_BasePlayer::EnsureTranslations)) == 216);
+			Assert((offset = VTableOffset(&C_BasePlayer::Weapon_Switch)) == 222);
+			Assert((offset = VTableOffset(&C_BasePlayer::Weapon_CanSwitchTo)) == 223);
+			Assert((offset = VTableOffset(&C_BasePlayer::GetActiveWeapon)) == 224);
+			Assert((offset = VTableOffset(&C_BasePlayer::GetGlowEffectColor)) == 225);
+			Assert((offset = VTableOffset(&C_BasePlayer::UpdateGlowEffect)) == 226);
+			Assert((offset = VTableOffset(&C_BasePlayer::DestroyGlowEffect)) == 227);
+			Assert((offset = VTableOffset(&C_BasePlayer::SharedSpawn)) == 228);
+			Assert((offset = VTableOffset(&C_BasePlayer::GetSteamID)) == 229);
+			Assert((offset = VTableOffset(&C_BasePlayer::GetPlayerMaxSpeed)) == 230);
+			Assert((offset = VTableOffset(&C_BasePlayer::PlayerUse)) == 240);
+			Assert((offset = VTableOffset(&C_BasePlayer::DrawOverriddenViewmodel)) == 250);
+			Assert((offset = VTableOffset(&C_BasePlayer::ItemPreFrame)) == 260);
+			Assert((offset = VTableOffset(&C_BasePlayer::GetFOV)) == 270);
+		}
 	}
 };
 #ifdef DEBUG

@@ -186,6 +186,22 @@ void CameraSmooths::SetupCameraSmooth(const CamStateData& state, const CameraPtr
 	auto newSimpleSmooth = std::make_shared<SimpleCameraSmooth>(copy(currentCamera), copy(targetCamera), time);
 	newSimpleSmooth->m_Interpolator = Interpolators::Smoothstep;
 
+#if false
+	// If we're coming from an entity-attached camera and heading for a camera
+	// that isn't attached to the same entity (or is attached to nothing)
+	if (!dynamic_cast<ICameraSmooth*>(currentCamera.get()) &&
+		currentCamera->GetAttachedEntity() &&
+		currentCamera->GetAttachedEntity() != targetCamera->GetAttachedEntity())
+	{
+		// If target camera is attached to something
+		if (targetCamera->GetAttachedEntity())
+			newSimpleSmooth->m_UpdateStartOrigin = false;
+
+		newSimpleSmooth->m_UpdateStartAngles = false;
+		newSimpleSmooth->m_UpdateStartFOV = false;
+	}
+#endif
+
 	targetCamera = newSimpleSmooth;
 	return;
 

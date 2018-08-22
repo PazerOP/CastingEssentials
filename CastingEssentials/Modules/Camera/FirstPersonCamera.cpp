@@ -15,12 +15,16 @@ void FirstPersonCamera::Update(float dt, uint32_t frame)
 	{
 		m_Origin = ent->EyePosition();
 		m_Angles = ent->EyeAngles();
-		m_FOV = 90;
+
+		if (ent->IsPlayer())
+			m_FOV = static_cast<C_BasePlayer*>(ent)->GetFOV();
+		else
+			m_FOV = 90;
 	}
 	else
 	{
 		m_Origin = vec3_origin;
 		m_Angles = vec3_angle;
-		m_FOV = 150;
+		m_FOV = 150; // So we know something is wrong
 	}
 }

@@ -6,7 +6,6 @@
 #include "PluginBase/Modules.h"
 #include "PluginBase/PlayerStateBase.h"
 
-#define GLOWS_ENABLE
 #include <client/glow_outline_effect.h>
 
 #include <array>
