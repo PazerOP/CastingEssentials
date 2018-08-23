@@ -134,27 +134,6 @@ void AngleDistance(const QAngle& a1, const QAngle& a2, Vector& dists)
 	dists.z = AngleDistance(a1.z, a2.z);
 }
 
-Quaternion operator+(const Quaternion& p, const Quaternion& q)
-{
-	Quaternion retVal;
-	QuaternionAdd(p, q, retVal);
-	return retVal;
-}
-Quaternion operator-(const Quaternion& p)
-{
-	return Quaternion(-p.x, -p.y, -p.z, -p.w);
-}
-Quaternion& operator+=(Quaternion& p, const Quaternion& q)
-{
-	QuaternionAdd(p, q, p);
-	return p;
-}
-Quaternion& operator*=(Quaternion& p, float scalar)
-{
-	QuaternionScale(p, scalar, p);
-	return p;
-}
-
 int GetConLine()
 {
 	static int s_LastConLine = 0;

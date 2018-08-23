@@ -20,6 +20,8 @@ extern const char* const PLUGIN_FULL_VERSION;
 
 static constexpr float PI_2 = M_PI * 2;
 
+#define XYZW(v) XYZ(v),(v).w
+
 //#define NDEBUG_PER_FRAME_SUPPORT 1
 #ifdef NDEBUG_PER_FRAME_SUPPORT
 // Oddly specific
@@ -167,11 +169,6 @@ extern std::string KeyValuesDumpAsString(KeyValues* kv, int indentLevel = 0);
 
 Vector ApproachVector(const Vector& from, const Vector& to, float speed);
 void AngleDistance(const QAngle& a1, const QAngle& a2, Vector& dists);
-
-Quaternion operator+(const Quaternion& p, const Quaternion& q);
-Quaternion operator-(const Quaternion& p);
-Quaternion& operator+=(Quaternion& p, const Quaternion& q);
-Quaternion& operator*=(Quaternion& p, float scalar);
 
 constexpr float Rad2Deg(float radians)
 {

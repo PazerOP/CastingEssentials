@@ -1,3 +1,5 @@
+#include "Misc/Extras/QAngle.h"
+#include "Misc/Extras/Quaternion.h"
 #include "Modules/Camera/SimpleCameraSmooth.h"
 #include "PluginBase/Interfaces.h"
 
@@ -41,16 +43,13 @@ void SimpleCameraSmooth::Update(float dt, uint32_t frame)
 	{
 		if (m_CurrentTime <= 0)
 		{
-			m_StartAngles = m_Angles = m_StartCamera->GetAngles();
+			m_StartAngles = m_Angles = AngleNormalize(m_StartCamera->GetAngles());
 			m_StartOrigin = m_Origin = m_StartCamera->GetOrigin();
 			m_StartFOV = m_FOV = m_StartCamera->GetFOV();
 
-			//m_InitialStartAngles = Quaternion(m_StartCamera->GetAngles());
-			//m_InitialEndAngles = Quaternion(m_EndCamera->GetAngles());
-
-			//m_InitialAngleDot = QuaternionDotProduct(m_InitialStartAngles, m_InitialEndAngles);
-
-			m_PreviousAngles = Quaternion(m_StartAngles);
+			const auto& endAngles = m_EndCamera->GetAngles();
+			for (int i = 0; i < 3; i++)
+				m_EndAngles[i] = m_StartAngles[i] + AngleDistance(endAngles[i], m_StartAngles[i]);
 		}
 
 		m_CurrentTime = std::min(m_CurrentTime + dt, m_Duration);
@@ -69,64 +68,25 @@ void SimpleCameraSmooth::Update(float dt, uint32_t frame)
 
 	if (m_UpdateStartAngles)
 	{
-		// Only two possible ways to slerp
-		Quaternion shortWay, longWay;
+		const auto& newStartAngles = m_StartCamera->GetAngles();
+		const auto& newEndAngles = m_EndCamera->GetAngles();
 
-		const Quaternion startQuat(m_StartCamera->GetAngles());
-
-		Quaternion endQuat(m_EndCamera->GetAngles());
-		QuaternionAlign(startQuat, endQuat, endQuat);
-
-		QuaternionSlerpNoAlign(startQuat, endQuat, progress, shortWay);
-		QuaternionSlerpNoAlign(startQuat, -endQuat, progress, longWay);
-		//QuaternionBlendNoAlign(startQuat, endQuat, progress, shortWay);
-		//QuaternionBlendNoAlign(startQuat, -endQuat, 1 - progress, longWay);
-
-		QuaternionNormalize(shortWay);
-		QuaternionNormalize(longWay);
-
-		auto diffShort = std::fabsf(QuaternionAngleDiff(m_PreviousAngles, shortWay));
-		auto diffLong = std::fabsf(QuaternionAngleDiff(m_PreviousAngles, longWay));
+		// Pitch can just live with "normal" interpolation, since it should only ever be
+		// between -90 and 90.
+		for (int i = 0; i < 3; i++)
+		{
+			//m_Angles[ROLL] = Lerp(progress, startAngles[ROLL], endAngles[ROLL]);
+			m_StartAngles[i] += AngleDiff(newStartAngles[i], m_StartAngles[i]);
+			m_EndAngles[i] += AngleDiff(newEndAngles[i], m_EndAngles[i]);
+			m_Angles[i] = Lerp(progress, m_StartAngles[i], m_EndAngles[i]);
+		}
 
 		auto engine = Interfaces::GetEngineClient();
-
-		con_nprint_s printData;
-		printData.color[0] = printData.color[1] = printData.color[2] = 1;
-		printData.fixed_width_font = false;
-		printData.time_to_live = -1;
-
-		engine->Con_NXPrintf(GetConLine(printData), "");
-		engine->Con_NXPrintf(GetConLine(printData), "angles start: %1.2f %1.2f %1.2f %1.2f",
-			startQuat.x, startQuat.y, startQuat.z, startQuat.w);
-		engine->Con_NXPrintf(GetConLine(printData), "angles cur: %1.2f %1.2f %1.2f %1.2f",
-			m_PreviousAngles.x, m_PreviousAngles.y, m_PreviousAngles.z, m_PreviousAngles.w);
-		engine->Con_NXPrintf(GetConLine(printData), "angles end: %1.2f %1.2f %1.2f %1.2f",
-			endQuat.x, endQuat.y, endQuat.z, endQuat.w);
-		engine->Con_NXPrintf(GetConLine(printData), "diffShort: %1.2f", diffShort);
-		engine->Con_NXPrintf(GetConLine(printData), "diffLong: %1.2f", diffLong);
-
-		QAngle angShort, angLong;
-		QuaternionAngles(shortWay, angShort);
-		QuaternionAngles(longWay, angLong);
-
-		RotationDelta(m_Angles, angShort, &angShort);
-		RotationDelta(m_Angles, angLong, &angLong);
-
-		//diffShort = std::fabsf(angShort.x) + std::fabsf(angShort.y) + std::fabsf(angShort.z);
-		//diffLong = std::fabsf(angLong.x) + std::fabsf(angLong.y) + std::fabsf(angLong.z);
-
-		//diffShort = QuaternionAngleDist(m_PreviousAngles, shortWay);
-		//diffLong = QuaternionAngleDist(m_PreviousAngles, longWay);
-
-		//engine->Con_NXPrintf(GetConLine(printData), "diffShort manual: %1.2f", Rad2Deg(diffShort));
-		//engine->Con_NXPrintf(GetConLine(printData), "diffLong manual: %1.2f", Rad2Deg(diffLong));
-
-		if (diffShort <= diffLong + 1)
-			m_PreviousAngles = shortWay;
-		else
-			m_PreviousAngles = longWay;
-
-		QuaternionAngles(m_PreviousAngles, m_Angles);
+		con_nprint_s data(0, -1);
+		engine->Con_NXPrintf(GetConLine(data), "");
+		engine->Con_NXPrintf(GetConLine(data), "start: %1.2f %1.2f %1.2f", XYZ(m_StartAngles));
+		engine->Con_NXPrintf(GetConLine(data), "end: %1.2f %1.2f %1.2f", XYZ(m_EndAngles));
+		engine->Con_NXPrintf(GetConLine(data), "current: %1.2f %1.2f %1.2f", XYZ(m_Angles));
 	}
 	else
 		m_Angles = Lerp(progressDelta, m_Angles, m_EndCamera->GetAngles());

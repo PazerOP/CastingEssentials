@@ -48,13 +48,9 @@ private:
 
 	static float QuaternionAngleDist(const Quaternion& a, const Quaternion& b);
 
-	//float m_InitialAngleDot;
-
-	//Quaternion m_InitialStartAngles;
-	//Quaternion m_InitialEndAngles;
-	Quaternion m_PreviousAngles;
-
 	Vector m_StartOrigin;
 	QAngle m_StartAngles;
 	float m_StartFOV;
+
+	QAngle m_EndAngles;
 };

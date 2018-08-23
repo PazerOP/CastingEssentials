@@ -446,6 +446,12 @@
     <ClInclude Include="Misc\Interpolators.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Misc\Extras\Quaternion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Misc\Extras\QAngle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Misc\NatVis\RecvTable.natvis" />

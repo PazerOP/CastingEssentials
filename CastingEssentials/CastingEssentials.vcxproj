@@ -49,7 +49,7 @@
     <ClCompile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>_CRT_NO_VA_START_VALIDATION;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <PostBuildEvent>
@@ -168,6 +168,8 @@
     <ClInclude Include="Misc\CmdAlias.h" />
     <ClInclude Include="Misc\CRefPtrFix.h" />
     <ClInclude Include="Misc\DebugOverlay.h" />
+    <ClInclude Include="Misc\Extras\QAngle.h" />
+    <ClInclude Include="Misc\Extras\Quaternion.h" />
     <ClInclude Include="Misc\Extras\VPlane.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
     <ClInclude Include="Misc\Padding.h" />
