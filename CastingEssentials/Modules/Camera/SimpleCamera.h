@@ -6,14 +6,14 @@ class SimpleCamera : public ICamera
 public:
 	SimpleCamera()
 	{
-		m_IsFirstPerson = false;
+		m_Type = CameraType::Fixed;
 	}
-	SimpleCamera(const Vector& origin, const QAngle& angles, float fov, bool isFirstPerson)
+	SimpleCamera(const Vector& origin, const QAngle& angles, float fov, CameraType camType = CameraType::Fixed)
 	{
 		m_Origin = origin;
 		m_Angles = angles;
 		m_FOV = fov;
-		m_IsFirstPerson = isFirstPerson;
+		m_Type = camType;
 	}
 
 	void Reset() override {}
@@ -23,7 +23,7 @@ public:
 	using ICamera::m_Origin;
 	using ICamera::m_Angles;
 	using ICamera::m_FOV;
-	using ICamera::m_IsFirstPerson;
+	using ICamera::m_Type;
 
 protected:
 	bool IsCollapsible() const override { return false; }

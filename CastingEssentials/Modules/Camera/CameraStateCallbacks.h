@@ -14,7 +14,7 @@ struct CamStateData
 class CameraStateCallbacks
 {
 public:
-	CameraStateCallbacks();
+	CameraStateCallbacks(bool addToList = true);
 	virtual ~CameraStateCallbacks();
 
 	// 1st function to be called, lets modules prevent camera mode/target from being changed at all
@@ -26,12 +26,15 @@ public:
 	// 3rd function to be called, after all other modules have had a chance to mess
 	// with the target camera via SetupCameraTarget. As the name implies, used by CameraSmooths
 	// module to create a camera smooth once we know for sure what our target will be.
-	virtual void SetupCameraSmooth(const CamStateData& state, const CameraPtr& currentCamera, CameraPtr& targetCamera) {}
+	virtual void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera) {}
 
 	virtual bool GetFOVOverride(const CameraConstPtr& camera, float& fov) { return false; }
 
-	static void RunSetupCameraState(CamStateData& state);
-	static void RunSetupCameraTarget(const CamStateData& state, CameraPtr& newCamera);
-	static void RunSetupCameraSmooth(const CamStateData& state, const CameraPtr& currentCamera, CameraPtr& targetCamera);
-	static bool RunGetFOVOverride(const CameraConstPtr& camera, float& fov);
+	// Called whenever the top-level camera (the one returned by CameraState::GetActiveCamera())
+	// is collapsed.
+	virtual void CameraCollapsed(const CameraPtr& previousCam, CameraPtr& newCam) {}
+
+private:
+	friend class CameraState;
+	static CameraStateCallbacks& GetCallbacksParent();
 };

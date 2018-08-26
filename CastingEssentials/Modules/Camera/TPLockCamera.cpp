@@ -9,7 +9,7 @@
 TPLockCamera::TPLockCamera(CHandle<C_BaseEntity> entity) :
 	m_Entity(entity)
 {
-	m_IsFirstPerson = false;
+	m_Type = CameraType::ThirdPerson;
 }
 
 void TPLockCamera::Update(float dt, uint32_t frame)

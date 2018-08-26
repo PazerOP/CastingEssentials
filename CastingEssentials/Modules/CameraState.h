@@ -11,6 +11,7 @@
 #include <shared/igamesystem.h>
 
 class C_BaseEntity;
+struct CamStateData;
 class ICamera;
 enum ObserverMode;
 class Player;
@@ -36,11 +37,13 @@ public:
 
 	CameraConstPtr GetActiveCamera() const { return m_ActiveCamera; }
 	const CameraPtr& GetActiveCamera() { return m_ActiveCamera; }
-	void SetActiveCamera(const CameraPtr& camera);
+	void SetActiveCamera(const CameraPtr& camera); // Instantly snaps the current camera to this.
+	void SetActiveCameraSmooth(CameraPtr camera);  // Sets the current camera, letting CameraStateCallbacks add smooths
 
 	bool IsEngineCameraActive() const { return m_ActiveCamera == m_EngineCamera; }
 	CameraConstPtr GetEngineCamera() const { return m_EngineCamera; }
 
+	bool IsRoamingCameraActive() const { return m_ActiveCamera == m_RoamingCamera; }
 	auto& GetRoamingCamera() { return m_RoamingCamera; }
 
 private:
@@ -65,7 +68,7 @@ private:
 	Vector m_LastUpdatedServerPos;
 	void UpdateServerPosition(const Vector& origin, const QAngle& angles, float fov);
 
-	int m_LastSpecTarget = 0;
+	int m_LastSpecTarget;
 	ObserverMode m_LastSpecMode;
 
 	ModeSwitchReason m_SwitchReason = ModeSwitchReason::Unknown;
@@ -76,6 +79,8 @@ private:
 	void SpecPlayerDetour(const CCommand& cmd);
 
 	void SpecStateChanged(ObserverMode mode, C_BaseEntity* primaryTarget);
+
+	void SetSpecMode(ObserverMode mode);
 
 	Hook<HookFunc::IClientEngineTools_InToolMode> m_InToolModeHook;
 	Hook<HookFunc::IClientEngineTools_IsThirdPersonCamera> m_IsThirdPersonCameraHook;

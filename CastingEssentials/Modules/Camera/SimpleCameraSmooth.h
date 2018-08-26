@@ -38,16 +38,6 @@ private:
 	float m_Duration;
 	float m_CurrentTime = 0;
 
-	bool m_RotatingClockwise;
-	AngularImpulse m_AnglesVelocity;
-	static void FlipYaw(Quaternion& q);
-	static Quaternion QuaternionDelta(const Quaternion& a, const Quaternion& b);
-	static Quaternion HackQuaternionScale(const Quaternion& a, float scalar);
-	static Quaternion HackQuaternionAdd(const Quaternion& a, const Quaternion& b);
-	static Quaternion HackQuaternionSlerp(const Quaternion& a, Quaternion b, float t);
-
-	static float QuaternionAngleDist(const Quaternion& a, const Quaternion& b);
-
 	Vector m_StartOrigin;
 	QAngle m_StartAngles;
 	float m_StartFOV;

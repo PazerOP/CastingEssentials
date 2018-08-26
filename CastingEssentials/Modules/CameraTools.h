@@ -69,8 +69,10 @@ private:
 	void SpecSteamID(const CCommand& command);
 	void SpecIndex(const CCommand& command);
 	void SpecEntIndex(const CCommand& command);
-
 	void SpecPlayer(int playerIndex);
+
+	ConCommand ce_cameratools_smoothto;
+	static void SmoothTo(const CCommand& cmd);
 
 	void OnTick(bool inGame) override;
 

@@ -2,7 +2,7 @@
 
 OrbitCamera::OrbitCamera()
 {
-	m_IsFirstPerson = false;
+	m_Type = CameraType::Fixed;
 }
 
 void OrbitCamera::Reset()

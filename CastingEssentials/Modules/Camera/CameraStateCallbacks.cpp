@@ -3,50 +3,63 @@
 #include <vector>
 
 static std::vector<CameraStateCallbacks*> s_CallbackInstances;
-
-CameraStateCallbacks::CameraStateCallbacks()
+class CameraStateCallbacksParent : public CameraStateCallbacks
 {
-	s_CallbackInstances.push_back(this);
+public:
+	CameraStateCallbacksParent() : CameraStateCallbacks(false) {}
+
+	void SetupCameraState(CamStateData& state) override
+	{
+		for (auto inst : s_CallbackInstances)
+			inst->SetupCameraState(state);
+	}
+
+	void SetupCameraTarget(const CamStateData& state, CameraPtr& newCamera) override
+	{
+		for (auto inst : s_CallbackInstances)
+			inst->SetupCameraTarget(state, newCamera);
+	}
+
+	void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera) override
+	{
+		for (auto inst : s_CallbackInstances)
+			inst->SetupCameraSmooth(currentCamera, targetCamera);
+	}
+
+	bool GetFOVOverride(const CameraConstPtr& camera, float& fov) override
+	{
+		bool overridden = false;
+
+		for (auto inst : s_CallbackInstances)
+		{
+			if (inst->GetFOVOverride(camera, fov))
+			{
+#ifdef DEBUG
+				AssertMsg(!overridden, "Attempted to override fov from two places at once!");
+				overridden = true;
+#else
+				return true;
+#endif
+			}
+		}
+
+		return overridden;
+	}
+};
+
+CameraStateCallbacks::CameraStateCallbacks(bool nonParent)
+{
+	if (nonParent)
+		s_CallbackInstances.push_back(this);
 }
 CameraStateCallbacks::~CameraStateCallbacks()
 {
-	s_CallbackInstances.erase(std::find(s_CallbackInstances.begin(), s_CallbackInstances.end(), this));
+	if (auto found = std::find(s_CallbackInstances.begin(), s_CallbackInstances.end(), this); found != s_CallbackInstances.end())
+		s_CallbackInstances.erase(found);
 }
 
-void CameraStateCallbacks::RunSetupCameraState(CamStateData& state)
+CameraStateCallbacks& CameraStateCallbacks::GetCallbacksParent()
 {
-	for (auto inst : s_CallbackInstances)
-		inst->SetupCameraState(state);
-}
-
-void CameraStateCallbacks::RunSetupCameraTarget(const CamStateData& state, CameraPtr& newCamera)
-{
-	for (auto inst : s_CallbackInstances)
-		inst->SetupCameraTarget(state, newCamera);
-}
-
-void CameraStateCallbacks::RunSetupCameraSmooth(const CamStateData& state, const CameraPtr& currentCamera, CameraPtr& targetCamera)
-{
-	for (auto inst : s_CallbackInstances)
-		inst->SetupCameraSmooth(state, currentCamera, targetCamera);
-}
-
-bool CameraStateCallbacks::RunGetFOVOverride(const CameraConstPtr& camera, float& fov)
-{
-	bool overridden = false;
-
-	for (auto inst : s_CallbackInstances)
-	{
-		if (inst->GetFOVOverride(camera, fov))
-		{
-#ifdef DEBUG
-			AssertMsg(!overridden, "Attempted to override fov from two places at once!");
-			overridden = true;
-#else
-			return true;
-#endif
-		}
-	}
-
-	return overridden;
+	static CameraStateCallbacksParent s_Parent;
+	return s_Parent;
 }

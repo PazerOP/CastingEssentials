@@ -98,6 +98,7 @@
     <ClCompile Include="Misc\OffsetChecking.cpp" />
     <ClCompile Include="Modules\CameraTPLock.cpp" />
     <ClCompile Include="Modules\Camera\CameraStateCallbacks.cpp" />
+    <ClCompile Include="Modules\Camera\DeathCamera.cpp" />
     <ClCompile Include="Modules\Camera\FirstPersonCamera.cpp" />
     <ClCompile Include="Modules\Camera\HybridPlayerCameraSmooth.cpp" />
     <ClCompile Include="Modules\Camera\ICamera.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="Misc\Padding.h" />
     <ClInclude Include="Modules\CameraTPLock.h" />
     <ClInclude Include="Modules\Camera\CameraStateDelta.h" />
+    <ClInclude Include="Modules\Camera\DeathCamera.h" />
     <ClInclude Include="Modules\Camera\FirstPersonCamera.h" />
     <ClInclude Include="Modules\Camera\HybridPlayerCameraSmooth.h" />
     <ClInclude Include="Modules\Camera\ICamera.h" />

@@ -22,6 +22,9 @@ public:
 	static bool CheckDependencies();
 	static constexpr __forceinline const char* GetModuleName() { return "Camera Smooths"; }
 
+protected:
+	void LevelInit() override;
+
 private:
 	ConVar ce_smoothing_enabled;
 	ConVar ce_smoothing_fov;
@@ -31,24 +34,16 @@ private:
 	ConVar ce_smoothing_rate;
 	ConVar ce_smoothing_rate_dist_exp;
 
-	ConVar ce_smoothing_linear_speed;
-	ConVar ce_smoothing_bezier_dist;
-	ConVar ce_smoothing_bezier_duration;
-
-	ConVar ce_smoothing_ang_bias;
-
-	ConVar ce_smoothing_mode;
-
 	ConVar ce_smoothing_debug;
 	ConVar ce_smoothing_debug_los;
 
 	ConVar ce_smoothing_los_buffer;
 	ConVar ce_smoothing_los_min;
 
-	ConCommand ce_smoothing_lerpto;
-	void LerpTo(const CCommand& cmd) const;
+	ConVar ce_smoothing_cooldown;
+	float m_LastSmoothEnd;
 
-	void SetupCameraSmooth(const CamStateData& state, const CameraPtr& currentCamera, CameraPtr& targetCamera) override;
+	void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera) override;
 
 	float TestVisibility(const Vector& eyePos, const Vector& targetPos) const;
 

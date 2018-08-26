@@ -558,26 +558,18 @@ QAngle Player::GetAbsAngles() const
 
 Vector Player::GetEyePosition() const
 {
-	if (!IsValid())
-		return vec3_origin;
+	if (auto baseEnt = GetBaseEntity())
+		return baseEnt->EyePosition();
 
-	return GetAbsOrigin() + GetEyeOffset();
+	return vec3_origin;
 }
 
 QAngle Player::GetEyeAngles() const
 {
-	if (!IsValid())
-		return vec3_angle;
+	if (auto baseEnt = GetBaseEntity())
+		return baseEnt->EyeAngles();
 
-	IClientEntity* const clientEntity = GetEntity();
-	if (!clientEntity)
-		return vec3_angle;
-
-	C_BaseEntity* const baseEntity = clientEntity->GetBaseEntity();
-	if (!baseEntity)
-		return vec3_angle;
-
-	return baseEntity->EyeAngles();
+	return vec3_angle;
 }
 
 const Vector& Player::GetEyeOffset(TFClassType cls)

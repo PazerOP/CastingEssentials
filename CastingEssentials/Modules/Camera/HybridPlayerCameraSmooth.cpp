@@ -25,7 +25,7 @@ void HybridPlayerCameraSmooth::Update(float dt, uint32_t frame)
 			m_Angles = m_StartCamera->GetAngles();
 			m_FOV = m_StartCamera->GetFOV();
 			m_Origin = m_StartCamera->GetOrigin();
-			m_IsFirstPerson = m_StartCamera->IsFirstPerson();
+			m_Type = m_StartCamera->GetCameraType();
 
 			if (dt == 0)
 				return;
@@ -39,7 +39,7 @@ void HybridPlayerCameraSmooth::Update(float dt, uint32_t frame)
 		m_Angles = m_EndCamera->GetAngles();
 		m_FOV = m_EndCamera->GetFOV();
 		m_Origin = m_EndCamera->GetOrigin();
-		m_IsFirstPerson = m_EndCamera->IsFirstPerson();
+		m_Type = m_EndCamera->GetCameraType();
 	}
 
 	const Vector targetPos = m_EndCamera->GetOrigin();
@@ -48,14 +48,7 @@ void HybridPlayerCameraSmooth::Update(float dt, uint32_t frame)
 	float percent;
 	const float targetDist = ComputeSmooth(m_ElapsedTime, 0, m_StartDist, m_LinearSpeed, m_BezierDist, m_BezierDuration, percent);
 
-	if (m_Percent >= 1)
-	{
-		m_Origin = m_EndCamera->GetOrigin();
-		m_Angles = m_EndCamera->GetAngles();
-		m_FOV = m_EndCamera->GetFOV();
-		m_IsFirstPerson = m_EndCamera->IsFirstPerson();
-	}
-	else if (m_ElapsedTime > 0)
+	if (m_ElapsedTime > 0)
 	{
 		if (m_SmoothingMode == SmoothingMode::Approach)
 			m_Origin = ApproachVector(targetPos, m_Origin, targetDist);
@@ -88,7 +81,7 @@ void HybridPlayerCameraSmooth::Update(float dt, uint32_t frame)
 		}
 
 		m_Percent = percent;
-		m_IsFirstPerson = false;
+		m_Type = CameraType::Smooth;
 	}
 }
 

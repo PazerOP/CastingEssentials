@@ -40,25 +40,13 @@ CameraSmooths::CameraSmooths() :
 	ce_smoothing_rate_dist_exp("ce_smoothing_rate_dist_exp", "0.315", FCVAR_NONE,
 		"Adjusts the ratio of smooth duration vs distance. <smooth duration> = <initial distance>^<ce_smoothing_rate_dist_exp> / <ce_smoothing_rate>"),
 
-	ce_smoothing_linear_speed("ce_smoothing_linear_speed", "875", FCVAR_NONE, "Speed at which to approach the bezier curve start."),
-	ce_smoothing_bezier_dist("ce_smoothing_bezier_dist", "1000", FCVAR_NONE, "Units from target to begin the bezier smooth."),
-	ce_smoothing_bezier_duration("ce_smoothing_bezier_duration", "0.65", FCVAR_NONE, "Duration over which to smooth the camera."),
-
-	ce_smoothing_ang_bias("ce_smoothing_ang_bias", "0.85", FCVAR_NONE, "biasAmt for angle smoothing. 1 = linear, 0 = sharp snap at halfway", true, 0, true, 1),
-
-	ce_smoothing_mode("ce_smoothing_mode", "1", FCVAR_NONE,
-		"\nDifferent modes for smoothing to targets."
-		"\n\t0: Clamp distance to target."
-		"\n\t1: Lerp between start position and target.",
-		true, 0, true, 1),
-
 	ce_smoothing_debug("ce_smoothing_debug", "0", FCVAR_NONE, "Prints debugging info about camera smooths to the console."),
 	ce_smoothing_debug_los("ce_smoothing_debug_los", "0", FCVAR_NONE, "Draw points associated with LOS checking for camera smooths."),
 
 	ce_smoothing_los_buffer("ce_smoothing_los_buffer", "32", FCVAR_NONE, "Additional space to give ourselves so we can sorta see around corners."),
 	ce_smoothing_los_min("ce_smoothing_los_min", "0", FCVAR_NONE, "Minimum percentage of points that must pass the LOS check before we allow ourselves to smooth to a target.", true, 0, true, 1),
 
-	ce_smoothing_lerpto("ce_smoothing_lerpto", [](const CCommand& cmd) { GetModule()->LerpTo(cmd); })
+	ce_smoothing_cooldown("ce_smoothing_cooldown", "5", FCVAR_NONE, "Minimum number of seconds that must pass between one camera smooth ending and another beginning.")
 {
 }
 
@@ -118,13 +106,27 @@ bool CameraSmooths::CheckDependencies()
 	return ready;
 }
 
-void CameraSmooths::SetupCameraSmooth(const CamStateData& state, const CameraPtr& currentCamera, CameraPtr& targetCamera)
+void CameraSmooths::LevelInit()
+{
+	m_LastSmoothEnd = -FLT_MAX;
+}
+
+void CameraSmooths::SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera)
 {
 	if (!ce_smoothing_enabled.GetBool())
 		return;
 
-	const float frametime = Interfaces::GetEngineTool()->HostFrameTime();
-	const float hosttime = Interfaces::GetEngineTool()->HostTime();
+	auto currentSmooth = dynamic_cast<ICameraSmooth*>(currentCamera.get());
+
+	const auto clientTime = Interfaces::GetEngineTool()->ClientTime();
+	if (m_LastSmoothEnd > clientTime && !currentSmooth)
+	{
+		if (ce_smoothing_debug.GetBool())
+			ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, %s still has %1.2f seconds left\n",
+				GetModuleName(), ce_smoothing_cooldown.GetName(), m_LastSmoothEnd - clientTime);
+
+		return;
+	}
 
 	Vector currentForward;
 	AngleVectors(currentCamera->GetAngles(), &currentForward);
@@ -132,6 +134,14 @@ void CameraSmooths::SetupCameraSmooth(const CamStateData& state, const CameraPtr
 	const Vector deltaPos = targetCamera->GetOrigin() - currentCamera->GetOrigin();
 	const float angle = Rad2Deg(std::acosf(currentForward.Dot(deltaPos) / (currentForward.Length() + deltaPos.Length())));
 	const float distance = deltaPos.Length();
+
+	if (distance < 0.1f)
+	{
+		if (ce_smoothing_debug.GetBool())
+			ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, start and end points are %1.2f units apart\n", GetModuleName(), distance);
+
+		return;
+	}
 
 	const bool forceSmooth = distance <= ce_smoothing_force_distance.GetFloat();
 	if (!forceSmooth)
@@ -173,22 +183,23 @@ void CameraSmooths::SetupCameraSmooth(const CamStateData& state, const CameraPtr
 	else
 	{
 		if (ce_smoothing_debug.GetBool())
-			ConColorMsg(DBGMSG_COLOR, "[%s] Forcing smooth, distance of %1.0f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_smoothing_force_distance.GetName(), ce_smoothing_force_distance.GetFloat());
+			ConColorMsg(DBGMSG_COLOR, "[%s] Forcing smooth, distance of %1.2f units < %s (%1.0f units)\n", GetModuleName(), distance, ce_smoothing_force_distance.GetName(), ce_smoothing_force_distance.GetFloat());
 	}
-
-	if (ce_smoothing_debug.GetBool())
-		ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth!\n\n", GetModuleName());
 
 	auto distexp = std::powf(distance, ce_smoothing_rate_dist_exp.GetFloat());
 	auto time = distexp / ce_smoothing_rate.GetFloat();
 
-	ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth, time %1.2f, dist %1.2f, dist^exp %1.2f\n", GetModuleName(), time, distance, distexp);
+	if (ce_smoothing_debug.GetBool())
+		ConColorMsg(DBGMSG_COLOR, "[%s] Launching smooth, time %1.2f, dist %1.2f, dist^exp %1.2f\n", GetModuleName(), time, distance, distexp);
+
+	m_LastSmoothEnd = clientTime + time + ce_smoothing_cooldown.GetFloat();
+
 	auto newSimpleSmooth = std::make_shared<SimpleCameraSmooth>(copy(currentCamera), copy(targetCamera), time);
 	newSimpleSmooth->m_Interpolator = Interpolators::Smoothstep;
 
 	// If we're coming from an entity-attached camera and heading for a camera
 	// that isn't attached to the same entity (or is attached to nothing)
-	if (!dynamic_cast<ICameraSmooth*>(currentCamera.get()) &&
+	if (!currentSmooth &&
 		currentCamera->GetAttachedEntity() &&
 		currentCamera->GetAttachedEntity() != targetCamera->GetAttachedEntity())
 	{
@@ -201,52 +212,6 @@ void CameraSmooths::SetupCameraSmooth(const CamStateData& state, const CameraPtr
 	}
 
 	targetCamera = newSimpleSmooth;
-	return;
-
-	auto newSmooth = std::make_shared<HybridPlayerCameraSmooth>(copy(currentCamera), copy(targetCamera));
-	newSmooth->m_AngleBias = ce_smoothing_ang_bias.GetFloat();
-	newSmooth->m_BezierDist = ce_smoothing_bezier_dist.GetFloat();
-	newSmooth->m_BezierDuration = ce_smoothing_bezier_duration.GetFloat();
-	newSmooth->m_LinearSpeed = ce_smoothing_linear_speed.GetFloat();
-	newSmooth->m_SmoothingMode = (HybridPlayerCameraSmooth::SmoothingMode)ce_smoothing_mode.GetInt();
-
-	targetCamera = newSmooth;
-}
-
-void CameraSmooths::LerpTo(const CCommand& cmd) const
-{
-	auto cs = CameraState::GetModule();
-	if (!cs)
-	{
-		Warning("%s: Unable to get Camera State module\n", cmd[0]);
-		return;
-	}
-
-	do
-	{
-		if (cmd.ArgC() != 8)
-			break;
-
-		auto endCam = std::make_shared<SimpleCamera>();
-		for (uint_fast8_t i = 0; i < 3; i++)
-		{
-			endCam->m_Origin[i] = atof(cmd[i + 1]);
-			endCam->m_Angles[i] = atof(cmd[i + 4]);
-		}
-
-		auto newSmooth = std::make_shared<SimpleCameraSmooth>(copy(cs->GetActiveCamera()), std::move(endCam), 8);
-		newSmooth->ApplySettings();
-
-		cs->SetActiveCamera(newSmooth);
-
-		return;
-
-	} while (false);
-	if (cmd.ArgC() != 7)
-		goto Usage;
-
-Usage:
-	Warning("Usage: %s <x> <y> <z> <pitch> <yaw> <roll> <duration>\n", cmd[0]);
 }
 
 float CameraSmooths::TestVisibility(const Vector& eyePos, const Vector& targetPos) const

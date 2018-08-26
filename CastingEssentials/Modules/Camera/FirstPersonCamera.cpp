@@ -6,7 +6,7 @@
 FirstPersonCamera::FirstPersonCamera(CHandle<C_BaseEntity> entity) :
 	m_Entity(entity)
 {
-	m_IsFirstPerson = true;
+	m_Type = CameraType::FirstPerson;
 }
 
 void FirstPersonCamera::Update(float dt, uint32_t frame)

@@ -29,7 +29,7 @@ static float GetFriction()
 
 RoamingCamera::RoamingCamera() : m_Velocity(0)
 {
-	m_IsFirstPerson = false;
+	m_Type = CameraType::Roaming;
 	m_Origin.Init();
 	m_Angles.Init();
 	m_FOV = 90;
@@ -131,7 +131,12 @@ void RoamingCamera::Update(float dt, uint32_t frame)
 void RoamingCamera::SetPosition(const Vector& pos, const QAngle& angles)
 {
 	m_Origin = pos;
+
 	m_Angles = angles;
+
+	QAngle copy(m_Angles);
+	engine->SetViewAngles(copy);
+
 	m_Velocity.Init();
 }
 

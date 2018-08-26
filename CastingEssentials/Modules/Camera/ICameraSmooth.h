@@ -35,7 +35,25 @@ public:
 	// Helpers
 	bool IsSmoothComplete() const { return GetProgress() >= 1; }
 
+	// Gets/sets a camera to collapse to when this smooth is complete, INSTEAD OF the end camera.
+	void SetQueuedCamera(const CameraPtr& camera) { m_QueuedCamera = camera; }
+	const CameraPtr& GetQueuedCamera() const { return m_QueuedCamera; }
+
 protected:
 	// ICamera
-	CameraPtr GetCollapsedCamera() override { return IsSmoothComplete() ? GetEndCamera() : nullptr; }
+	CameraPtr GetCollapsedCamera() override
+	{
+		if (IsSmoothComplete())
+		{
+			if (m_QueuedCamera)
+				return m_QueuedCamera;
+			else
+				return GetEndCamera();
+		}
+
+		return nullptr;
+	}
+
+private:
+	CameraPtr m_QueuedCamera;
 };

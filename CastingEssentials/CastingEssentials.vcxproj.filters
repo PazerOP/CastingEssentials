@@ -201,6 +201,9 @@
     <ClCompile Include="Modules\Camera\CameraStateCallbacks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\Camera\DeathCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -450,6 +453,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Misc\Extras\QAngle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\Camera\DeathCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

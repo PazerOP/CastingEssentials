@@ -1,6 +1,7 @@
 #include "CameraTools.h"
 #include "Misc/CCvar.h"
 #include "Misc/HLTVCameraHack.h"
+#include "Modules/Camera/SimpleCameraSmooth.h"
 #include "Modules/CameraSmooths.h"
 #include "Modules/CameraState.h"
 #include "Modules/FOVOverride.h"
@@ -58,6 +59,11 @@ CameraTools::CameraTools() :
 		"Spectates a player with the given steamid: ce_cameratools_spec_steamid <steamID>"),
 	ce_cameratools_spec_index("ce_cameratools_spec_index", [](const CCommand& args) { GetModule()->SpecIndex(args); },
 		"Spectate a player based on their index in the tournament spectator hud."),
+
+	ce_cameratools_smoothto("ce_cameratools_smoothto", &SmoothTo,
+		"Interpolates between the current camera and a given target: "
+		"\"ce_cameratools_smoothto <x> <y> <z> <pitch> <yaw> <roll> <duration> [smooth mode]\"\n"
+		"\tSmooth mode can be either linear or smoothstep, default linear."),
 
 	ce_cameratools_show_users("ce_cameratools_show_users", [](const CCommand& args) { GetModule()->ShowUsers(args); },
 		"Lists all currently connected players on the server.")
@@ -457,6 +463,79 @@ void CameraTools::SpecPlayer(int playerIndex)
 			Interfaces::GetEngineClient()->ServerCmd(buffer);
 		}
 	}
+}
+
+void CameraTools::SmoothTo(const CCommand& cmd)
+{
+	auto cs = CameraState::GetModule();
+	if (!cs)
+	{
+		Warning("%s: Unable to get Camera State module\n", cmd[0]);
+		return;
+	}
+
+	do
+	{
+		if (cmd.ArgC() < 8 || cmd.ArgC() > 9)
+			break;
+
+		const auto& activeCam = cs->GetActiveCamera();
+		if (!activeCam)
+		{
+			Warning("%s: No current active camera?\n", cmd[0]);
+			break;
+		}
+
+		const auto& currentPos = activeCam->GetOrigin();
+		const auto& currentAng = activeCam->GetAngles();
+
+		auto startCam = std::make_shared<SimpleCamera>();
+		{
+			startCam->m_Angles = activeCam->GetAngles();
+			startCam->m_Origin = activeCam->GetOrigin();
+			startCam->m_FOV = activeCam->GetFOV();
+		}
+
+		Vector endCamPos;
+		QAngle endCamAng;
+		for (uint_fast8_t i = 0; i < 6; i++)
+		{
+			const auto& arg = cmd[i + 1];
+			auto& param = i < 3 ? endCamPos[i] : endCamAng[i - 3];
+
+			if (arg[0] == '?' && arg[1] == '\0')
+				param = i < 3 ? currentPos[i] : currentAng[i];
+			else if (!TryParseFloat(arg, param))
+			{
+				Warning("%s: Unable to parse \"%s\" (arg %i) as a float\n", cmd[0], arg, i);
+				break;
+			}
+		}
+
+		auto endCam = cs->GetRoamingCamera();
+		endCam->SetPosition(endCamPos, endCamAng);
+
+		auto newSmooth = std::make_shared<SimpleCameraSmooth>(std::move(startCam), std::move(endCam), atof(cmd[7]));
+		if (cmd.ArgC() > 8)
+		{
+			if (!stricmp(cmd[8], "linear"))
+				newSmooth->m_Interpolator = Interpolators::Linear;
+			else if (!stricmp(cmd[8], "smoothstep"))
+				newSmooth->m_Interpolator = Interpolators::Smoothstep;
+			else
+				Warning("%s: Unrecognized smooth mode %s, defaulting to linear\n", cmd[0], cmd[8]);
+		}
+
+		newSmooth->ApplySettings();
+		cs->SetActiveCamera(newSmooth);
+
+		return;
+
+	} while (false);
+
+	Warning("Usage: %s <x> <y> <z> <pitch> <yaw> <roll> <duration> [smooth mode]\n"
+		"\tSmooth mode can be either linear or smoothstep, default linear.\n"
+		"\tIf any of the parameters are '?', they are left untouched.", cmd[0]);
 }
 
 void CameraTools::OnTick(bool inGame)

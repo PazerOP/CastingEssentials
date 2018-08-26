@@ -151,11 +151,36 @@ void CameraState::SetActiveCamera(const CameraPtr& camera)
 {
 	if (camera)
 	{
+		switch (camera->GetCameraType())
+		{
+			case CameraType::FirstPerson:    SetSpecMode(ObserverMode::OBS_MODE_IN_EYE); break;
+			case CameraType::ThirdPerson:    SetSpecMode(ObserverMode::OBS_MODE_CHASE); break;
+			case CameraType::Roaming:        SetSpecMode(ObserverMode::OBS_MODE_ROAMING); break;
+			case CameraType::Fixed:          SetSpecMode(ObserverMode::OBS_MODE_FIXED); break;
+
+			case CameraType::Smooth:
+				if (GetLocalObserverMode() == ObserverMode::OBS_MODE_IN_EYE)
+					SetSpecMode(ObserverMode::OBS_MODE_FIXED);
+
+				break;
+		}
+
 		m_ActiveCamera = camera;
 		m_ActiveCamera->ApplySettings();
 	}
 	else
 		m_ActiveCamera = m_EngineCamera;
+}
+
+void CameraState::SetActiveCameraSmooth(CameraPtr camera)
+{
+	if (camera != m_ActiveCamera)
+	{
+		camera->ApplySettings();
+		CameraStateCallbacks::GetCallbacksParent().SetupCameraSmooth(m_ActiveCamera, camera);
+	}
+
+	SetActiveCamera(camera);
 }
 
 void CameraState::ClearCameras()
@@ -178,7 +203,7 @@ bool CameraState::IsThirdPersonCameraOverride()
 		return false;
 
 	const auto& cam = GetActiveCamera();
-	if (!cam || cam->IsFirstPerson())
+	if (!cam || cam->GetCameraType() == CameraType::FirstPerson)
 		return false;
 
 	m_IsThirdPersonCameraHook.SetState(Hooking::HookAction::SUPERCEDE);
@@ -201,7 +226,17 @@ bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float&
 		return false;
 
 	m_ActiveCamera->TryUpdate(s_EngineTool->ClientFrameTime(), s_EngineTool->HostFrameCount());
-	ICamera::TryCollapse(m_ActiveCamera);
+
+	if (m_ActiveCamera->IsCollapsible())
+	{
+		auto prevCamera = m_ActiveCamera;
+		auto newCamera = prevCamera;
+		if (ICamera::TryCollapse(newCamera))
+		{
+			CameraStateCallbacks::GetCallbacksParent().CameraCollapsed(prevCamera, newCamera);
+			SetActiveCamera(newCamera);
+		}
+	}
 
 	origin = cam->GetOrigin();
 	angles = cam->GetAngles();
@@ -229,33 +264,30 @@ void CameraState::CreateMoveOverride(CInput* pThis, int sequenceNumber, float in
 
 void CameraState::OnTick(bool inGame)
 {
+	if (!inGame)
+		return;
+
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-	if (inGame)
+
+	// Update spec mode/target
 	{
-		// Update spec mode/target
+		auto newMode = GetLocalObserverMode();
+		auto newTarget = GetLocalObserverTarget();
+		auto newTargetEntindex = newTarget ? newTarget->entindex() : 0;
+
+		if (newMode != m_LastSpecMode || newTargetEntindex != m_LastSpecTarget)
 		{
-			auto newMode = GetLocalObserverMode();
-			auto newTarget = GetLocalObserverTarget();
-			auto newTargetEntindex = newTarget ? newTarget->entindex() : 0;
+			SpecStateChanged(newMode, newTarget);
 
-			if (newMode != m_LastSpecMode || newTargetEntindex != m_LastSpecTarget)
-			{
-				SpecStateChanged(newMode, newTarget);
-
-				m_LastSpecMode = newMode;
-				m_LastSpecTarget = newTargetEntindex;
-			}
-		}
-
-		if (ce_camerastate_debug_cameras.GetBool())
-		{
-			auto camera = m_ActiveCamera.get();
-			engine->Con_NPrintf(GetConLine(), "Current camera type: %s", camera ? camera->GetDebugName() : "(null)");
+			m_LastSpecMode = newMode;
+			m_LastSpecTarget = newTargetEntindex;
 		}
 	}
-	else
+
+	if (ce_camerastate_debug_cameras.GetBool())
 	{
-		SetupHooks(false);
+		auto camera = m_ActiveCamera.get();
+		engine->Con_NPrintf(GetConLine(), "Current camera type: %s", camera ? camera->GetDebugName() : "(null)");
 	}
 }
 
@@ -360,7 +392,7 @@ void CameraState::SetupHooks(bool connect)
 void CameraState::SetModeOverride(int iMode)
 {
 	// HLTV path
-	Assert(!"FIXME");
+	//Assert(!"FIXME");
 	//auto mode = (ObserverMode)iMode;
 	//SpecModeChanged(mode);
 }
@@ -383,7 +415,9 @@ void CameraState::SpecStateChanged(ObserverMode mode, C_BaseEntity* primaryTarge
 	state.m_Mode = mode;
 	state.m_PrimaryTarget = primaryTarget;
 
-	CameraStateCallbacks::RunSetupCameraState(state);
+	auto& callbacksParent = CameraStateCallbacks::GetCallbacksParent();
+
+	callbacksParent.SetupCameraState(state);
 
 	CameraPtr newCamera = m_EngineCamera;
 
@@ -392,8 +426,7 @@ void CameraState::SpecStateChanged(ObserverMode mode, C_BaseEntity* primaryTarge
 		if (state.m_PrimaryTarget)
 			m_QueuedCopyEngineData = true;
 
-		newCamera = s_DebugOrbitCamera;
-		//newCamera = m_RoamingCamera;
+		newCamera = m_RoamingCamera;
 	}
 	else if (state.m_PrimaryTarget)
 	{
@@ -405,20 +438,27 @@ void CameraState::SpecStateChanged(ObserverMode mode, C_BaseEntity* primaryTarge
 	if (!newCamera)
 		newCamera = s_DebugOrbitCamera;
 
-	CameraStateCallbacks::RunSetupCameraTarget(state, newCamera);
+	callbacksParent.SetupCameraTarget(state, newCamera);
 
-	if (newCamera != m_ActiveCamera)
-	{
-		newCamera->ApplySettings();
-		CameraStateCallbacks::RunSetupCameraSmooth(state, m_ActiveCamera, newCamera);
-	}
+	SetActiveCameraSmooth(newCamera);
+}
 
-	SetActiveCamera(newCamera);
+void CameraState::SetSpecMode(ObserverMode mode)
+{
+	auto currentMode = GetLocalObserverMode();
+	if (mode == currentMode)
+		return;
+
+	char buf[32];
+	sprintf_s(buf, "spec_mode %i", (int)mode);
+	engine->ClientCmd(buf);
+
+	//static_assert(false, "FIXME: just ignore what the engine is doing, hook spec_mode and spec_player/next/prev, and do the roaming camera positioning logic from C_HLTVCamera::CalcRoamingView/CBasePlayer::SetObserverTarget ourselves");
 }
 
 void CameraState::SetPrimaryTargetOverride(int nEntity)
 {
-	Assert(!"FIXME");
+	//Assert(!"FIXME");
 	//SpecTargetChanged(nEntity);
 }
 
