@@ -305,7 +305,8 @@ bool C_BaseEntity::GetPredictable(void) const
 }
 int C_BaseAnimating::LookupBone(const char* szName)
 {
-	return HookManager::GetRawFunc<HookFunc::C_BaseAnimating_LookupBone>()(this, szName);
+	Assert(GetModelPtr());
+	return HookManager::GetRawFunc<HookFunc::Global_Studio_BoneIndexByName>()(GetModelPtr(), szName);
 }
 CBoneCache* C_BaseAnimating::GetBoneCache(CStudioHdr* hdr)
 {

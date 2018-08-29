@@ -143,6 +143,7 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::Global_GetLocalPlayerIndex>("\xE8????\x85\xC0\x74\x08\x8D\x48\x08\x8B\x01\xFF\x60\x24\x33\xC0\xC3", "x????xxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::Global_GetSequenceName>("\x55\x8B\xEC\x56\x8B\x75\x08\x57\x85\xF6\x74\x5C\x8B\x7D\x0C\x85\xFF\x78\x1A\x8B\xCE\xE8????\x3B\xF8\x7D\x0F\x57\x8B\xCE\xE8????\x5F\x5E\x03\x40\x04", "xxxxxxxxxxxxxxxxxxxxxx????xxxxxxxx????xxxxx");
 	FindFunc<HookFunc::Global_GetVectorInScreenSpace>("\x55\x8B\xEC\x8B\x45\x1C\x83\xEC\x10", "xxxxxxxxx");
+	FindFunc<HookFunc::Global_Studio_BoneIndexByName>("\x55\x8B\xEC\x51\x8B\x45\x08\x53\x56\x57\x85\xC0", "xxxxxxxxxxxx");
 	FindFunc<HookFunc::Global_UserInfoChangedCallback>("\x55\x8B\xEC\x53\x8B\x5D\x18\x85\xDB\x0F\x84????\x56", "xxxxxxxxxxx????x", 0, "engine");
 	FindFunc<HookFunc::Global_UTILComputeEntityFade>("\x55\x8B\xEC\x83\xEC\x40\x80\x3D", "xxxxxxxx");
 	FindFunc<HookFunc::Global_UTIL_TraceLine>("\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x83\xEC\x6C\x8D\x4D\xA0\x56\xFF\x73\x0C", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
@@ -155,7 +156,6 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::C_BaseAnimating_GetSequenceActivityName>("\x55\x8B\xEC\x83\x7D\x08\xFF\x56\x8B\xF1\x75\x0A", "xxxxxxxxxxxx");
 	FindFunc<HookFunc::C_BaseAnimating_InternalDrawModel>("\x55\x8B\xEC\x81\xEC????\x53\x56\x57\x8B\xF9\xC6\x45\xFF\x00\x8B\x87", "xxxxx????xxxxxxxxxxx");
 	FindFunc<HookFunc::C_BaseAnimating_LockStudioHdr>("\x55\x8B\xEC\x83\xEC\x20\x56\x57\x6A\x01\x68????\x8B\xF1", "xxxxxxxxxxx????xx");
-	FindFunc<HookFunc::C_BaseAnimating_LookupBone>("\x55\x8B\xEC\x56\x8B\xF1\x80\xBE\x00\x00\x00\x00\x00\x74\x13\xFF\x75\x08\x33\xC0\x50\xE8\x00\x00\x00\x00\x83\xC4\x08\x5E\x5D\xC2\x04\x00\x83\xBE\x00\x00\x00\x00\x00\x75\x05\xE8\x00\x00\x00\x00\xFF\x75\x08\x8B\x86\x00\x00\x00\x00\x50\xE8\x00\x00\x00\x00\x83\xC4\x08\x5E\x5D\xC2\x04\x00", "xxxxxxxx?????xxxxxxxxx????xxxxxxxxxx?????xxx????xxxxx????xx????xxxxxxxx");
 
 	FindFunc<HookFunc::C_BaseEntity_Init>("\x55\x8B\xEC\x8B\x45\x08\x56\xFF\x75\x0C\x8B\xF1\x8D\x4E\x04", "xxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::C_BaseEntity_CalcAbsolutePosition>("\x55\x8B\xEC\x81\xEC????\x80\x3D?????\x53\x8B\xD9\x0F\x84", "xxxxx????xx?????xxxxx");
@@ -208,17 +208,8 @@ void HookManager::InitRawFunctionsList()
 
 template<HookFunc fn> void HookManager::FindFunc(const char* signature, const char* mask, int offset, const char* module)
 {
-	std::byte* result = (std::byte*)SignatureScan(module, signature, mask);
-	if (result)
-	{
-		result += offset;
-	}
-	else
-	{
-		Assert(!"Failed to find function!");
-		result = nullptr;
-	}
-
+	auto result = SignatureScan(module, signature, mask, offset);
+	AssertMsg(result, "Failed to find function!");
 	s_RawFunctions[(int)fn] = (void*)result;
 }
 
@@ -258,9 +249,9 @@ HookManager::HookManager()
 	InitHook<HookFunc::ICvar_ConsoleDPrintf>(g_pCVar, &ICvar::ConsoleDPrintf);
 	InitHook<HookFunc::ICvar_ConsolePrintf>(g_pCVar, &ICvar::ConsolePrintf);
 
-	InitHook<HookFunc::IClientEngineTools_InToolMode>(Interfaces::GetClientEngineTools(), &IClientEngineTools::InToolMode);
-	InitHook<HookFunc::IClientEngineTools_IsThirdPersonCamera>(Interfaces::GetClientEngineTools(), &IClientEngineTools::IsThirdPersonCamera);
-	InitHook<HookFunc::IClientEngineTools_SetupEngineView>(Interfaces::GetClientEngineTools(), &IClientEngineTools::SetupEngineView);
+	//InitHook<HookFunc::IClientEngineTools_InToolMode>(Interfaces::GetClientEngineTools(), &IClientEngineTools::InToolMode);
+	//InitHook<HookFunc::IClientEngineTools_IsThirdPersonCamera>(Interfaces::GetClientEngineTools(), &IClientEngineTools::IsThirdPersonCamera);
+	//InitHook<HookFunc::IClientEngineTools_SetupEngineView>(Interfaces::GetClientEngineTools(), &IClientEngineTools::SetupEngineView);
 
 	// Just construct but don't init, gameeventmanager isn't instantiated until we load a map
 	m_Hooks[(int)HookFunc::IGameEventManager2_FireEventClientSide] = std::make_unique<HookFuncType<HookFunc::IGameEventManager2_FireEventClientSide>::Hook>();

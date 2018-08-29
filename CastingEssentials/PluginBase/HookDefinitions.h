@@ -81,7 +81,6 @@ enum class HookFunc
 	C_BaseAnimating_GetSequenceActivityName,
 	C_BaseAnimating_InternalDrawModel,
 	C_BaseAnimating_LockStudioHdr,
-	C_BaseAnimating_LookupBone,
 
 	C_BaseEntity_Init,
 	C_BaseEntity_CalcAbsolutePosition,
@@ -135,6 +134,7 @@ enum class HookFunc
 	Global_GetLocalPlayerIndex,
 	Global_GetSequenceName,
 	Global_GetVectorInScreenSpace,
+	Global_Studio_BoneIndexByName,
 	Global_UserInfoChangedCallback,
 	Global_UTILComputeEntityFade,
 	Global_UTIL_TraceLine,
@@ -310,11 +310,6 @@ protected:
 		typedef void(__thiscall *Raw)(C_BaseAnimating*);
 		typedef GlobalClassHook<HookFunc::C_BaseAnimating_LockStudioHdr, false, C_BaseAnimating, void> Hook;
 	};
-	template<> struct HookFuncType<HookFunc::C_BaseAnimating_LookupBone>
-	{
-		typedef int(__thiscall *Raw)(C_BaseAnimating*, const char*);
-		typedef GlobalClassHook<HookFunc::C_BaseAnimating_LookupBone, false, C_BaseAnimating, int, const char*> Hook;
-	};
 	template<> struct HookFuncType<HookFunc::C_BaseAnimating_GetBonePosition>
 	{
 		typedef void(__thiscall *Raw)(C_BaseAnimating*, int, Vector&, QAngle&);
@@ -459,6 +454,10 @@ protected:
 	{
 		typedef bool(__cdecl* Raw)(Vector pos, int& x, int& y, Vector* offset);
 		typedef GlobalHook<HookFunc::Global_GetVectorInScreenSpace, false, bool, Vector, int&, int&, Vector*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_Studio_BoneIndexByName>
+	{
+		typedef int(__cdecl* Raw)(const CStudioHdr* pStudioHdr, const char* pName);
 	};
 	template<> struct HookFuncType<HookFunc::Global_CreateTFGlowObject>
 	{
