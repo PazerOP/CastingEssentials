@@ -91,10 +91,12 @@ enum class HookFunc
 	C_BasePlayer_GetLocalPlayer,
 	C_BasePlayer_ShouldDrawLocalPlayer,
 
+	C_HLTVCamera_CalcView,
 	C_HLTVCamera_SetCameraAngle,
 	C_HLTVCamera_SetMode,
 	C_HLTVCamera_SetPrimaryTarget,
 
+	C_TFPlayer_CalcView,
 	C_TFPlayer_DrawModel,
 	C_TFPlayer_GetEntityForLoadoutSlot,
 
@@ -242,6 +244,11 @@ protected:
 	{
 		typedef GlobalVirtualHook<HookFunc::IClientRenderable_DrawModel, false, IClientRenderable, int, int> Hook;
 	};
+	template<> struct HookFuncType<HookFunc::C_HLTVCamera_CalcView>
+	{
+		typedef void(__thiscall* Raw)(C_HLTVCamera* pThis, Vector& origin, QAngle& angles, float& fov);
+		typedef GlobalClassHook<HookFunc::C_HLTVCamera_CalcView, false, C_HLTVCamera, void, Vector&, QAngle&, float&> Hook;
+	};
 	template<> struct HookFuncType<HookFunc::C_HLTVCamera_SetCameraAngle>
 	{
 		typedef void(__thiscall *Raw)(C_HLTVCamera* pThis, const QAngle& ang);
@@ -353,6 +360,11 @@ protected:
 	template<> struct HookFuncType<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer>
 	{
 		typedef bool(*Raw)();
+	};
+	template<> struct HookFuncType<HookFunc::C_TFPlayer_CalcView>
+	{
+		typedef void(__thiscall* Raw)(C_TFPlayer* pThis, Vector& eyeOrigin, QAngle& eyeAngles, float& zNear, float& zFar, float& fov);
+		typedef GlobalClassHook<HookFunc::C_TFPlayer_CalcView, false, C_TFPlayer, void, Vector&, QAngle&, float&, float&, float&> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::C_TFPlayer_DrawModel>
 	{

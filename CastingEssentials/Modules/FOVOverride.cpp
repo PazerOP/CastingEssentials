@@ -91,7 +91,7 @@ bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 	{
 		auto camTools = CameraTools::GetModule();
 
-		switch (CameraState::GetLocalObserverMode())
+		switch (CameraState::GetModule()->GetLocalObserverMode())
 		{
 			case OBS_MODE_IN_EYE:
 			{
@@ -99,7 +99,7 @@ bool FOVOverride::SetupEngineViewOverride(Vector&, QAngle&, float &fov)
 				if (newFov == 0)
 					return false;
 
-				auto target = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+				auto target = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
 				if (!target || target->CheckCondition(TFCond_Zoomed))
 					return false;
 

@@ -118,8 +118,8 @@ void Killstreaks::HideFirstPersonEffects() const
 	for (Player* player : Player::Iterable())
 	{
 		const bool shouldHideKS =
-			player == Player::AsPlayer(CameraState::GetLocalObserverTarget()) &&
-			CameraState::GetLocalObserverMode() == ObserverMode::OBS_MODE_IN_EYE;
+			player == Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget()) &&
+			CameraState::GetModule()->GetLocalObserverMode() == ObserverMode::OBS_MODE_IN_EYE;
 
 		auto entParticles = player->GetBaseEntity()->ParticleProp();
 		for (int i = 0; i < entParticles->GetParticleEffectCount(); i++)

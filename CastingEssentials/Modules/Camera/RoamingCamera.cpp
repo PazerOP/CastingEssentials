@@ -42,15 +42,12 @@ void RoamingCamera::Reset()
 
 void RoamingCamera::Update(float dt, uint32_t frame)
 {
-	Vector wishvel;
-	Vector forward, right, up;
-	Vector wishdir;
-	float wishspeed;
 	float factor = GetSpecSpeed();
 	float maxspeed = GetMaxSpeed() * factor;
 
 	auto cmd = &m_LastCmd;
 
+	Vector forward, right, up;
 	AngleVectors(cmd->viewangles, &forward, &right, &up);  // Determine movement angles
 
 	if (cmd->buttons & IN_SPEED)
@@ -63,19 +60,24 @@ void RoamingCamera::Update(float dt, uint32_t frame)
 	VectorNormalize(forward);  // Normalize remainder of vectors
 	VectorNormalize(right);    //
 
-	for (int i = 0; i < 3; i++)       // Determine x and y parts of velocity
-		wishvel[i] = forward[i] * fmove + right[i] * smove;
-	wishvel[2] += cmd->upmove * factor;
+	Vector wishvel(0, 0, 0);
+	if (m_InputEnabled)
+	{
+		for (int i = 0; i < 3; i++)       // Determine x and y parts of velocity
+			wishvel[i] = forward[i] * fmove + right[i] * smove;
 
-	VectorCopy(wishvel, wishdir);   // Determine magnitude of speed of move
-	wishspeed = VectorNormalize(wishdir);
+		wishvel[2] += cmd->upmove * factor;
+	}
+
+	Vector wishdir = wishvel;   // Determine magnitude of speed of move
+	float wishspeed = VectorNormalize(wishdir);
 
 	//
 	// Clamp to server defined max speed
 	//
 	if (wishspeed > maxspeed)
 	{
-		VectorScale(wishvel, maxspeed / wishspeed, wishvel);
+		wishvel *= maxspeed / wishspeed;
 		wishspeed = maxspeed;
 	}
 
@@ -107,20 +109,20 @@ void RoamingCamera::Update(float dt, uint32_t frame)
 
 			// Determine proportion of old speed we are using.
 			newspeed /= spd;
-			VectorScale(m_Velocity, newspeed, m_Velocity);
+			m_Velocity *= newspeed;
 		}
 	}
 	else
 	{
-		VectorCopy(wishvel, m_Velocity);
+		m_Velocity = wishvel;
 	}
 
 	// Just move ( don't clip or anything )
-	VectorMA(m_Origin, dt, m_Velocity, m_Origin);
+	m_Origin += m_Velocity * dt;
 
 	// get camera angle directly from engine
 	Assert(engine);
-	if (engine)
+	if (m_InputEnabled && engine)
 		engine->GetViewAngles(m_Angles);
 
 	// Zero out velocity if in noaccel mode
@@ -143,6 +145,17 @@ void RoamingCamera::SetPosition(const Vector& pos, const QAngle& angles)
 void RoamingCamera::CreateMove(const CUserCmd& cmd)
 {
 	m_LastCmd = cmd;
+}
+
+void RoamingCamera::GotoEntity(IClientEntity* ent)
+{
+	if (!ent)
+		return;
+
+	if (auto baseEnt = ent->GetBaseEntity())
+		SetPosition(baseEnt->EyePosition(), baseEnt->EyeAngles());
+	else
+		SetPosition(ent->GetAbsOrigin(), ent->GetAbsAngles());
 }
 
 void RoamingCamera::Accelerate(Vector& wishdir, float wishspeed, float accel, float dt)

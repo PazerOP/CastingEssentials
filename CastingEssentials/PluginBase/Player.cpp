@@ -200,14 +200,7 @@ TFTeam Player::GetTeam() const
 
 int Player::GetUserID() const
 {
-	if (IsValid())
-	{
-		player_info_t playerInfo;
-		if (Interfaces::GetEngineClient()->GetPlayerInfo(GetEntity()->entindex(), &playerInfo))
-			return playerInfo.userID;
-	}
-
-	return 0;
+	return GetPlayerInfo().userID;
 }
 
 const char* Player::GetName() const

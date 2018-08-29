@@ -37,7 +37,6 @@ public:
 	                             const IHandleEntity* ignoreEnt = nullptr);
 
 private:
-	ConVar ce_cameratools_show_mode;
 	ConVar ce_cameratools_autodirector_mode;
 	ConVar ce_cameratools_force_target;
 	ConVar ce_cameratools_force_valid_target;

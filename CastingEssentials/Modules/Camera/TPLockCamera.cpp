@@ -24,10 +24,10 @@ void TPLockCamera::Update(float dt, uint32_t frame)
 	C_BaseAnimating* const baseAnimating = ent->GetBaseAnimating();
 	if (baseAnimating)
 	{
-		const int targetBone = baseAnimating->LookupBone(m_Bone.c_str());
+		const int targetBone = baseAnimating->LookupBone(m_Ruleset.m_Bone.c_str());
 		if (targetBone < 0)
 		{
-			DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", m_Bone.c_str());
+			DevWarning(2, "[Third person lock] Unable to find bone \"%s\"! Reverting to eye position.\n", m_Ruleset.m_Bone.c_str());
 		}
 		else
 		{
@@ -43,10 +43,10 @@ void TPLockCamera::Update(float dt, uint32_t frame)
 	QAngle idealAngles = ent->EyeAngles();
 	for (uint_fast8_t i = 0; i < 3; i++)
 	{
-		idealAngles[i] = AngleNormalize(m_AngOffset[i].GetValue(idealAngles[i]));
+		idealAngles[i] = AngleNormalize(m_Ruleset.m_Angle[i].GetValue(idealAngles[i]));
 
-		if (m_DPS[i] >= 0)
-			idealAngles[i] = ApproachAngle(idealAngles[i], m_Angles[i], m_DPS[i] * dt);
+		if (m_Ruleset.m_DPS[i] >= 0)
+			idealAngles[i] = ApproachAngle(idealAngles[i], m_Angles[i], m_Ruleset.m_DPS[i] * dt);
 	}
 
 	const Vector idealPos = CalcPosForAngle(targetPos, idealAngles);
@@ -60,9 +60,9 @@ Vector TPLockCamera::CalcPosForAngle(const Vector& orbitCenter, const QAngle& an
 	Vector forward, right, up;
 	AngleVectors(angle, &forward, &right, &up);
 
-	Vector idealPos = orbitCenter + forward * m_PosOffset[1];
-	idealPos += right * m_PosOffset[0];
-	idealPos += up * m_PosOffset[2];
+	Vector idealPos = orbitCenter + forward * m_Ruleset.m_Pos[1];
+	idealPos += right * m_Ruleset.m_Pos[0];
+	idealPos += up * m_Ruleset.m_Pos[2];
 
 	const Vector camDir = (idealPos - orbitCenter).Normalized();
 	const float dist = orbitCenter.DistTo(idealPos);
@@ -78,7 +78,7 @@ Vector TPLockCamera::CalcPosForAngle(const Vector& orbitCenter, const QAngle& an
 	return orbitCenter + camDir * wallDist;;
 }
 
-float TPLockCamera::TPLockValue::GetValue(float input) const
+float TPLockValue::GetValue(float input) const
 {
 	switch (m_Mode)
 	{

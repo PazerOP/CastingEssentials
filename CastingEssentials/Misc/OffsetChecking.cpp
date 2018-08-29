@@ -22,6 +22,7 @@ class OffsetChecking
 	OFFSET_CHECK(C_BaseAnimating, m_bDynamicModelPending, 2185);
 	OFFSET_CHECK(C_BaseAnimating, m_pStudioHdr, 2192);
 
+	OFFSET_CHECK(C_BaseEntity, m_EntClientFlags, 90);
 	OFFSET_CHECK(C_BaseEntity, m_lifeState, 165);
 	OFFSET_CHECK(C_BaseEntity, m_bDormant, 426);
 	OFFSET_CHECK(C_BaseEntity, m_Particles, 596);
@@ -174,6 +175,7 @@ public:
 			Assert((offset = VTableOffset(&C_BasePlayer::FireEvent)) == 172);
 			Assert((offset = VTableOffset(&C_BasePlayer::BecomeRagdollOnClient)) == 182);
 			Assert((offset = VTableOffset(&C_BasePlayer::ComputeClientSideAnimationFlags)) == 192);
+			Assert((offset = VTableOffset(&C_BasePlayer::DoMuzzleFlash)) == 196);
 			Assert((offset = VTableOffset(&C_BasePlayer::FormatViewModelAttachment)) == 202);
 			Assert((offset = VTableOffset(&C_BasePlayer::CalcAttachments)) == 204);
 			Assert((offset = VTableOffset(&C_BasePlayer::LastBoneChangedTime)) == 205);
@@ -195,6 +197,8 @@ public:
 			Assert((offset = VTableOffset(&C_BasePlayer::SharedSpawn)) == 228);
 			Assert((offset = VTableOffset(&C_BasePlayer::GetSteamID)) == 229);
 			Assert((offset = VTableOffset(&C_BasePlayer::GetPlayerMaxSpeed)) == 230);
+			Assert((offset = VTableOffset(&C_BasePlayer::CalcView)) == 231);
+			Assert((offset = VTableOffset(&C_BasePlayer::CalcViewModelView)) == 232);
 			Assert((offset = VTableOffset(&C_BasePlayer::PlayerUse)) == 240);
 			Assert((offset = VTableOffset(&C_BasePlayer::DrawOverriddenViewmodel)) == 250);
 			Assert((offset = VTableOffset(&C_BasePlayer::ItemPreFrame)) == 260);

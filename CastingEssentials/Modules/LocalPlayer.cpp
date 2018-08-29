@@ -88,13 +88,13 @@ void LocalPlayer::ToggleEnabled(const ConVar *var)
 
 void LocalPlayer::SetToCurrentTarget()
 {
-	auto localMode = CameraState::GetLocalObserverMode();
+	auto localMode = CameraState::GetModule()->GetLocalObserverMode();
 
 	if (localMode == OBS_MODE_FIXED ||
 		localMode == OBS_MODE_IN_EYE ||
 		localMode == OBS_MODE_CHASE)
 	{
-		Player* targetPlayer = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+		Player* targetPlayer = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
 
 		if (targetPlayer)
 		{

@@ -7,6 +7,31 @@
 
 class C_BaseEntity;
 
+struct TPLockValue
+{
+	enum class Mode
+	{
+		Set,
+		Add,
+		Scale,
+		ScaleAdd,
+	};
+
+	Mode m_Mode;
+	float m_Value;
+	float m_Base;
+
+	float GetValue(float input) const;
+};
+
+struct TPLockRuleset
+{
+	Vector m_Pos;
+	std::array<TPLockValue, 3> m_Angle;
+	std::array<float, 3> m_DPS;
+	std::string m_Bone;
+};
+
 class TPLockCamera final : public ICamera
 {
 public:
@@ -17,27 +42,7 @@ public:
 
 	const char* GetDebugName() const override { return "TPLockCamera"; }
 
-	struct TPLockValue
-	{
-		enum class Mode
-		{
-			Set,
-			Add,
-			Scale,
-			ScaleAdd,
-		};
-
-		Mode m_Mode;
-		float m_Value;
-		float m_Base;
-
-		float GetValue(float input) const;
-	};
-
-	std::string m_Bone;
-	Vector m_PosOffset;
-	std::array<TPLockValue, 3> m_AngOffset;
-	std::array<float, 3> m_DPS;
+	TPLockRuleset m_Ruleset;
 	using ICamera::m_FOV;
 
 	CHandle<C_BaseEntity> m_Entity;

@@ -264,6 +264,18 @@ void C_BaseAnimating::GetBonePosition(int iBone, Vector &origin, QAngle &angles)
 {
 	return HookManager::GetRawFunc<HookFunc::C_BaseAnimating_GetBonePosition>()(this, iBone, origin, angles);
 }
+int C_BaseAnimating::GetNumBoneAttachments()
+{
+	return m_BoneAttachments.Count();
+}
+C_BaseAnimating* C_BaseAnimating::GetBoneAttachment(int i)
+{
+	if (m_BoneAttachments.IsValidIndex(i))
+	{
+		return m_BoneAttachments[i];
+	}
+	return NULL;
+}
 void C_BaseEntity::CalcAbsolutePosition()
 {
 	return HookManager::GetRawFunc<HookFunc::C_BaseEntity_CalcAbsolutePosition>()(this);
@@ -286,6 +298,10 @@ void C_BaseEntity::AddToLeafSystem(RenderGroup_t group)
 		ClientLeafSystem()->SetRenderGroup(m_hRender, group);
 		ClientLeafSystem()->RenderableChanged(m_hRender);
 	}
+}
+bool C_BaseEntity::GetPredictable(void) const
+{
+	return m_bPredictable;
 }
 int C_BaseAnimating::LookupBone(const char* szName)
 {

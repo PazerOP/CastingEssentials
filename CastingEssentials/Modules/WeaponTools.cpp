@@ -284,7 +284,7 @@ void WeaponTools::OnTick(bool inGame)
 
 	if (ce_weapon_inspect_debug.GetBool())
 	{
-		auto target = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+		auto target = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
 		if (!target)
 			target = Player::GetLocalPlayer();
 

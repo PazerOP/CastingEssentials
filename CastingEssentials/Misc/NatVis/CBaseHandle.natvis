@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="CBaseHandle">
+		<DisplayString Condition="m_Index != 0xFFFFFFFF">index {m_Index &amp; 4095}, serial {m_Index >> 12}</DisplayString>
+		<DisplayString Condition="m_Index == 0xFFFFFFFF">{{invalid}}</DisplayString>
+	</Type>
+</AutoVisualizer>

@@ -10,7 +10,7 @@ static bool s_TypeCheckersInit = false;
 static EntityOffset<TFGrenadePipebombType> s_GrenadeTypeOffset;
 static const ClientClass* s_RocketClass;
 
-static ConVar ce_cam_death_anglerate("ce_cam_death_anglesmooth_rate", "0.75", FCVAR_NONE, "Speed of smoothed angles for deathcam.");
+static ConVar ce_cam_death_anglesmooth_rate("ce_cam_death_anglesmooth_rate", "0.75", FCVAR_NONE, "Speed of smoothed angles for deathcam.");
 
 DeathCamera::DeathCamera()
 {
@@ -34,7 +34,7 @@ void DeathCamera::Reset()
 
 void DeathCamera::Update(float dt, uint32_t frame)
 {
-	auto victim = Player::GetPlayer(m_Victim, __FUNCSIG__);
+	auto victim = Player::AsPlayer(m_Victim.Get());
 
 	if (m_ElapsedTime == 0)
 	{
@@ -53,7 +53,7 @@ void DeathCamera::Update(float dt, uint32_t frame)
 		m_ElapsedTime += dt;
 
 	// 3/4 of the way there per second
-	const float rate = ce_cam_death_anglerate.GetFloat() * dt;
+	const float rate = ce_cam_death_anglesmooth_rate.GetFloat() * dt;
 
 	if (m_Projectiles.size()) // Track the averaged origin of the projectiles
 	{
@@ -121,11 +121,7 @@ void DeathCamera::FindProjectiles()
 
 void DeathCamera::UpdateKillerPosition()
 {
-	auto entityList = Interfaces::GetClientEntityList();
-	if (!entityList)
-		return;
-
-	auto ent = entityList->GetClientEntity(m_Killer);
+	auto ent = m_Killer.Get();
 	if (!ent)
 		return;
 

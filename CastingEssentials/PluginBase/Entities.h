@@ -33,8 +33,8 @@ public:
 		return buffer;
 	}
 
-	template<typename TValue> inline static EntityOffset<TValue>
-	GetEntityProp(const ClientClass* cc, const char* propertyString)
+	template<typename TValue> inline static EntityOffset<TValue> GetEntityProp(
+		const ClientClass* cc, const char* propertyString)
 	{
 		auto found = RetrieveClassPropOffset(cc, propertyString);
 		if (found.first < 0)
@@ -42,15 +42,30 @@ public:
 
 		return EntityOffset<TValue>(*found.second, found.first);
 	}
-	template<typename TValue> __forceinline static EntityOffset<TValue>
-	GetEntityProp(IClientNetworkable* entity, const char* propertyString)
+	template<typename TValue> __forceinline static EntityOffset<TValue> GetEntityProp(
+		IClientNetworkable* entity, const char* propertyString)
 	{
 		return GetEntityProp<TValue>((const ClientClass*)(entity->GetClientClass()), propertyString);
 	}
-	template<typename TValue> __forceinline static EntityOffset<TValue>
-	GetEntityProp(const char* clientClassName, const char* propertyString)
+	template<typename TValue> __forceinline static EntityOffset<TValue> GetEntityProp(
+		const char* clientClassName, const char* propertyString)
 	{
 		return GetEntityProp<TValue>(GetClientClass(clientClassName), propertyString);
+	}
+	template<typename TValue> __forceinline static void GetEntityProp(
+		EntityOffset<TValue>& offset, const char* clientClassName, const char* propertyString)
+	{
+		offset = GetEntityProp<TValue>(clientClassName, propertyString);
+	}
+	template<typename TValue> __forceinline static void GetEntityProp(
+		EntityOffset<TValue>& offset, IClientNetworkable* entity, const char* propertyString)
+	{
+		offset = GetEntityProp<TValue>(entity, propertyString);
+	}
+	template<typename TValue> __forceinline static void GetEntityProp(
+		EntityOffset<TValue>& offset, const ClientClass* cc, const char* propertyString)
+	{
+		offset = GetEntityProp<TValue>(cc, propertyString);
 	}
 
 	static EntityTypeChecker GetTypeChecker(const char* type);

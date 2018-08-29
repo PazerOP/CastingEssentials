@@ -96,13 +96,13 @@
     <ClCompile Include="Hooking\ModuleSegments.cpp" />
     <ClCompile Include="Misc\DebugOverlay.cpp" />
     <ClCompile Include="Misc\OffsetChecking.cpp" />
-    <ClCompile Include="Modules\CameraTPLock.cpp" />
     <ClCompile Include="Modules\Camera\CameraStateCallbacks.cpp" />
     <ClCompile Include="Modules\Camera\DeathCamera.cpp" />
     <ClCompile Include="Modules\Camera\FirstPersonCamera.cpp" />
     <ClCompile Include="Modules\Camera\HybridPlayerCameraSmooth.cpp" />
     <ClCompile Include="Modules\Camera\ICamera.cpp" />
     <ClCompile Include="Modules\Camera\OrbitCamera.cpp" />
+    <ClCompile Include="Modules\Camera\PlayerCameraGroup.cpp" />
     <ClCompile Include="Modules\Camera\RoamingCamera.cpp" />
     <ClCompile Include="Modules\Camera\SimpleCameraSmooth.cpp" />
     <ClCompile Include="Modules\Camera\TPLockCamera.cpp" />
@@ -174,16 +174,16 @@
     <ClInclude Include="Misc\Extras\VPlane.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
     <ClInclude Include="Misc\Padding.h" />
-    <ClInclude Include="Modules\CameraTPLock.h" />
-    <ClInclude Include="Modules\Camera\CameraStateDelta.h" />
     <ClInclude Include="Modules\Camera\DeathCamera.h" />
     <ClInclude Include="Modules\Camera\FirstPersonCamera.h" />
     <ClInclude Include="Modules\Camera\HybridPlayerCameraSmooth.h" />
     <ClInclude Include="Modules\Camera\ICamera.h" />
+    <ClInclude Include="Modules\Camera\ICameraGroup.h" />
     <ClInclude Include="Modules\Camera\ICameraSmooth.h" />
     <ClInclude Include="Modules\Camera\CameraStateCallbacks.h" />
     <ClInclude Include="Misc\Interpolators.h" />
     <ClInclude Include="Modules\Camera\OrbitCamera.h" />
+    <ClInclude Include="Modules\Camera\PlayerCameraGroup.h" />
     <ClInclude Include="Modules\Camera\RoamingCamera.h" />
     <ClInclude Include="Modules\Camera\SimpleCameraSmooth.h" />
     <ClInclude Include="Modules\Camera\SimpleCamera.h" />
@@ -237,6 +237,7 @@
     <ClInclude Include="PluginBase\VariablePusher.h" />
   </ItemGroup>
   <ItemGroup>
+    <Natvis Include="Misc\NatVis\CBaseHandle.natvis" />
     <Natvis Include="Misc\NatVis\ClientClass.natvis" />
     <Natvis Include="Misc\NatVis\CUtlVector.natvis" />
     <Natvis Include="Misc\NatVis\RecvProp.natvis" />

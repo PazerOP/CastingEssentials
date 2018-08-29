@@ -222,13 +222,13 @@ void HitEvents::FireGameEvent(IGameEvent* event)
 	if (!localPlayer)
 		return;
 
-	if (auto mode = CameraState::GetLocalObserverMode();
+	if (auto mode = CameraState::GetModule()->GetLocalObserverMode();
 		mode != ObserverMode::OBS_MODE_CHASE && mode != ObserverMode::OBS_MODE_IN_EYE)
 	{
 		return;
 	}
 
-	auto specTarget = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+	auto specTarget = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
 	if (!specTarget || specTarget->GetUserID() != event->GetInt("attacker"))
 		return;
 

@@ -82,6 +82,8 @@ template<class... Parameters> __forceinline void PluginColorMsg(const Color& col
 	ConColorMsg(color, fmt, param...);
 }
 
+__forceinline constexpr const char* FMT_BOOL(bool value) { return value ? "true" : "false"; }
+
 bool TryParseInteger(const char* str, int& out);
 bool TryParseFloat(const char* str, float& out);
 

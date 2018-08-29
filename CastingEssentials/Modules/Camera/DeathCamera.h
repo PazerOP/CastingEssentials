@@ -6,6 +6,7 @@
 #include <vector>
 
 class C_BaseEntity;
+class IClientEntity;
 enum class TFClassType;
 
 class DeathCamera : public ICamera
@@ -17,8 +18,8 @@ public:
 	int GetAttachedEntity() const override { return 0; }
 	const char* GetDebugName() const override { return "DeathCamera"; }
 
-	int m_Victim;
-	int m_Killer = 0;
+	CHandle<IClientEntity> m_Victim;
+	CHandle<IClientEntity> m_Killer;
 
 protected:
 	bool IsCollapsible() const override { return false; }

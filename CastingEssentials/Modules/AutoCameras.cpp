@@ -800,12 +800,12 @@ void AutoCameras::CycleCamera(const CCommand& args)
 		goto Usage;
 
 	// Get current camera origin
-	const Vector camOrigin = CameraState::GetModule()->GetActiveCamera()->GetOrigin();
+	const Vector camOrigin = CameraState::GetModule()->GetCurrentCamera()->GetOrigin();
 	{
 		QAngle dummy;
 		Assert(CameraState::GetModule());
 		if (CameraState::GetModule())
-			CameraState::GetModule()->GetActiveCamera()->GetOrigin();
+			CameraState::GetModule()->GetCurrentCamera()->GetOrigin();
 	}
 
 	// Check if we're already at a camera, in which case we just operate by file (group) order
@@ -914,7 +914,7 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 	}
 
 #if 0
-	if (auto currentMode = CameraState::GetLocalObserverMode(); currentMode != OBS_MODE_CHASE && currentMode != OBS_MODE_IN_EYE)
+	if (auto currentMode = CameraState::GetModule()->GetLocalObserverMode(); currentMode != OBS_MODE_CHASE && currentMode != OBS_MODE_IN_EYE)
 	{
 		PluginWarning("%s: Not currently spectating a player in firstperson or thirdperson\n", args.Arg(0));
 		return;
@@ -936,9 +936,9 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 		return;
 	}
 
-	C_BaseEntity* observeTarget;
+	IClientEntity* observeTarget;
 	{
-		if (auto playerTarget = CameraState::GetLocalObserverTarget())
+		if (auto playerTarget = CameraState::GetModule()->GetLocalObserverTarget())
 			observeTarget = playerTarget->GetBaseEntity();
 		else if (auto lastTarget = camState->GetLastSpecTarget())
 			observeTarget = lastTarget;
@@ -1016,7 +1016,7 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 
 	Assert(bestCamera);
 
-	const auto activeCam = camState->GetActiveCamera();
+	const auto activeCam = camState->GetCurrentCamera();
 	if (bestCamera != m_LastActiveCamera ||
 		!VectorsAreEqual(activeCam->GetOrigin(), m_LastActiveCamera->m_Pos, 25) ||
 		(!bFollow && !QAnglesAreEqual(activeCam->GetAngles(), m_LastActiveCamera->m_DefaultAngle)))

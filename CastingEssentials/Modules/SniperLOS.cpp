@@ -58,7 +58,7 @@ void SniperLOS::LOSRenderer::PostRender()
 	const float beamWidth = GetModule()->ce_sniperlos_width.GetFloat();
 	const auto& beamColorBlue = GetModule()->m_BeamColorBlue;
 	const auto& beamColorRed = GetModule()->m_BeamColorRed;
-	const auto specTarget = CameraState::GetLocalObserverTarget(true);
+	const auto specTarget = CameraState::GetModule()->GetLocalObserverTarget(true);
 
 	for (const auto& player : Player::Iterable())
 	{

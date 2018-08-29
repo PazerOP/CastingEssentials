@@ -33,8 +33,6 @@ MODULE_REGISTER(CameraTools);
 EntityOffset<float> CameraTools::s_ViewOffsetZOffset;
 
 CameraTools::CameraTools() :
-	ce_cameratools_show_mode("ce_cameratools_show_mode", "0", FCVAR_NONE, "Displays the current spec_mode in the top right corner of the screen."),
-
 	ce_cameratools_autodirector_mode("ce_cameratools_autodirector_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.",
 		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceMode(var, pOldValue, flOldValue); }),
 	ce_cameratools_force_target("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.",
@@ -378,12 +376,12 @@ void CameraTools::SpecClass(TFTeam team, TFClassType playerClass, int classIndex
 	// If classIndex was not specified, cycle through the available options
 	if (classIndex < 0)
 	{
-		auto localMode = CameraState::GetLocalObserverMode();
+		auto localMode = CameraState::GetModule()->GetLocalObserverMode();
 		if (localMode == OBS_MODE_FIXED ||
 			localMode == OBS_MODE_IN_EYE ||
 			localMode == OBS_MODE_CHASE)
 		{
-			Player* spectatingPlayer = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+			Player* spectatingPlayer = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
 			int currentIndex = -1;
 			for (int i = 0; i < validPlayersCount; i++)
 			{
@@ -479,7 +477,7 @@ void CameraTools::SmoothTo(const CCommand& cmd)
 		if (cmd.ArgC() < 8 || cmd.ArgC() > 9)
 			break;
 
-		const auto& activeCam = cs->GetActiveCamera();
+		const auto& activeCam = cs->GetCurrentCamera();
 		if (!activeCam)
 		{
 			Warning("%s: No current active camera?\n", cmd[0]);
@@ -527,7 +525,7 @@ void CameraTools::SmoothTo(const CCommand& cmd)
 		}
 
 		newSmooth->ApplySettings();
-		cs->SetActiveCamera(newSmooth);
+		cs->SetCamera(newSmooth);
 
 		return;
 
@@ -544,27 +542,6 @@ void CameraTools::OnTick(bool inGame)
 
 	if (inGame)
 	{
-		if (ce_cameratools_show_mode.GetBool())
-		{
-			auto mode = CameraState::GetLocalObserverMode();
-			auto target = CameraState::GetLocalObserverTarget();
-			auto targetIndex = target ? target->entindex() : 0;
-			const char* playerName;
-
-			if (auto player = Player::AsPlayer(target))
-				playerName = player->GetName();
-			else
-				playerName = "not a player";
-
-			if (mode >= 0)
-			{
-				Interfaces::GetEngineClient()->Con_NPrintf(GetConLine(), "Current spec_mode: %i %s",
-					mode, mode >= 0 && mode < NUM_OBSERVER_MODES ? s_ObserverModes[mode] : "INVALID");
-				Interfaces::GetEngineClient()->Con_NPrintf(GetConLine(), "Current target: %i%s",
-					targetIndex, targetIndex == 0 ? " (none)" : (strprintf(" (%s)", playerName)).c_str());
-			}
-		}
-
 		if (!ce_cameratools_fix_view_heights.GetBool() || !FixViewHeights())
 		{
 			m_OldViewHeight.reset();
@@ -575,10 +552,10 @@ void CameraTools::OnTick(bool inGame)
 
 bool CameraTools::FixViewHeights()
 {
-	if (CameraState::GetLocalObserverMode() != ObserverMode::OBS_MODE_IN_EYE)
+	if (CameraState::GetModule()->GetLocalObserverMode() != ObserverMode::OBS_MODE_IN_EYE)
 		return false;
 
-	auto cameraPlayer = Player::AsPlayer(CameraState::GetLocalObserverTarget());
+	auto cameraPlayer = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
 	if (!cameraPlayer)
 		return false;
 
@@ -872,7 +849,7 @@ void CameraTools::SpecPosition(const CCommand &command)
 	}
 
 	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->GetMode();
-	const auto activeCam = camState->GetActiveCamera();
+	const auto activeCam = camState->GetCurrentCamera();
 
 	// Legacy support, we used to always force OBS_MODE_FIXED
 	if (ParseSpecPosCommand(command, pos, ang, mode, activeCam->GetOrigin(), activeCam->GetAngles(), defaultMode))
@@ -896,7 +873,7 @@ void CameraTools::SpecPositionDelta(const CCommand& command)
 			return;
 		}
 
-		const auto activeCam = camState->GetActiveCamera();
+		const auto activeCam = camState->GetCurrentCamera();
 
 		pos += activeCam->GetOrigin();
 		ang += activeCam->GetAngles();

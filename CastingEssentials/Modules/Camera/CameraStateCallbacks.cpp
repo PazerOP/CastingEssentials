@@ -8,16 +8,21 @@ class CameraStateCallbacksParent : public CameraStateCallbacks
 public:
 	CameraStateCallbacksParent() : CameraStateCallbacks(false) {}
 
-	void SetupCameraState(CamStateData& state) override
+	void SpecModeChanged(ObserverMode oldMode, ObserverMode& newMode) override
 	{
 		for (auto inst : s_CallbackInstances)
-			inst->SetupCameraState(state);
+			inst->SpecModeChanged(oldMode, newMode);
+	}
+	void SpecTargetChanged(IClientEntity* oldEnt, IClientEntity*& newEnt) override
+	{
+		for (auto inst : s_CallbackInstances)
+			inst->SpecTargetChanged(oldEnt, newEnt);
 	}
 
-	void SetupCameraTarget(const CamStateData& state, CameraPtr& newCamera) override
+	void SetupCameraTarget(ObserverMode mode, IClientEntity* target, CameraPtr& newCamera) override
 	{
 		for (auto inst : s_CallbackInstances)
-			inst->SetupCameraTarget(state, newCamera);
+			inst->SetupCameraTarget(mode, target, newCamera);
 	}
 
 	void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera) override
@@ -44,6 +49,12 @@ public:
 		}
 
 		return overridden;
+	}
+
+	void CameraCollapsed(const CameraPtr& previousCam, CameraPtr& newCam) override
+	{
+		for (auto inst : s_CallbackInstances)
+			inst->CameraCollapsed(previousCam, newCam);
 	}
 };
 
