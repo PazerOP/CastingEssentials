@@ -2,6 +2,7 @@
 
 #include "Misc/CCvar.h"
 #include "Misc/CmdAlias.h"
+#include "Misc/SuggestionList.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 
@@ -47,21 +48,24 @@ ConsoleTools::ConsoleTools() :
 		"Removes an existing console filter."),
 	ce_consoletools_filter_list("ce_consoletools_filter_list", [](const CCommand& cmd) { GetModule()->ListFilters(cmd); }, "Lists all console filters."),
 
-	ce_consoletools_flags_add("ce_consoletools_flags_add", [](const CCommand& cmd) { GetModule()->AddFlags(cmd); },
-		"Adds a flag to a cvar.", FCVAR_NONE, FlagModifyAutocomplete),
-	ce_consoletools_flags_remove("ce_consoletools_flags_remove", [](const CCommand& cmd) { GetModule()->RemoveFlags(cmd); },
-		"Removes a flag from a cvar.", FCVAR_NONE, FlagModifyAutocomplete),
+	ce_consoletools_flags_add("ce_consoletools_flags_add", m_AddFlagsCallbacks, "Adds a flag to a cvar.", FCVAR_NONE, m_AddFlagsCallbacks),
+	ce_consoletools_flags_remove("ce_consoletools_flags_remove", m_RemoveFlagsCallbacks, "Removes a flag from a cvar.", FCVAR_NONE, m_RemoveFlagsCallbacks),
 
-	ce_consoletools_limits_set("ce_consoletools_limits_set", SetLimits, "Sets or removes limits for a ConVar.", FCVAR_NONE, SetLimitsAutocomplete),
+	ce_consoletools_limits_set("ce_consoletools_limits_set", m_SetLimitsCallbacks, "Sets or removes limits for a ConVar.", FCVAR_NONE, m_SetLimitsCallbacks),
 
-	ce_consoletools_alias_remove("ce_consoletools_alias_remove", RemoveAlias,
-		"Removes an existing alias created with the \"alias\" command.", FCVAR_NONE, RemoveAliasAutocomplete),
+	ce_consoletools_alias_remove("ce_consoletools_alias_remove", m_RemoveAliasCallbacks,
+		"Removes an existing alias created with the \"alias\" command.", FCVAR_NONE, m_RemoveAliasCallbacks),
 	ce_consoletools_unhide_all_cvars("ce_consoletools_unhide_all_cvars", UnhideAllCvars,
 		"Removes FCVAR_DEVELOPMENTONLY and FCVAR_HIDDEN from all cvars."),
 
 	m_ConsoleColorPrintfHook(std::bind(&ConsoleTools::ConsoleColorPrintfHook, this, std::placeholders::_1, std::placeholders::_2)),
 	m_ConsoleDPrintfHook(std::bind(&ConsoleTools::ConsoleDPrintfHook, this, std::placeholders::_1)),
-	m_ConsolePrintfHook(std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1))
+	m_ConsolePrintfHook(std::bind(&ConsoleTools::ConsolePrintfHook, this, std::placeholders::_1)),
+
+	m_SetLimitsCallbacks(&SetLimits, &SetLimitsAutocomplete),
+	m_AddFlagsCallbacks(&AddFlags, &FlagModifyAutocomplete),
+	m_RemoveFlagsCallbacks(&RemoveFlags, &FlagModifyAutocomplete),
+	m_RemoveAliasCallbacks(&RemoveAlias, &RemoveAliasAutocomplete)
 {
 	m_FilterPaused = false;
 }
@@ -165,21 +169,13 @@ Usage:
 	Warning("Usage: %s <cvar> <minimum/'x' for none/'?' for keep existing> <maximum/'x' for none/'?' for keep existing>\n", command[0]);
 }
 
-int ConsoleTools::SetLimitsAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
+void ConsoleTools::SetLimitsAutocomplete(const CCommand& partial, CUtlVector<CUtlString>& outSuggestions)
 {
-	CCommand partialParsed;
-	partialParsed.Tokenize(partial);
+	if (partial.ArgC() < 1 || partial.ArgC() > 2)
+		return;
 
-	if (partialParsed.ArgC() < 1 || partialParsed.ArgC() > 2)
-		return 0;
-
-	const auto cmdNameLength = strlen(partialParsed[0]);
-	const auto partialCvarLength = partialParsed.ArgC() > 1 ? strlen(partialParsed[1]) : 0;
-
-	bool suggestionsSorted = false;
-	static const auto suggestionsSorter = [](const char* a, const char* b) { return stricmp(a, b) < 0; };
-	size_t suggestionsCount = 0;
-	const char* suggestions[COMMAND_COMPLETION_MAXITEMS];
+	const auto partialCvarLength = strlen(partial[1]);
+	SuggestionList<> suggestions;
 
 	for (const ConCommandBase* cmd = g_pCVar->GetCommands(); cmd; cmd = cmd->GetNext())
 	{
@@ -187,142 +183,45 @@ int ConsoleTools::SetLimitsAutocomplete(const char* partial, char commands[COMMA
 			continue;  // Only care about actual ConVars
 
 		const char* const cmdName = cmd->GetName();
-		if (strnicmp(cmdName, partialParsed[1], partialCvarLength))
+		if (strnicmp(cmdName, partial[1], partialCvarLength))
 			continue;
 
-		if (suggestionsCount < std::size(suggestions))
-		{
-			// We have spare room, don't worry about insertion sorting
-			suggestions[suggestionsCount++] = cmdName;
-		}
-		else	// We're full, need to insertion sort, dropping off the last element
-		{
-			if (!suggestionsSorted)
-			{
-				// If we just finished filling up our array, the next command is going to need to
-				// be insertion sorted. For that to work, we need the array sorted to begin with.
-				std::sort(std::begin(suggestions), std::end(suggestions), suggestionsSorter);
-				suggestionsSorted = true;
-			}
-
-			const auto& upperBound = std::upper_bound(std::begin(suggestions), std::end(suggestions), cmdName, suggestionsSorter);
-			if (upperBound != std::end(suggestions))
-			{
-				// Shift elements afterwards to make room for new entry
-				std::move(upperBound, std::end(suggestions) - 1, upperBound + 1);
-
-				// Insert new entry
-				*upperBound = cmdName;
-			}
-		}
-	}
-
-	// If we only ever encountered <= std::size(suggestions) possible suggestions, our array
-	// will not be sorted. Do it now.
-	if (!suggestionsSorted)
-	{
-		std::sort(std::begin(suggestions), std::begin(suggestions) + suggestionsCount, suggestionsSorter);
-		suggestionsSorted = true;
+		suggestions.insert(cmdName);
 	}
 
 	// Copy suggestions into output array
-	for (size_t i = 0; i < suggestionsCount; i++)
+	suggestions.EnsureSorted();
+	for (const auto& suggestion : suggestions)
 	{
-		strcpy_s(commands[i], partialParsed[0]);
-		commands[i][cmdNameLength] = ' ';
-		commands[i][cmdNameLength + 1] = '\0';
-
-		strncat(commands[i], suggestions[i], COMMAND_COMPLETION_ITEM_LENGTH - (cmdNameLength + 2));
+		char buf[512];
+		const auto length = sprintf_s(buf, "%s %s", partial[0], suggestion);
+		outSuggestions.AddToTail(CUtlString(buf, length));
 	}
-
-	return (int)suggestionsCount;
 }
 
-int ConsoleTools::FlagModifyAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
+void ConsoleTools::FlagModifyAutocomplete(const CCommand& partial, CUtlVector<CUtlString>& outSuggestions)
 {
-	// Save original pointer
-	const char* const flagModifyCmdName = partial;
+	if (partial.ArgC() < 1 || partial.ArgC() > 2)
+		return;
 
-	// Skip any leading whitespace
-	while (*partial && isspace(*partial))
-		partial++;
+	const auto arg1Length = partial.ArgC() > 1 ? strlen(partial[1]) : 0;
 
-	// Determine length of command, including first space
-	while (*partial)
-	{
-		partial++;
-
-		if (isspace(*partial))
-		{
-			partial++;
-			break;
-		}
-	}
-
-	// Record command length
-	const size_t cmdLengthWithSpace = partial - flagModifyCmdName;
-
-	// Skip any extra whitespace between command and first argument
-	while (*partial && isspace(*partial))
-		partial++;
-
-	// Number of characters after command name + 1 whitespace
-	const auto partialLength = strlen(partial);
-
-	bool suggestionsSorted = false;
-	static const auto suggestionsSorter = [](const char* a, const char* b) { return stricmp(a, b) < 0; };
-	size_t suggestionsCount = 0;
-	const char* suggestions[COMMAND_COMPLETION_MAXITEMS];
-
+	SuggestionList<> suggestions;
 	for (const ConCommandBase* cmd = g_pCVar->GetCommands(); cmd; cmd = cmd->GetNext())
 	{
 		const char* const cmdName = cmd->GetName();
-		if (strnicmp(cmdName, partial, partialLength))
-			continue;
-
-		if (suggestionsCount < std::size(suggestions))
-		{
-			// We have spare room, don't worry about insertion sorting
-			suggestions[suggestionsCount++] = cmdName;
-		}
-		else	// We're full, need to insertion sort, dropping off the last element
-		{
-			if (!suggestionsSorted)
-			{
-				// If we just finished filling up our array, the next command is going to need to
-				// be insertion sorted. For that to work, we need the array sorted to begin with.
-				std::sort(std::begin(suggestions), std::end(suggestions), suggestionsSorter);
-				suggestionsSorted = true;
-			}
-
-			const auto& upperBound = std::upper_bound(std::begin(suggestions), std::end(suggestions), cmdName, suggestionsSorter);
-			if (upperBound != std::end(suggestions))
-			{
-				// Shift elements afterwards to make room for new entry
-				std::move(upperBound, std::end(suggestions) - 1, upperBound + 1);
-
-				// Insert new entry
-				*upperBound = cmdName;
-			}
-		}
-	}
-
-	// If we only ever encountered <= std::size(suggestions) possible suggestions, our array
-	// will not be sorted. Do it now.
-	if (!suggestionsSorted)
-	{
-		std::sort(std::begin(suggestions), std::begin(suggestions) + suggestionsCount, suggestionsSorter);
-		suggestionsSorted = true;
+		if (!strnicmp(cmdName, partial[1], arg1Length))
+			suggestions.insert(cmdName);
 	}
 
 	// Copy suggestions into output array
-	for (size_t i = 0; i < suggestionsCount; i++)
+	suggestions.EnsureSorted();
+	for (const auto& suggestion : suggestions)
 	{
-		strncpy_s(commands[i], flagModifyCmdName, cmdLengthWithSpace);
-		strncat(commands[i], suggestions[i], COMMAND_COMPLETION_ITEM_LENGTH - cmdLengthWithSpace - 1);
+		char buf[512];
+		const auto length = sprintf_s(buf, "%s %s", partial[0], suggestion);
+		outSuggestions.AddToTail(CUtlString(buf, length));
 	}
-
-	return (int)suggestionsCount;
 }
 
 void ConsoleTools::ConsoleColorPrintfHook(const Color &clr, const char *message)
@@ -467,56 +366,30 @@ void ConsoleTools::RemoveAlias(const CCommand& command)
 	Warning("%s: Unable to find alias named \"%s\"\n", command[0], command[1]);
 }
 
-int ConsoleTools::RemoveAliasAutocomplete(const char* partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
+void ConsoleTools::RemoveAliasAutocomplete(const CCommand& partial, CUtlVector<CUtlString>& outSuggestions)
 {
-	// Save original pointer
-	const char* const flagModifyCmdName = partial;
-
-	// Skip any leading whitespace
-	while (*partial && isspace(*partial))
-		partial++;
-
-	// Determine length of command, including first space
-	while (*partial)
-	{
-		partial++;
-
-		if (isspace(*partial))
-		{
-			partial++;
-			break;
-		}
-	}
-
-	// Record command length
-	const size_t cmdLengthWithSpace = partial - flagModifyCmdName;
-
-	// Skip any extra whitespace between command and first argument
-	while (*partial && isspace(*partial))
-		partial++;
+	if (partial.ArgC() < 1 || partial.ArgC() > 2)
+		return;
 
 	// Number of characters after command name + 1 whitespace
-	const auto partialLength = strlen(partial);
+	const auto arg1Length = strlen(partial[1]);
 
-	std::vector<const char*> aliases;
+	SuggestionList<> suggestions;
 	for (auto alias = *Interfaces::GetCmdAliases(); alias; alias = alias->next)
 	{
-		if (strnicmp(alias->name, partial, partialLength))
+		if (strnicmp(alias->name, partial[1], arg1Length))
 			continue;
 
-		aliases.push_back(alias->name);
+		suggestions.insert(alias->name);
 	}
 
-	std::sort(aliases.begin(), aliases.end(), [](const char* a, const char* b) { return stricmp(a, b) < 0; });
-
-	const size_t count = std::min<size_t>(COMMAND_COMPLETION_MAXITEMS, aliases.size());
-	for (size_t i = 0; i < count; i++)
+	suggestions.EnsureSorted();
+	for (const auto& suggestion : suggestions)
 	{
-		strncpy_s(commands[i], flagModifyCmdName, cmdLengthWithSpace);
-		strncat(commands[i], aliases[i], COMMAND_COMPLETION_ITEM_LENGTH - cmdLengthWithSpace - 1);
+		char buf[512];
+		const auto length = sprintf_s(buf, "%s %s", partial[0], suggestion);
+		outSuggestions.AddToTail(CUtlString(buf, length));
 	}
-
-	return count;
 }
 
 void ConsoleTools::AddFlags(const CCommand &command)

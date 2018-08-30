@@ -13,6 +13,7 @@
 
 MODULE_REGISTER(ProjectileOutlines);
 
+
 EntityOffset<bool> ProjectileOutlines::s_GlowDisabledOffset;
 EntityOffset<int> ProjectileOutlines::s_GlowModeOffset;
 EntityOffset<EHANDLE> ProjectileOutlines::s_GlowTargetOffset;
@@ -75,6 +76,17 @@ bool ProjectileOutlines::CheckDependencies()
 	s_RocketType = Entities::GetClientClass("CTFProjectile_Rocket");
 
 	return true;
+}
+
+Color ProjectileOutlines::CalcProjectileColor(IClientEntity* baseEntity, IClientEntity* glowEntity) {
+
+	const TFTeam team = Entities::GetEntityTeamSafe(baseEntity);
+	if (team == TFTeam::Blue)
+		return m_ColorBlu;
+	else if (team == TFTeam::Red)
+		return m_ColorRed;
+	else
+		return Color(0, 255, 0, 255);
 }
 
 void ProjectileOutlines::OnTick(bool inGame)
@@ -143,19 +155,20 @@ void ProjectileOutlines::OnTick(bool inGame)
 				Lerp(Interpolators::Smoothstep(RemapValClamped(dist, ce_projectileoutlines_fade_start.GetFloat(), ce_projectileoutlines_fade_end.GetFloat(), 1, 0)), 0, 255) :
 				255;
 
-			Color& glowColor = s_GlowColorOffset.GetValue(glowEntity);
+			auto newColor = CalcProjectileColor(baseEntity, glowEntity);
+			newColor.a() = alpha;
 
-			Color newColor(glowColor.r(), glowColor.g(), glowColor.b(), alpha);
-			if (newColor == glowColor)
+			Color& curColor = s_GlowColorOffset.GetValue(glowEntity);
+			if (newColor == curColor)
 				continue;
 
-			glowColor = newColor;
+			curColor = newColor;
 			glowEntity->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_DATATABLE_CHANGED);
 		}
 	}
 }
 
-CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* projectileEntity)
+void ProjectileOutlines::CreateGlowForEntity(IClientEntity* projectileEntity)
 {
 	C_BaseEntity* ent;
 	{
@@ -169,20 +182,12 @@ CHandle<C_BaseEntity> ProjectileOutlines::CreateGlowForEntity(IClientEntity* pro
 		s_GlowDisabledOffset.GetValue(glowEntity) = false;
 		s_GlowModeOffset.GetValue(glowEntity) = ce_projectileoutlines_mode.GetInt();
 		s_GlowTargetOffset.GetValue(glowEntity).Set(projectileEntity->GetBaseEntity());
-
-		Color& color = s_GlowColorOffset.GetValue(glowEntity);
-		const TFTeam team = Entities::GetEntityTeamSafe(projectileEntity);
-		if (team == TFTeam::Blue)
-			color = m_ColorBlu;
-		else if (team == TFTeam::Red)
-			color = m_ColorRed;
-		else
-			color.SetColor(0, 255, 0, 255);
+		s_GlowColorOffset.GetValue(glowEntity) = CalcProjectileColor(projectileEntity, glowEntity);
 	}
 
 	ent->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_CREATED);
 	ent->PostDataUpdate(DataUpdateType_t::DATA_UPDATE_DATATABLE_CHANGED);
-	return ent;
+	m_GlowEntities.emplace(projectileEntity->GetRefEHandle().ToInt(), ent);
 }
 
 void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
@@ -196,7 +201,7 @@ void ProjectileOutlines::SoldierGlows(IClientEntity* entity)
 	if (entity->GetClientClass() != s_RocketType)
 		return;
 
-	m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
+	CreateGlowForEntity(entity);
 }
 
 void ProjectileOutlines::DemoGlows(IClientEntity* entity)
@@ -214,9 +219,9 @@ void ProjectileOutlines::DemoGlows(IClientEntity* entity)
 		return;
 
 	if (pills && type == TFGrenadePipebombType::Pill)
-		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
+		CreateGlowForEntity(entity);
 	else if (stickies && (type == TFGrenadePipebombType::Sticky || type == TFGrenadePipebombType::StickyJumper))
-		m_GlowEntities.insert(std::make_pair<int, EHANDLE>(entity->GetRefEHandle().ToInt(), CreateGlowForEntity(entity)));
+		CreateGlowForEntity(entity);
 }
 
 bool ProjectileOutlines::InitDetour(C_BaseEntity* pThis, int entnum, int iSerialNum)

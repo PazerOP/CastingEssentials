@@ -131,6 +131,7 @@
     <ClCompile Include="Modules\ProjectileOutlines.cpp" />
     <ClCompile Include="Modules\FreezeInfo.cpp" />
     <ClCompile Include="Modules\SniperLOS.cpp" />
+    <ClCompile Include="Modules\SrcTVPlus.cpp" />
     <ClCompile Include="Modules\SteamTools.cpp" />
     <ClCompile Include="Modules\TeamNames.cpp" />
     <ClCompile Include="Modules\IngameTeamScores.cpp" />
@@ -167,6 +168,7 @@
     <ClInclude Include="Hooking\TemplateTypedefs.h" />
     <ClInclude Include="Misc\CCvar.h" />
     <ClInclude Include="Misc\CmdAlias.h" />
+    <ClInclude Include="Misc\CommandCallbacks.h" />
     <ClInclude Include="Misc\CRefPtrFix.h" />
     <ClInclude Include="Misc\DebugOverlay.h" />
     <ClInclude Include="Misc\Extras\QAngle.h" />
@@ -188,6 +190,7 @@
     <ClInclude Include="Modules\Camera\SimpleCameraSmooth.h" />
     <ClInclude Include="Modules\Camera\SimpleCamera.h" />
     <ClInclude Include="Modules\Camera\TPLockCamera.h" />
+    <ClInclude Include="Misc\SuggestionList.h" />
     <ClInclude Include="Modules\ClientTools.h" />
     <ClInclude Include="Modules\HitEvents.h" />
     <ClInclude Include="Modules\HUDHacking.h" />
@@ -211,6 +214,7 @@
     <ClInclude Include="Modules\PlayerAliases.h" />
     <ClInclude Include="Modules\ProjectileOutlines.h" />
     <ClInclude Include="Modules\SniperLOS.h" />
+    <ClInclude Include="Modules\SrcTVPlus.h" />
     <ClInclude Include="Modules\SteamTools.h" />
     <ClInclude Include="Modules\TeamNames.h" />
     <ClInclude Include="Modules\IngameTeamScores.h" />

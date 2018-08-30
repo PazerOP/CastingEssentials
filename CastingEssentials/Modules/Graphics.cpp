@@ -1,12 +1,14 @@
 #include "Graphics.h"
 #include "Controls/StubPanel.h"
 #include "Misc/CRefPtrFix.h"
+#include "Misc/SuggestionList.h"
 #include "Misc/Extras/VPlane.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Entities.h"
 #include "PluginBase/Player.h"
 #include "PluginBase/TFDefinitions.h"
+#include "Modules/CameraState.h"
 
 #include <bone_setup.h>
 #include <debugoverlay_shared.h>
@@ -49,6 +51,9 @@ Graphics::Graphics() :
 		[](IConVar* var, const char*, float) { GetModule()->ToggleImprovedGlows(static_cast<ConVar*>(var)); }),
 	ce_graphics_fix_invisible_players("ce_graphics_fix_invisible_players", "1", FCVAR_NONE,
 		"Fix a case where players are invisible if you're firstperson speccing them when the round starts."),
+	ce_graphics_fix_viewmodel_particles("ce_graphics_fix_viewmodel_particles", "1", FCVAR_NONE,
+		"Fix a case where particles on view models(e.g. medic beams and unusual effects) disappear right after loading.",
+		[](IConVar* var, const char*, float) { GetModule()->ToggleFixViewmodel(static_cast<ConVar*>(var)); }),
 
 	ce_graphics_fxaa("ce_graphics_fxaa", "0", FCVAR_NONE, "Enables postprocess antialiasing (NVIDIA FXAA 3.11)",
 		[](IConVar* var, const char*, float) { GetModule()->ToggleFXAA(static_cast<ConVar*>(var)); }),
@@ -84,7 +89,8 @@ Graphics::Graphics() :
 	ce_infills_fade_after_hurt_time("ce_infills_fade_after_hurt_time", "2.0", FCVAR_NONE, "How long to fade out infills after taking damage. -1 to disable."),
 	ce_infills_fade_after_hurt_bias("ce_infills_fade_after_hurt_bias", "0.15", FCVAR_NONE, "Bias amount for infill fade outs.", true, 0, true, 1),
 
-	ce_graphics_dump_shader_params("ce_graphics_dump_shader_params", DumpShaderParams, "Prints out all parameters for a given shader.", FCVAR_NONE, DumpShaderParamsAutocomplete),
+	m_ShaderParamsCallbacks(&DumpShaderParams, &DumpShaderParamsAutocomplete),
+	ce_graphics_dump_shader_params("ce_graphics_dump_shader_params", m_ShaderParamsCallbacks, "Prints out all parameters for a given shader.", FCVAR_NONE, m_ShaderParamsCallbacks),
 	ce_graphics_dump_rts("ce_graphics_dump_rts", DumpRTs, "Dump all rendertargets to console."),
 
 	m_PostEffectsHook(std::bind(&Graphics::PostEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5)),
@@ -94,9 +100,13 @@ Graphics::Graphics() :
 
 	m_ApplyEntityGlowEffectsHook(std::bind(&Graphics::ApplyEntityGlowEffectsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9)),
 
-	m_ForcedMaterialOverrideHook(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2))
+	m_ForcedMaterialOverrideHook(std::bind(&Graphics::ForcedMaterialOverrideOverride, this, std::placeholders::_1, std::placeholders::_2)),
+
+	m_PostDataUpdateHook(std::bind(&Graphics::PostDataUpdateOverride, this, std::placeholders::_1, std::placeholders::_2)),
+	m_ShouldDrawLocalPlayerHook(std::bind(&Graphics::ShouldDrawLocalPlayerOverride, this, std::placeholders::_1))
 {
 	ToggleImprovedGlows(&ce_graphics_improved_glows);
+	ToggleFixViewmodel(&ce_graphics_fix_viewmodel_particles);
 }
 
 bool Graphics::IsDefaultParam(const char* paramName)
@@ -120,14 +130,15 @@ bool Graphics::IsDefaultParam(const char* paramName)
 void Graphics::DumpShaderParams(const CCommand& cmd)
 {
 	const auto shaderCount = materials->ShaderCount();
-	IShader** shaderList = (IShader**)stackalloc(shaderCount * sizeof(*shaderList));
-	materials->GetShaders(0, shaderCount, shaderList);
+	std::vector<IShader*> shaderList;
+	shaderList.resize(shaderCount);
+	materials->GetShaders(0, shaderCount, shaderList.data());
 
 	if (cmd.ArgC() < 2)
 	{
 		// Sort shaders alphabetically
-		std::qsort(shaderList, shaderCount, sizeof(*shaderList),
-			[](void const* p1, void const* p2) { return stricmp((*(IShader**)p1)->GetName(), (*(IShader**)p2)->GetName()); });
+		std::sort(shaderList.begin(), shaderList.end(), [](const IShader* p1, const IShader* p2)
+			{ return stricmp(p1->GetName(), p2->GetName()) < 0; });
 
 		Warning("Usage: %s <shader name>\nAvailable shaders:\n", cmd.Arg(0));
 		for (int i = 0; i < shaderCount; i++)
@@ -137,26 +148,22 @@ void Graphics::DumpShaderParams(const CCommand& cmd)
 	}
 
 	// Find the shader
-	for (int i = 0; i < shaderCount; i++)
+	for (const auto& current : shaderList)
 	{
-		auto current = shaderList[i];
 		if (stricmp(current->GetName(), cmd.Arg(1)))
 			continue;
 
 		const auto paramCount = current->GetNumParams();
 
 		// Sort parameters alphabetically
-		int* paramOrder;
+		std::vector<int> paramOrder;
+		paramOrder.reserve(paramCount);
 		{
-			paramOrder = (int*)stackalloc(paramCount * sizeof(*paramOrder));
 			for (int p = 0; p < paramCount; p++)
-				paramOrder[p] = p;
+				paramOrder.push_back(p);
 
-			// Shitty thread safety, whatever, this'll never be re-entrant
-			static thread_local IShader* s_Shader = nullptr;
-			s_Shader = current;
-			std::qsort(paramOrder, paramCount, sizeof(*paramOrder),
-				[](void const* p1, void const* p2) { return stricmp(s_Shader->GetParamName(*(int*)p1), s_Shader->GetParamName(*(int*)p2)); });
+			std::sort(paramOrder.begin(), paramOrder.end(),
+				[current](int p1, int p2) { return stricmp(current->GetParamName(p1), current->GetParamName(p2)) < 0; });
 		}
 
 		for (int p2 = 0; p2 < paramCount; p2++)
@@ -194,71 +201,49 @@ void Graphics::DumpShaderParams(const CCommand& cmd)
 	Warning("No shader found with the name %s\n", cmd.Arg(1));
 }
 
-int Graphics::DumpShaderParamsAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH])
+void Graphics::DumpShaderParamsAutocomplete(const CCommand& partial, CUtlVector<CUtlString>& outSuggestions)
 {
+	if (partial.ArgC() < 1 || partial.ArgC() > 2)
+		return;
+
 	const auto shaderCount = materials->ShaderCount();
 	IShader** shaderList = (IShader**)stackalloc(shaderCount * sizeof(*shaderList));
 	const auto actualShaderCount = materials->GetShaders(0, shaderCount, shaderList);
 
 	Assert(shaderCount == actualShaderCount);
 
-	const char* const cmdName = partial;
+	const auto arg1Length = strlen(partial[1]);
 
-	// Go forward until the second word
-	while (*partial && !isspace(*partial))
-		partial++;
-
-	// Record command length
-	const size_t cmdLength = partial - cmdName;
-
-	while (*partial && isspace(*partial))
-		partial++;
-
-	const auto partialLength = strlen(partial);
-
-	// Sort shaders alphabetically
-	std::qsort(shaderList, shaderCount, sizeof(*shaderList),
-		[](void const* p1, void const* p2) { return stricmp((*(IShader**)p1)->GetName(), (*(IShader**)p2)->GetName()); });
-
-	int outputCount = 0;
-	int outputIndices[COMMAND_COMPLETION_MAXITEMS];
-
-	// Search starting from the beginning of the string
-	for (int i = 0; i < shaderCount; i++)
+	SuggestionList<> suggestionsStart, suggestionsAnywhere;
+	for (auto it = shaderList; it < shaderList + shaderCount; ++it)
 	{
-		const char* shaderName = shaderList[i]->GetName();
-
-		if (strnicmp(partial, shaderName, partialLength))
-			continue;
-
-		snprintf(commands[outputCount], COMMAND_COMPLETION_ITEM_LENGTH, "%.*s %s", cmdLength, cmdName, shaderName);
-		outputIndices[outputCount] = i;
-		outputCount++;
-
-		if (outputCount >= COMMAND_COMPLETION_MAXITEMS)
-			break;
+		const auto name = (*it)->GetName();
+		if (!strnicmp(partial[1], name, arg1Length))
+			suggestionsStart.insert(name);
+		else if (stristr(name, partial[1]))
+			suggestionsAnywhere.insert(name);
 	}
 
-	const auto firstLoopOutputsEnd = std::begin(outputIndices) + outputCount;
+	suggestionsStart.EnsureSorted();
+	suggestionsAnywhere.EnsureSorted();
 
-	// Now search anywhere in the string
-	for (int i = 0; i < shaderCount; i++)
+	auto AddSuggestion = [&partial, &outSuggestions](const char* suggestion)
 	{
-		if (outputCount >= COMMAND_COMPLETION_MAXITEMS)
+		char buf[512];
+		const auto length = sprintf_s(buf, "%s %s", partial[0], suggestion);
+		outSuggestions.AddToTail(CUtlString(buf, length));
+	};
+
+	for (const auto& suggestion : suggestionsStart)
+		AddSuggestion(suggestion);
+
+	for (const auto& suggestion : suggestionsAnywhere)
+	{
+		if (outSuggestions.Count() >= COMMAND_COMPLETION_MAXITEMS)
 			break;
 
-		if (std::find(std::begin(outputIndices), firstLoopOutputsEnd, i) != firstLoopOutputsEnd)
-			continue;
-
-		const char* shaderName = shaderList[i]->GetName();
-		if (!stristr(shaderName, partial))
-			continue;
-
-		snprintf(commands[outputCount], COMMAND_COMPLETION_ITEM_LENGTH, "%.*s %s", cmdLength, cmdName, shaderName);
-		outputCount++;
+		AddSuggestion(suggestion);
 	}
-
-	return outputCount;
 }
 
 void Graphics::DumpRTs(const CCommand& cmd)
@@ -399,6 +384,34 @@ void Graphics::ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_
 	{
 		GetHooks()->SetState<HookFunc::IStudioRender_ForcedMaterialOverride>(Hooking::HookAction::IGNORE);
 	}
+}
+
+void Graphics::ToggleFixViewmodel(const ConVar* var)
+{
+	auto enabled = var->GetBool();
+	m_ShouldDrawLocalPlayerHook.SetEnabled(enabled);
+	m_PostDataUpdateHook.SetEnabled(enabled);
+}
+
+void Graphics::PostDataUpdateOverride(IClientNetworkable* pThis, int updateType)
+{
+	m_PostDataUpdateHook.SetState(Hooking::HookAction::SUPERCEDE);
+	auto weapon = static_cast<C_BaseEntity*>(pThis);
+	const auto localOwnerOverride = CreateVariablePusher(m_LocalOwner, weapon ? weapon->GetOwnerEntity() : nullptr);
+	m_PostDataUpdateHook.GetOriginal()(pThis, updateType);
+}
+
+bool Graphics::ShouldDrawLocalPlayerOverride(C_BasePlayer * pThis)
+{
+	if (!m_LocalOwner) return false;
+
+	m_ShouldDrawLocalPlayerHook.SetState(Hooking::HookAction::SUPERCEDE);
+	auto ret = m_ShouldDrawLocalPlayerHook.GetOriginal()(pThis);
+	if (!ret && CameraState::GetModule()->GetLocalObserverMode() == OBS_MODE_IN_EYE) {
+		auto specTarget = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
+		if (specTarget && m_LocalOwner == specTarget->GetEntity()) return true;
+	}
+	return ret;
 }
 
 Graphics::ExtraGlowData* Graphics::FindExtraGlowData(int entindex)

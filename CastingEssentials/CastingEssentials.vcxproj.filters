@@ -204,6 +204,9 @@
     <ClCompile Include="Modules\Camera\PlayerCameraGroup.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Modules\SrcTVPlus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PluginBase\Plugin.h">
@@ -404,6 +407,7 @@
     <ClInclude Include="PluginBase\PlayerStateBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+<<<<<<< HEAD
     <ClInclude Include="Modules\Camera\ICamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -456,6 +460,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Modules\Camera\PlayerCameraGroup.h">
+=======
+    <ClInclude Include="Misc\CommandCallbacks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Misc\SuggestionList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Modules\SrcTVPlus.h">
+>>>>>>> origin/master
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Misc/CommandCallbacks.h"
 #include "Misc/CRefPtrFix.h"
 #include "PluginBase/EntityOffset.h"
 #include "PluginBase/Hook.h"
@@ -40,6 +41,7 @@ private:
 	ConVar ce_graphics_glow_silhouettes;
 	ConVar ce_graphics_improved_glows;
 	ConVar ce_graphics_fix_invisible_players;
+	ConVar ce_graphics_fix_viewmodel_particles;
 
 	ConVar ce_graphics_fxaa;
 	ConVar ce_graphics_fxaa_debug;
@@ -76,8 +78,9 @@ private:
 	ConCommand ce_graphics_dump_rts;
 
 	static bool IsDefaultParam(const char* paramName);
+	CommandCallbacks m_ShaderParamsCallbacks;
 	static void DumpShaderParams(const CCommand& cmd);
-	static int DumpShaderParamsAutocomplete(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);
+	static void DumpShaderParamsAutocomplete(const CCommand& partial, CUtlVector<CUtlString>& outSuggestions);
 
 	static void DumpRTs(const CCommand& cmd);
 
@@ -98,6 +101,13 @@ private:
 
 	Hook<HookFunc::IStudioRender_ForcedMaterialOverride> m_ForcedMaterialOverrideHook;
 	void ForcedMaterialOverrideOverride(IMaterial* material, OverrideType_t overrideType);
+
+	Hook<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer> m_ShouldDrawLocalPlayerHook;
+	Hook<HookFunc::C_TFWeaponBase_PostDataUpdate> m_PostDataUpdateHook;
+	C_BaseEntity* m_LocalOwner{ nullptr };
+	void ToggleFixViewmodel(const ConVar* var);
+	void PostDataUpdateOverride(IClientNetworkable* pThis, int updateType);
+	bool ShouldDrawLocalPlayerOverride(C_BasePlayer* pThis);
 
 	void DrawGlowAlways(int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;
 	void DrawGlowOccluded(int nSplitScreenSlot, CMatRenderContextPtr& pRenderContext) const;
