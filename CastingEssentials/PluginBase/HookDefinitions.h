@@ -9,6 +9,8 @@
 
 class C_BaseCombatCharacter;
 class C_BasePlayer;
+class C_BaseViewModel;
+class C_EconEntity;
 class C_HLTVCamera;
 class C_TFViewModel;
 class C_TFWeaponBase;
@@ -84,6 +86,8 @@ enum class HookFunc
 	C_BaseAnimating_InternalDrawModel,
 	C_BaseAnimating_LockStudioHdr,
 
+	C_BaseCombatWeapon_DrawModel,
+
 	C_BaseEntity_Init,
 	C_BaseEntity_CalcAbsolutePosition,
 
@@ -92,6 +96,14 @@ enum class HookFunc
 	C_BasePlayer_GetLocalPlayer,
 	C_BasePlayer_ShouldDrawLocalPlayer,
 
+	C_BaseViewModel_DrawModel,
+	C_BaseViewModel_InternalDrawModel,
+	C_BaseViewModel_SetWeaponModel,
+
+	C_EconEntity_DrawOverriddenViewmodel,
+	C_EconEntity_IsOverridingViewmodel,
+	C_EconEntity_UpdateAttachmentModels,
+
 	C_HLTVCamera_CalcView,
 	C_HLTVCamera_SetCameraAngle,
 	C_HLTVCamera_SetMode,
@@ -99,9 +111,12 @@ enum class HookFunc
 
 	C_TFPlayer_CalcView,
 	C_TFPlayer_DrawModel,
+	C_TFPlayer_DrawOverriddenViewmodel,
 	C_TFPlayer_GetEntityForLoadoutSlot,
 
 	C_TFViewModel_CalcViewModelView,
+	C_TFViewModel_DrawModel,
+	C_TFViewModel_OnPostInternalDrawModel,
 
 	C_TFWeaponBase_PostDataUpdate,
 
@@ -133,6 +148,7 @@ enum class HookFunc
 	Global_Cmd_Shutdown,
 	Global_CreateEntityByName,
 	Global_CreateTFGlowObject,
+	Global_DrawEconEntityAttachedModels,
 	Global_DrawOpaqueRenderable,
 	Global_DrawTranslucentRenderable,
 	Global_GetLocalPlayerIndex,
@@ -314,6 +330,11 @@ protected:
 		typedef void(__thiscall *Raw)(C_BaseAnimating*);
 		typedef GlobalClassHook<HookFunc::C_BaseAnimating_LockStudioHdr, false, C_BaseAnimating, void> Hook;
 	};
+	template<> struct HookFuncType<HookFunc::C_BaseCombatWeapon_DrawModel>
+	{
+		typedef int(__thiscall* Raw)(C_BaseCombatWeapon* pThis, int flags);
+		typedef GlobalClassHook<HookFunc::C_BaseCombatWeapon_DrawModel, false, C_BaseCombatWeapon, int, int> Hook;
+	};
 	template<> struct HookFuncType<HookFunc::C_BaseAnimating_GetBonePosition>
 	{
 		typedef void(__thiscall *Raw)(C_BaseAnimating*, int, Vector&, QAngle&);
@@ -361,6 +382,36 @@ protected:
 		typedef bool(__thiscall *Raw)(C_BasePlayer* pThis);
 		typedef GlobalClassHook<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer, false, C_BasePlayer, bool> Hook;
 	};
+	template<> struct HookFuncType<HookFunc::C_BaseViewModel_DrawModel>
+	{
+		typedef int(__thiscall* Raw)(C_BaseViewModel* pThis, int flags);
+		typedef GlobalClassHook<HookFunc::C_BaseViewModel_DrawModel, false, C_BaseViewModel, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseViewModel_InternalDrawModel>
+	{
+		typedef int(__thiscall* Raw)(C_BaseViewModel* pThis, int flags);
+		typedef GlobalClassHook<HookFunc::C_BaseViewModel_InternalDrawModel, false, C_BaseViewModel, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_BaseViewModel_SetWeaponModel>
+	{
+		typedef void(__thiscall* Raw)(C_BaseViewModel* pThis, const char* modelName, C_BaseCombatWeapon* weapon);
+		typedef GlobalClassHook<HookFunc::C_BaseViewModel_SetWeaponModel, false, C_BaseViewModel, void, const char*, C_BaseCombatWeapon*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_EconEntity_DrawOverriddenViewmodel>
+	{
+		typedef int(__thiscall* Raw)(C_EconEntity* pThis, C_BaseViewModel* viewmodel, int flags);
+		typedef GlobalClassHook<HookFunc::C_EconEntity_DrawOverriddenViewmodel, false, C_EconEntity, int, C_BaseViewModel*, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_EconEntity_IsOverridingViewmodel>
+	{
+		typedef bool(__thiscall* Raw)(C_EconEntity* pThis);
+		typedef GlobalClassHook<HookFunc::C_EconEntity_IsOverridingViewmodel, false, C_EconEntity, bool> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_EconEntity_UpdateAttachmentModels>
+	{
+		typedef int(__thiscall* Raw)(C_EconEntity* pThis);
+		typedef GlobalClassHook<HookFunc::C_EconEntity_UpdateAttachmentModels, false, C_EconEntity, int> Hook;
+	};
 	template<> struct HookFuncType<HookFunc::C_TFPlayer_CalcView>
 	{
 		typedef void(__thiscall* Raw)(C_TFPlayer* pThis, Vector& eyeOrigin, QAngle& eyeAngles, float& zNear, float& zFar, float& fov);
@@ -371,6 +422,11 @@ protected:
 		typedef int(__thiscall *Raw)(C_TFPlayer*, int);
 		typedef GlobalClassHook<HookFunc::C_TFPlayer_DrawModel, false, C_TFPlayer, int, int> Hook;
 	};
+	template<> struct HookFuncType<HookFunc::C_TFPlayer_DrawOverriddenViewmodel>
+	{
+		typedef int(__thiscall* Raw)(C_TFPlayer* pThis, C_BaseViewModel* pViewmodel, int flags);
+		typedef GlobalClassHook<HookFunc::C_TFPlayer_DrawOverriddenViewmodel, false, C_TFPlayer, int, C_BaseViewModel*, int> Hook;
+	};
 	template<> struct HookFuncType<HookFunc::C_TFPlayer_GetEntityForLoadoutSlot>
 	{
 		typedef C_BaseEntity*(__thiscall *Raw)(C_TFPlayer* pThis, int slot, bool includeWearables);
@@ -379,6 +435,16 @@ protected:
 	{
 		typedef void(__thiscall *Raw)(C_TFViewModel* pThis, C_BasePlayer* player, const Vector& eyePos, const QAngle& eyeAng);
 		typedef GlobalClassHook<HookFunc::C_TFViewModel_CalcViewModelView, false, C_TFViewModel, void, C_BasePlayer*, const Vector&, const QAngle&> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_TFViewModel_DrawModel>
+	{
+		typedef int(__thiscall* Raw)(C_TFViewModel* pThis, int flags);
+		typedef GlobalClassHook<HookFunc::C_TFViewModel_DrawModel, false, C_TFViewModel, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_TFViewModel_OnPostInternalDrawModel>
+	{
+		typedef bool(__thiscall* Raw)(C_TFViewModel* pThis, ClientModelRenderInfo_t* info);
+		typedef GlobalClassHook<HookFunc::C_TFViewModel_OnPostInternalDrawModel, false, C_TFViewModel, bool, ClientModelRenderInfo_t*> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::C_TFWeaponBase_PostDataUpdate>
 	{
@@ -473,6 +539,11 @@ protected:
 	{
 		typedef IClientNetworkable*(__cdecl *Raw)(int entNum, int serialNum);
 		typedef GlobalHook<HookFunc::Global_CreateTFGlowObject, false, IClientNetworkable*, int, int> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::Global_DrawEconEntityAttachedModels>
+	{
+		typedef void(__cdecl* Raw)(C_BaseAnimating* pBase, C_EconEntity* pModels, ClientModelRenderInfo_t const* info, int mode);
+		typedef GlobalHook<HookFunc::Global_DrawEconEntityAttachedModels, false, void, C_BaseAnimating*, C_EconEntity*, ClientModelRenderInfo_t const*, int> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::Global_UserInfoChangedCallback>
 	{

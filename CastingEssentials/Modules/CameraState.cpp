@@ -34,6 +34,7 @@ static IVEngineClient* s_EngineClient;
 static EntityOffset<ObserverMode> s_PlayerObserverModeOffset;
 static EntityOffset<EHANDLE> s_PlayerObserverTargetOffset;
 static EntityOffset<CHandle<C_BaseViewModel>[2]> s_PlayerViewModelsOffset;
+static EntityOffset<CHandle<C_BaseCombatCharacter>> s_WeaponOwnerOffset;
 
 MODULE_REGISTER(CameraState);
 
@@ -74,9 +75,17 @@ CameraState::CameraState() :
 	m_CalcViewPlayerHook(std::bind(&CameraState::CalcViewPlayerOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)),
 	m_CalcViewHLTVHook(std::bind(&CameraState::CalcViewHLTVOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
 
-	//m_InToolModeHook(std::bind(&CameraState::InToolModeOverride, this)),
-	//m_IsThirdPersonCameraHook(std::bind(&CameraState::IsThirdPersonCameraOverride, this)),
-	//m_SetupEngineViewHook(std::bind(&CameraState::SetupEngineViewOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)),
+	m_OnPostInternalDrawViewmodelHook(std::bind(&CameraState::OnPostInternalDrawViewmodelOverride, this, std::placeholders::_1, std::placeholders::_2), true),
+	m_DrawEconEntityAttachedModelsHook(std::bind(&CameraState::DrawEconEntityAttachedModelsOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4), true),
+	m_DrawViewmodelHook(std::bind(&CameraState::DrawViewmodelOverride, this, std::placeholders::_1, std::placeholders::_2), true),
+	m_DrawBaseViewmodelHook(std::bind(&CameraState::DrawBaseViewmodelOverride, this, std::placeholders::_1, std::placeholders::_2), true),
+	m_InternalDrawBaseViewmodelHook(std::bind(&CameraState::InternalDrawBaseViewmodelHook, this, std::placeholders::_1, std::placeholders::_2), true),
+	m_DrawBaseAnimatingHook(std::bind(&CameraState::DrawBaseAnimatingOverride, this, std::placeholders::_1, std::placeholders::_2), true),
+	m_PlayerDrawOverriddenViewmodelHook(std::bind(&CameraState::PlayerDrawOverriddenViewmodelOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), true),
+	m_EconDrawViewmodelHook(std::bind(&CameraState::EconDrawViewmodelOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), true),
+	m_EconIsOverridingViewmodelHook(std::bind(&CameraState::EconIsOverridingViewmodelOverride, this, std::placeholders::_1), true),
+	m_UpdateAttachmentModelsHook(std::bind(&CameraState::UpdateAttachmentModelsOverride, this, std::placeholders::_1), true),
+	m_DrawWeaponHook(std::bind(&CameraState::DrawWeaponOverride, this, std::placeholders::_1, std::placeholders::_2), true),
 
 	m_CreateMoveHook(std::bind(&CameraState::CreateMoveOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
 
@@ -105,6 +114,7 @@ bool CameraState::CheckDependencies()
 	Entities::GetEntityProp(s_PlayerObserverModeOffset, "CBasePlayer", "m_iObserverMode");
 	Entities::GetEntityProp(s_PlayerObserverTargetOffset, "CBasePlayer", "m_hObserverTarget");
 	Entities::GetEntityProp(s_PlayerViewModelsOffset, "CTFPlayer", "m_hViewModel[0]");
+	Entities::GetEntityProp(s_WeaponOwnerOffset, "CBaseCombatWeapon", "m_hOwner");
 
 	return true;
 }
@@ -205,76 +215,7 @@ void CameraState::SetCameraGroupSmoothed(const CameraGroupPtr& group)
 	m_LastCameraGroupCamera = newCam;
 }
 
-void CameraState::ClearCameras()
-{
-	SetCamera(nullptr);
-}
-
-bool CameraState::InToolModeOverride()
-{
-	if (!GetCurrentCamera())
-		return false;
-
-	//m_InToolModeHook.SetState(Hooking::HookAction::SUPERCEDE);
-	return true;
-}
-
-bool CameraState::IsThirdPersonCameraOverride()
-{
-	const auto& cam = GetCurrentCamera();
-	if (!cam || cam->GetCameraType() == CameraType::FirstPerson)
-		return false;
-
-	//m_IsThirdPersonCameraHook.SetState(Hooking::HookAction::SUPERCEDE);
-	return true;
-}
-
-bool CameraState::SetupEngineViewOverride(Vector& origin, QAngle& angles, float& fov)
-{
-	UpdateFromCameraGroup();
-
-	Assert(m_ActiveCamera);
-	if (!m_ActiveCamera)
-		return false;
-
-	auto& callbacks = CameraStateCallbacks::GetCallbacksParent();
-
-	m_ActiveCamera->TryUpdate(s_EngineTool->ClientFrameTime(), s_EngineTool->HostFrameCount());
-
-	if (m_ActiveCamera->IsCollapsible())
-	{
-		auto prevCamera = m_ActiveCamera;
-		auto newCamera = prevCamera;
-		if (ICamera::TryCollapse(newCamera))
-		{
-			callbacks.CameraCollapsed(prevCamera, newCamera);
-			SetCamera(newCamera);
-		}
-	}
-
-	origin = m_ActiveCamera->GetOrigin();
-	angles = m_ActiveCamera->GetAngles();
-	fov = m_ActiveCamera->GetFOV();
-
-	Assert(origin.IsValid());
-	Assert(angles.IsValid());
-	Assert(std::isfinite(fov));
-
-	const auto mode = GetLocalObserverMode();
-	auto playerTarget = Player::AsPlayer(GetLocalObserverTarget());
-	if (playerTarget)
-	{
-		if (auto basePlayer = playerTarget->GetBasePlayer())
-			basePlayer->CalcViewModelView(origin, angles);
-	}
-
-	//UpdateGameState(playerTarget, GetLocalObserverMode(), origin, angles, fov);
-
-	//m_SetupEngineViewHook.SetState(Hooking::HookAction::SUPERCEDE);
-	return true;
-}
-
-static const char* IsDrawing(C_BaseEntity* ent)
+static const char* IsDrawing(C_BaseAnimating* ent)
 {
 	if (ent->IsEFlagSet(EF_NODRAW))
 		return "EF_NODRAW";
@@ -287,6 +228,21 @@ static const char* IsDrawing(C_BaseEntity* ent)
 
 	if (!ent->m_bReadyToDraw)
 		return "Not ready to draw";
+
+	if (!ent->GetModelPtr())
+		return "No model pointer";
+
+	if (!ent->GetModelIndex())
+		return "No model index";
+
+	if (!ent->GetModel())
+		return "No model_t";
+
+	if (!ent->GetModelInstance())
+		return "No model instance";
+
+	if (ent->IsDynamicModelLoading())
+		return "Dynamic model loading";
 
 	return "true";
 }
@@ -329,6 +285,15 @@ bool CameraState::CalcView(Vector& origin, QAngle& angles, float& fov)
 
 void CameraState::UpdateViewmodels()
 {
+	// These are junk and/or uninteresting to us
+	static const RecvTable* excludeTables[] =
+	{
+		Entities::FindRecvTable("DT_AttributeList"),
+		Entities::FindRecvTable("DT_CollisionProperty"),
+		Entities::FindRecvTable("DT_EconEntity"),
+		Entities::FindRecvTable("m_flPoseParameter"),
+	};
+
 	const auto mode = GetLocalObserverMode();
 	auto localPlayer = Player::GetLocalPlayer();
 	if (auto playerTarget = Player::AsPlayer(GetLocalObserverTarget()))
@@ -343,6 +308,8 @@ void CameraState::UpdateViewmodels()
 				auto vmEnt = vm.Get();
 				if (!vmEnt)
 					continue;
+
+				Assert(vmEnt->IsViewModel());
 
 				con_nprint_s info(0, -1);
 				engine->Con_NXPrintf(GetConLine(info), "");
@@ -363,44 +330,38 @@ void CameraState::UpdateViewmodels()
 				//vmEnt->UpdateVisibility();
 				//bool isnodraw2 = IsDrawing(vmEnt);
 
-				engine->Con_NXPrintf(GetConLine(info), "Viewmodel: %i (%s, %s), drawing? %s",
-					vmEnt->entindex(), cc->GetName(), FirstNotNull(minfo->GetModelName(vmEnt->GetModel()), "(null)"), IsDrawing(vmEnt));
+				engine->Con_NXPrintf(GetConLine(info), "Viewmodel: %i (%s, %s), drawing? %s (%i)",
+					vmEnt->entindex(), cc->GetName(), FirstNotNull(minfo->GetModelName(vmEnt->GetModel()), "(null)"),
+					IsDrawing(vmEnt), m_LastDrawViewmodelResult);
 
-				static const RecvTable* excludeTables[] =
+				if (auto owningWep = vmEnt->GetOwningWeapon())
 				{
-					Entities::FindRecvTable("DT_AttributeList"),
-					Entities::FindRecvTable("DT_CollisionProperty"),
-					Entities::FindRecvTable("DT_EconEntity"),
-					Entities::FindRecvTable("m_flPoseParameter"),
-				};
+					engine->Con_NXPrintf(GetConLine(info), "Owning weapon: %i (%s, %s), drawing? %s",
+						owningWep->entindex(), owningWep->GetClientClass()->GetName(),
+						FirstNotNull(minfo->GetModelName(owningWep->GetModel()), "(null)"), IsDrawing(owningWep));
+				}
 
 				//for (const auto& prop : EntityOffsetIterable<int>(cc->m_pRecvTable, std::begin(excludeTables), std::end(excludeTables)))
 				//	engine->Con_NXPrintf(GetConLine(info), "%s: %i", prop.first.c_str(), prop.second.GetValue(vmEnt));
-
-				engine->Con_NXPrintf(GetConLine(info), "m_flAnimTime: %1.2f", vmEnt->m_flAnimTime);
-				engine->Con_NXPrintf(GetConLine(info), "cycle: %1.3f", vmEnt->GetCycle());
-				engine->Con_NXPrintf(GetConLine(info), "is client created?: %s", FMT_BOOL(vmEnt->IsClientCreated()));
-				engine->Con_NXPrintf(GetConLine(info), "sequence cycle rate: %1.2f", vmEnt->GetSequenceCycleRate(vmEnt->GetModelPtr(), vmEnt->GetSequence()));
-				engine->Con_NXPrintf(GetConLine(info), "is sequence looping?: %s", FMT_BOOL(vmEnt->GetSequence()));
-				engine->Con_NXPrintf(GetConLine(info), "is predictable: %s", FMT_BOOL(vmEnt->GetPredictable()));
 
 				engine->Con_NXPrintf(GetConLine(info), "");
 
 				if (auto wep = vmEnt->GetWeapon())
 				{
+					m_DrawViewmodelEntity = vmEnt->entindex();
+					m_DrawWeaponEntity = wep->entindex();
+
+					//static_assert(false, "TODO: only call this when we absolutely need to.");
+					wep->UpdateAttachmentModels();
+
 					auto ccWep = wep->GetClientClass();
 					auto isdrawing = IsDrawing(wep);
 					//wep->UpdateVisibility();
 					//isnodraw2 = IsDrawing(wep);
 
-					engine->Con_NXPrintf(GetConLine(info), "Weapon: %i (%s, %s), drawing? %s",
-						wep->entindex(), ccWep->GetName(), FirstNotNull(minfo->GetModelName(wep->GetModel()), "(null)"), isdrawing);
-					engine->Con_NXPrintf(GetConLine(info), "sequence: %i", wep->GetSequence());
-					engine->Con_NXPrintf(GetConLine(info), "moveparent: %i", wep->GetMoveParent() ? wep->GetMoveParent()->entindex() : -1);
-					engine->Con_NXPrintf(GetConLine(info), "is bonemerge: %s", FMT_BOOL(wep->IsEffectActive(EF_BONEMERGE)));
-
-					//engine->Con_NXPrintf(GetConLine(info), "origin: %1.2f %1.2f %1.2f", XYZ(wep->GetAbsOrigin()));
-					//engine->Con_NXPrintf(GetConLine(info), "render origin: %1.2f %1.2f %1.2f", XYZ(wep->GetRenderOrigin()));
+					engine->Con_NXPrintf(GetConLine(info), "Weapon: %i (%s, %s), drawing? %s (%i, %i)",
+						wep->entindex(), ccWep->GetName(), FirstNotNull(minfo->GetModelName(wep->GetModel()), "(null)"),
+						isdrawing, m_LastDrawWeaponResult, m_LastDrawBaseAnimatingResult);
 
 					//for (const auto& prop : EntityOffsetIterable<int>(ccWep->m_pRecvTable, std::begin(excludeTables), std::end(excludeTables)))
 					//	engine->Con_NXPrintf(GetConLine(info), "%s: %i", prop.first.c_str(), prop.second.GetValue(wep));
@@ -412,7 +373,155 @@ void CameraState::UpdateViewmodels()
 	}
 }
 
+class C_TFViewModel : public C_BaseViewModel {};
 class C_TFPlayer : public C_BasePlayer {};
+
+static constexpr Color ENTER(128, 255, 128);
+static constexpr Color EXIT(255, 128, 128);
+
+static bool s_InDrawViewmodel = false;
+int CameraState::DrawViewmodelOverride(C_TFViewModel* pThis, int flags)
+{
+	if (!(flags & STUDIO_RENDER))
+		return 0;
+
+	m_DrawViewmodelHook.SetState(Hooking::HookAction::SUPERCEDE);
+
+	auto hack = reinterpret_cast<C_TFViewModel*>(((int*)pThis) - 1);
+	auto cc = hack->GetClientClass();
+	auto minfo = Interfaces::GetModelInfoClient();
+
+	Con_Printf(ENTER, "C_TFViewModel::DrawModel - %i (%s, %s)", hack->entindex(), cc->GetName(), minfo->GetModelName(hack->GetModel()));
+	auto pusher = CreateVariablePusher(s_InDrawViewmodel, true);
+	auto retVal = m_DrawViewmodelHook.GetOriginal()(pThis, flags);
+	Con_Printf(EXIT, "C_TFViewModel::DrawModel");
+
+	return retVal;
+}
+
+int CameraState::DrawBaseViewmodelOverride(C_BaseViewModel* pThis, int flags)
+{
+	if (!(flags & STUDIO_RENDER))
+		return 0;
+
+	m_DrawBaseViewmodelHook.SetState(Hooking::HookAction::SUPERCEDE);
+
+	auto hack = reinterpret_cast<C_BaseViewModel*>(((int*)pThis) - 1);
+	auto cc = hack->GetClientClass();
+	auto minfo = Interfaces::GetModelInfoClient();
+
+	Con_Printf(ENTER, "C_BaseViewModel::DrawModel - %i (%s, %s)", hack->entindex(), cc->GetName(), minfo->GetModelName(hack->GetModel()));
+	m_LastDrawViewmodelResult = m_DrawBaseViewmodelHook.GetOriginal()(pThis, flags);
+	Con_Printf(EXIT, "C_BaseViewModel::DrawModel");
+
+	return m_LastDrawViewmodelResult;
+}
+
+int CameraState::InternalDrawBaseViewmodelHook(C_BaseViewModel* pThis, int flags)
+{
+	if (!(flags & STUDIO_RENDER))
+		return 0;
+
+	m_InternalDrawBaseViewmodelHook.SetState(Hooking::HookAction::SUPERCEDE);
+
+	auto hack = pThis;//reinterpret_cast<C_BaseAnimating*>(((int*)pThis) - 1);
+	auto cc = hack->GetClientClass();
+	auto minfo = Interfaces::GetModelInfoClient();
+
+	Con_Printf(ENTER, "C_BaseViewModel::InternalDrawModel - %i (%s, %s)", hack->entindex(), cc->GetName(), minfo->GetModelName(hack->GetModel()));
+	auto retVal = m_InternalDrawBaseViewmodelHook.GetOriginal()(pThis, flags);
+	Con_Printf(EXIT, "C_BaseViewModel::InternalDrawModel");
+
+	return retVal;
+}
+
+int CameraState::DrawBaseAnimatingOverride(C_BaseAnimating* pThis, int flags)
+{
+	if (!(flags & STUDIO_RENDER))
+		return 0;
+
+	auto hack = reinterpret_cast<C_BaseAnimating*>(((int*)pThis) - 1);
+	auto cc = hack->GetClientClass();
+	auto minfo = Interfaces::GetModelInfoClient();
+
+	/*if (hack->entindex() == m_DrawViewmodelEntity)
+	{
+		//m_DrawViewmodelHook.SetState(Hooking::HookAction::SUPERCEDE);
+		auto pusher = CreateVariablePusher(s_InDrawViewmodel, true);
+		m_DrawBaseAnimatingHook.SetState(Hooking::HookAction::SUPERCEDE);
+		return m_DrawBaseAnimatingHook.GetOriginal()(pThis, flags);
+	}
+	else*/ if (s_InDrawViewmodel)
+	{
+		//Con_Printf("C_BaseAnimating::DrawModel: %i (%s, %s)", hack->entindex(), cc->GetName(), minfo->GetModelName(hack->GetModel()));
+		m_DrawBaseAnimatingHook.SetState(Hooking::HookAction::SUPERCEDE);
+		Con_Printf(ENTER, "C_BaseAnimating::DrawModel - %i (%s, %s)", hack->entindex(), cc->GetName(), minfo->GetModelName(hack->GetModel()));
+		m_LastDrawBaseAnimatingResult = m_DrawBaseAnimatingHook.GetOriginal()(pThis, flags);
+		Con_Printf(EXIT, "C_BaseAnimating::DrawModel");
+		return m_LastDrawBaseAnimatingResult;
+	}
+
+	return 0;
+}
+
+void CameraState::DrawEconEntityAttachedModelsOverride(C_BaseAnimating* pBase, C_EconEntity* pModels, ClientModelRenderInfo_t const* info, int mode)
+{
+	m_DrawEconEntityAttachedModelsHook.SetState(Hooking::HookAction::SUPERCEDE);
+	return;
+}
+
+bool CameraState::OnPostInternalDrawViewmodelOverride(C_TFViewModel* pThis, ClientModelRenderInfo_t* info)
+{
+	m_OnPostInternalDrawViewmodelHook.SetState(Hooking::HookAction::SUPERCEDE);
+	return 0;
+}
+
+int CameraState::PlayerDrawOverriddenViewmodelOverride(C_TFPlayer* pThis, C_BaseViewModel* viewmodel, int flags)
+{
+	m_PlayerDrawOverriddenViewmodelHook.SetState(Hooking::HookAction::SUPERCEDE);
+	return 0;
+}
+
+int CameraState::EconDrawViewmodelOverride(C_EconEntity* pThis, C_BaseViewModel* viewmodel, int flags)
+{
+	//m_EconDrawViewmodelHook.SetState(Hooking::HookAction::SUPERCEDE);
+	return 0;
+}
+
+bool CameraState::EconIsOverridingViewmodelOverride(C_EconEntity* pThis)
+{
+	//m_EconIsOverridingViewmodelHook.SetState(Hooking::HookAction::SUPERCEDE);
+	return false;
+
+	auto ent = pThis->m_Something.Get();
+	auto ccEnt = ent ? ent->GetClientClass() : nullptr;
+	auto outer = pThis->m_AttributeManager.m_hOuter.Get();
+	auto outerCC = outer ? outer->GetClientClass() : nullptr;
+	auto teamNum = pThis->GetTeamNumber();
+
+	auto original = m_EconIsOverridingViewmodelHook.GetOriginal()(pThis);
+	return false;
+}
+
+bool CameraState::UpdateAttachmentModelsOverride(C_EconEntity* pThis)
+{
+	auto entindex = pThis->entindex();
+	if (entindex != m_DrawWeaponEntity && entindex != m_DrawViewmodelEntity)
+		return false;
+
+	m_UpdateAttachmentModelsHook.SetState(Hooking::HookAction::SUPERCEDE);
+	Msg("C_EconEntity::UpdateAttachmentModels() @ %i on %s (%i)\n", s_EngineTool->HostFrameCount(),
+		pThis->GetClientClass()->GetName(), entindex);
+
+	auto retVal = m_UpdateAttachmentModelsHook.GetOriginal()(pThis);
+	return retVal;
+}
+
+int CameraState::DrawWeaponOverride(C_BaseCombatWeapon* pThis, int flags)
+{
+	m_DrawWeaponHook.SetState(Hooking::HookAction::SUPERCEDE);
+	return 0;
+}
 
 void CameraState::CalcViewPlayerOverride(C_TFPlayer* pThis, Vector& origin, QAngle& angles, float& zNear, float& zFar, float& fov)
 {

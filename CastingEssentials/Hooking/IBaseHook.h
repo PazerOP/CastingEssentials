@@ -22,8 +22,10 @@ namespace Hooking
 	{
 		extern constexpr int MFI_GetVTblOffset(void* mfp);
 	}
-	template<class F> static constexpr int VTableOffset(F func)
+	template<class F> static int VTableOffset(F func)
 	{
+		static_assert(std::is_member_function_pointer_v<F>);
+
 		union
 		{
 			F p;

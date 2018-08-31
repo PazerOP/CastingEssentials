@@ -138,6 +138,7 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::Global_Cmd_Shutdown>("\xA1????\x85\xC0\x74\x2F", "x????xxxx", 0, "engine");
 	FindFunc<HookFunc::Global_CreateEntityByName>("\x55\x8B\xEC\xE8????\xFF\x75\x08\x8B\xC8\x8B\x10\xFF??\x85\xC0\x75\x13\xFF\x75\x08\x68????\xFF?????\x83\xC4\x08\x33\xC0\x5D\xC3", "xxxx????xxxxxxxx??xxxxxxxx????x?????xxxxxxx");
 	FindFunc<HookFunc::Global_CreateTFGlowObject>("\x55\x8B\xEC\x57\x68????\xE8????\x8B\xF8\x83\xC4\x04\x85\xFF\x74\x5F\x56\x8B\xCF\xE8????\xFF\x75\x0C\xC7\x07", "xxxxx????x????xxxxxxxxxxxxx????xxxxx");
+	FindFunc<HookFunc::Global_DrawEconEntityAttachedModels>("\x55\x8B\xEC\x81\xEC????\x83\x7D\x08\x00\x0F\x84", "xxxxx????xxxxxx");
 	FindFunc<HookFunc::Global_DrawOpaqueRenderable>("\x55\x8B\xEC\x83\xEC\x20\x8B\x0D????\x53\x56\x33\xF6", "xxxxxxxx????xxxx");
 	FindFunc<HookFunc::Global_DrawTranslucentRenderable>("\x55\x8B\xEC\x83\xEC\x0C\x53\x8B\x5D\x08\x8B\xCB\x8B\x03\xFF\x50\x34", "xxxxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::Global_GetLocalPlayerIndex>("\xE8????\x85\xC0\x74\x08\x8D\x48\x08\x8B\x01\xFF\x60\x24\x33\xC0\xC3", "x????xxxxxxxxxxxxxxx");
@@ -157,12 +158,22 @@ void HookManager::InitRawFunctionsList()
 	FindFunc<HookFunc::C_BaseAnimating_InternalDrawModel>("\x55\x8B\xEC\x81\xEC????\x53\x56\x57\x8B\xF9\xC6\x45\xFF\x00\x8B\x87", "xxxxx????xxxxxxxxxxx");
 	FindFunc<HookFunc::C_BaseAnimating_LockStudioHdr>("\x55\x8B\xEC\x83\xEC\x20\x56\x57\x6A\x01\x68????\x8B\xF1", "xxxxxxxxxxx????xx");
 
+	FindFunc<HookFunc::C_BaseCombatWeapon_DrawModel>("\x55\x8B\xEC\x83\xEC\x14\x53\x56\x57\x8B\xF9\x33\xF6\x8B\x0D", "xxxxxxxxxxxxxxx");
+
 	FindFunc<HookFunc::C_BaseEntity_Init>("\x55\x8B\xEC\x8B\x45\x08\x56\xFF\x75\x0C\x8B\xF1\x8D\x4E\x04", "xxxxxxxxxxxxxxx");
 	FindFunc<HookFunc::C_BaseEntity_CalcAbsolutePosition>("\x55\x8B\xEC\x81\xEC????\x80\x3D?????\x53\x8B\xD9\x0F\x84", "xxxxx????xx?????xxxxx");
 
 	FindFunc<HookFunc::C_BasePlayer_GetDefaultFOV>("\x57\x8B\xF9\x8B\x07\xFF\x90????\x83\xF8\x04", "xxxxxxx????xxx");
 	FindFunc<HookFunc::C_BasePlayer_GetFOV>("\x55\x8B\xEC\x83\xEC\x10\x56\x8B\xF1\x8B\x0D????\x8B\x01", "xxxxxxxxxxx????xx");
 	FindFunc<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer>("\x56\x57\x8B\x3D????\x8B\xF1\x3B\xFE\x74\x3F\x85\xFF\x0F\x84\xA5\x00\x00\x00\x8B\x07\x8B\xCF\xFF\x90\xC8\x03\x00\x00\x83\xF8\x04\x0F\x85\x92\x00\x00\x00", "xxxx????xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+
+	FindFunc<HookFunc::C_BaseViewModel_DrawModel>("\x55\x8B\xEC\x83\xEC\x10\x57\x8B\xF9\x80\xBF?????\x75\x09", "xxxxxxxxxxx?????xx");
+	FindFunc<HookFunc::C_BaseViewModel_InternalDrawModel>("\x55\x8B\xEC\x56\x57\x8B\xF9\x8B\x0D????\x8B\x01\xFF\x90????\x8B\xF0\x85\xF6\x74\x07\x8B\x06\x8B\xCE\xFF\x50\x08\x8B\x97", "xxxxxxxxx????xxxx????xxxxxxxxxxxxxxx");
+	FindFunc<HookFunc::C_BaseViewModel_SetWeaponModel>("\x55\x8B\xEC\x56\x8B\xF1\x8B\x4D\x0C\x85\xC9\x74\x09", "xxxxxxxxxxxxx");
+
+	FindFunc<HookFunc::C_EconEntity_DrawOverriddenViewmodel>("\x55\x8B\xEC\x83\xEC\x0C\x53\x56\x8B\xF1\x57\x8B\x8E????\x83\xF9\xFF\x74\x61", "xxxxxxxxxxxxx????xxxxx");
+	FindFunc<HookFunc::C_EconEntity_IsOverridingViewmodel>("\x56\x8B\xF1\x8B\x06\xFF\x90????\x85\xC0\x78\x26", "xxxxxxx????xxxx");
+	FindFunc<HookFunc::C_EconEntity_UpdateAttachmentModels>("\x55\x8B\xEC\x83\xEC\x1C\x53\x8B\xD9\x8B\x83", "xxxxxxxxxxx");
 
 	FindFunc<HookFunc::C_HLTVCamera_CalcView>("\x55\x8B\xEC\x51\x53\x56\x8B\xF1\x80\x7E\x50\x00", "xxxxxxxxxxxx");
 	FindFunc<HookFunc::C_HLTVCamera_SetCameraAngle>("\x55\x8B\xEC\x8B\x45\x08\x56\x8B\xF1\x8D\x56\x00\xD9\x00\xD9\x1A\xD9\x40\x00\xD9\x5A\x00\xD9\x40\x00\x52", "xxxxxxxxxxx?xxxxxx?xx?xx?x");
@@ -171,7 +182,11 @@ void HookManager::InitRawFunctionsList()
 
 	FindFunc<HookFunc::C_TFPlayer_CalcView>("\x55\x8B\xEC\x56\x8B\xF1\xE8????\xFF\x75\x18", "xxxxxxx????xxx");
 	FindFunc<HookFunc::C_TFPlayer_DrawModel>("\x55\x8B\xEC\x51\x57\x8B\xF9\x80\x7F\x54\x17", "xxxxxxxxxxx");
+	FindFunc<HookFunc::C_TFPlayer_DrawOverriddenViewmodel>("\x55\x8B\xEC\x56\x57\x8B\xF9\xE8????\x8B\xF0\x85\xF6\x74\x53", "xxxxxxxx????xxxxxx");
 	FindFunc<HookFunc::C_TFPlayer_GetEntityForLoadoutSlot>("\x55\x8B\xEC\x51\x53\x8B\x5D\x08\x57\x8B\xF9\x89\x7D\xFC\x83\xFB\x07", "xxxxxxxxxxxxxxxxx");
+
+	FindFunc<HookFunc::C_TFViewModel_DrawModel>("\x55\x8B\xEC\x53\x57\x8B\xD9\xE8????\x80\xBB", "xxxxxxxx????xx");
+	FindFunc<HookFunc::C_TFViewModel_OnPostInternalDrawModel>("\x55\x8B\xEC\x56\xFF\x75\x08\x8B\xF1\xE8????\x84\xC0\x75\x05\x5E\x5D\xC2\x04\x00\x8B\x06", "xxxxxxxxxx????xxxxxxxxxxx");
 
 	FindFunc<HookFunc::C_TFWeaponBase_PostDataUpdate>("\x55\x8B\xEC\x53\x56\x57\x8B\xF9\x8D\x4F\xF8\xE8\x60\x55\xB9\xFF\x8B\xF0\x85\xF6\x74\x10\x8B\x06\x8B\xCE\x8B\x80\x0C\x02\x00\x00\xFF\xD0\x84\xC0\x75\x02", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
@@ -212,6 +227,8 @@ template<HookFunc fn> void HookManager::FindFunc(const char* signature, const ch
 {
 	auto result = SignatureScan(module, signature, mask, offset);
 	AssertMsg(result, "Failed to find function!");
+
+	Assert(!s_RawFunctions[(int)fn]);
 	s_RawFunctions[(int)fn] = (void*)result;
 }
 
@@ -274,11 +291,27 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::C_BaseAnimating_DoInternalDrawModel>();
 	InitGlobalHook<HookFunc::C_BaseAnimating_DrawModel>();
 	InitGlobalHook<HookFunc::C_BaseAnimating_InternalDrawModel>();
+
+	InitGlobalHook<HookFunc::C_BaseCombatWeapon_DrawModel>();
+
 	InitGlobalHook<HookFunc::C_BasePlayer_GetDefaultFOV>();
 	InitGlobalHook<HookFunc::C_BasePlayer_ShouldDrawLocalPlayer>();
 
+	InitGlobalHook<HookFunc::C_BaseViewModel_DrawModel>();
+	InitGlobalHook<HookFunc::C_BaseViewModel_InternalDrawModel>();
+	InitGlobalHook<HookFunc::C_BaseViewModel_SetWeaponModel>();
+
+	InitGlobalHook<HookFunc::C_EconEntity_DrawOverriddenViewmodel>();
+	InitGlobalHook<HookFunc::C_EconEntity_IsOverridingViewmodel>();
+	InitGlobalHook<HookFunc::C_EconEntity_UpdateAttachmentModels>();
+
 	InitGlobalHook<HookFunc::C_TFPlayer_CalcView>();
 	InitGlobalHook<HookFunc::C_TFPlayer_DrawModel>();
+	InitGlobalHook<HookFunc::C_TFPlayer_DrawOverriddenViewmodel>();
+
+	InitGlobalHook<HookFunc::C_TFViewModel_DrawModel>();
+	InitGlobalHook<HookFunc::C_TFViewModel_OnPostInternalDrawModel>();
+
 	InitGlobalHook<HookFunc::C_TFWeaponBase_PostDataUpdate>();
 
 	InitGlobalHook<HookFunc::C_BaseEntity_Init>();
@@ -299,6 +332,7 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::CVTFTexture_ReadHeader>();
 
 	InitGlobalHook<HookFunc::Global_CreateEntityByName>();
+	InitGlobalHook<HookFunc::Global_DrawEconEntityAttachedModels>();
 	InitGlobalHook<HookFunc::Global_DrawOpaqueRenderable>();
 	InitGlobalHook<HookFunc::Global_DrawTranslucentRenderable>();
 	InitGlobalHook<HookFunc::Global_GetLocalPlayerIndex>();

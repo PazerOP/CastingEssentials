@@ -167,6 +167,21 @@ extern Vector GetViewOrigin();
 extern int GetConLine();
 extern struct con_nprint_s* GetConLine(con_nprint_s& data);
 
+// Single-frame Con_NPrintf with automatic line selection.
+template<typename... Args> void Con_Printf(const char* fmt, const Args&... args)
+{
+	con_nprint_s info(0, -1);
+	engine->Con_NXPrintf(GetConLine(info), fmt, args...);
+}
+template<typename... Args> void Con_Printf(const Color& color, const char* fmt, const Args&... args)
+{
+	con_nprint_s info(0, -1);
+	info.color[0] = color[0] / 255.0f;
+	info.color[1] = color[1] / 255.0f;
+	info.color[2] = color[2] / 255.0f;
+	engine->Con_NXPrintf(GetConLine(info), fmt, args...);
+}
+
 extern std::string KeyValuesDumpAsString(KeyValues* kv, int indentLevel = 0);
 
 Vector ApproachVector(const Vector& from, const Vector& to, float speed);

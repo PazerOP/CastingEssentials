@@ -12,6 +12,7 @@
 #include <engine/ivmodelinfo.h>
 #include <model_types.h>
 #include <networkvar.h>
+#include <shared/basecombatweapon_shared.h>
 #include <steam/steamclientpublic.h>
 #include <util_shared.h>
 
@@ -491,4 +492,9 @@ int CStudioHdr::GetNumSeq() const
 mstudioseqdesc_t& CStudioHdr::pSeqdesc(int iSequence)
 {
 	return HookManager::GetRawFunc<HookFunc::CStudioHdr_pSeqdesc>()(this, iSequence);
+}
+
+CBaseCombatCharacter *CBaseCombatWeapon::GetOwner() const
+{
+	return ToBaseCombatCharacter(m_hOwner.Get());
 }
