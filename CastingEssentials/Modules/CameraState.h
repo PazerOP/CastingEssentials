@@ -68,45 +68,10 @@ private:
 	void SetupHooks(bool connect);
 
 	bool CalcView(Vector& origin, QAngle& angles, float& fov);
-	void UpdateViewmodels();
 
-	Hook<HookFunc::C_TFViewModel_DrawModel> m_DrawViewmodelHook;
-	int DrawViewmodelOverride(C_TFViewModel* pThis, int flags);
-	int m_LastDrawViewmodelResult = 0;
-	int m_DrawViewmodelEntity;
-
-	Hook<HookFunc::C_BaseViewModel_DrawModel> m_DrawBaseViewmodelHook;
-	int DrawBaseViewmodelOverride(C_BaseViewModel* pThis, int flags);
-
-	Hook<HookFunc::C_BaseViewModel_InternalDrawModel> m_InternalDrawBaseViewmodelHook;
-	int InternalDrawBaseViewmodelHook(C_BaseViewModel* pThis, int flags);
-
-	Hook<HookFunc::C_TFViewModel_OnPostInternalDrawModel> m_OnPostInternalDrawViewmodelHook;
-	bool OnPostInternalDrawViewmodelOverride(C_TFViewModel* pThis, ClientModelRenderInfo_t* info);
-
-	Hook<HookFunc::Global_DrawEconEntityAttachedModels> m_DrawEconEntityAttachedModelsHook;
-	void DrawEconEntityAttachedModelsOverride(C_BaseAnimating* pBase, C_EconEntity* pModels, ClientModelRenderInfo_t const* info, int mode);
-
-	Hook<HookFunc::C_BaseAnimating_DrawModel> m_DrawBaseAnimatingHook;
-	int DrawBaseAnimatingOverride(C_BaseAnimating* pThis, int flags);
-	int m_LastDrawBaseAnimatingResult = 0;
-
-	Hook<HookFunc::C_TFPlayer_DrawOverriddenViewmodel> m_PlayerDrawOverriddenViewmodelHook;
-	int PlayerDrawOverriddenViewmodelOverride(C_TFPlayer* pThis, C_BaseViewModel* viewmodel, int flags);
-
-	Hook<HookFunc::C_EconEntity_DrawOverriddenViewmodel> m_EconDrawViewmodelHook;
-	int EconDrawViewmodelOverride(C_EconEntity* pThis, C_BaseViewModel* viewmodel, int flags);
-
-	Hook<HookFunc::C_EconEntity_IsOverridingViewmodel> m_EconIsOverridingViewmodelHook;
-	bool EconIsOverridingViewmodelOverride(C_EconEntity* pThis);
-
-	Hook<HookFunc::C_EconEntity_UpdateAttachmentModels> m_UpdateAttachmentModelsHook;
-	bool UpdateAttachmentModelsOverride(C_EconEntity* pThis);
-
-	Hook<HookFunc::C_BaseCombatWeapon_DrawModel> m_DrawWeaponHook;
-	int DrawWeaponOverride(C_BaseCombatWeapon* pThis, int flags);
-	int m_LastDrawWeaponResult = 0;
-	int m_DrawWeaponEntity;
+	void UpdateViewModels();
+	ObserverMode m_AttachmentModelsLastMode;
+	IHandleEntity* m_AttachmentModelsLastPlayer;
 
 	Hook<HookFunc::C_TFPlayer_CalcView> m_CalcViewPlayerHook;
 	void CalcViewPlayerOverride(C_TFPlayer* pThis, Vector& eyeOrigin, QAngle& eyeAngles, float& zNear, float& zFar, float &fov);

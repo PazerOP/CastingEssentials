@@ -212,10 +212,10 @@ public:
 
 		// C_EconEntity
 		{
-			Check(207, &C_EconEntity::ShouldShowToolTip);
-			Check(210, &C_EconEntity::UpdateAttachmentModels);
-			Check(213, &C_EconEntity::IsOverridingViewmodel);
-			Check(214, &C_EconEntity::DrawOverriddenViewmodel);
+			Check(206, &C_EconEntity::ShouldShowToolTip);
+			Check(209, &C_EconEntity::UpdateAttachmentModels);
+			Check(212, &C_EconEntity::IsOverridingViewmodel);
+			Check(213, &C_EconEntity::DrawOverriddenViewmodel);
 		}
 
 		// C_BasePlayer
