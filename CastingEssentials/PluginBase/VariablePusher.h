@@ -19,6 +19,7 @@ public:
 		m_Variable = std::move(other.m_Variable);
 		other.m_Variable = nullptr;
 		m_OldValue = std::move(other.m_OldValue);
+		return *this;
 	}
 	VariablePusher(T& variable, const T& newValue) : m_Variable(&variable)
 	{
