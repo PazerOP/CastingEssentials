@@ -16,6 +16,8 @@ public:
 	AutoCameras();
 	static constexpr __forceinline const char* GetModuleName() { return "AutoCameras"; }
 
+	static bool CheckDependencies();
+
 	void OnTick(bool ingame) override;
 
 private:
@@ -64,11 +66,12 @@ private:
 	ConVar ce_autocamera_spec_player_los;
 	ConVar ce_autocamera_spec_player_debug;
 	void SpecPlayer(const CCommand& args);
+	ObserverMode GetSpecPlayerFallback() const;
 	float ScoreSpecPlayerCamera(const Camera& camera, const Vector& position, const IHandleEntity* targetEnt = nullptr) const;
 
 	ConCommand ce_autocamera_goto;
 	ConVar ce_autocamera_goto_mode;
-	void GotoCamera(const Camera& camera);
+	void GotoCamera(const Camera& camera) { GotoCamera(camera, (ObserverMode)ce_autocamera_goto_mode.GetInt()); }
 	void GotoCamera(const Camera& camera, ObserverMode mode);
 	void GotoCamera(const CCommand& args);
 	static int GotoCameraCompletion(const char *partial, char commands[COMMAND_COMPLETION_MAXITEMS][COMMAND_COMPLETION_ITEM_LENGTH]);

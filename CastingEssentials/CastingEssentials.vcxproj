@@ -101,6 +101,7 @@
     <ClCompile Include="Modules\Camera\FirstPersonCamera.cpp" />
     <ClCompile Include="Modules\Camera\HybridPlayerCameraSmooth.cpp" />
     <ClCompile Include="Modules\Camera\ICamera.cpp" />
+    <ClCompile Include="Modules\Camera\LookatCamera.cpp" />
     <ClCompile Include="Modules\Camera\OrbitCamera.cpp" />
     <ClCompile Include="Modules\Camera\PlayerCameraGroup.cpp" />
     <ClCompile Include="Modules\Camera\RoamingCamera.cpp" />
@@ -117,7 +118,6 @@
     <ClCompile Include="Modules\CameraState.cpp" />
     <ClCompile Include="Modules\CameraTools.cpp" />
     <ClCompile Include="Modules\ConsoleTools.cpp" />
-    <ClCompile Include="Modules\FOVOverride.cpp" />
     <ClCompile Include="Modules\Graphics.cpp" />
     <ClCompile Include="Modules\ItemSchema.cpp" />
     <ClCompile Include="Modules\Killfeed.cpp" />
@@ -184,11 +184,13 @@
     <ClInclude Include="Modules\Camera\ICameraSmooth.h" />
     <ClInclude Include="Modules\Camera\CameraStateCallbacks.h" />
     <ClInclude Include="Misc\Interpolators.h" />
+    <ClInclude Include="Modules\Camera\LookatCamera.h" />
     <ClInclude Include="Modules\Camera\OrbitCamera.h" />
     <ClInclude Include="Modules\Camera\PlayerCameraGroup.h" />
     <ClInclude Include="Modules\Camera\RoamingCamera.h" />
     <ClInclude Include="Modules\Camera\SimpleCameraSmooth.h" />
     <ClInclude Include="Modules\Camera\SimpleCamera.h" />
+    <ClInclude Include="Modules\Camera\SmoothSettings.h" />
     <ClInclude Include="Modules\Camera\TPLockCamera.h" />
     <ClInclude Include="Misc\SuggestionList.h" />
     <ClInclude Include="Modules\ClientTools.h" />
@@ -200,7 +202,6 @@
     <ClInclude Include="Modules\CameraSmooths.h" />
     <ClInclude Include="Modules\CameraTools.h" />
     <ClInclude Include="Modules\ConsoleTools.h" />
-    <ClInclude Include="Modules\FOVOverride.h" />
     <ClInclude Include="Modules\FreezeInfo.h" />
     <ClInclude Include="Modules\Graphics.h" />
     <ClInclude Include="Modules\ItemSchema.h" />

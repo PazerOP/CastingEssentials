@@ -11,7 +11,25 @@
 #include <vgui/IScheme.h>
 #include <vgui_controls/Controls.h>
 
+#include <algorithm>
+#include <cctype>
 #include <regex>
+
+std::string_view::const_iterator stristr(const std::string_view& searchThis, const std::string_view& forThis)
+{
+	// https://stackoverflow.com/a/19839371/871842
+	return std::search(searchThis.begin(), searchThis.end(), forThis.begin(), forThis.end(),
+		[](char a, char b) { return std::toupper(a) == std::toupper(b); });
+}
+
+const char* stristr(const char* searchThis, const char* forThis)
+{
+	const std::string_view searchThisSV(searchThis);
+	if (auto found = stristr(searchThisSV, forThis); found != searchThisSV.end())
+		return &*found;
+
+	return nullptr;
+}
 
 std::string RenderSteamID(const CSteamID& id)
 {

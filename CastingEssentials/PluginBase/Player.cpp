@@ -208,7 +208,7 @@ const char* Player::GetName() const
 	if (IsValid())
 		return GetPlayerInfo().name;
 
-	return nullptr;
+	return __FUNCSIG__ ": [UNKNOWN]";
 }
 
 const char* Player::GetName(int entIndex)
@@ -217,7 +217,7 @@ const char* Player::GetName(int entIndex)
 	if (player)
 		return player->GetName();
 
-	return nullptr;
+	return __FUNCSIG__ ": [UNKNOWN]";
 }
 
 TFClassType Player::GetClass() const

@@ -25,7 +25,9 @@ private:
 	FirstPersonCamera m_FirstPersonCam;
 	TPLockCamera m_TPLockCam;
 	TPLockCamera m_TPLockTauntCam;
-	std::optional<DeathCamera> m_DeathCam;
+	DeathCamera m_DeathCam;
+
+	float m_DeathCameraCreateTime;
 
 	CHandle<IClientEntity> m_PlayerEnt;
 };

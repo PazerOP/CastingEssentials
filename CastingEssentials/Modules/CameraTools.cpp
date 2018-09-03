@@ -4,7 +4,6 @@
 #include "Modules/Camera/SimpleCameraSmooth.h"
 #include "Modules/CameraSmooths.h"
 #include "Modules/CameraState.h"
-#include "Modules/FOVOverride.h"
 #include "PluginBase/Entities.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
@@ -30,17 +29,13 @@
 
 MODULE_REGISTER(CameraTools);
 
-EntityOffset<float> CameraTools::s_ViewOffsetZOffset;
+static IClientEntityList* s_ClientEntityList;
+static IVEngineClient* s_EngineClient;
 
 CameraTools::CameraTools() :
-	ce_cameratools_autodirector_mode("ce_cameratools_autodirector_mode", "0", FCVAR_NONE, "Forces the camera mode to this value.",
-		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceMode(var, pOldValue, flOldValue); }),
-	ce_cameratools_force_target("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index.",
-		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ChangeForceTarget(var, pOldValue, flOldValue); }),
-	ce_cameratools_force_valid_target("ce_cameratools_force_valid_target", "0", FCVAR_NONE, "Forces the camera to only have valid targets.",
-		[](IConVar* var, const char* pOldValue, float flOldValue) { GetModule()->ToggleForceValidTarget(var, pOldValue, flOldValue); }),
-	ce_cameratools_spec_player_alive("ce_cameratools_spec_player_alive", "1", FCVAR_NONE, "Prevents spectating dead players."),
-	ce_cameratools_fix_view_heights("ce_cameratools_fix_view_heights", "0", FCVAR_NONE, "Corrects HLTV view height to match that of spectated classes."),
+	ce_cameratools_autodirector_mode("ce_cameratools_autodirector_mode", "0", FCVAR_NONE,
+		"Forces the camera mode to this value while spec_autodirector is enabled. 0 = don't force anything"),
+	ce_cameratools_force_target("ce_cameratools_force_target", "-1", FCVAR_NONE, "Forces the camera target to this player index."),
 	ce_cameratools_disable_view_punches("ce_cameratools_disable_view_punches", "0", FCVAR_NONE,
 		"Disables all view punches (used for recoil effects on some weapons)",
 		[](IConVar* var, const char*, float) { GetModule()->ToggleDisableViewPunches(static_cast<ConVar*>(var)); }),
@@ -60,7 +55,7 @@ CameraTools::CameraTools() :
 
 	ce_cameratools_smoothto("ce_cameratools_smoothto", &SmoothTo,
 		"Interpolates between the current camera and a given target: "
-		"\"ce_cameratools_smoothto <x> <y> <z> <pitch> <yaw> <roll> <duration> [smooth mode]\"\n"
+		"\"ce_cameratools_smoothto <x> <y> <z> <pitch> <yaw> <roll> [duration] [smooth mode] [force]\"\n"
 		"\tSmooth mode can be either linear or smoothstep, default linear."),
 
 	ce_cameratools_show_users("ce_cameratools_show_users", [](const CCommand& args) { GetModule()->ShowUsers(args); },
@@ -72,134 +67,45 @@ bool CameraTools::CheckDependencies()
 {
 	Modules().Depend<CameraState>();
 
-	bool ready = true;
-
-	if (!Interfaces::GetEngineTool())
-	{
-		PluginWarning("Required interface IEngineTool for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	if (!g_pFullFileSystem)
-	{
-		PluginWarning("Required interface IFileSystem for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	try
-	{
-		GetHooks()->GetRawFunc<HookFunc::C_HLTVCamera_SetCameraAngle>();
-	}
-	catch (bad_pointer)
-	{
-		PluginWarning("Required function C_HLTVCamera::SetCameraAngle for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	try
-	{
-		GetHooks()->GetRawFunc<HookFunc::C_HLTVCamera_SetMode>();
-	}
-	catch (bad_pointer)
-	{
-		PluginWarning("Required function C_HLTVCamera::SetMode for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	try
-	{
-		GetHooks()->GetRawFunc<HookFunc::C_HLTVCamera_SetPrimaryTarget>();
-	}
-	catch (bad_pointer)
-	{
-		PluginWarning("Required function C_HLTVCamera::SetPrimaryTarget for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	if (!g_pVGuiPanel)
-	{
-		PluginWarning("Required interface vgui::IPanel for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
-
-	if (!g_pVGuiSchemeManager)
-	{
-		PluginWarning("Required interface vgui::ISchemeManager for module %s not available!\n", GetModuleName());
-		ready = false;
-	}
+	if (!CheckDependency(Interfaces::GetClientEntityList(), s_ClientEntityList))
+		return false;
+	if (!CheckDependency(Interfaces::GetEngineClient(), s_EngineClient))
+		return false;
 
 	if (!Player::CheckDependencies())
 	{
 		PluginWarning("Required player helper class for module %s not available!\n", GetModuleName());
-		ready = false;
+		return false;
 	}
 
-	try
-	{
-		Interfaces::GetClientMode();
-	}
-	catch (bad_pointer)
-	{
-		PluginWarning("Module %s requires IClientMode, which cannot be verified at this time!\n", GetModuleName());
-	}
-
-	try
-	{
-		Interfaces::GetHLTVCamera();
-	}
-	catch (bad_pointer)
-	{
-		PluginWarning("Module %s requires C_HLTVCamera, which cannot be verified at this time!\n", GetModuleName());
-	}
-
-	s_ViewOffsetZOffset = Entities::GetEntityProp<float>("CTFPlayer", "m_vecViewOffset[2]");
-
-	return ready;
+	return true;
 }
 
 void CameraTools::SpecPosition(const Vector& pos, const QAngle& angle, ObserverMode mode, float fov)
 {
-	if (Interfaces::GetEngineClient()->IsHLTV())
+	if (mode == OBS_MODE_FIXED)
 	{
-		try
-		{
-			HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
+		auto cam = std::make_shared<SimpleCamera>();
+		cam->m_Origin = pos;
+		cam->m_Angles = angle;
+		cam->m_FOV = fov == INFINITY ? 90 : fov;
+		cam->m_Type = CameraType::Fixed;
 
-			hltvcamera->SetMode(mode);
-			Assert(!"FIXME");
-			//m_SwitchReason = ModeSwitchReason::SpecPosition;
+		CameraState::GetModule()->SetCamera(cam);
+	}
+	else if (mode == OBS_MODE_ROAMING)
+	{
+		auto cam = std::make_shared<RoamingCamera>();
+		cam->SetPosition(pos, angle);
 
-			hltvcamera->m_iCameraMan = 0;
-			hltvcamera->m_vCamOrigin = pos;
-			hltvcamera->m_aCamAngle = angle;
-			hltvcamera->m_iTraget1 = 0;
-			hltvcamera->m_iTraget2 = 0;
-			hltvcamera->m_flLastAngleUpdateTime = -1;
+		if (fov != INFINITY)
+			cam->SetFOV(fov);
 
-			if (fov > 0)
-				hltvcamera->m_flFOV = fov;
-
-			// We may have to set angles directly
-			if (mode == OBS_MODE_ROAMING)
-			{
-				QAngle wtf(angle);	// Why does this take a non-const reference
-				Interfaces::GetEngineClient()->SetViewAngles(wtf);
-			}
-
-			hltvcamera->SetCameraAngle(hltvcamera->m_aCamAngle);
-		}
-		catch (bad_pointer &e)
-		{
-			Warning("%s\n", e.what());
-		}
+		CameraState::GetModule()->SetCamera(cam);
 	}
 	else
 	{
-		std::string buffer = strprintf("spec_mode %i\n", OBS_MODE_ROAMING);	// Fixed cameras do not work outside of hltv
-		Interfaces::GetEngineClient()->ServerCmd(buffer.c_str());
-
-		buffer = strprintf("spec_goto %f %f %f %f %f\n", pos.x, pos.y, pos.z, angle.x, angle.y);
-		Interfaces::GetEngineClient()->ServerCmd(buffer.c_str());
+		Warning("%s: Programmer error! mode was %i\n", __FUNCTION__, mode);
 	}
 }
 
@@ -263,6 +169,55 @@ float CameraTools::CollisionTest3D(const Vector& startPos, const Vector& targetP
 	}
 
 	return pointsPassed / float(std::size(TEST_POINTS));
+}
+
+void CameraTools::GetSmoothTestSettings(const std::string_view& testsString, SmoothSettings& settings)
+{
+	if (stristr(testsString, "all"sv) != testsString.end())
+	{
+		settings.m_TestFOV = true;
+		settings.m_TestDist = true;
+		settings.m_TestCooldown = true;
+		settings.m_TestLOS = true;
+	}
+	else
+	{
+		settings.m_TestFOV = stristr(testsString, "fov"sv) != testsString.end();
+		settings.m_TestDist = stristr(testsString, "dist"sv) != testsString.end();
+		settings.m_TestCooldown = stristr(testsString, "time"sv) != testsString.end();
+		settings.m_TestLOS = stristr(testsString, "los"sv) != testsString.end();
+	}
+}
+
+void CameraTools::SpecModeChanged(ObserverMode oldMode, ObserverMode& newMode)
+{
+	static ConVarRef spec_autodirector("spec_autodirector");
+	if (!spec_autodirector.GetBool())
+		return;
+
+	const auto forceMode = ce_cameratools_autodirector_mode.GetInt();
+
+	switch (forceMode)
+	{
+		case OBS_MODE_NONE:
+			return;
+
+		case OBS_MODE_FIXED:
+		case OBS_MODE_IN_EYE:
+		case OBS_MODE_CHASE:
+		case OBS_MODE_ROAMING:
+			newMode = (ObserverMode)forceMode;
+			break;
+
+		default:
+			Warning("Unknown/unsupported value %i for %s\n", forceMode, ce_cameratools_autodirector_mode.GetName());
+	}
+}
+
+void CameraTools::SpecTargetChanged(IClientEntity* oldEnt, IClientEntity*& newEnt)
+{
+	if (auto ent = s_ClientEntityList->GetClientEntity(ce_cameratools_force_target.GetInt()))
+		newEnt = ent;
 }
 
 void CameraTools::ShowUsers(const CCommand& command)
@@ -433,34 +388,15 @@ void CameraTools::SpecPlayer(int playerIndex)
 		return;
 	}
 
-	if (!ce_cameratools_spec_player_alive.GetBool() || player->IsAlive())
+	if (!player->IsAlive())
 	{
-		if (Interfaces::GetEngineClient()->IsHLTV())
-		{
-			try
-			{
-
-				HLTVCameraOverride* const hltvcamera = Interfaces::GetHLTVCamera();
-				if (hltvcamera)
-				{
-					hltvcamera->SetPrimaryTarget(player->GetEntity()->entindex());
-
-					Assert(!"FIXME");
-					//hltvcamera->SetMode(ce_tplock_enable.GetBool() ? OBS_MODE_CHASE : OBS_MODE_IN_EYE);
-				}
-			}
-			catch (bad_pointer &e)
-			{
-				Warning("%s\n", e.what());
-			}
-		}
-		else
-		{
-			char buffer[32];
-			sprintf_s(buffer, "spec_player %i\n", player->GetUserID());
-			Interfaces::GetEngineClient()->ServerCmd(buffer);
-		}
+		DevWarning("%s: Not speccing \"%s\" because they are dead (%s)\n", __FUNCTION__, player->GetName());
+		return;
 	}
+
+	char buf[32];
+	sprintf_s(buf, "spec_player \"#%i\"", player->GetUserID());
+	s_EngineClient->ClientCmd(buf);
 }
 
 void CameraTools::SmoothTo(const CCommand& cmd)
@@ -474,7 +410,7 @@ void CameraTools::SmoothTo(const CCommand& cmd)
 
 	do
 	{
-		if (cmd.ArgC() < 8 || cmd.ArgC() > 9)
+		if (cmd.ArgC() < 1 || cmd.ArgC() > 10)
 			break;
 
 		const auto& activeCam = cs->GetCurrentCamera();
@@ -498,11 +434,11 @@ void CameraTools::SmoothTo(const CCommand& cmd)
 		QAngle endCamAng;
 		for (uint_fast8_t i = 0; i < 6; i++)
 		{
-			const auto& arg = cmd[i + 1];
+			const auto& arg = cmd.ArgC() > i + 1 ? cmd[i + 1] : "?";
 			auto& param = i < 3 ? endCamPos[i] : endCamAng[i - 3];
 
 			if (arg[0] == '?' && arg[1] == '\0')
-				param = i < 3 ? currentPos[i] : currentAng[i];
+				param = i < 3 ? currentPos[i] : currentAng[i - 3];
 			else if (!TryParseFloat(arg, param))
 			{
 				Warning("%s: Unable to parse \"%s\" (arg %i) as a float\n", cmd[0], arg, i);
@@ -510,85 +446,51 @@ void CameraTools::SmoothTo(const CCommand& cmd)
 			}
 		}
 
-		auto endCam = cs->GetRoamingCamera();
-		endCam->SetPosition(endCamPos, endCamAng);
+		SmoothSettings settings;
 
-		auto newSmooth = std::make_shared<SimpleCameraSmooth>(std::move(startCam), std::move(endCam), atof(cmd[7]));
-		if (cmd.ArgC() > 8)
+		if (cmd.ArgC() > 7 && !TryParseFloat(cmd[7], settings.m_DurationOverride))
+		{
+			Warning("%s: Unable to parse arg 7 (duration, \"%s\") as a float\n", cmd[0], cmd[7]);
+			break;
+		}
+
+		if (cmd.ArgC() > 8 && (cmd[8][0] != '?' || cmd[8][1] != '\0'))
 		{
 			if (!stricmp(cmd[8], "linear"))
-				newSmooth->m_Interpolator = Interpolators::Linear;
+				settings.m_InterpolatorOverride = &Interpolators::Linear;
 			else if (!stricmp(cmd[8], "smoothstep"))
-				newSmooth->m_Interpolator = Interpolators::Smoothstep;
+				settings.m_InterpolatorOverride = &Interpolators::Smoothstep;
 			else
 				Warning("%s: Unrecognized smooth mode %s, defaulting to linear\n", cmd[0], cmd[8]);
 		}
 
-		newSmooth->ApplySettings();
-		cs->SetCamera(newSmooth);
+		if (cmd.ArgC() > 9)
+			GetSmoothTestSettings(cmd[9], settings);
+		else
+		{
+			settings.m_TestFOV = false;
+			settings.m_TestCooldown = false;
+		}
+
+		auto endCam = std::make_shared<RoamingCamera>();
+		endCam->SetInputEnabled(false);
+		endCam->SetPosition(endCamPos, endCamAng);
+		cs->SetCameraSmoothed(endCam, settings);
 
 		return;
 
 	} while (false);
 
-	Warning("Usage: %s <x> <y> <z> <pitch> <yaw> <roll> <duration> [smooth mode]\n"
-		"\tSmooth mode can be either linear or smoothstep, default linear.\n"
-		"\tIf any of the parameters are '?', they are left untouched.", cmd[0]);
-}
-
-void CameraTools::OnTick(bool inGame)
-{
-	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
-
-	if (inGame)
-	{
-		if (!ce_cameratools_fix_view_heights.GetBool() || !FixViewHeights())
-		{
-			m_OldViewHeight.reset();
-			m_OldDuckViewHeight.reset();
-		}
-	}
-}
-
-bool CameraTools::FixViewHeights()
-{
-	if (CameraState::GetModule()->GetLocalObserverMode() != ObserverMode::OBS_MODE_IN_EYE)
-		return false;
-
-	auto cameraPlayer = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
-	if (!cameraPlayer)
-		return false;
-
-	auto gamerules = Interfaces::GetGameRules();
-	if (!gamerules)
-		return false;
-
-	auto viewVecs = const_cast<CViewVectors*>(gamerules->GetViewVectors());
-	if (!viewVecs)
-		return false;
-
-	auto ent = cameraPlayer->GetEntity();
-	if (!ent)
-		return false;
-
-	auto basePlayer = dynamic_cast<C_BasePlayer*>(ent->GetBaseEntity()->GetBaseAnimating());
-	if (!basePlayer)
-		return false;
-
-	// We can sometimes end up reading m_vecViewOffset[2] before the entity
-	// has had a chance to update its interpolated vars. Force the interpolation
-	// now.
-	auto& viewOffsetVar = basePlayer->m_iv_vecViewOffset;
-	viewOffsetVar.Interpolate(Interfaces::GetEngineTool()->ClientTime());
-
-	const Vector viewOffset(0, 0, s_ViewOffsetZOffset.GetValue(ent));
-	if (viewVecs->m_vView != viewOffset)
-	{
-		m_OldViewHeight.emplace(viewVecs->m_vView, viewOffset);
-		m_OldDuckViewHeight.emplace(viewVecs->m_vDuckView, viewOffset);
-	}
-
-	return true;
+	Warning("Usage: %s [x] [y] [z] [pitch] [yaw] [roll] [duration] [smooth mode] [tests]\n"
+		"\tSmooth mode can be either linear or smoothstep.\n"
+		"\tIf any of the pos/angle parameters are '?' or omitted, they are left untouched.\n"
+		"\t'?' or omission for duration and smooth mode means use ce_smoothing_ cvars.\n"
+		"\ttests: default 'dist+los'. Can be 'all', 'none', or combined with '+' (NO SPACES):\n"
+		"\t\tlos:  Don't smooth if we don't have LOS to the target (ce_smoothing_los_)\n"
+		"\t\tdist: Don't smooth if we're too far away (ce_smoothing_*_distance)\n"
+		"\t\ttime: Don't smooth if we're still on cooldown (ce_smoothing_cooldown)\n"
+		"\t\tfov:  Don't smooth if target is outside of fov (ce_smoothing_fov)\n"
+		, cmd[0]);
 }
 
 void CameraTools::ToggleDisableViewPunches(const ConVar* var)
@@ -675,7 +577,7 @@ void CameraTools::SpecIndex(const CCommand& command)
 		goto Usage;
 
 	// Create an array of all our players on the specified team
-	Player* allPlayers[ABSOLUTE_PLAYER_LIMIT];
+	Player* allPlayers[MAX_PLAYERS];
 	const auto endIter = std::copy_if(Player::Iterable().begin(), Player::Iterable().end(), allPlayers,
 		[team](const Player* player) { return player->GetTeam() == team; });
 
@@ -737,54 +639,6 @@ Usage:
 	PluginWarning("Usage: %s <red/blue> <index>\n", command.Arg(0));
 }
 
-void CameraTools::ChangeForceMode(IConVar *var, const char *pOldValue, float flOldValue)
-{
-	const int forceMode = ce_cameratools_autodirector_mode.GetInt();
-
-	if (forceMode == OBS_MODE_FIXED || forceMode == OBS_MODE_IN_EYE || forceMode == OBS_MODE_CHASE || forceMode == OBS_MODE_ROAMING)
-	{
-		try
-		{
-			GetHooks()->GetOriginal<HookFunc::C_HLTVCamera_SetMode>()(forceMode);
-		}
-		catch (bad_pointer)
-		{
-			Warning("Error in setting mode.\n");
-		}
-	}
-	else
-	{
-		PluginWarning("%s: Unsupported spec_mode \"%s\"", var->GetName(), ce_cameratools_autodirector_mode.GetString());
-		var->SetValue(OBS_MODE_NONE);
-	}
-}
-
-void CameraTools::ChangeForceTarget(IConVar *var, const char *pOldValue, float flOldValue)
-{
-#if false
-	const int forceTarget = ce_cameratools_force_target.GetInt();
-
-	if (Interfaces::GetClientEntityList()->GetClientEntity(forceTarget))
-	{
-		m_SetPrimaryTargetHook.Enable();
-
-		try
-		{
-			Interfaces::GetHLTVCamera()->SetPrimaryTarget(forceTarget);
-		}
-		catch (bad_pointer)
-		{
-			Warning("Error in setting target.\n");
-		}
-	}
-	else
-	{
-		if (!ce_cameratools_force_valid_target.GetBool())
-			m_SetPrimaryTargetHook.Disable();
-	}
-#endif
-}
-
 bool CameraTools::ParseSpecPosCommand(const CCommand& command, Vector& pos, QAngle& ang, ObserverMode& mode,
 	const Vector& defaultPos, const QAngle& defaultAng, ObserverMode defaultMode) const
 {
@@ -835,12 +689,8 @@ PrintUsage:
 	return false;
 }
 
-void CameraTools::SpecPosition(const CCommand &command)
+void CameraTools::SpecPosition(const CCommand& command)
 {
-	Vector pos;
-	QAngle ang;
-	ObserverMode mode;
-
 	const auto camState = CameraState::GetModule();
 	if (!camState)
 	{
@@ -848,46 +698,52 @@ void CameraTools::SpecPosition(const CCommand &command)
 		return;
 	}
 
-	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->GetMode();
-	const auto activeCam = camState->GetCurrentCamera();
+	ObserverMode defaultMode = camState->GetDesiredObserverMode();
+	if (defaultMode != OBS_MODE_FIXED && defaultMode != OBS_MODE_ROAMING)
+		defaultMode = OBS_MODE_ROAMING;
 
-	// Legacy support, we used to always force OBS_MODE_FIXED
+	const auto activeCam = camState->GetCurrentCamera();
+	if (!activeCam)
+	{
+		Warning("%s: No active camera?\n", command[0]);
+		return;
+	}
+
+	Vector pos;
+	QAngle ang;
+	ObserverMode mode;
 	if (ParseSpecPosCommand(command, pos, ang, mode, activeCam->GetOrigin(), activeCam->GetAngles(), defaultMode))
 		SpecPosition(pos, ang, mode);
 }
 
 void CameraTools::SpecPositionDelta(const CCommand& command)
 {
+	const auto camState = CameraState::GetModule();
+	if (!camState)
+	{
+		Warning("%s: Failed to get CameraState module\n", command[0]);
+		return;
+	}
+
+	ObserverMode defaultMode = camState->GetDesiredObserverMode();
+	if (defaultMode != OBS_MODE_FIXED && defaultMode != OBS_MODE_ROAMING)
+		defaultMode = OBS_MODE_ROAMING;
+
+	const auto activeCam = camState->GetCurrentCamera();
+	if (!activeCam)
+	{
+		Warning("%s: No active camera?\n", command[0]);
+		return;
+	}
+
 	Vector pos;
 	QAngle ang;
 	ObserverMode mode;
-
-	const ObserverMode defaultMode = (ObserverMode)Interfaces::GetHLTVCamera()->GetMode();
-
 	if (ParseSpecPosCommand(command, pos, ang, mode, vec3_origin, vec3_angle, defaultMode))
 	{
-		const auto camState = CameraState::GetModule();
-		if (!camState)
-		{
-			Warning("%s: Failed to get CameraState module\n", command[0]);
-			return;
-		}
-
-		const auto activeCam = camState->GetCurrentCamera();
-
 		pos += activeCam->GetOrigin();
 		ang += activeCam->GetAngles();
 
 		SpecPosition(pos, ang, mode);
 	}
-}
-
-void CameraTools::ToggleForceValidTarget(IConVar *var, const char *pOldValue, float flOldValue)
-{
-#if false
-	if (ce_cameratools_force_valid_target.GetBool())
-		m_SetPrimaryTargetHook.Enable();
-	else if(!Interfaces::GetClientEntityList()->GetClientEntity(ce_cameratools_force_target.GetInt()))
-		m_SetPrimaryTargetHook.Disable();
-#endif
 }

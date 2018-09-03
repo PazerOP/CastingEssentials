@@ -43,7 +43,7 @@ private:
 	ConVar ce_smoothing_cooldown;
 	float m_LastSmoothEnd;
 
-	void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera) override;
+	void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera, const SmoothSettings& settings) override;
 
 	float TestVisibility(const Vector& eyePos, const Vector& targetPos) const;
 

@@ -25,10 +25,10 @@ public:
 			inst->SetupCameraTarget(mode, target, newCamera);
 	}
 
-	void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera) override
+	void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera, const SmoothSettings& settings) override
 	{
 		for (auto inst : s_CallbackInstances)
-			inst->SetupCameraSmooth(currentCamera, targetCamera);
+			inst->SetupCameraSmooth(currentCamera, targetCamera, settings);
 	}
 
 	bool GetFOVOverride(const CameraConstPtr& camera, float& fov) override

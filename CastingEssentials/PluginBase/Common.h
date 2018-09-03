@@ -3,10 +3,15 @@
 
 #include <Color.h>
 #include <dbg.h>
-#include <string>
 #include <mathlib/mathlib.h>
 
 #include "PluginBase/VariablePusher.h"
+
+#include <string>
+#include <string_view>
+
+using namespace std::string_literals;
+using namespace std::string_view_literals;
 
 #pragma warning(disable : 4355)    // 'this': used in base member initializer list
 #pragma warning(disable : 4592)    // 'x': symbol will be dynamically initialized (implementation limitation)
@@ -122,25 +127,8 @@ inline std::string strprintf(const char* fmt, ...)
 	return vstrprintf(fmt, args);
 }
 
-inline const char* stristr(const char* const searchThis, const char* const forThis)
-{
-	// smh
-	std::string lowerSearchThis(searchThis);
-	for (auto& c : lowerSearchThis)
-		c = (char)tolower(c);
-
-	std::string lowerForThis(forThis);
-	for (auto& c : lowerForThis)
-		c = (char)tolower(c);
-
-	auto const ptr = strstr(lowerSearchThis.c_str(), lowerForThis.c_str());
-	if (!ptr)
-		return nullptr;
-
-	auto const dist = std::distance(lowerSearchThis.c_str(), ptr);
-
-	return (const char*)(searchThis + dist);
-}
+std::string_view::const_iterator stristr(const std::string_view& searchThis, const std::string_view& forThis);
+const char* stristr(const char* searchThis, const char* forThis);
 
 __forceinline float Bezier(float t, float x0, float x1, float x2)
 {

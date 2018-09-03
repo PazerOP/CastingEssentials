@@ -4,6 +4,7 @@
 #include "Modules/Camera/ICameraGroup.h"
 #include "Modules/Camera/RoamingCamera.h"
 #include "Modules/Camera/SimpleCamera.h"
+#include "Modules/Camera/SmoothSettings.h"
 #include "PluginBase/Hook.h"
 #include "PluginBase/Modules.h"
 
@@ -38,8 +39,13 @@ public:
 	ObserverMode GetLocalObserverMode() const;
 	IClientEntity* GetLocalObserverTarget(bool attachedModesOnly = false) const;
 
-	// Affected only by spec_mode. May not match GetLocalObserverMode().
-	auto GetDesiredObserverMode() const { return m_DesiredSpecMode; }
+	// Affected only by spec_mode. May or may not match GetLocalObserverMode(). If any changes
+	// are made to spec_mode or through SetDesiredObserverMode, they will apply next frame.
+	void SetDesiredObserverMode(ObserverMode mode);
+	ObserverMode GetDesiredObserverMode() const { return m_DesiredSpecMode; }
+
+	void SetDesiredObserverTarget(IClientEntity* target);
+	IClientEntity* GetDesiredObserverTarget() const { return m_DesiredSpecTarget.Get(); }
 
 	auto& GetLastSpecTarget() const { return m_LastSpecTarget; }
 
@@ -50,13 +56,10 @@ public:
 	void SetCamera(const CameraPtr& camera);
 
 	// Sets the current camera, letting CameraStateCallbacks add smooths. Clears a set camera group if there is one.
-	void SetCameraSmoothed(CameraPtr camera);
+	void SetCameraSmoothed(CameraPtr camera, const SmoothSettings& settings = SmoothSettings());
 
 	void SetCameraGroup(const CameraGroupPtr& group);
 	void SetCameraGroupSmoothed(const CameraGroupPtr& group);
-
-	bool IsRoamingCameraActive() const { return m_ActiveCamera == m_RoamingCamera; }
-	auto& GetRoamingCamera() { return m_RoamingCamera; }
 
 private:
 	ConCommand ce_camerastate_clear_cameras;
@@ -81,6 +84,9 @@ private:
 
 	Hook<HookFunc::CInput_CreateMove> m_CreateMoveHook;
 	void CreateMoveOverride(CInput* input, int sequenceNumber, float inputSampleFrametime, bool active);
+
+	Hook<HookFunc::C_TFPlayer_CreateMove> m_PlayerCreateMoveHook;
+	bool PlayerCreateMoveOverride(C_TFPlayer* pThis, float inputSampleTime, CUserCmd* cmd);
 
 	void OnTick(bool inGame) override;
 	void LevelInit() override;
@@ -111,6 +117,7 @@ private:
 	void SpecPrevDetour(const CCommand& cmd) { SpecNextEntity(true); }
 
 	void SpecEntity(int entindex);
+	void SpecUserID(int userid);
 	void SpecEntity(IClientEntity* ent);
 	void SpecNextEntity(bool backwards);
 
@@ -122,7 +129,7 @@ private:
 	void SetCameraInternal(const CameraPtr& camera);
 
 	// Sets the current camera, letting CameraStateCallbacks add smooths. Does not clear the current camera group.
-	void SetCameraSmoothedInternal(CameraPtr camera);
+	void SetCameraSmoothedInternal(CameraPtr camera, const SmoothSettings& settings);
 
 	CameraPtr m_ActiveCamera;
 
@@ -131,5 +138,4 @@ private:
 	void UpdateFromCameraGroup();
 
 	const CameraPtr m_EngineCamera;
-	std::shared_ptr<RoamingCamera> m_RoamingCamera;
 };

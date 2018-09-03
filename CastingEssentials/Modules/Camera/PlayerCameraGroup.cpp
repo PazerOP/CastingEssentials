@@ -5,6 +5,7 @@
 #include "PluginBase/TFDefinitions.h"
 
 #include <shared/gameeventdefs.h>
+#include <toolframework/ienginetool.h>
 
 static bool ParseTPLockValues(const CCommand& valuesIn, std::array<TPLockValue, 3>& valuesOut);
 static bool ParseTPLockValuesInto(ConVar* cv, const char* oldVal, std::array<TPLockValue, 3>& values);
@@ -91,10 +92,13 @@ void PlayerCameraGroup::GetBestCamera(CameraPtr& targetCamera)
 
 	const bool isAlive = player->IsAlive();
 	if (isAlive)
-		m_DeathCam.reset();
+		m_DeathCam.Reset();
 
-	if (!isAlive && m_DeathCam)
-		bestCamera = &m_DeathCam.value();
+	if (!isAlive)
+	{
+		m_DeathCam.m_Victim = player->GetEntity();
+		bestCamera = &m_DeathCam;
+	}
 	else if (player->CheckCondition(TFCond::TFCond_Taunting))
 		bestCamera = &m_TPLockTauntCam;
 	else if (camstate->GetDesiredObserverMode() == ObserverMode::OBS_MODE_CHASE)
@@ -112,16 +116,20 @@ void PlayerCameraGroup::FireGameEvent(IGameEvent* event)
 	if (strcmp(event->GetName(), GAME_EVENT_PLAYER_DEATH))
 		return;
 
-	if (event->GetInt("victim_entindex") != m_PlayerEnt.GetEntryIndex())
+	if (auto entindex = event->GetInt("victim_entindex"); entindex != m_PlayerEnt.GetEntryIndex())
+	{
+		Assert(entindex != 0);
 		return;
+	}
 
-	m_DeathCam.emplace();
-	m_DeathCam->m_Victim = m_PlayerEnt;
+	m_DeathCam.m_Victim = m_PlayerEnt;
 
 	auto killerUserID = event->GetInt("attacker");
 	auto killerPlayer = Player::GetPlayerFromUserID(killerUserID);
 	if (killerPlayer && killerPlayer->GetEntity() != m_PlayerEnt)
-		m_DeathCam->m_Killer = killerPlayer->GetEntity();
+		m_DeathCam.m_Killer = killerPlayer->GetEntity();
+
+	m_DeathCameraCreateTime = Interfaces::GetEngineTool()->ClientTime();
 }
 
 bool ParseTPLockValues(const CCommand& valuesIn, std::array<TPLockValue, 3>& valuesOut)

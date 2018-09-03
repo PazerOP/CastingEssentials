@@ -6,6 +6,8 @@
 #include <client/c_baseplayer.h>
 #include <shared/in_buttons.h>
 
+#include <algorithm>
+
 static float GetSpecSpeed()
 {
 	static ConVarRef sv_specspeed("sv_specspeed");
@@ -27,12 +29,18 @@ static float GetFriction()
 	return sv_friction.GetFloat();
 }
 
+ConVar ce_cam_roaming_fov("ce_cam_roaming_fov", "90", FCVAR_NONE, "Roaming camera FOV.");
+
 RoamingCamera::RoamingCamera() : m_Velocity(0)
 {
 	m_Type = CameraType::Roaming;
 	m_Origin.Init();
-	m_Angles.Init();
-	m_FOV = 90;
+	m_FOV = ce_cam_roaming_fov.GetFloat();
+
+	if (engine)
+		engine->GetViewAngles(m_Angles);
+	else
+		m_Angles.Init();
 }
 
 void RoamingCamera::Reset()
@@ -48,7 +56,7 @@ void RoamingCamera::Update(float dt, uint32_t frame)
 	auto cmd = &m_LastCmd;
 
 	Vector forward, right, up;
-	AngleVectors(cmd->viewangles, &forward, &right, &up);  // Determine movement angles
+	AngleVectors(m_Angles, &forward, &right, &up);  // Determine movement angles
 
 	if (cmd->buttons & IN_SPEED)
 		factor /= 2.0f;
@@ -61,13 +69,10 @@ void RoamingCamera::Update(float dt, uint32_t frame)
 	VectorNormalize(right);    //
 
 	Vector wishvel(0, 0, 0);
-	if (m_InputEnabled)
-	{
-		for (int i = 0; i < 3; i++)       // Determine x and y parts of velocity
-			wishvel[i] = forward[i] * fmove + right[i] * smove;
+	for (int i = 0; i < 3; i++)       // Determine x and y parts of velocity
+		wishvel[i] = forward[i] * fmove + right[i] * smove;
 
-		wishvel[2] += cmd->upmove * factor;
-	}
+	wishvel[2] += cmd->upmove * factor;
 
 	Vector wishdir = wishvel;   // Determine magnitude of speed of move
 	float wishspeed = VectorNormalize(wishdir);
@@ -122,8 +127,10 @@ void RoamingCamera::Update(float dt, uint32_t frame)
 
 	// get camera angle directly from engine
 	Assert(engine);
-	if (m_InputEnabled && engine)
-		engine->GetViewAngles(m_Angles);
+	//if (auto clientdll = Interfaces::GetClientDLL(); clientdll && m_InputEnabled && engine)
+	{
+		//m_Angles = cmd->viewangles;
+	}
 
 	// Zero out velocity if in noaccel mode
 	if (GetSpecAccelerate() < 0.0f)
@@ -144,7 +151,18 @@ void RoamingCamera::SetPosition(const Vector& pos, const QAngle& angles)
 
 void RoamingCamera::CreateMove(const CUserCmd& cmd)
 {
+	if (!m_InputEnabled)
+		return;
+
 	m_LastCmd = cmd;
+
+	static ConVarRef m_yaw("m_yaw");
+	static ConVarRef m_pitch("m_pitch");
+	static ConVarRef cl_pitchup("cl_pitchup");
+	static ConVarRef cl_pitchdown("cl_pitchdown");
+
+	m_Angles[PITCH] = clamp(m_Angles.x + (m_pitch.GetFloat() * cmd.mousedy), -cl_pitchup.GetFloat(), cl_pitchdown.GetFloat());
+	m_Angles[YAW] -= m_yaw.GetFloat() * cmd.mousedx;
 }
 
 void RoamingCamera::GotoEntity(IClientEntity* ent)
@@ -156,6 +174,14 @@ void RoamingCamera::GotoEntity(IClientEntity* ent)
 		SetPosition(baseEnt->EyePosition(), baseEnt->EyeAngles());
 	else
 		SetPosition(ent->GetAbsOrigin(), ent->GetAbsAngles());
+}
+
+void RoamingCamera::SetInputEnabled(bool enabled)
+{
+	if (!enabled && m_InputEnabled)
+		m_LastCmd.MakeInert();
+
+	m_InputEnabled = enabled;
 }
 
 void RoamingCamera::Accelerate(Vector& wishdir, float wishspeed, float accel, float dt)

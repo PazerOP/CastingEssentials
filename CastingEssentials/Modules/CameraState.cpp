@@ -11,7 +11,6 @@
 #include "Modules/Camera/PlayerCameraGroup.h"
 #include "Modules/CameraTools.h"
 #include "Modules/CameraSmooths.h"
-#include "Modules/FOVOverride.h"
 
 #include <cdll_int.h>
 #include <client/c_basecombatweapon.h>
@@ -75,9 +74,9 @@ CameraState::CameraState() :
 	m_CalcViewPlayerHook(std::bind(&CameraState::CalcViewPlayerOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)),
 	m_CalcViewHLTVHook(std::bind(&CameraState::CalcViewHLTVOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
 	m_CreateMoveHook(std::bind(&CameraState::CreateMoveOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
+	m_PlayerCreateMoveHook(std::bind(&CameraState::PlayerCreateMoveOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)),
 
-	m_EngineCamera(std::make_shared<EngineCamera>()),
-	m_RoamingCamera(std::make_shared<RoamingCamera>())
+	m_EngineCamera(std::make_shared<EngineCamera>())
 {
 	m_LastSpecTarget = 0;
 	m_LastSpecMode = OBS_MODE_NONE;
@@ -168,6 +167,16 @@ IClientEntity* CameraState::GetLocalObserverTarget(bool attachedModesOnly) const
 		return GetEngineObserverTarget();
 }
 
+void CameraState::SetDesiredObserverMode(ObserverMode mode)
+{
+	m_DesiredSpecMode = mode;
+}
+
+void CameraState::SetDesiredObserverTarget(IClientEntity* target)
+{
+	m_DesiredSpecTarget = target;
+}
+
 void CameraState::SetCamera(const CameraPtr& camera)
 {
 	m_LastCameraGroupCamera.reset();
@@ -175,11 +184,11 @@ void CameraState::SetCamera(const CameraPtr& camera)
 	SetCameraInternal(camera);
 }
 
-void CameraState::SetCameraSmoothed(CameraPtr camera)
+void CameraState::SetCameraSmoothed(CameraPtr camera, const SmoothSettings& settings)
 {
 	m_LastCameraGroupCamera.reset();
 	m_CurrentCameraGroup.reset();
-	SetCameraSmoothedInternal(std::move(camera));
+	SetCameraSmoothedInternal(std::move(camera), settings);
 }
 
 void CameraState::SetCameraGroup(const CameraGroupPtr& group)
@@ -197,45 +206,16 @@ void CameraState::SetCameraGroupSmoothed(const CameraGroupPtr& group)
 
 	group->GetBestCamera(newCam);
 	if (newCam != m_ActiveCamera)
-		SetCameraSmoothedInternal(newCam);
+		SetCameraSmoothedInternal(newCam, SmoothSettings());
 
 	m_LastCameraGroupCamera = newCam;
 }
 
-static const char* IsDrawing(C_BaseAnimating* ent)
-{
-	if (ent->IsEFlagSet(EF_NODRAW))
-		return "EF_NODRAW";
-
-	if (!ent->ShouldDraw())
-		return "ShouldDraw() == false";
-
-	if (!ent->IsVisible())
-		return "IsVisible() == false";
-
-	if (!ent->m_bReadyToDraw)
-		return "Not ready to draw";
-
-	if (!ent->GetModelPtr())
-		return "No model pointer";
-
-	if (!ent->GetModelIndex())
-		return "No model index";
-
-	if (!ent->GetModel())
-		return "No model_t";
-
-	if (!ent->GetModelInstance())
-		return "No model instance";
-
-	if (ent->IsDynamicModelLoading())
-		return "Dynamic model loading";
-
-	return "true";
-}
-
 bool CameraState::CalcView(Vector& origin, QAngle& angles, float& fov)
 {
+	if (auto localplayer = Player::GetLocalPlayer(); localplayer && localplayer->GetTeam() != TFTeam::Spectator)
+		return false;
+
 	UpdateFromCameraGroup();
 
 	Assert(m_ActiveCamera);
@@ -244,9 +224,7 @@ bool CameraState::CalcView(Vector& origin, QAngle& angles, float& fov)
 
 	auto& callbacks = CameraStateCallbacks::GetCallbacksParent();
 
-	const auto lastMode = m_ActiveCamera->GetCameraType();
 	m_ActiveCamera->TryUpdate(s_EngineTool->ClientFrameTime(), s_EngineTool->HostFrameCount());
-	const auto newMode = m_ActiveCamera->GetCameraType();
 
 	if (m_ActiveCamera->IsCollapsible())
 	{
@@ -263,9 +241,15 @@ bool CameraState::CalcView(Vector& origin, QAngle& angles, float& fov)
 	angles = m_ActiveCamera->GetAngles();
 	fov = m_ActiveCamera->GetFOV();
 
+	{
+		QAngle temp(angles);
+		s_EngineClient->SetViewAngles(temp);
+	}
+
 	Assert(origin.IsValid());
 	Assert(angles.IsValid());
 	Assert(std::isfinite(fov));
+	Assert(!AlmostEqual(fov, 0));
 
 	return true;
 }
@@ -335,8 +319,11 @@ void CameraState::CalcViewPlayerOverride(C_TFPlayer* pThis, Vector& origin, QAng
 				sprintf_s(buf, "spec_player \"#%i\"", player->GetUserID());
 				strcat_s(fullCmdBuf, buf);
 				engine->ServerCmd(buf);
+
+				engine->ServerCmd("spec_player \"4\"");
 			}
 
+#if false
 			static ConVarRef cl_spec_mode("cl_spec_mode");
 			if (auto mode = GetLocalObserverMode(); mode != cl_spec_mode.GetInt())
 			{
@@ -346,12 +333,13 @@ void CameraState::CalcViewPlayerOverride(C_TFPlayer* pThis, Vector& origin, QAng
 			}
 
 			static ConVarRef sv_cheats("sv_cheats");
-			if (false && sv_cheats.GetBool())
+			if (sv_cheats.GetBool())
 			{
 				sprintf_s(buf, "spec_goto \"%f %f %f %f %f %f\";", origin.x, origin.y, origin.z, angles.x, angles.y, angles.z);
 				strcat_s(fullCmdBuf, buf);
 				engine->ServerCmd(buf);
 			}
+#endif
 		}
 
 		m_CalcViewPlayerHook.SetState(Hooking::HookAction::SUPERCEDE);
@@ -381,12 +369,38 @@ void CameraState::CalcViewHLTVOverride(C_HLTVCamera* pThis, Vector& origin, QAng
 
 void CameraState::CreateMoveOverride(CInput* pThis, int sequenceNumber, float inputSampleFrametime, bool active)
 {
+	return;
 	m_CreateMoveHook.GetOriginal()(pThis, sequenceNumber, inputSampleFrametime, active);
 
 	auto cmd = pThis->GetUserCmd(sequenceNumber);
 	Assert(cmd);
 	if (cmd)
-		m_RoamingCamera->CreateMove(*cmd);
+	{
+		if (auto cam = dynamic_cast<RoamingCamera*>(m_ActiveCamera.get()))
+		{
+			cam->CreateMove(*cmd);
+			cam->SetInputEnabled(true);
+		}
+	}
+}
+
+bool CameraState::PlayerCreateMoveOverride(C_TFPlayer* pThis, float inputSampleTime, CUserCmd* cmd)
+{
+	Assert(cmd);
+	if (!cmd)
+		return false;
+
+	auto roaming = dynamic_cast<RoamingCamera*>(m_ActiveCamera.get());
+	if (!roaming)
+		return false;
+
+	m_PlayerCreateMoveHook.SetState(Hooking::HookAction::SUPERCEDE);
+	const bool retVal = m_PlayerCreateMoveHook.GetOriginal()(pThis, inputSampleTime, cmd);
+
+	roaming->CreateMove(*cmd);
+	roaming->SetInputEnabled(true);
+
+	return retVal;
 }
 
 void CameraState::OnTick(bool inGame)
@@ -419,6 +433,13 @@ void CameraState::OnTick(bool inGame)
 		auto engineTarget = GetEngineObserverTarget();
 		engine->Con_NPrintf(GetConLine(), "Engine observer target: %i (%s)", engineTarget ? engineTarget->entindex() : 0,
 			Player::AsPlayer(engineTarget) ? Player::AsPlayer(engineTarget)->GetName() : "none");
+
+		auto desiredMode = GetDesiredObserverMode();
+		Con_Printf("DESIRED spec mode: %i (%s)", desiredMode, s_ShortObserverModes[desiredMode]);
+
+		auto desiredTarget = GetDesiredObserverTarget();
+		Con_Printf("DESIRED spec target: %i (%s)", desiredTarget ? desiredTarget->entindex() : 0,
+			Player::AsPlayer(desiredTarget) ? Player::AsPlayer(desiredTarget)->GetName() : "none");
 	}
 
 	if (ce_camerastate_debug_cameras.GetBool())
@@ -436,11 +457,16 @@ void CameraState::LevelInit()
 	// This only helps on listen servers, but it won't hurt us anywhere else
 	if (auto found = cvar->FindVar("sv_force_transmit_ents"))
 		found->SetValue(1);
+
+	auto roaming = std::make_shared<RoamingCamera>();
+	roaming->SetPosition(m_ActiveCamera->GetOrigin(), m_ActiveCamera->GetAngles());
+	SetCamera(roaming);
 }
 
 void CameraState::LevelShutdown()
 {
 	SetupHooks(false);
+	SetCamera(m_EngineCamera);
 }
 
 void CameraState::SetupHooks(bool connect)
@@ -448,6 +474,7 @@ void CameraState::SetupHooks(bool connect)
 	m_CalcViewHLTVHook.SetEnabled(connect);
 	m_CalcViewPlayerHook.SetEnabled(connect);
 	m_CreateMoveHook.SetEnabled(connect);
+	m_PlayerCreateMoveHook.SetEnabled(connect);
 
 	if (connect)
 	{
@@ -483,11 +510,13 @@ void CameraState::SetupHooks(bool connect)
 void CameraState::SpecPlayerDetour(const CCommand& cmd)
 {
 	if (cmd.ArgC() < 2)
-		return Warning("Usage: %s <name/#index>\n", cmd[0]);
+		return Warning("Usage: %s <name/#userid>\n", cmd[0]);
+
+	const bool isNumber = cmd[1][0] == '#';
 
 	int parsed;
-	if (TryParseInteger(cmd[1], parsed))
-		return SpecEntity(parsed);
+	if (isNumber && TryParseInteger(cmd[1] + 1, parsed))
+		return SpecUserID(parsed);
 	else
 	{
 		for (auto player : Player::Iterable())
@@ -503,6 +532,14 @@ void CameraState::SpecPlayerDetour(const CCommand& cmd)
 void CameraState::SpecEntity(int entindex)
 {
 	SpecEntity(s_ClientEntityList->GetClientEntity(entindex));
+}
+
+void CameraState::SpecUserID(int userid)
+{
+	if (auto player = Player::GetPlayerFromUserID(userid))
+		SpecEntity(player->GetEntity());
+	else
+		Warning("%s: No player found with userid %i\n", GetModuleName());
 }
 
 void CameraState::SpecEntity(IClientEntity* ent)
@@ -553,6 +590,7 @@ void CameraState::SpecNextEntity(bool backwards)
 			continue;
 
 		SpecEntity(index);
+		break;
 	}
 }
 
@@ -568,8 +606,6 @@ void CameraState::SpecStateChanged(ObserverMode mode, IClientEntity* primaryTarg
 
 	if (mode == OBS_MODE_ROAMING)
 	{
-		m_RoamingCamera->m_InputEnabled = false;
-
 		// Create a new roaming camera so we have keep momentum of our old camera, and have no momentum on our new.
 		auto newCam = std::make_shared<RoamingCamera>();
 
@@ -580,10 +616,6 @@ void CameraState::SpecStateChanged(ObserverMode mode, IClientEntity* primaryTarg
 		callbacksParent.SetupCameraTarget(mode, primaryTarget, newCamAdjusted);
 
 		SetCameraSmoothed(newCamAdjusted);
-		if (auto roamingCam = std::dynamic_pointer_cast<RoamingCamera>(newCamAdjusted))
-			m_RoamingCamera = roamingCam;
-		else
-			m_RoamingCamera->m_InputEnabled = true;
 	}
 	else if (mode == OBS_MODE_IN_EYE || mode == OBS_MODE_CHASE)
 	{
@@ -619,6 +651,9 @@ ObserverMode CameraState::ToObserverMode(CameraType type)
 
 void CameraState::SetCameraInternal(const CameraPtr& camera)
 {
+	if (auto roaming = dynamic_cast<RoamingCamera*>(m_ActiveCamera.get()))
+		roaming->SetInputEnabled(false);
+
 	if (camera)
 	{
 		m_ActiveCamera = camera;
@@ -628,12 +663,12 @@ void CameraState::SetCameraInternal(const CameraPtr& camera)
 		m_ActiveCamera = m_EngineCamera;
 }
 
-void CameraState::SetCameraSmoothedInternal(CameraPtr camera)
+void CameraState::SetCameraSmoothedInternal(CameraPtr camera, const SmoothSettings& settings)
 {
 	if (camera != m_ActiveCamera)
 	{
 		camera->ApplySettings();
-		CameraStateCallbacks::GetCallbacksParent().SetupCameraSmooth(m_ActiveCamera, camera);
+		CameraStateCallbacks::GetCallbacksParent().SetupCameraSmooth(m_ActiveCamera, camera, settings);
 	}
 
 	SetCameraInternal(camera);
@@ -649,7 +684,7 @@ void CameraState::UpdateFromCameraGroup()
 
 	if (nextCam != m_LastCameraGroupCamera)
 	{
-		SetCameraSmoothedInternal(nextCam);
+		SetCameraSmoothedInternal(nextCam, SmoothSettings());
 		m_LastCameraGroupCamera = std::move(nextCam);
 	}
 }
@@ -685,9 +720,4 @@ void CameraState::SpecModeDetour(const CCommand& cmd)
 		CameraStateCallbacks::GetCallbacksParent().SpecModeChanged(m_DesiredSpecMode, newMode);
 
 	m_DesiredSpecMode = newMode;
-
-	//auto pusher = CreateVariablePusher(m_SwitchReason, ModeSwitchReason::SpecMode);
-	//m_SwitchReason = ModeSwitchReason::SpecMode;
-
-	//m_SpecModeDetour.GetOldValue()(cmd);
 }

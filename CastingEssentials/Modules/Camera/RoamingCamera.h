@@ -17,12 +17,13 @@ public:
 	const char* GetDebugName() const override { return "RoamingCamera"; }
 
 	void SetPosition(const Vector& pos, const QAngle& angles);
+	void SetFOV(float fov) { m_FOV = fov; }
+
 	void CreateMove(const CUserCmd& cmd);
 
 	void GotoEntity(IClientEntity* ent);
 
-	// Should we be processing the last usercmd, or should we just let velocity decay?
-	bool m_InputEnabled = true;
+	void SetInputEnabled(bool enabled);
 
 protected:
 	bool IsCollapsible() const override { return false; }
@@ -30,6 +31,9 @@ protected:
 
 private:
 	void Accelerate(Vector& wishdir, float wishspeed, float accel, float dt);
+
+	// Should we be processing the last usercmd, or should we just let velocity decay?
+	bool m_InputEnabled = true;
 
 	Vector m_Velocity;
 	CUserCmd m_LastCmd;

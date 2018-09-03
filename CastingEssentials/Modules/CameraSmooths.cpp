@@ -111,7 +111,7 @@ void CameraSmooths::LevelInit()
 	m_LastSmoothEnd = -FLT_MAX;
 }
 
-void CameraSmooths::SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera)
+void CameraSmooths::SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera, const SmoothSettings& settings)
 {
 	if (!ce_smoothing_enabled.GetBool())
 		return;
@@ -119,7 +119,7 @@ void CameraSmooths::SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr&
 	auto currentSmooth = dynamic_cast<ICameraSmooth*>(currentCamera.get());
 
 	const auto clientTime = Interfaces::GetEngineTool()->ClientTime();
-	if (m_LastSmoothEnd > clientTime && !currentSmooth)
+	if (settings.m_TestCooldown && m_LastSmoothEnd > clientTime && !currentSmooth)
 	{
 		if (ce_smoothing_debug.GetBool())
 			ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, %s still has %1.2f seconds left\n",
@@ -146,7 +146,7 @@ void CameraSmooths::SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr&
 	const bool forceSmooth = distance <= ce_smoothing_force_distance.GetFloat();
 	if (!forceSmooth)
 	{
-		if (angle > ce_smoothing_fov.GetFloat())
+		if (settings.m_TestFOV && angle > ce_smoothing_fov.GetFloat())
 		{
 			if (ce_smoothing_debug.GetBool())
 				ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, angle difference was %1.0f degrees.\n\n", GetModuleName(), angle);
@@ -158,7 +158,7 @@ void CameraSmooths::SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr&
 			ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed angle test with difference of %1.0f degrees.\n", GetModuleName(), angle);
 
 		const float visibility = TestVisibility(currentCamera->GetOrigin(), targetCamera->GetOrigin());
-		if (visibility < ce_smoothing_los_min.GetFloat())
+		if (settings.m_TestLOS && visibility < ce_smoothing_los_min.GetFloat())
 		{
 			if (ce_smoothing_debug.GetBool())
 				ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, no visibility to new target\n\n", GetModuleName());
@@ -169,7 +169,7 @@ void CameraSmooths::SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr&
 		if (ce_smoothing_debug.GetBool())
 			ConColorMsg(DBGMSG_COLOR, "[%s] Smooth passed LOS test (%1.0f%% visible)\n", GetModuleName(), visibility * 100);
 
-		if (ce_smoothing_max_distance.GetFloat() > 0 && distance > ce_smoothing_max_distance.GetFloat())
+		if (settings.m_TestDist && ce_smoothing_max_distance.GetFloat() > 0 && distance > ce_smoothing_max_distance.GetFloat())
 		{
 			if (ce_smoothing_debug.GetBool())
 				ConColorMsg(DBGMSG_COLOR, "[%s] Skipping smooth, distance of %1.0f units > %s (%1.0f units)\n\n", GetModuleName(), distance, ce_smoothing_max_distance.GetName(), ce_smoothing_max_distance.GetFloat());

@@ -174,28 +174,13 @@ void CameraAutoSwitch::OnTick(bool inGame)
 	if (ce_cameraautoswitch_enabled.GetBool() && m_AutoSwitchQueued && Interfaces::GetEngineTool()->HostTime() >= m_AutoSwitchTime)
 	{
 		m_AutoSwitchQueued = false;
-		Player* const localObserverTarget = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
-		if (localObserverTarget)
+		if (auto target = Player::GetPlayer(m_AutoSwitchToPlayer))
 		{
-			const int localObserverTargetUserID = localObserverTarget->GetUserID();
+			const int localObserverTargetUserID = target->GetUserID();
 
 			char buf[32];
 			sprintf_s(buf, "spec_player #%i\n", localObserverTargetUserID);
-			Warning("SEND: %s\n", buf);
 			engine->ClientCmd(buf);
-
-			/*
-			if (m_AutoSwitchFromPlayer == localObserverTargetIndex)
-			{
-				try
-				{
-					Interfaces::GetHLTVCamera()->SetPrimaryTarget(m_AutoSwitchToPlayer);
-				}
-				catch (bad_pointer &e)
-				{
-					Warning("%s\n", e.what());
-				}
-			}*/
 		}
 	}
 }

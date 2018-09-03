@@ -1,482 +1,168 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="Plugin Base">
-      <UniqueIdentifier>{2fc3bb3c-611f-415e-ae3a-e1c4d8d0203a}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="$(SolutionDir)\sdk2013\mp\src\public\tier0\memoverride.cpp">
-      <Filter>Plugin Base</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\CastingPlugin.cpp">
-      <Filter>Plugin Base</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\Interfaces.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\Modules.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\CameraTools.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\Player.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\Entities.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\Common.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\TFPlayerResource.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\ConsoleTools.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\PlayerAliases.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\CameraAutoSwitch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\LocalPlayer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Hooking\IGroupHook.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Killstreaks.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Hooking\IBaseHook.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sdk2013\mp\src\public\vgui_controls\vgui_controls.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\MedigunInfo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Controls\VariableLabel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Controls\StubPanel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Controls\ImageProgressBar.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\SteamTools.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\HookManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\FOVOverride.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\ProjectileOutlines.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\TeamNames.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\CameraSmooths.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Misc\MissingDefinitions.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Misc\DebugOverlay.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\FreezeInfo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Antifreeze.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\CameraState.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\MapConfigs.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Graphics.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Killfeed.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Misc\Polyhook.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\LoadoutIcons.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\ItemSchema.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\HUDHacking.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\IngameTeamScores.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\TFTeamResource.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Misc\OffsetChecking.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\HitEvents.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\ClientTools.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\AutoCameras.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Hooking\ModuleSegments.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\WeaponTools.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\ViewAngles.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\SniperLOS.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\TextureTools.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\Exceptions.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PluginBase\PlayerStateBase.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\HybridPlayerCameraSmooth.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\SimpleCameraSmooth.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\TPLockCamera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\FirstPersonCamera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\OrbitCamera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\ICamera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\RoamingCamera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\CameraStateCallbacks.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\DeathCamera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\Camera\PlayerCameraGroup.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Modules\SrcTVPlus.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="PluginBase\Plugin.h">
-      <Filter>Plugin Base</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\Interfaces.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\Common.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\Modules.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\Exceptions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\CameraTools.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\TFDefinitions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\Player.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\Entities.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\TFPlayerResource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\ConsoleTools.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\PlayerAliases.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\CameraAutoSwitch.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\LocalPlayer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\IGroupHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\GroupGlobalHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\BaseGroupHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\GroupClassHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\GroupVirtualHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Killstreaks.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\IBaseHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\MedigunInfo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Controls\VariableLabel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Controls\StubPanel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Controls\ImageProgressBar.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\SteamTools.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\HookManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\FOVOverride.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\ProjectileOutlines.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\TeamNames.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\GroupManualClassHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\TemplateFunctions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\TemplateTypedefs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\CameraSmooths.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\HLTVCameraHack.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\FreezeInfo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Antifreeze.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\DebugOverlay.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\CameraState.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\MapConfigs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Graphics.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Killfeed.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\GroupGlobalVirtualHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\LoadoutIcons.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\ItemSchema.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\HUDHacking.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\CRefPtrFix.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\IngameTeamScores.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\TFTeamResource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\Extras\VPlane.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\HitEvents.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\ClientTools.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\AutoCameras.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\ModuleSegments.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\CmdAlias.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\WeaponTools.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\EntityOffset.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\ViewAngles.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\SniperLOS.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\TextureTools.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\VariablePusher.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\HookDefinitions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Hooking\HookShim.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\Hook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\EntityOffsetIterator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginBase\PlayerStateBase.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-<<<<<<< HEAD
-    <ClInclude Include="Modules\Camera\ICamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\ICameraSmooth.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\HybridPlayerCameraSmooth.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\SimpleCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\SimpleCameraSmooth.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\TPLockCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\FirstPersonCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\OrbitCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\CCvar.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\RoamingCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\Padding.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\CameraStateCallbacks.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\Interpolators.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\Extras\Quaternion.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\Extras\QAngle.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\DeathCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\ICameraGroup.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\Camera\PlayerCameraGroup.h">
-=======
-    <ClInclude Include="Misc\CommandCallbacks.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Misc\SuggestionList.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Modules\SrcTVPlus.h">
->>>>>>> origin/master
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="Misc\NatVis\RecvTable.natvis" />
-    <Natvis Include="Misc\NatVis\RecvProp.natvis" />
+    <Natvis Include="Misc\NatVis\CBaseHandle.natvis" />
     <Natvis Include="Misc\NatVis\ClientClass.natvis" />
     <Natvis Include="Misc\NatVis\CUtlVector.natvis" />
-    <Natvis Include="Misc\NatVis\CBaseHandle.natvis" />
+    <Natvis Include="Misc\NatVis\RecvProp.natvis" />
+    <Natvis Include="Misc\NatVis\RecvTable.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(SolutionDir)\sdk2013\mp\src\public\tier0\memoverride.cpp" />
+    <ClCompile Include="..\sdk2013\mp\src\public\vgui_controls\vgui_controls.cpp" />
+    <ClCompile Include="Controls\ImageProgressBar.cpp" />
+    <ClCompile Include="Controls\VariableLabel.cpp" />
+    <ClCompile Include="Hooking\IBaseHook.cpp" />
+    <ClCompile Include="Hooking\IGroupHook.cpp" />
+    <ClCompile Include="Hooking\ModuleSegments.cpp" />
+    <ClCompile Include="Misc\DebugOverlay.cpp" />
+    <ClCompile Include="Misc\OffsetChecking.cpp" />
+    <ClCompile Include="Modules\Camera\CameraStateCallbacks.cpp" />
+    <ClCompile Include="Modules\Camera\DeathCamera.cpp" />
+    <ClCompile Include="Modules\Camera\FirstPersonCamera.cpp" />
+    <ClCompile Include="Modules\Camera\HybridPlayerCameraSmooth.cpp" />
+    <ClCompile Include="Modules\Camera\ICamera.cpp" />
+    <ClCompile Include="Modules\Camera\OrbitCamera.cpp" />
+    <ClCompile Include="Modules\Camera\PlayerCameraGroup.cpp" />
+    <ClCompile Include="Modules\Camera\RoamingCamera.cpp" />
+    <ClCompile Include="Modules\Camera\SimpleCameraSmooth.cpp" />
+    <ClCompile Include="Modules\Camera\TPLockCamera.cpp" />
+    <ClCompile Include="Modules\ClientTools.cpp" />
+    <ClCompile Include="Modules\HitEvents.cpp" />
+    <ClCompile Include="Modules\HUDHacking.cpp" />
+    <ClCompile Include="Misc\MissingDefinitions.cpp" />
+    <ClCompile Include="Misc\Polyhook.cpp" />
+    <ClCompile Include="Modules\Antifreeze.cpp" />
+    <ClCompile Include="Modules\CameraAutoSwitch.cpp" />
+    <ClCompile Include="Modules\CameraSmooths.cpp" />
+    <ClCompile Include="Modules\CameraState.cpp" />
+    <ClCompile Include="Modules\CameraTools.cpp" />
+    <ClCompile Include="Modules\ConsoleTools.cpp" />
+    <ClCompile Include="Modules\Graphics.cpp" />
+    <ClCompile Include="Modules\ItemSchema.cpp" />
+    <ClCompile Include="Modules\Killfeed.cpp" />
+    <ClCompile Include="Modules\Killstreaks.cpp" />
+    <ClCompile Include="Modules\LoadoutIcons.cpp" />
+    <ClCompile Include="Modules\LocalPlayer.cpp" />
+    <ClCompile Include="Modules\MapConfigs.cpp" />
+    <ClCompile Include="Modules\AutoCameras.cpp" />
+    <ClCompile Include="Modules\MedigunInfo.cpp" />
+    <ClCompile Include="Modules\PlayerAliases.cpp" />
+    <ClCompile Include="Modules\ProjectileOutlines.cpp" />
+    <ClCompile Include="Modules\FreezeInfo.cpp" />
+    <ClCompile Include="Modules\SniperLOS.cpp" />
+    <ClCompile Include="Modules\SrcTVPlus.cpp" />
+    <ClCompile Include="Modules\SteamTools.cpp" />
+    <ClCompile Include="Modules\TeamNames.cpp" />
+    <ClCompile Include="Modules\IngameTeamScores.cpp" />
+    <ClCompile Include="Modules\TextureTools.cpp" />
+    <ClCompile Include="Modules\ViewAngles.cpp" />
+    <ClCompile Include="Modules\WeaponTools.cpp" />
+    <ClCompile Include="PluginBase\CastingPlugin.cpp" />
+    <ClCompile Include="PluginBase\Common.cpp" />
+    <ClCompile Include="PluginBase\Entities.cpp" />
+    <ClCompile Include="PluginBase\Exceptions.cpp" />
+    <ClCompile Include="PluginBase\HookManager.cpp" />
+    <ClCompile Include="PluginBase\Interfaces.cpp" />
+    <ClCompile Include="PluginBase\PlayerStateBase.cpp" />
+    <ClCompile Include="PluginBase\Modules.cpp" />
+    <ClCompile Include="PluginBase\Player.cpp" />
+    <ClCompile Include="Controls\StubPanel.cpp" />
+    <ClCompile Include="PluginBase\TFPlayerResource.cpp" />
+    <ClCompile Include="PluginBase\TFTeamResource.cpp" />
+    <ClCompile Include="Modules\Camera\LookatCamera.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Controls\ImageProgressBar.h" />
+    <ClInclude Include="Controls\VariableLabel.h" />
+    <ClInclude Include="Hooking\BaseGroupHook.h" />
+    <ClInclude Include="Hooking\GroupGlobalVirtualHook.h" />
+    <ClInclude Include="Hooking\HookShim.h" />
+    <ClInclude Include="Hooking\ModuleSegments.h" />
+    <ClInclude Include="Hooking\TemplateFunctions.h" />
+    <ClInclude Include="Hooking\GroupClassHook.h" />
+    <ClInclude Include="Hooking\GroupGlobalHook.h" />
+    <ClInclude Include="Hooking\GroupManualClassHook.h" />
+    <ClInclude Include="Hooking\GroupVirtualHook.h" />
+    <ClInclude Include="Hooking\IBaseHook.h" />
+    <ClInclude Include="Hooking\IGroupHook.h" />
+    <ClInclude Include="Hooking\TemplateTypedefs.h" />
+    <ClInclude Include="Misc\CCvar.h" />
+    <ClInclude Include="Misc\CmdAlias.h" />
+    <ClInclude Include="Misc\CommandCallbacks.h" />
+    <ClInclude Include="Misc\CRefPtrFix.h" />
+    <ClInclude Include="Misc\DebugOverlay.h" />
+    <ClInclude Include="Misc\Extras\QAngle.h" />
+    <ClInclude Include="Misc\Extras\Quaternion.h" />
+    <ClInclude Include="Misc\Extras\VPlane.h" />
+    <ClInclude Include="Misc\HLTVCameraHack.h" />
+    <ClInclude Include="Misc\Padding.h" />
+    <ClInclude Include="Modules\Camera\DeathCamera.h" />
+    <ClInclude Include="Modules\Camera\FirstPersonCamera.h" />
+    <ClInclude Include="Modules\Camera\HybridPlayerCameraSmooth.h" />
+    <ClInclude Include="Modules\Camera\ICamera.h" />
+    <ClInclude Include="Modules\Camera\ICameraGroup.h" />
+    <ClInclude Include="Modules\Camera\ICameraSmooth.h" />
+    <ClInclude Include="Modules\Camera\CameraStateCallbacks.h" />
+    <ClInclude Include="Misc\Interpolators.h" />
+    <ClInclude Include="Modules\Camera\OrbitCamera.h" />
+    <ClInclude Include="Modules\Camera\PlayerCameraGroup.h" />
+    <ClInclude Include="Modules\Camera\RoamingCamera.h" />
+    <ClInclude Include="Modules\Camera\SimpleCameraSmooth.h" />
+    <ClInclude Include="Modules\Camera\SimpleCamera.h" />
+    <ClInclude Include="Modules\Camera\TPLockCamera.h" />
+    <ClInclude Include="Misc\SuggestionList.h" />
+    <ClInclude Include="Modules\ClientTools.h" />
+    <ClInclude Include="Modules\HitEvents.h" />
+    <ClInclude Include="Modules\HUDHacking.h" />
+    <ClInclude Include="Modules\Antifreeze.h" />
+    <ClInclude Include="Modules\CameraState.h" />
+    <ClInclude Include="Modules\CameraAutoSwitch.h" />
+    <ClInclude Include="Modules\CameraSmooths.h" />
+    <ClInclude Include="Modules\CameraTools.h" />
+    <ClInclude Include="Modules\ConsoleTools.h" />
+    <ClInclude Include="Modules\FreezeInfo.h" />
+    <ClInclude Include="Modules\Graphics.h" />
+    <ClInclude Include="Modules\ItemSchema.h" />
+    <ClInclude Include="Modules\Killfeed.h" />
+    <ClInclude Include="Modules\Killstreaks.h" />
+    <ClInclude Include="Modules\LoadoutIcons.h" />
+    <ClInclude Include="Modules\LocalPlayer.h" />
+    <ClInclude Include="Modules\MapConfigs.h" />
+    <ClInclude Include="Modules\AutoCameras.h" />
+    <ClInclude Include="Modules\MedigunInfo.h" />
+    <ClInclude Include="Modules\PlayerAliases.h" />
+    <ClInclude Include="Modules\ProjectileOutlines.h" />
+    <ClInclude Include="Modules\SniperLOS.h" />
+    <ClInclude Include="Modules\SrcTVPlus.h" />
+    <ClInclude Include="Modules\SteamTools.h" />
+    <ClInclude Include="Modules\TeamNames.h" />
+    <ClInclude Include="Modules\IngameTeamScores.h" />
+    <ClInclude Include="Modules\TextureTools.h" />
+    <ClInclude Include="Modules\ViewAngles.h" />
+    <ClInclude Include="Modules\WeaponTools.h" />
+    <ClInclude Include="PluginBase\Common.h" />
+    <ClInclude Include="PluginBase\Entities.h" />
+    <ClInclude Include="PluginBase\EntityOffset.h" />
+    <ClInclude Include="PluginBase\EntityOffsetIterator.h" />
+    <ClInclude Include="PluginBase\Exceptions.h" />
+    <ClInclude Include="PluginBase\Hook.h" />
+    <ClInclude Include="PluginBase\HookDefinitions.h" />
+    <ClInclude Include="PluginBase\HookManager.h" />
+    <ClInclude Include="PluginBase\PlayerStateBase.h" />
+    <ClInclude Include="PluginBase\Player.h" />
+    <ClInclude Include="Controls\StubPanel.h" />
+    <ClInclude Include="PluginBase\TFDefinitions.h" />
+    <ClInclude Include="PluginBase\Interfaces.h" />
+    <ClInclude Include="PluginBase\Modules.h" />
+    <ClInclude Include="PluginBase\Plugin.h" />
+    <ClInclude Include="PluginBase\TFPlayerResource.h" />
+    <ClInclude Include="PluginBase\TFTeamResource.h" />
+    <ClInclude Include="PluginBase\VariablePusher.h" />
+    <ClInclude Include="Modules\Camera\LookatCamera.h" />
+    <ClInclude Include="Modules\Camera\SmoothSettings.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".editorconfig" />
   </ItemGroup>
 </Project>

@@ -11,7 +11,6 @@ std::shared_ptr<TFTeamResource> TFTeamResource::s_TeamResource;
 
 std::shared_ptr<TFTeamResource> TFTeamResource::GetTeamResource()
 {
-	static const auto s_TeamType = Entities::GetTypeChecker("CTFTeam");
 	static const auto s_TeamOffset = Entities::GetEntityProp<TFTeam>("CTFTeam", "m_iTeamNum");
 
 	if (s_TeamResource && s_TeamResource->m_TeamResourceEntity[0].Get() && s_TeamResource->m_TeamResourceEntity[1].Get())
@@ -30,15 +29,12 @@ std::shared_ptr<TFTeamResource> TFTeamResource::GetTeamResource()
 		if (!networkable)
 			continue;
 
-		if (!s_TeamType.Match(networkable))
+		const TFTeam* team = s_TeamOffset.TryGetValue(networkable);
+		if (!team)
 			continue;
 
 		if (!s_TeamResource)
 			s_TeamResource.reset(new TFTeamResource());
-
-		const TFTeam* team = s_TeamOffset.TryGetValue(networkable);
-		if (!team)
-			continue;
 
 		if (*team == TFTeam::Red)
 			s_TeamResource->m_TeamResourceEntity[0] = unknownEnt->GetBaseEntity();

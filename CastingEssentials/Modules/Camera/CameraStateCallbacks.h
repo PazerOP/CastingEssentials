@@ -4,6 +4,7 @@
 
 class IClientEntity;
 enum ObserverMode;
+struct SmoothSettings;
 
 class CameraStateCallbacks
 {
@@ -21,7 +22,7 @@ public:
 	// 2nd function to be called, after all other modules have had a chance to mess
 	// with the target camera via SetupCameraTarget. As the name implies, used by CameraSmooths
 	// module to create a camera smooth once we know for sure what our target will be.
-	virtual void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera) {}
+	virtual void SetupCameraSmooth(const CameraPtr& currentCamera, CameraPtr& targetCamera, const SmoothSettings& settings) {}
 
 	virtual bool GetFOVOverride(const CameraConstPtr& camera, float& fov) { return false; }
 

@@ -2,7 +2,7 @@
 #include "Misc/DebugOverlay.h"
 #include "Modules/CameraState.h"
 #include "Modules/CameraTools.h"
-#include "Modules/FOVOverride.h"
+#include "Modules/Camera/LookatCamera.h"
 #include "PluginBase/HookManager.h"
 #include "PluginBase/Interfaces.h"
 #include "PluginBase/Player.h"
@@ -35,6 +35,12 @@ MODULE_REGISTER(AutoCameras);
 #undef max
 
 #undef MAX_FOV
+
+static IClientEntityList* s_ClientEntityList;
+static IEngineTool* s_EngineTool;
+static IEngineTrace* s_EngineTrace;
+static IFileSystem* s_FileSystem;
+static IVEngineClient* s_EngineClient;
 
 static const auto MIN_FOV = std::nextafter(-180.0f, 0.0f);
 static const auto MAX_FOV = std::nextafter(180.0f, 0.0f);
@@ -82,43 +88,62 @@ AutoCameras::AutoCameras() :
 
 static bool GetView(Vector* pos, QAngle* ang, float* fov)
 {
-	CViewSetup view;
-	if (!Interfaces::GetClientDLL()->GetPlayerView(view))
+	auto currentCam = CameraState::GetModule()->GetCurrentCamera();
+	if (!currentCam)
 	{
-		PluginWarning("[%s] Failed to GetPlayerView!\n", __FUNCSIG__);
+		Warning("%s: No active camera?\n", __FUNCTION__);
 		return false;
 	}
 
 	if (pos)
-		*pos = view.origin;
+		*pos = currentCam->GetOrigin();
 
 	if (ang)
-		*ang = view.angles;
+		*ang = currentCam->GetAngles();
 
 	if (fov)
-		*fov = UnscaleFOVByAspectRatio(view.fov, view.m_flAspectRatio);
+		*fov = currentCam->GetFOV();
 
 	return true;
 }
 
 static Vector GetCrosshairTarget()
 {
-	CViewSetup view;
-	if (!Interfaces::GetClientDLL()->GetPlayerView(view))
+	Vector pos;
+	QAngle angles;
+	if (!GetView(&pos, &angles, nullptr))
+	{
 		PluginWarning("[%s] Failed to GetPlayerView!\n", __FUNCSIG__);
+		return vec3_invalid;
+	}
 
-	const Vector forward;
-	AngleVectors(view.angles, const_cast<Vector*>(&forward));
+	Vector forward;
+	AngleVectors(angles, &forward);
 
 	Ray_t ray;
-	ray.Init(view.origin, view.origin + forward * 5000);
+	ray.Init(pos, pos + forward * 5000);
 
-	const int viewEntity = Interfaces::GetHLTVCamera()->m_iTraget1;
-	CTraceFilterSimple tf(Interfaces::GetClientEntityList()->GetClientEntity(viewEntity), COLLISION_GROUP_NONE);
+	CTraceFilterSimple tf(nullptr, COLLISION_GROUP_PLAYER_MOVEMENT);
 
 	trace_t tr;
-	Interfaces::GetEngineTrace()->TraceRay(ray, MASK_SOLID, &tf, &tr);
+	s_EngineTrace->TraceRay(ray, MASK_SOLID, &tf, &tr);
 	return tr.endpos;
+}
+
+bool AutoCameras::CheckDependencies()
+{
+	Modules().Depend<CameraState>();
+
+	if (!CheckDependency(Interfaces::GetEngineClient(), s_EngineClient))
+		return false;
+	if (!CheckDependency(Interfaces::GetEngineTool(), s_EngineTool))
+		return false;
+	if (!CheckDependency(Interfaces::GetEngineTrace(), s_EngineTrace))
+		return false;
+	if (!CheckDependency(Interfaces::GetFileSystem(), s_FileSystem))
+		return false;
+
+	return true;
 }
 
 void AutoCameras::OnTick(bool ingame)
@@ -172,7 +197,7 @@ void AutoCameras::LevelInit()
 
 void AutoCameras::LoadConfig()
 {
-	const char* const mapName = Interfaces::GetEngineClient()->GetLevelName();
+	const char* const mapName = s_EngineClient->GetLevelName();
 	LoadConfig(mapName);
 }
 
@@ -198,7 +223,7 @@ void AutoCameras::LoadConfig(const char* bspName)
 
 	KeyValuesAD kv("AutoCameras");
 	m_ConfigFilename = strprintf("addons/castingessentials/autocameras/%s.vdf", mapName.c_str());
-	if (!kv->LoadFromFile(Interfaces::GetFileSystem(), m_ConfigFilename.c_str(), nullptr, true))
+	if (!kv->LoadFromFile(s_FileSystem, m_ConfigFilename.c_str(), nullptr, true))
 	{
 		PluginWarning("Unable to load autocameras from %s!\n", m_ConfigFilename.c_str());
 		return;
@@ -597,9 +622,9 @@ void AutoCameras::CheckTrigger(const Trigger& trigger, std::vector<C_BaseEntity*
 {
 	VPROF_BUDGET(__FUNCTION__, VPROF_BUDGETGROUP_CE);
 
-	for (int i = 1; i <= Interfaces::GetEngineTool()->GetMaxClients(); i++)
+	for (int i = 1; i <= s_EngineTool->GetMaxClients(); i++)
 	{
-		IClientEntity* const clientEnt = Interfaces::GetClientEntityList()->GetClientEntity(i);
+		IClientEntity* const clientEnt = s_ClientEntityList->GetClientEntity(i);
 		if (!clientEnt)
 			continue;
 
@@ -647,6 +672,7 @@ void AutoCameras::ExecuteStoryboardElement(const StoryboardElement& element, C_B
 
 void AutoCameras::ExecuteShot(const Shot& shot, C_BaseEntity* const triggerer)
 {
+#if false
 	const auto& camera = shot.m_Camera;
 
 	CameraTools::GetModule()->SpecPosition(camera->m_Pos, camera->m_DefaultAngle);
@@ -659,6 +685,9 @@ void AutoCameras::ExecuteShot(const Shot& shot, C_BaseEntity* const triggerer)
 		hltvcamera->m_iTraget1 = triggerer->entindex();
 		hltvcamera->m_flInertia = 30;
 	}
+#else
+	Assert(!"FIXME");
+#endif
 }
 
 void AutoCameras::ExecuteAction(const Action& action, C_BaseEntity* const triggerer)
@@ -987,29 +1016,15 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 		}
 	}
 
-	auto const hltvcamera = Interfaces::GetHLTVCamera();
-
 	if (bestCameraScore <= 0)
 	{
 		if (ce_autocamera_spec_player_debug.GetBool())
 			PluginMsg("%s: No best camera found\n", args.Arg(0));
 
-		if (auto fallback = ce_autocamera_spec_player_fallback.GetString(); fallback[0])
-		{
-			if (!stricmp(fallback, "firstperson"))
-				mode = OBS_MODE_IN_EYE;
-			else if (!stricmp(fallback, "thirdperson"))
-				mode = OBS_MODE_CHASE;
-			else if (!stricmp(fallback, "none"))
-				return;
-			else
-			{
-				PluginWarning("%s: unknown fallback mode \"%s\"\n", ce_autocamera_spec_player_fallback.GetName(), fallback);
-				return;
-			}
-
-			hltvcamera->SetMode(mode);
-		}
+		// If we return OBS_MODE_NONE for any abnormal reason, errors will be printed from
+		// GetSpecPlayerFallback().
+		if (auto fallback = GetSpecPlayerFallback(); fallback != OBS_MODE_NONE)
+			camState->SetDesiredObserverMode(fallback);
 
 		return;
 	}
@@ -1021,18 +1036,34 @@ void AutoCameras::SpecPlayer(const CCommand& args)
 		!VectorsAreEqual(activeCam->GetOrigin(), m_LastActiveCamera->m_Pos, 25) ||
 		(!bFollow && !QAnglesAreEqual(activeCam->GetAngles(), m_LastActiveCamera->m_DefaultAngle)))
 	{
-		GotoCamera(*bestCamera, mode);
-
 		if (bFollow)
 		{
-			// Since we just switched positions, snap angles to target player
-			VectorAngles((observedOrigin - bestCamera->m_Pos).Normalized(), hltvcamera->m_aCamAngle);
-			hltvcamera->m_flLastAngleUpdateTime = -1;
+			auto newCam = std::make_shared<LookatCamera>();
+			newCam->m_TargetEntity = observeTarget;
+			newCam->m_Origin = bestCamera->m_Pos;
+			newCam->m_FOV = bestCamera->m_FOV;
+
+			camState->SetCameraSmoothed(newCam);
+		}
+		else
+		{
+			GotoCamera(*bestCamera, mode);
 		}
 	}
+}
 
-	if (bFollow)
-		hltvcamera->SetPrimaryTarget(observeTarget->entindex());
+ObserverMode AutoCameras::GetSpecPlayerFallback() const
+{
+	auto fallback = ce_autocamera_spec_player_fallback.GetString();
+	if (!stricmp(fallback, "firstperson"))
+		return OBS_MODE_IN_EYE;
+	else if (!stricmp(fallback, "thirdperson"))
+		return OBS_MODE_CHASE;
+	else if (!stricmp(fallback, "none"))
+		return OBS_MODE_NONE;
+
+	PluginWarning("%s: unknown fallback mode \"%s\"\n", ce_autocamera_spec_player_fallback.GetName(), fallback);
+	return OBS_MODE_NONE;
 }
 
 float AutoCameras::ScoreSpecPlayerCamera(const Camera& camera, const Vector& position, const IHandleEntity* targetEnt) const
@@ -1065,11 +1096,6 @@ float AutoCameras::ScoreSpecPlayerCamera(const Camera& camera, const Vector& pos
 	return score;
 }
 
-void AutoCameras::GotoCamera(const Camera& camera)
-{
-	GotoCamera(camera, (ObserverMode)ce_autocamera_goto_mode.GetInt());
-}
-
 void AutoCameras::GotoCamera(const Camera& camera, ObserverMode mode)
 {
 	CameraTools* const ctools = CameraTools::GetModule();
@@ -1084,8 +1110,10 @@ void AutoCameras::GotoCamera(const Camera& camera, ObserverMode mode)
 	auto fov = camera.m_FOV;
 	if (fov == 0)
 	{
-		if (auto fovOverride = FOVOverride::GetModule())
-			fov = fovOverride->GetBaseFOV(mode);
+		extern ConVar ce_cam_roaming_fov;
+
+		if (auto roamingFOV = ce_cam_roaming_fov.GetFloat(); fov >= MIN_FOV && fov <= MAX_FOV)
+			fov = roamingFOV;
 		else
 		{
 			static ConVarRef fov_desired("fov_desired");
@@ -1093,6 +1121,7 @@ void AutoCameras::GotoCamera(const Camera& camera, ObserverMode mode)
 		}
 	}
 
+	Assert(fov >= MIN_FOV && fov <= MAX_FOV && !AlmostEqual(fov, 0));
 	ctools->SpecPosition(camera.m_Pos, camera.m_DefaultAngle, mode, fov);
 	m_LastActiveCamera = &camera;
 }
@@ -1154,10 +1183,12 @@ int AutoCameras::GotoCameraCompletion(const char* const partial, char commands[C
 
 float AutoCameras::GetCameraFOV(const Camera& camera, ObserverMode mode) const
 {
+	extern ConVar ce_cam_roaming_fov;
+
 	if (camera.m_FOV != 0)
 		return camera.m_FOV;
-	else if (auto fov = FOVOverride::GetModule())
-		return fov->GetBaseFOV(mode);
+	else if (auto fov = ce_cam_roaming_fov.GetFloat(); fov >= MIN_FOV && fov <= MAX_FOV)
+		return fov;
 	else
 	{
 		static ConVarRef fov_desired("fov_desired");

@@ -8,18 +8,30 @@
 
 static bool s_TypeCheckersInit = false;
 static EntityOffset<TFGrenadePipebombType> s_GrenadeTypeOffset;
+static EntityOffset<bool> s_GrenadeTouchedOffset;
 static const ClientClass* s_RocketClass;
 
-static ConVar ce_cam_death_anglesmooth_rate("ce_cam_death_anglesmooth_rate", "0.75", FCVAR_NONE, "Speed of smoothed angles for deathcam.");
+static ConVar ce_cam_death_anglesmooth_rate("ce_cam_death_anglesmooth_rate", "2", FCVAR_NONE, "Speed of smoothed angles for deathcam.");
+static ConVar ce_cam_death_fov("ce_cam_death_fov", "90", FCVAR_NONE, "Deathcam fov.");
+static ConVar ce_cam_death_debug("ce_cam_death_debug", "0");
+
+static ConVar ce_cam_death_lookat_pills("ce_cam_death_lookat_pills", "1", FCVAR_NONE, "Look at alive, untouched demoman pipes with the deathcam?");
+static ConVar ce_cam_death_lookat_rockets("ce_cam_death_lookat_rockets", "1", FCVAR_NONE, "Look at alive soldier rockets with the deathcam?");
+static ConVar ce_cam_death_lookat_killer("ce_cam_death_lookat_killer", "1", FCVAR_NONE, "Look at the killer with the deathcam?");
 
 DeathCamera::DeathCamera()
 {
 	m_Type = CameraType::Fixed;
 	m_VictimClass = TFClassType::Unknown;
+	m_FOV = ce_cam_death_fov.GetFloat();
 
 	if (!s_TypeCheckersInit)
 	{
-		s_GrenadeTypeOffset = Entities::GetEntityProp<TFGrenadePipebombType>("CTFGrenadePipebombProjectile", "m_iType");
+		auto grenadeType = Entities::GetClientClass("CTFGrenadePipebombProjectile");
+
+		Entities::GetEntityProp(s_GrenadeTypeOffset, grenadeType, "m_iType");
+		Entities::GetEntityProp(s_GrenadeTouchedOffset, grenadeType, "m_bTouched");
+
 		s_RocketClass = Entities::GetClientClass("CTFProjectile_Rocket");
 		s_TypeCheckersInit = true;
 	}
@@ -36,12 +48,8 @@ void DeathCamera::Update(float dt, uint32_t frame)
 {
 	auto victim = Player::AsPlayer(m_Victim.Get());
 
-	if (m_ElapsedTime == 0)
+	if (m_Victim && m_ElapsedTime == 0)
 	{
-		Assert(victim);
-		if (!victim)
-			return;
-
 		m_Origin = victim->GetEyePosition();
 		m_Angles = victim->GetEyeAngles();
 		m_VictimClass = victim->GetClass();
@@ -67,26 +75,36 @@ void DeathCamera::Update(float dt, uint32_t frame)
 			sumPos += proj.first / m_Projectiles.size();
 		}
 
-		SmoothCameraAngle(sumPos, rate);
+		m_Angles = SmoothCameraAngle(sumPos, rate);
 	}
 	else if (m_Killer) // Smoothly track the killer
 	{
 		if (m_ShouldUpdateKillerPosition)
 			UpdateKillerPosition();
 
-		SmoothCameraAngle(m_KillerPosition, rate);
+		m_Angles = SmoothCameraAngle(m_KillerPosition, rate);
 	}
 	else // Just smoothly return to horizontal pitch/no roll at original view yaw
 	{
+		if (ce_cam_death_debug.GetBool())
+		{
+			if (!victim)
+				Warning("Deathcam: No victim!\n");
+			else
+				Warning("Deathcam: No killer for %s!\n", victim->GetName());
+		}
+
 		m_Angles = SmoothCameraAngle(QAngle(0, m_Angles[YAW], 0), rate);
 	}
+
+	Assert(m_Origin.IsValid());
+	Assert(m_Angles.IsValid());
+	Assert(std::isfinite(m_FOV));
+	Assert(!AlmostEqual(m_FOV, 0));
 }
 
 void DeathCamera::FindProjectiles()
 {
-	if (m_VictimClass != TFClassType::DemoMan && m_VictimClass != TFClassType::Soldier)
-		return;
-
 	auto entityList = Interfaces::GetClientEntityList();
 	if (!entityList)
 		return;
@@ -106,15 +124,20 @@ void DeathCamera::FindProjectiles()
 		if (!baseEnt)
 			continue;
 
-		if (m_VictimClass == TFClassType::Soldier)
+		if (m_VictimClass == TFClassType::Soldier && ce_cam_death_lookat_rockets.GetBool())
 		{
 			if (networkable->GetClientClass() == s_RocketClass)
 				m_Projectiles.push_back(std::make_pair(vec3_invalid, baseEnt));
 		}
-		else if (m_VictimClass == TFClassType::DemoMan)
+		else if (m_VictimClass == TFClassType::DemoMan && ce_cam_death_lookat_pills.GetBool())
 		{
-			if (auto type = s_GrenadeTypeOffset.TryGetValue(networkable); type && *type == TFGrenadePipebombType::Pill)
-				m_Projectiles.push_back(std::make_pair(vec3_invalid, baseEnt));
+			if (auto type = s_GrenadeTypeOffset.TryGetValue(networkable); !type || *type != TFGrenadePipebombType::Pill)
+				continue;
+
+			if (auto touched = s_GrenadeTouchedOffset.TryGetValue(networkable); !touched || *touched)
+				continue;
+
+			m_Projectiles.push_back(std::make_pair(vec3_invalid, baseEnt));
 		}
 	}
 }

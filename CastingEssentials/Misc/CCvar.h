@@ -12,12 +12,12 @@ public:
 
 	static void SetMin(ConVar* var, float min)
 	{
-		if (var->m_bHasMin = !std::isnan(min))
+		if ((var->m_bHasMin = !std::isnan(min)) == true)
 			var->m_fMinVal = min;
 	}
 	static void SetMax(ConVar* var, float max)
 	{
-		if (var->m_bHasMax = !std::isnan(max))
+		if ((var->m_bHasMax = !std::isnan(max)) == true)
 			var->m_fMaxVal = max;
 	}
 

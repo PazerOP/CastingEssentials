@@ -23,6 +23,7 @@ class CInput;
 struct ClientModelRenderInfo_t;
 class CNewParticleEffect;
 class CParticleProperty;
+class CUserCmd;
 class CUtlBuffer;
 class CViewRender;
 class CVTFTexture;
@@ -110,6 +111,7 @@ enum class HookFunc
 	C_HLTVCamera_SetPrimaryTarget,
 
 	C_TFPlayer_CalcView,
+	C_TFPlayer_CreateMove,
 	C_TFPlayer_DrawModel,
 	C_TFPlayer_DrawOverriddenViewmodel,
 	C_TFPlayer_GetEntityForLoadoutSlot,
@@ -416,6 +418,11 @@ protected:
 	{
 		typedef void(__thiscall* Raw)(C_TFPlayer* pThis, Vector& eyeOrigin, QAngle& eyeAngles, float& zNear, float& zFar, float& fov);
 		typedef GlobalClassHook<HookFunc::C_TFPlayer_CalcView, false, C_TFPlayer, void, Vector&, QAngle&, float&, float&, float&> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::C_TFPlayer_CreateMove>
+	{
+		typedef bool(__thiscall* Raw)(C_TFPlayer* pThis, float inputSampleTime, CUserCmd* cmd);
+		typedef GlobalClassHook<HookFunc::C_TFPlayer_CalcView, false, C_TFPlayer, bool, float, CUserCmd*> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::C_TFPlayer_DrawModel>
 	{

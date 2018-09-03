@@ -112,6 +112,7 @@ class OffsetChecking
 	template<typename T> static void Check(int expectedOffset, T func)
 	{
 		auto offset = Hooking::VTableOffset(func);
+		offset; // Don't generate a warning in release builds
 		Assert(offset == expectedOffset);
 	}
 
