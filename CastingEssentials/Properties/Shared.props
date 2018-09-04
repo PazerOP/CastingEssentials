@@ -8,7 +8,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>legacy_stdio_definitions.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier0.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier1.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier2.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier3.lib;$(SolutionDir)sdk2013\mp\src\lib\public\steam_api.lib;$(SolutionDir)sdk2013\mp\src\lib\public\vstdlib.lib;$(SolutionDir)sdk2013\mp\src\lib\public\mathlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier0.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier1.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier2.lib;$(SolutionDir)sdk2013\mp\src\lib\public\tier3.lib;$(SolutionDir)sdk2013\mp\src\lib\public\steam_api.lib;$(SolutionDir)sdk2013\mp\src\lib\public\vstdlib.lib;$(SolutionDir)sdk2013\mp\src\lib\public\mathlib.lib;$(SolutionDir)sdk2013\mp\src\lib\public\bitmap.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ClCompile>

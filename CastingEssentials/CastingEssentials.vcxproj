@@ -108,6 +108,7 @@
     <ClCompile Include="Modules\Camera\SimpleCameraSmooth.cpp" />
     <ClCompile Include="Modules\Camera\TPLockCamera.cpp" />
     <ClCompile Include="Modules\ClientTools.cpp" />
+    <ClCompile Include="Modules\ExternalMinimap.cpp" />
     <ClCompile Include="Modules\HitEvents.cpp" />
     <ClCompile Include="Modules\HUDHacking.cpp" />
     <ClCompile Include="Misc\MissingDefinitions.cpp" />
@@ -170,6 +171,7 @@
     <ClInclude Include="Misc\CmdAlias.h" />
     <ClInclude Include="Misc\CommandCallbacks.h" />
     <ClInclude Include="Misc\CRefPtrFix.h" />
+    <ClInclude Include="Misc\CvarPusher.h" />
     <ClInclude Include="Misc\DebugOverlay.h" />
     <ClInclude Include="Misc\Extras\QAngle.h" />
     <ClInclude Include="Misc\Extras\Quaternion.h" />
@@ -194,6 +196,7 @@
     <ClInclude Include="Modules\Camera\TPLockCamera.h" />
     <ClInclude Include="Misc\SuggestionList.h" />
     <ClInclude Include="Modules\ClientTools.h" />
+    <ClInclude Include="Modules\ExternalMinimap.h" />
     <ClInclude Include="Modules\HitEvents.h" />
     <ClInclude Include="Modules\HUDHacking.h" />
     <ClInclude Include="Modules\Antifreeze.h" />

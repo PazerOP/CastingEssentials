@@ -161,8 +161,18 @@ void RoamingCamera::CreateMove(const CUserCmd& cmd)
 	static ConVarRef cl_pitchup("cl_pitchup");
 	static ConVarRef cl_pitchdown("cl_pitchdown");
 
-	m_Angles[PITCH] = clamp(m_Angles.x + (m_pitch.GetFloat() * cmd.mousedy), -cl_pitchup.GetFloat(), cl_pitchdown.GetFloat());
-	m_Angles[YAW] -= m_yaw.GetFloat() * cmd.mousedx;
+	static ConVarRef cl_leveloverview("cl_leveloverview");
+
+	if (cl_leveloverview.GetFloat() <= 0)
+	{
+		m_Angles[PITCH] = clamp(m_Angles.x + (m_pitch.GetFloat() * cmd.mousedy), -cl_pitchup.GetFloat(), cl_pitchdown.GetFloat());
+		m_Angles[YAW] -= m_yaw.GetFloat() * cmd.mousedx;
+	}
+	else
+	{
+		m_Angles[PITCH] = 0;
+		m_Angles[YAW] = 90;
+	}
 }
 
 void RoamingCamera::GotoEntity(IClientEntity* ent)

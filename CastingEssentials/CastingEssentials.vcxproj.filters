@@ -71,6 +71,7 @@
     <ClCompile Include="PluginBase\TFPlayerResource.cpp" />
     <ClCompile Include="PluginBase\TFTeamResource.cpp" />
     <ClCompile Include="Modules\Camera\LookatCamera.cpp" />
+    <ClCompile Include="Modules\ExternalMinimap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Controls\ImageProgressBar.h" />
@@ -161,6 +162,8 @@
     <ClInclude Include="PluginBase\VariablePusher.h" />
     <ClInclude Include="Modules\Camera\LookatCamera.h" />
     <ClInclude Include="Modules\Camera\SmoothSettings.h" />
+    <ClInclude Include="Modules\ExternalMinimap.h" />
+    <ClInclude Include="Misc\CvarPusher.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
