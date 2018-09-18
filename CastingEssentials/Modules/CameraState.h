@@ -88,6 +88,9 @@ private:
 	Hook<HookFunc::C_TFPlayer_CreateMove> m_PlayerCreateMoveHook;
 	bool PlayerCreateMoveOverride(C_TFPlayer* pThis, float inputSampleTime, CUserCmd* cmd);
 
+	Hook<HookFunc::SVC_FixAngle_ReadFromBuffer> m_FixAngleHook;
+	bool FixAngleOverride(SVC_FixAngle* pThis, bf_read& buffer);
+
 	void OnTick(bool inGame) override;
 	void LevelInit() override;
 	void LevelShutdown() override;

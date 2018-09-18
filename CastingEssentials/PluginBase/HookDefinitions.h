@@ -7,6 +7,7 @@
 #include "Hooking/GroupVirtualHook.h"
 #include "Hooking/GroupGlobalVirtualHook.h"
 
+class bf_read;
 class C_BaseCombatCharacter;
 class C_BasePlayer;
 class C_BaseViewModel;
@@ -35,6 +36,7 @@ class IMaterialSystemHardwareConfig;
 class INetworkStringTable;
 class IStaticPropMgrClient;
 struct mstudioseqdesc_t;
+class SVC_FixAngle;
 using trace_t = class CGameTrace;
 struct VTFFileHeader_t;
 enum ERenderDepthMode : int;
@@ -182,6 +184,8 @@ enum class HookFunc
 
 	IVEngineClient_GetPlayerInfo,
 
+	SVC_FixAngle_ReadFromBuffer,
+
 	vgui_AnimationController_StartAnimationSequence,
 	vgui_Panel_FindChildByName,
 	vgui_ProgressBar_ApplySettings,
@@ -240,6 +244,11 @@ protected:
 	template<> struct HookFuncType<HookFunc::IVEngineClient_GetPlayerInfo>
 	{
 		typedef VirtualHook<HookFunc::IVEngineClient_GetPlayerInfo, false, IVEngineClient, bool, int, player_info_t*> Hook;
+	};
+	template<> struct HookFuncType<HookFunc::SVC_FixAngle_ReadFromBuffer>
+	{
+		typedef bool(__thiscall* Raw)(SVC_FixAngle* pThis, bf_read& buffer);
+		typedef GlobalClassHook<HookFunc::SVC_FixAngle_ReadFromBuffer, false, SVC_FixAngle, bool, bf_read&> Hook;
 	};
 	template<> struct HookFuncType<HookFunc::IGameEventManager2_FireEventClientSide>
 	{

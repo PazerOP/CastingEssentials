@@ -68,7 +68,9 @@ class CCommand;
 class ConVar;
 class CSteamID;
 class KeyValues;
+class Player;
 class QAngle;
+enum class TFTeam;
 class Vector;
 
 template<class... Parameters> __forceinline void PluginMsg(const char* fmt, Parameters... param)
@@ -136,6 +138,8 @@ __forceinline float Bezier(float t, float x0, float x1, float x2)
 }
 
 extern std::string RenderSteamID(const CSteamID& id);
+void RenderSteamID(const CSteamID& id, char* buf, size_t length);
+template<size_t length> void RenderSteamID(const CSteamID& id, char(&buf)[length]) { RenderSteamID(id, buf, length); }
 
 extern bool ReparseForSteamIDs(const CCommand& in, CCommand& out);
 
@@ -174,6 +178,8 @@ extern std::string KeyValuesDumpAsString(KeyValues* kv, int indentLevel = 0);
 
 Vector ApproachVector(const Vector& from, const Vector& to, float speed);
 void AngleDistance(const QAngle& a1, const QAngle& a2, Vector& dists);
+QAngle AngleDiff(const QAngle& start, const QAngle& end);
+void AngleNormalize(QAngle& angle);
 
 constexpr float Rad2Deg(float radians)
 {

@@ -217,6 +217,8 @@ void HookManager::InitRawFunctionsList()
 
 	FindFunc<HookFunc::IGameSystem_Add>("\x55\x8B\xEC\x51\x8B\x15????\x8B\x0D", "xxxxxx????xx");
 
+	FindFunc<HookFunc::SVC_FixAngle_ReadFromBuffer>("\x55\x8B\xEC\x53\x56\x8B\x75\x08\x8B\xD9\x57\x8B\x46\x08\x8B\x7E\x0C\x2B\xC7\x85\xC0\x7F\x0B\x8B\xCE\xE8????\x33\xD2\xEB\x1A\x8B\x06\x8B\xD7\xC1\xFA\x05\x8B\xCF\x83\xE1\x1F\x8B\x14\x90\x8D\x47\x01\xD3\xEA\x89\x46\x0C\x83\xE2\x01\x6A\x10", "xxxxxxxxxxxxxxxxxxxxxxxxxx????xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", 0, "engine");
+
 	FindFunc<HookFunc::vgui_AnimationController_StartAnimationSequence>("\x55\x8B\xEC\x51\x56\x8B\xF1\x57\x80\xBE", "xxxxxxxxxx");
 	FindFunc<HookFunc::vgui_Panel_FindChildByName>("\x55\x8B\xEC\x83\xEC\x28\xA1????\x53\x8B\xD9\x33\xC9", "xxxxxxx????xxxxx");
 	FindFunc<HookFunc::vgui_ProgressBar_ApplySettings>("\x55\x8B\xEC\xD9\xEE\x53", "xxxxxx");
@@ -342,6 +344,8 @@ HookManager::HookManager()
 	InitGlobalHook<HookFunc::Global_UserInfoChangedCallback>();
 	InitGlobalHook<HookFunc::Global_UTILComputeEntityFade>();
 	InitGlobalHook<HookFunc::Global_UTIL_TraceLine>();
+
+	InitGlobalHook<HookFunc::SVC_FixAngle_ReadFromBuffer>();
 
 	InitGlobalHook<HookFunc::vgui_Panel_FindChildByName>();
 	InitGlobalHook<HookFunc::vgui_ProgressBar_ApplySettings>();

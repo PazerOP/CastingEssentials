@@ -304,5 +304,17 @@ enum class TFGrenadePipebombType
 	StickyJumper,	// These are separate for some reason
 };
 
+enum class ObjectType
+{
+	Dispenser,
+	TeleEntrance,
+	Sentry,
+	TeleExit,
+
+	Sapper,
+
+	COUNT
+};
+
 constexpr auto MAX_COSMETIC_SLOTS = 3;
 constexpr auto MAX_TAUNT_SLOTS = 8;

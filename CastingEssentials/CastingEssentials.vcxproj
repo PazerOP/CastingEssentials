@@ -177,6 +177,7 @@
     <ClInclude Include="Misc\Extras\Quaternion.h" />
     <ClInclude Include="Misc\Extras\VPlane.h" />
     <ClInclude Include="Misc\HLTVCameraHack.h" />
+    <ClInclude Include="Misc\MissingDefinitions.h" />
     <ClInclude Include="Misc\Padding.h" />
     <ClInclude Include="Modules\Camera\DeathCamera.h" />
     <ClInclude Include="Modules\Camera\FirstPersonCamera.h" />

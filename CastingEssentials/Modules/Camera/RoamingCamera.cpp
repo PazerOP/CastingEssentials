@@ -126,10 +126,17 @@ void RoamingCamera::Update(float dt, uint32_t frame)
 	m_Origin += m_Velocity * dt;
 
 	// get camera angle directly from engine
-	Assert(engine);
-	//if (auto clientdll = Interfaces::GetClientDLL(); clientdll && m_InputEnabled && engine)
+	if (engine && m_InputEnabled)
 	{
+		engine->GetViewAngles(m_Angles);
 		//m_Angles = cmd->viewangles;
+	}
+
+	static ConVarRef cl_leveloverview("cl_leveloverview");
+	if (cl_leveloverview.GetFloat() > 0)
+	{
+		m_Angles[PITCH] = 0;
+		m_Angles[YAW] = 90;
 	}
 
 	// Zero out velocity if in noaccel mode
@@ -140,12 +147,7 @@ void RoamingCamera::Update(float dt, uint32_t frame)
 void RoamingCamera::SetPosition(const Vector& pos, const QAngle& angles)
 {
 	m_Origin = pos;
-
 	m_Angles = angles;
-
-	QAngle copy(m_Angles);
-	engine->SetViewAngles(copy);
-
 	m_Velocity.Init();
 }
 
@@ -154,25 +156,8 @@ void RoamingCamera::CreateMove(const CUserCmd& cmd)
 	if (!m_InputEnabled)
 		return;
 
+	auto delta = AngleDiff(m_LastCmd.viewangles, cmd.viewangles);
 	m_LastCmd = cmd;
-
-	static ConVarRef m_yaw("m_yaw");
-	static ConVarRef m_pitch("m_pitch");
-	static ConVarRef cl_pitchup("cl_pitchup");
-	static ConVarRef cl_pitchdown("cl_pitchdown");
-
-	static ConVarRef cl_leveloverview("cl_leveloverview");
-
-	if (cl_leveloverview.GetFloat() <= 0)
-	{
-		m_Angles[PITCH] = clamp(m_Angles.x + (m_pitch.GetFloat() * cmd.mousedy), -cl_pitchup.GetFloat(), cl_pitchdown.GetFloat());
-		m_Angles[YAW] -= m_yaw.GetFloat() * cmd.mousedx;
-	}
-	else
-	{
-		m_Angles[PITCH] = 0;
-		m_Angles[YAW] = 90;
-	}
 }
 
 void RoamingCamera::GotoEntity(IClientEntity* ent)

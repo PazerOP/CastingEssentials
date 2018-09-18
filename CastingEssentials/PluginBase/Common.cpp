@@ -40,6 +40,11 @@ std::string RenderSteamID(const CSteamID& id)
 	return std::string("[U:") + std::to_string(id.GetEUniverse()) + ':' + std::to_string(id.GetAccountID()) + ']';
 }
 
+void RenderSteamID(const CSteamID& id, char* buf, size_t length)
+{
+	sprintf_s(buf, length, "[U:%i:%i]", id.GetEUniverse(), id.GetAccountID());
+}
+
 bool ReparseForSteamIDs(const CCommand& in, CCommand& out)
 {
 	characterset_t newSet;
@@ -163,6 +168,20 @@ void AngleDistance(const QAngle& a1, const QAngle& a2, Vector& dists)
 	dists.x = AngleDistance(a1.x, a2.x);
 	dists.y = AngleDistance(a1.y, a2.y);
 	dists.z = AngleDistance(a1.z, a2.z);
+}
+
+QAngle AngleDiff(const QAngle& a1, const QAngle& a2)
+{
+	return QAngle(
+		AngleDiff(a2.x, a1.x),
+		AngleDiff(a2.y, a1.y),
+		AngleDiff(a2.z, a1.z));
+}
+void AngleNormalize(QAngle& angle)
+{
+	angle.x = AngleNormalize(angle.x);
+	angle.y = AngleNormalize(angle.y);
+	angle.z = AngleNormalize(angle.z);
 }
 
 int GetConLine()

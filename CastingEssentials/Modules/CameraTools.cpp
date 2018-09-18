@@ -578,8 +578,7 @@ void CameraTools::SpecIndex(const CCommand& command)
 
 	// Create an array of all our players on the specified team
 	Player* allPlayers[MAX_PLAYERS];
-	const auto endIter = std::copy_if(Player::Iterable().begin(), Player::Iterable().end(), allPlayers,
-		[team](const Player* player) { return player->GetTeam() == team; });
+	const auto endIter = Player::GetSortedPlayers(team, std::begin(allPlayers), std::end(allPlayers));
 
 	const auto playerCount = std::distance(std::begin(allPlayers), endIter);
 
@@ -598,39 +597,6 @@ void CameraTools::SpecIndex(const CCommand& command)
 
 		return;
 	}
-
-	// Sort by class, then by userid
-	std::sort(std::begin(allPlayers), endIter, [](const Player* p1, const Player* p2)
-	{
-		// Convert internal classes to actual game class order
-		static const auto GameClassNum = [](TFClassType codeClass)
-		{
-			switch (codeClass)
-			{
-				case TFClassType::Scout:    return 1;
-				case TFClassType::Soldier:  return 2;
-				case TFClassType::Pyro:     return 3;
-				case TFClassType::DemoMan:  return 4;
-				case TFClassType::Heavy:    return 5;
-				case TFClassType::Engineer: return 6;
-				case TFClassType::Medic:    return 7;
-				case TFClassType::Sniper:   return 8;
-				case TFClassType::Spy:      return 9;
-
-				default:                    return 0;
-			}
-		};
-
-		const auto class1 = GameClassNum(p1->GetClass());
-		const auto class2 = GameClassNum(p2->GetClass());
-
-		if (class1 < class2)
-			return true;
-		else if (class1 > class2)
-			return false;
-		else
-			return p1->entindex() < p2->entindex();	// Classes identical, sort by entindex
-	});
 
 	SpecPlayer(allPlayers[index]->entindex());
 	return;

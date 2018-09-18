@@ -37,6 +37,10 @@ public:
 	static bool IsValidIndex(int entIndex);
 	static Player* GetLocalPlayer();
 
+	// Sorts players the same way the tournament HUD does. outBegin and outEnd must be
+	// pointers to an array with at least MAX_PLAYERS slots. Returns the new end pointer.
+	static Player** GetSortedPlayers(TFTeam team, Player** outBegin, Player** outEnd);
+
 	static bool CheckDependencies();
 
 	IClientEntity* GetEntity() const { return m_PlayerEntity.Get(); }

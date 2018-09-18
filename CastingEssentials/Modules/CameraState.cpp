@@ -6,6 +6,7 @@
 #include "PluginBase/TFDefinitions.h"
 #include "Misc/CCvar.h"
 #include "Misc/HLTVCameraHack.h"
+#include "Misc/MissingDefinitions.h"
 #include "Modules/Camera/ICamera.h"
 #include "Modules/Camera/OrbitCamera.h"
 #include "Modules/Camera/PlayerCameraGroup.h"
@@ -75,6 +76,8 @@ CameraState::CameraState() :
 	m_CalcViewHLTVHook(std::bind(&CameraState::CalcViewHLTVOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
 	m_CreateMoveHook(std::bind(&CameraState::CreateMoveOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)),
 	m_PlayerCreateMoveHook(std::bind(&CameraState::PlayerCreateMoveOverride, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)),
+
+	m_FixAngleHook(std::bind(&CameraState::FixAngleOverride, this, std::placeholders::_1, std::placeholders::_2)),
 
 	m_EngineCamera(std::make_shared<EngineCamera>())
 {
@@ -323,7 +326,6 @@ void CameraState::CalcViewPlayerOverride(C_TFPlayer* pThis, Vector& origin, QAng
 				engine->ServerCmd("spec_player \"4\"");
 			}
 
-#if false
 			static ConVarRef cl_spec_mode("cl_spec_mode");
 			if (auto mode = GetLocalObserverMode(); mode != cl_spec_mode.GetInt())
 			{
@@ -332,6 +334,7 @@ void CameraState::CalcViewPlayerOverride(C_TFPlayer* pThis, Vector& origin, QAng
 				engine->ServerCmd(buf);
 			}
 
+#if false
 			static ConVarRef sv_cheats("sv_cheats");
 			if (sv_cheats.GetBool())
 			{
@@ -369,7 +372,9 @@ void CameraState::CalcViewHLTVOverride(C_HLTVCamera* pThis, Vector& origin, QAng
 
 void CameraState::CreateMoveOverride(CInput* pThis, int sequenceNumber, float inputSampleFrametime, bool active)
 {
-	return;
+	m_CreateMoveHook.SetState(Hooking::HookAction::SUPERCEDE);
+	m_CreateMoveHook.GetOriginal()(pThis, sequenceNumber, inputSampleFrametime, active);
+#if 0
 	m_CreateMoveHook.GetOriginal()(pThis, sequenceNumber, inputSampleFrametime, active);
 
 	auto cmd = pThis->GetUserCmd(sequenceNumber);
@@ -382,6 +387,7 @@ void CameraState::CreateMoveOverride(CInput* pThis, int sequenceNumber, float in
 			cam->SetInputEnabled(true);
 		}
 	}
+#endif
 }
 
 bool CameraState::PlayerCreateMoveOverride(C_TFPlayer* pThis, float inputSampleTime, CUserCmd* cmd)
@@ -395,10 +401,26 @@ bool CameraState::PlayerCreateMoveOverride(C_TFPlayer* pThis, float inputSampleT
 		return false;
 
 	m_PlayerCreateMoveHook.SetState(Hooking::HookAction::SUPERCEDE);
+
 	const bool retVal = m_PlayerCreateMoveHook.GetOriginal()(pThis, inputSampleTime, cmd);
 
 	roaming->CreateMove(*cmd);
 	roaming->SetInputEnabled(true);
+
+	return retVal;
+}
+
+bool CameraState::FixAngleOverride(SVC_FixAngle* pThis, bf_read& buffer)
+{
+	m_FixAngleHook.SetState(Hooking::HookAction::SUPERCEDE);
+	const auto retVal = m_FixAngleHook.GetOriginal()(pThis, buffer);
+
+	// Zero it out and make it relative so it doesn't actually have any effect
+	Assert(!pThis->m_bRelative);
+	pThis->m_bRelative = true;
+	pThis->m_Angle.Init();
+
+	Msg("%s: Blocked SVC_FixAngle\n", GetModuleName());
 
 	return retVal;
 }
@@ -475,6 +497,7 @@ void CameraState::SetupHooks(bool connect)
 	m_CalcViewPlayerHook.SetEnabled(connect);
 	m_CreateMoveHook.SetEnabled(connect);
 	m_PlayerCreateMoveHook.SetEnabled(connect);
+	m_FixAngleHook.SetEnabled(connect);
 
 	if (connect)
 	{
@@ -610,7 +633,10 @@ void CameraState::SpecStateChanged(ObserverMode mode, IClientEntity* primaryTarg
 		auto newCam = std::make_shared<RoamingCamera>();
 
 		if (primaryTarget)
+		{
 			newCam->GotoEntity(primaryTarget);
+			newCam->SetInputEnabled(false);
+		}
 
 		CameraPtr newCamAdjusted = newCam;
 		callbacksParent.SetupCameraTarget(mode, primaryTarget, newCamAdjusted);

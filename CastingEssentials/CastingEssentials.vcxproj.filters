@@ -164,6 +164,7 @@
     <ClInclude Include="Modules\Camera\SmoothSettings.h" />
     <ClInclude Include="Modules\ExternalMinimap.h" />
     <ClInclude Include="Misc\CvarPusher.h" />
+    <ClInclude Include="Misc\MissingDefinitions.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />

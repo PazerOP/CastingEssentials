@@ -1,4 +1,5 @@
 #include "Hooking/IBaseHook.h"
+#include "Misc/MissingDefinitions.h"
 
 #include <client/c_baseanimating.h>
 #include <client/c_baseplayer.h>
@@ -108,6 +109,9 @@ class OffsetChecking
 	OFFSET_CHECK(vgui::ProgressBar, _segmentWide, 368);
 	OFFSET_CHECK(vgui::ProgressBar, m_iBarInset, 372);
 	OFFSET_CHECK(vgui::ProgressBar, m_iBarMargin, 376);
+
+	OFFSET_CHECK(SVC_FixAngle, m_bRelative, 20);
+	OFFSET_CHECK(SVC_FixAngle, m_Angle, 24);
 
 	template<typename T> static void Check(int expectedOffset, T func)
 	{
