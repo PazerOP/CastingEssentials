@@ -87,10 +87,10 @@ void ModuleManager::Load(ModuleDesc& desc)
 		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load because dependency %s did not load!\n", desc.name.c_str(), e.what());
 		throw module_load_failed(desc.name.c_str());
 	}
-	catch (const std::exception&)
+	catch (const std::exception& e)
 	{
 		desc.state = ModuleState::MODULE_FAILED;
-		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load!\n", desc.name.c_str());
+		PluginColorMsg(Color(255, 0, 0, 255), "Module %s failed to load! Error: %s\n", desc.name.c_str(), e.what());
 		throw module_load_failed(desc.name.c_str());
 	}
 }
