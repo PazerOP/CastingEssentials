@@ -53,6 +53,8 @@ bool CastingPlugin::Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn g
 	const auto delta = std::chrono::duration<float>(endTime - startTime);
 	PluginMsg("Finished loading %d modules in %1.2f seconds.\n", Modules().size(), delta.count());
 
+	Interfaces::GetEngineClient()->ExecuteClientCmd("exec castingessentials.cfg");
+
 	return true;
 }
 
