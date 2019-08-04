@@ -658,7 +658,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr, bool& anyAlways, 
 		auto const ent = current.m_hEntity.Get();
 
 		// Frustum culling
-		if (ce_outlines_cull_frustum.GetBool())
+		if (ent && ce_outlines_cull_frustum.GetBool())
 		{
 			Vector renderMins, renderMaxs;
 			ent->GetRenderBoundsWorldspace(renderMins, renderMaxs);
@@ -686,7 +686,7 @@ void Graphics::BuildExtraGlowData(CGlowObjectManager* glowMgr, bool& anyAlways, 
 			// Check PVS (if we would benefit from it)
 			if (ce_outlines_pvs_optimizations.GetBool() &&
 				currentExtra.m_Mode != GlowMode::Always &&
-				!ClientLeafSystem()->IsRenderableInPVS(ent))
+				(ent && !ClientLeafSystem()->IsRenderableInPVS(ent)))
 			{
 				if (currentExtra.m_Mode == GlowMode::Occluded)
 				{
