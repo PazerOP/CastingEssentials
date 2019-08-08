@@ -20,6 +20,7 @@ HitEvents::HitEvents() :
 	ce_hitevents_enabled("ce_hitevents_enabled", "0", FCVAR_NONE, "Enables hitsounds and damage numbers in STVs.",
 		[](IConVar* var, const char* oldValue, float fOldValue) { GetModule()->UpdateEnabledState(); }),
 	ce_hitevents_dmgnumbers_los("ce_hitevents_dmgnumbers_los", "1", FCVAR_NONE, "Should we require LOS to the target before showing a damage number? For a \"normal\" TF2 experience, this would be set to 1."),
+	ce_hitevents_healing_crossbow_only("ce_hitevents_healing_crossbow_only", "0", FCVAR_NONE, "Only show healing events originating from the Crusader's Crossbow."),
 
 	m_FireGameEventHook(std::bind(&HitEvents::FireGameEventOverride, this, std::placeholders::_1, std::placeholders::_2)),
 
@@ -178,6 +179,7 @@ static_assert(offsetof(CDamageAccountPanel, garbo) > offsetof(CAccountPanel, m_h
 
 void HitEvents::LevelInit()
 {
+	m_Panel = nullptr;
 	UpdateEnabledState();
 }
 
@@ -185,6 +187,7 @@ void HitEvents::LevelShutdown()
 {
 	UpdateEnabledState();
 	m_EventsToIgnore.clear();
+	m_Panel = nullptr;
 }
 
 void HitEvents::UpdateEnabledState()
@@ -198,8 +201,13 @@ void HitEvents::UpdateEnabledState()
 void HitEvents::FireGameEventOverride(CDamageAccountPanel* pThis, IGameEvent* event)
 {
 	auto is_player_hurt = stricmp(event->GetName(), "player_hurt") == 0;
-	auto is_player_healed = !is_player_hurt && stricmp(event->GetName(), "player_healed") == 0;
-	if (is_player_hurt || is_player_healed) {
+
+	auto crossbow_only = ce_hitevents_healing_crossbow_only.GetBool();
+
+	auto is_player_healed = !crossbow_only && !is_player_hurt && stricmp(event->GetName(), "player_healed") == 0;
+	auto is_crossbow = !is_player_healed && crossbow_only && stricmp(event->GetName(), "crossbow_heal") == 0;
+
+	if (is_player_hurt || is_player_healed || is_crossbow) {
 		m_FireGameEventHook.SetState(Hooking::HookAction::SUPERCEDE);
 
 		if (auto mode = CameraState::GetModule()->GetLocalObserverMode();
@@ -211,9 +219,10 @@ void HitEvents::FireGameEventOverride(CDamageAccountPanel* pThis, IGameEvent* ev
 		auto localPlayer = Player::GetLocalPlayer();
 		if (!localPlayer)
 			return;
-
-		auto inflictor = event->GetInt(is_player_hurt ? "attacker" : "healer");
-		if (event->GetInt(is_player_hurt ? "userid" : "patient") == inflictor) return;
+		
+		auto inflictor = event->GetInt(is_player_hurt ? "attacker" : "healer"); // 'healer' for both player_healed and crossbow_heal
+		auto target = event->GetInt(is_player_hurt ? "userid" : is_player_healed ? "patient" : "target");
+		if (inflictor == 0 || target == 0 || target == inflictor) return;
 
 		auto specTarget = Player::AsPlayer(CameraState::GetModule()->GetLocalObserverTarget());
 		if (!specTarget || specTarget->GetUserID() != inflictor) return;
@@ -227,7 +236,20 @@ void HitEvents::FireGameEventOverride(CDamageAccountPanel* pThis, IGameEvent* ev
 		// Not sure we can just mutate the event, so we'll clone it instead. std::unique_ptr is convenient here for giving
 		// us an RAII wrapper around the event.
 		auto deleter = [](IGameEvent* event) { gameeventmanager->FreeEvent(event); };
-		std::unique_ptr<IGameEvent, decltype(deleter)> newEvent(gameeventmanager->DuplicateEvent(event), deleter);
+		std::unique_ptr<IGameEvent, decltype(deleter)> newEvent(nullptr, deleter);
+
+		if (!is_crossbow) {
+			// For player_hurt and player_healed we can simply duplicate the event
+			newEvent.reset(gameeventmanager->DuplicateEvent(event));
+		}
+		else {
+			// CDamageAccountPanel doesn't handle crossbow_heal, so we make a matching player_healed.
+			newEvent.reset(gameeventmanager->CreateEvent("player_healed"));
+			if (!newEvent) return;
+			newEvent->SetInt("patient", event->GetInt("target"));
+			newEvent->SetInt("amount", event->GetInt("amount"));
+		}
+
 		newEvent->SetInt(is_player_hurt ? "attacker" : "healer", localPlayer->GetUserID());
 		m_FireGameEventHook.GetOriginal()(pThis, newEvent.get());
 	}
@@ -248,6 +270,18 @@ void HitEvents::UTILTracelineOverride(const Vector& vecAbsStart, const Vector& v
 bool HitEvents::DamageAccountPanelShouldDrawOverride(CDamageAccountPanel* pThis)
 {
 	m_DamageAccountPanelShouldDrawHook.SetState(Hooking::HookAction::SUPERCEDE);
+
+	if (pThis != m_Panel) {
+		m_Panel = pThis;
+
+		// CDamageAccountPanel is actually an IGameEventListener2, but there's other stuff
+		// in there before we get to the VGUI panel. This cast is safe because the IGameEventListener2
+		// interface is the first one in the vtable.
+		auto ptr = reinterpret_cast<IGameEventListener2*>(pThis);
+		if (!Interfaces::GetGameEventManager()->FindListener(ptr, "crossbow_heal")) {
+			Interfaces::GetGameEventManager()->AddListener(ptr, "crossbow_heal", false);
+		}
+	}
 
 	// Not too sure why this offset is required, maybe i'm just an idiot
 	CDamageAccountPanel* questionable = (CDamageAccountPanel*)((std::byte*)pThis + 44);

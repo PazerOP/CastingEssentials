@@ -30,6 +30,7 @@ protected:
 
 private:
 	std::vector<IGameEvent*> m_EventsToIgnore;
+	CDamageAccountPanel* m_Panel { nullptr };
 
 	void UpdateEnabledState();
 
@@ -48,4 +49,5 @@ private:
 
 	ConVar ce_hitevents_enabled;
 	ConVar ce_hitevents_dmgnumbers_los;
+	ConVar ce_hitevents_healing_crossbow_only;
 };
